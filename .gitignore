@@ -1,4 +1,4 @@
-bazel-bin/
-bazel-out/
-bazel-testlogs/
-bazel-moriarty/
+bazel-bin
+bazel-out
+bazel-testlogs
+bazel-moriarty
