@@ -16,7 +16,7 @@
 
 package(
     default_visibility = [
-        "//visibility:public"
+        "//visibility:public",
     ],
 )
 
@@ -47,11 +47,11 @@ cc_library(
     hdrs = ["mexample_graph.h"],
     deps = [
         ":example_graph",
-        "@absl//absl/status",
-        "@absl//absl/status:statusor",
         "//src:errors",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",
         "//src/variables:minteger",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
     ],
 )

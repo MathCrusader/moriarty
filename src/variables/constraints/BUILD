@@ -16,7 +16,7 @@
 
 package(
     default_visibility = [
-        "//visibility:public"
+        "//visibility:public",
     ],
 )
 
@@ -27,7 +27,7 @@ cc_library(
     srcs = ["base_constraints.cc"],
     hdrs = ["base_constraints.h"],
     deps = [
-        "@absl//absl/strings:string_view",
+        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -37,8 +37,8 @@ cc_library(
     hdrs = ["numeric_constraints.h"],
     deps = [
         ":base_constraints",
-        "@absl//absl/strings:string_view",
         "//src/internal:range",
+        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -48,9 +48,9 @@ cc_library(
     hdrs = ["container_constraints.h"],
     deps = [
         ":base_constraints",
-        "@absl//absl/strings",
-        "@absl//absl/strings:string_view",
         "//src/variables:minteger",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -70,9 +70,9 @@ cc_library(
     hdrs = ["size_constraints.h"],
     deps = [
         ":base_constraints",
-        "@absl//absl/strings",
-        "@absl//absl/strings:string_view",
         "//src/librarian:size_property",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -82,8 +82,8 @@ cc_library(
     hdrs = ["string_constraints.h"],
     deps = [
         ":base_constraints",
-        "@absl//absl/strings",
-        "@absl//absl/strings:string_view",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -92,8 +92,8 @@ cc_test(
     srcs = ["base_constraints_test.cc"],
     deps = [
         ":base_constraints",
-        "@com_google_googletest//:gtest_main",
-        "@absl//absl/strings:string_view",
+        "@abseil-cpp//absl/strings:string_view",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -103,9 +103,10 @@ cc_test(
     deps = [
         ":container_constraints",
         ":numeric_constraints",
-        "@com_google_googletest//:gtest_main",
         "//src/librarian:test_utils",
+        "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -114,8 +115,8 @@ cc_test(
     srcs = ["io_constraints_test.cc"],
     deps = [
         ":io_constraints",
-        "@com_google_googletest//:gtest_main",
         "//src/librarian:io_config",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -124,8 +125,8 @@ cc_test(
     srcs = ["numeric_constraints_test.cc"],
     deps = [
         ":numeric_constraints",
-        "@com_google_googletest//:gtest_main",
         "//src/internal:range",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -134,8 +135,8 @@ cc_test(
     srcs = ["size_constraints_test.cc"],
     deps = [
         ":size_constraints",
-        "@com_google_googletest//:gtest_main",
         "//src/librarian:size_property",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -144,7 +145,7 @@ cc_test(
     srcs = ["string_constraints_test.cc"],
     deps = [
         ":string_constraints",
-        "@com_google_googletest//:gtest_main",
-        "@absl//absl/container:flat_hash_set",
+        "@abseil-cpp//absl/container:flat_hash_set",
+        "@googletest//:gtest_main",
     ],
 )

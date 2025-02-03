@@ -18,9 +18,9 @@
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/status/status.h"
 #include "src/test_case.h"
 #include "src/testing/exporter_test_util.h"
 #include "src/testing/generator_test_util.h"
@@ -382,9 +382,9 @@ TEST(MoriartyTest, ApproximateGenerationLimitTruncatesTheSizeOfArrays) {
 }
 
 TEST(MoriartyTest, VariableNameValidationShouldWork) {
-  EXPECT_OK(Moriarty().TryAddVariable("good", MInteger()));
-  EXPECT_OK(Moriarty().TryAddVariable("a1_b", MInteger()));
-  EXPECT_OK(Moriarty().TryAddVariable("AbC_3c", MInteger()));
+  MORIARTY_EXPECT_OK(Moriarty().TryAddVariable("good", MInteger()));
+  MORIARTY_EXPECT_OK(Moriarty().TryAddVariable("a1_b", MInteger()));
+  MORIARTY_EXPECT_OK(Moriarty().TryAddVariable("AbC_3c", MInteger()));
 
   EXPECT_THAT(Moriarty().TryAddVariable("", MInteger()),
               StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("empty")));

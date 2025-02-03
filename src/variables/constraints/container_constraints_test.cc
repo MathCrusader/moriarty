@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,6 +20,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/test_utils.h"
+#include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/minteger.h"
 
@@ -33,25 +35,30 @@ using ::testing::Each;
 using ::testing::Ge;
 using ::testing::HasSubstr;
 using ::testing::Le;
-using ::testing::status::IsOkAndHolds;
 
 TEST(ContainerConstraintsTest, LengthConstraintsAreCorrect) {
   EXPECT_THAT(Length(10).GetConstraints(), GeneratedValuesAre(10));
-  EXPECT_THAT(GenerateLots(Length("2 * N").GetConstraints(),
-                           Context().WithValue<MInteger>("N", 7)),
-              IsOkAndHolds(Each(14)));
-  EXPECT_THAT(GenerateLots(Length(AtLeast("X"), AtMost(15)).GetConstraints(),
-                           Context().WithValue<MInteger>("X", 3)),
-              IsOkAndHolds(Each(AllOf(Ge(3), Le(15)))));
+
+  // TODO: This are really "IsOkAndHolds" tests, but the matcher is not working
+  auto val1 = GenerateLots(Length("2 * N").GetConstraints(),
+                           Context().WithValue<MInteger>("N", 7));
+  MORIARTY_EXPECT_OK(val1);
+  EXPECT_THAT(*val1, Each(14));
+
+  auto val2 = GenerateLots(Length(AtLeast("X"), AtMost(15)).GetConstraints(),
+                           Context().WithValue<MInteger>("X", 3));
+  MORIARTY_EXPECT_OK(val2);
+  EXPECT_THAT(*val2, Each(AllOf(Ge(3), Le(15))));
 }
 
 TEST(ContainerConstraintsTest, ElementsConstraintsAreCorrect) {
   EXPECT_THAT(Elements<MInteger>(Between(1, 10)).GetConstraints(),
               GeneratedValuesAre(AllOf(Ge(1), Le(10))));
-  EXPECT_THAT(GenerateLots(
-                  Elements<MInteger>(AtLeast("X"), AtMost(15)).GetConstraints(),
-                  Context().WithValue<MInteger>("X", 3)),
-              IsOkAndHolds(Each(AllOf(Ge(3), Le(15)))));
+  auto val = GenerateLots(
+      Elements<MInteger>(AtLeast("X"), AtMost(15)).GetConstraints(),
+      Context().WithValue<MInteger>("X", 3));
+  MORIARTY_EXPECT_OK(val);
+  EXPECT_THAT(*val, Each(AllOf(Ge(3), Le(15))));
 }
 
 TEST(ContainerConstraintsTest, LengthToStringWorks) {

@@ -12,8 +12,8 @@ cc_library(
     srcs = ["status_testutil.cc"],
     hdrs = ["status_testutil.h"],
     deps = [
-        "@com_google_googletest//:gtest",
-        "@absl//absl/status",
+        "@googletest//:gtest",
+        "@abseil-cpp//absl/status",
         "//src/testing:status_test_util",
         "//src/util/status_macro:status_macros",
     ],
@@ -26,8 +26,8 @@ cc_test(
     srcs = ["status_testutil_test.cc"],
     deps = [
         ":status_testutil",
-        "@com_google_googletest//:gtest_main",
-        "@absl//absl/status",
-        "@absl//absl/status:statusor",
+        "@googletest//:gtest_main",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
     ],
 )

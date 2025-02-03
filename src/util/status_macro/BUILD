@@ -27,9 +27,9 @@ cc_library(
     srcs = ["examine_stack.cc"],
     hdrs = ["examine_stack.h"],
     deps = [
-        "@absl//absl/base:core_headers",
-        "@absl//absl/debugging:stacktrace",
-        "@absl//absl/debugging:symbolize",
+        "@abseil-cpp//absl/base:core_headers",
+        "@abseil-cpp//absl/debugging:stacktrace",
+        "@abseil-cpp//absl/debugging:symbolize",
     ],
 )
 
@@ -44,7 +44,7 @@ cc_test(
     srcs = ["ostringstream_test.cc"],
     deps = [
         ":ostringstream",
-        "@com_google_googletest//:gtest_main",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -54,8 +54,8 @@ cc_library(
     deps = [
         ":source_location",
         ":status_builder",
-        "@absl//absl/base:core_headers",
-        "@absl//absl/status",
+        "@abseil-cpp//absl/base:core_headers",
+        "@abseil-cpp//absl/status",
     ],
 )
 
@@ -72,16 +72,16 @@ cc_library(
         ":examine_stack",
         ":ostringstream",
         ":source_location",
-        "@absl//absl/base:core_headers",
-        "@absl//absl/base:log_severity",
-        "@absl//absl/container:flat_hash_map",
-        "@absl//absl/log",
-        "@absl//absl/status",
-        "@absl//absl/strings",
-        "@absl//absl/strings:cord",
-        "@absl//absl/strings:string_view",
-        "@absl//absl/synchronization",
-        "@absl//absl/time",
+        "@abseil-cpp//absl/base:core_headers",
+        "@abseil-cpp//absl/base:log_severity",
+        "@abseil-cpp//absl/container:flat_hash_map",
+        "@abseil-cpp//absl/log",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/strings:cord",
+        "@abseil-cpp//absl/strings:string_view",
+        "@abseil-cpp//absl/synchronization",
+        "@abseil-cpp//absl/time",
     ],
 )
 
@@ -92,10 +92,10 @@ cc_test(
     deps = [
         ":source_location",
         ":status_builder",
-        "@com_google_googletest//:gtest_main",
-        "@absl//absl/base:log_severity",
-        "@absl//absl/log:scoped_mock_log",
-        "@absl//absl/status",
+        "@googletest//:gtest_main",
+        "@abseil-cpp//absl/base:log_severity",
+        "@abseil-cpp//absl/log:scoped_mock_log",
+        "@abseil-cpp//absl/status",
     ],
 )
 
@@ -106,9 +106,9 @@ cc_test(
     deps = [
         ":status_builder",
         ":status_macros",
-        "@com_google_googletest//:gtest_main",
-        "@absl//absl/status",
-        "@absl//absl/status:statusor",
-        "@absl//absl/strings:string_view",
+        "@googletest//:gtest_main",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings:string_view",
     ],
 )
