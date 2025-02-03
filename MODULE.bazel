@@ -6,3 +6,24 @@ module(name = "moriarty")
 
 bazel_dep(name = "abseil-cpp", version = "20240722.1")
 bazel_dep(name = "googletest", version = "1.15.2")
+
+# TODO: There is currently a bug in the main branch of this repo. Using a forked branch below until it's fixed.
+#
+# Hedron's Compile Commands Extractor for Bazel
+# https://github.com/hedronvision/bazel-compile-commands-extractor
+# bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
+# git_override(
+#     module_name = "hedron_compile_commands",
+#     remote = "https://github.com/hedronvision/bazel-compile-commands-extractor.git",
+#     commit = "0e990032f3c5a866e72615cf67e5ce22186dcb97",
+#     # Replace the commit hash (above) with the latest (https://github.com/hedronvision/bazel-compile-commands-extractor/commits/main).
+#     # Even better, set up Renovate and let it do the work for you (see "Suggestion: Updates" in the README).
+# )
+
+# https://github.com/hedronvision/bazel-compile-commands-extractor/pull/219
+bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
+git_override(
+    module_name = "hedron_compile_commands",
+    remote = "https://github.com/mikael-s-persson/bazel-compile-commands-extractor",
+    commit = "f5fbd4cee671d8d908f37c83abaf70fba5928fc7"
+)
