@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +17,7 @@
 
 #include <istream>
 #include <ostream>
+#include <span>
 #include <string>
 #include <utility>
 #include <variant>
@@ -39,6 +41,24 @@ namespace moriarty {
 
 // -----------------------------------------------------------------------------
 //  SimpleIO
+
+SimpleIO& SimpleIO::AddLine(std::span<const std::string> tokens) {
+  lines_per_test_case_.push_back(
+      std::vector<SimpleIOToken>(tokens.begin(), tokens.end()));
+  return *this;
+}
+
+SimpleIO& SimpleIO::AddHeaderLine(std::span<const std::string> tokens) {
+  lines_in_header_.push_back(
+      std::vector<SimpleIOToken>(tokens.begin(), tokens.end()));
+  return *this;
+}
+
+SimpleIO& SimpleIO::AddFooterLine(std::span<const std::string> tokens) {
+  lines_in_footer_.push_back(
+      std::vector<SimpleIOToken>(tokens.begin(), tokens.end()));
+  return *this;
+}
 
 const std::vector<SimpleIO::Line>& SimpleIO::LinesInHeader() const {
   return lines_in_header_;

@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,10 +19,10 @@
 #include <string>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/exporter.h"
 #include "src/importer.h"
 #include "src/internal/value_set.h"
@@ -34,6 +35,7 @@
 namespace moriarty {
 namespace {
 
+using ::moriarty::StatusIs;
 using ::moriarty_testing::ExampleTestCase;
 using ::moriarty_testing::GetExportedCases;
 using ::moriarty_testing::TwoIntegerExporter;
@@ -41,7 +43,6 @@ using ::testing::ElementsAre;
 using ::testing::HasSubstr;
 using ::testing::StrEq;
 using ::testing::VariantWith;
-using ::moriarty::StatusIs;
 
 // -----------------------------------------------------------------------------
 //  SimpleIO
@@ -59,9 +60,23 @@ TEST(SimpleIOTest, AddLineIsRetrievableViaLinesPerTestCase) {
                               VariantWith<std::string>("you?"))));
 }
 
+TEST(SimpleIOTest, AddLineWithSpanIsRetrievableViaLinesPerTestCase) {
+  SimpleIO s;
+  s.AddLine(std::vector<std::string>{"hello", "world!"})
+      .AddLine("how", StringLiteral("are"), "you?");
+
+  EXPECT_THAT(
+      s.LinesPerTestCase(),
+      ElementsAre(ElementsAre(VariantWith<std::string>("hello"),
+                              VariantWith<std::string>("world!")),
+                  ElementsAre(VariantWith<std::string>("how"),
+                              VariantWith<StringLiteral>(StringLiteral("are")),
+                              VariantWith<std::string>("you?"))));
+}
+
 TEST(SimpleIOTest, AddHeaderLineIsRetrievableViaLinesInHeader) {
   SimpleIO s;
-  s.AddHeaderLine("hello", "header!")
+  s.AddHeaderLine(std::vector<std::string>{"hello", "header!"})
       .AddHeaderLine("how", StringLiteral("are"), "you?");
 
   EXPECT_THAT(
@@ -75,7 +90,7 @@ TEST(SimpleIOTest, AddHeaderLineIsRetrievableViaLinesInHeader) {
 
 TEST(SimpleIOTest, AddHeaderLineIsRetrievableViaLinesInFooter) {
   SimpleIO s;
-  s.AddFooterLine("hello", "footer!")
+  s.AddFooterLine(std::vector<std::string>{"hello", "footer!"})
       .AddFooterLine("how", StringLiteral("are"), "you?");
 
   EXPECT_THAT(

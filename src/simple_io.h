@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +18,7 @@
 #ifndef MORIARTY_SRC_SIMPLE_IO_H_
 #define MORIARTY_SRC_SIMPLE_IO_H_
 
+#include <concepts>
 #include <iostream>
 #include <istream>
 #include <ostream>
@@ -81,20 +83,44 @@ class SimpleIO {
   //
   // states that each test case has 3 lines: (1) the variables `N` and `X`,
   // (2) the string "Hello" and the variable `P`, (3) the variable `A`.
+  //
+  // See also `AddLine(std::span<const std::string>)`.
   template <typename... Tokens>
+    requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
   SimpleIO& AddLine(Tokens&&... token);
 
   // AddHeaderLine()
   //
-  // These lines appear before all test cases. Similar format to `AddLine()`.
+  // These lines appear before all test cases. Similar format to
+  // `AddLine()`.
+  //
+  // See also `AddHeaderLine(std::span<const std::string>)`.
   template <typename... Tokens>
+    requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
   SimpleIO& AddHeaderLine(Tokens&&... token);
 
   // AddFooterLine()
   //
   // These lines appear after all test cases. Similar format to `AddLine()`.
+  //
+  // See also `AddFooterLine(std::span<const std::string>)`.
   template <typename... Tokens>
+    requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
   SimpleIO& AddFooterLine(Tokens&&... token);
+
+  // AddLine() for use when you don't know how many tokens you have and there
+  // are no StringLiterals. Prefer to use `AddLine(Tokens... tokens).`
+  SimpleIO& AddLine(std::span<const std::string> tokens);
+
+  // AddHeaderLine() for use when you don't know how many tokens you have and
+  // there are no StringLiterals. Prefer to use `AddHeaderLine(Tokens...
+  // tokens).`
+  SimpleIO& AddHeaderLine(std::span<const std::string> tokens);
+
+  // AddFooterLine() for use when you don't know how many tokens you have and
+  // there are no StringLiterals. Prefer to use `AddFooterLine(Tokens...
+  // tokens).`
+  SimpleIO& AddFooterLine(std::span<const std::string> tokens);
 
   // WithNumberOfTestCasesInHeader()
   //
@@ -214,19 +240,21 @@ std::vector<SimpleIOToken> SimpleIO::GetTokens(Tokens&&... token) {
 }
 
 template <typename... Tokens>
+  requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
 SimpleIO& SimpleIO::AddLine(Tokens&&... token) {
-  lines_per_test_case_.push_back(
-      GetTokens(std::forward<Tokens>(token)...));
+  lines_per_test_case_.push_back(GetTokens(std::forward<Tokens>(token)...));
   return *this;
 }
 
 template <typename... Tokens>
+  requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
 SimpleIO& SimpleIO::AddHeaderLine(Tokens&&... token) {
   lines_in_header_.push_back(GetTokens(std::forward<Tokens>(token)...));
   return *this;
 }
 
 template <typename... Tokens>
+  requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
 SimpleIO& SimpleIO::AddFooterLine(Tokens&&... token) {
   lines_in_footer_.push_back(GetTokens(std::forward<Tokens>(token)...));
   return *this;
