@@ -39,6 +39,7 @@
 #include "src/exporter.h"
 #include "src/generator.h"
 #include "src/importer.h"
+#include "src/internal/abstract_variable.h"
 #include "src/internal/status_utils.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -147,6 +148,14 @@ class Moriarty {
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
   Moriarty& AddVariable(absl::string_view name, T variable);
+
+  // FIXME: Temporary hack to get things working.
+  Moriarty& AddVariable(absl::string_view name,
+                        const moriarty_internal::AbstractVariable& variable) {
+    CHECK_OK(variables_.AddVariable(name, variable))
+        << "Adding the same variable multiple times";
+    return *this;
+  }
 
   // TryAddVariable()
   //
