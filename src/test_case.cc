@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +34,13 @@
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
+
+TestCase& TestCase::ConstrainAnonymousVariable(
+    absl::string_view variable_name,
+    const moriarty_internal::AbstractVariable& constraints) {
+  ABSL_CHECK_OK(variables_.AddOrMergeVariable(variable_name, constraints));
+  return *this;
+}
 
 TestCase& TestCase::WithScenario(Scenario scenario) {
   scenarios_.push_back(std::move(scenario));

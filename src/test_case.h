@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -94,6 +95,16 @@ class TestCase {
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
   TestCase& ConstrainVariable(absl::string_view variable_name, T constraints);
+
+  // ConstrainAnonymousVariable()
+  //
+  // May be deprecated in the future. Prefer to use `ConstrainVariable()`.
+  //
+  // Adds extra constraints to a variable. This version is for when you do not
+  // know the exact type of the variable.
+  TestCase& ConstrainAnonymousVariable(
+      absl::string_view variable_name,
+      const moriarty_internal::AbstractVariable& constraints);
 
   // WithScenario()
   //

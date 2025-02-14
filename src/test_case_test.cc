@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,11 +20,11 @@
 #include <tuple>
 #include <utility>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/types/span.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -38,6 +39,8 @@
 namespace moriarty {
 namespace {
 
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::moriarty::moriarty_internal::RandomEngine;
 using ::moriarty::moriarty_internal::TestCaseManager;
 using ::moriarty::moriarty_internal::ValueSet;
@@ -47,8 +50,6 @@ using ::moriarty_testing::MTestType;
 using ::moriarty_testing::MTestType2;
 using ::moriarty_testing::TestType;
 using ::testing::HasSubstr;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 TEST(TestCaseTest, ConstrainVariableAndGetVariableWorkInGeneralCase) {
   TestCase T;
@@ -114,6 +115,21 @@ TEST(TestCaseTest, AssignAllValuesGivesSomeValueForEachVariable) {
   TestCase T;
   T.ConstrainVariable("A", MTestType());
   T.ConstrainVariable("B", MTestType());
+
+  RandomEngine rng({}, "v0.1");
+  MORIARTY_ASSERT_OK_AND_ASSIGN(
+      ValueSet value_set,
+      TestCaseManager(&T).AssignAllValues(rng, std::nullopt));
+
+  EXPECT_TRUE(value_set.Contains("A"));
+  EXPECT_TRUE(value_set.Contains("B"));
+  EXPECT_FALSE(value_set.Contains("C"));
+}
+
+TEST(TestCaseTest, ConstrainAnonymousVariableAndGetVariableWorkInGeneralCase) {
+  TestCase T;
+  T.ConstrainAnonymousVariable("A", MTestType());
+  T.ConstrainAnonymousVariable("B", MTestType());
 
   RandomEngine rng({}, "v0.1");
   MORIARTY_ASSERT_OK_AND_ASSIGN(
