@@ -28,6 +28,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "src/internal/range.h"
+#include "src/librarian/cow_ptr.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/size_property.h"
 #include "src/property.h"
@@ -165,7 +166,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   absl::Status OfSizeProperty(Property property);
 
  private:
-  Range bounds_;
+  librarian::CowPtr<Range> bounds_;
 
   // What approximate size should the int64_t be when it is generated.
   CommonSize approx_size_ = CommonSize::kAny;

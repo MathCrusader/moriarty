@@ -1,3 +1,4 @@
+# Copyright 2025 Darcy Best
 # Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,13 +15,35 @@
 
 # The core parts of the Moriarty library.
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 package(
     default_visibility = [
-        "//visibility:public"
+        "//visibility:public",
     ],
 )
 
 licenses(["notice"])
+
+cc_library(
+    name = "cow_ptr",
+    hdrs = [
+        "cow_ptr.h",
+    ],
+)
+
+cc_library(
+    name = "io_config",
+    srcs = ["io_config.cc"],
+    hdrs = ["io_config.h"],
+    deps = [
+        "//src:errors",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
+    ],
+)
 
 cc_library(
     name = "mvariable",
@@ -30,14 +53,6 @@ cc_library(
     deps = [
         ":io_config",
         ":subvalues",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/base:nullability",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "//src:constraint_values",
         "//src:errors",
         "//src:property",
@@ -49,6 +64,40 @@ cc_library(
         "//src/internal:universe",
         "//src/internal:variable_name_utils",
         "//src/util/status_macro:status_macros",
+        "@abseil-cpp//absl/algorithm:container",
+        "@abseil-cpp//absl/base:nullability",
+        "@abseil-cpp//absl/container:flat_hash_map",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/log:check",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "subvalues",
+    srcs = ["subvalues.cc"],
+    hdrs = ["subvalues.h"],
+    deps = [
+        "//src/internal:abstract_variable",
+        "@abseil-cpp//absl/base:nullability",
+        "@abseil-cpp//absl/container:flat_hash_map",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/strings:string_view",
+    ],
+)
+
+cc_library(
+    name = "size_property",
+    srcs = ["size_property.cc"],
+    hdrs = ["size_property.h"],
+    deps = [
+        "//src/internal:range",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -59,12 +108,6 @@ cc_library(
     deps = [
         ":io_config",
         ":mvariable",
-        "@googletest//:gtest",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "//src:errors",
         "//src/internal:abstract_variable",
         "//src/internal:analysis_bootstrap",
@@ -75,6 +118,34 @@ cc_library(
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/util/status_macro:status_macros",
+        "@abseil-cpp//absl/algorithm:container",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
+        "@googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "cow_ptr_test",
+    srcs = ["cow_ptr_test.cc"],
+    deps = [
+        ":cow_ptr",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "io_config_test",
+    srcs = ["io_config_test.cc"],
+    deps = [
+        ":io_config",
+        "//src:errors",
+        "//src/testing:status_test_util",
+        "//src/util/test_status_macro:status_testutil",
+        "@abseil-cpp//absl/status",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -88,12 +159,6 @@ cc_test(
         ":io_config",
         ":mvariable",
         ":test_utils",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/types:span",
         "//src:constraint_values",
         "//src:errors",
         "//src:property",
@@ -108,57 +173,12 @@ cc_test(
         "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
-    ],
-)
-
-cc_library(
-    name = "io_config",
-    srcs = ["io_config.cc"],
-    hdrs = ["io_config.h"],
-    deps = [
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "//src:errors",
-    ],
-)
-
-cc_library(
-    name = "subvalues",
-    srcs = ["subvalues.cc"],
-    hdrs = ["subvalues.h"],
-    deps = [
-        "@abseil-cpp//absl/base:nullability",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:string_view",
-        "//src/internal:abstract_variable",
-    ],
-)
-
-cc_test(
-    name = "io_config_test",
-    srcs = ["io_config_test.cc"],
-    deps = [
-        ":io_config",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/status",
-        "//src:errors",
-        "//src/testing:status_test_util",
-        "//src/util/test_status_macro:status_testutil",
-    ],
-)
-
-cc_library(
-    name = "size_property",
-    srcs = ["size_property.cc"],
-    hdrs = ["size_property.h"],
-    deps = [
         "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/strings:string_view",
-        "//src/internal:range",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/types:span",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -167,12 +187,12 @@ cc_test(
     srcs = ["size_property_test.cc"],
     deps = [
         ":size_property",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "//src/internal:range",
         "//src/util/status_macro:status_macros",
         "//src/util/test_status_macro:status_testutil",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -181,11 +201,11 @@ cc_test(
     srcs = ["subvalues_test.cc"],
     deps = [
         ":subvalues",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/status",
         "//src/internal:abstract_variable",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
         "//src/variables:mstring",
+        "@abseil-cpp//absl/status",
+        "@googletest//:gtest_main",
     ],
 )

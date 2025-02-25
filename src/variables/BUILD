@@ -1,3 +1,4 @@
+# Copyright 2025 Darcy Best
 # Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,9 +15,12 @@
 
 # The core variables that are a part of the Moriarty library.
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 package(
     default_visibility = [
-        "//visibility:public"
+        "//visibility:public",
     ],
 )
 
@@ -27,12 +31,6 @@ cc_library(
     hdrs = ["marray.h"],
     deps = [
         ":minteger",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "//src:errors",
         "//src:property",
         "//src/librarian:io_config",
@@ -42,6 +40,12 @@ cc_library(
         "//src/variables/constraints:container_constraints",
         "//src/variables/constraints:io_constraints",
         "//src/variables/constraints:size_constraints",
+        "@abseil-cpp//absl/algorithm:container",
+        "@abseil-cpp//absl/container:flat_hash_set",
+        "@abseil-cpp//absl/log:check",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -54,17 +58,11 @@ cc_library(
         "minteger.h",
     ],
     deps = [
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/types:span",
         "//src:errors",
         "//src:property",
         "//src/internal:random_engine",
         "//src/internal:range",
+        "//src/librarian:cow_ptr",
         "//src/librarian:io_config",
         "//src/librarian:mvariable",
         "//src/librarian:size_property",
@@ -72,6 +70,13 @@ cc_library(
         "//src/variables/constraints:base_constraints",
         "//src/variables/constraints:numeric_constraints",
         "//src/variables/constraints:size_constraints",
+        "@abseil-cpp//absl/algorithm:container",
+        "@abseil-cpp//absl/container:flat_hash_map",
+        "@abseil-cpp//absl/container:flat_hash_set",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/types:span",
     ],
 )
 
@@ -85,12 +90,6 @@ cc_library(
     ],
     deps = [
         ":minteger",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "//src:errors",
         "//src:property",
         "//src/internal:random_engine",
@@ -103,6 +102,12 @@ cc_library(
         "//src/variables/constraints:numeric_constraints",
         "//src/variables/constraints:size_constraints",
         "//src/variables/constraints:string_constraints",
+        "@abseil-cpp//absl/algorithm:container",
+        "@abseil-cpp//absl/container:flat_hash_set",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -110,16 +115,16 @@ cc_library(
     name = "mtuple",
     hdrs = ["mtuple.h"],
     deps = [
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "//src:errors",
         "//src:property",
         "//src/librarian:io_config",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",
+        "@abseil-cpp//absl/algorithm:container",
+        "@abseil-cpp//absl/log:check",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -131,9 +136,6 @@ cc_test(
         ":minteger",
         ":mstring",
         ":mtuple",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/status",
         "//src/librarian:io_config",
         "//src/librarian:mvariable",
         "//src/librarian:test_utils",
@@ -142,6 +144,9 @@ cc_test(
         "//src/variables/constraints:container_constraints",
         "//src/variables/constraints:io_constraints",
         "//src/variables/constraints:numeric_constraints",
+        "@abseil-cpp//absl/container:flat_hash_set",
+        "@abseil-cpp//absl/status",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -153,14 +158,14 @@ cc_test(
     ],
     deps = [
         ":minteger",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/status",
         "//src/librarian:size_property",
         "//src/librarian:test_utils",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables/constraints:base_constraints",
         "//src/variables/constraints:numeric_constraints",
         "//src/variables/constraints:size_constraints",
+        "@abseil-cpp//absl/status",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -174,16 +179,16 @@ cc_test(
     deps = [
         ":minteger",
         ":mstring",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/strings",
         "//src/librarian:mvariable",
         "//src/librarian:test_utils",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables/constraints:container_constraints",
         "//src/variables/constraints:numeric_constraints",
         "//src/variables/constraints:string_constraints",
+        "@abseil-cpp//absl/container:flat_hash_set",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/strings",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -194,11 +199,11 @@ cc_test(
         ":minteger",
         ":mstring",
         ":mtuple",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/status",
         "//src/librarian:io_config",
         "//src/librarian:mvariable",
         "//src/librarian:test_utils",
         "//src/util/test_status_macro:status_testutil",
+        "@abseil-cpp//absl/status",
+        "@googletest//:gtest_main",
     ],
 )

@@ -6,6 +6,7 @@ module(name = "moriarty")
 
 bazel_dep(name = "abseil-cpp", version = "20240722.1")
 bazel_dep(name = "googletest", version = "1.15.2")
+bazel_dep(name = "rules_cc", version = "0.1.1")
 
 # TODO: There is currently a bug in the main branch of this repo. Using a forked branch below until it's fixed.
 #
@@ -25,5 +26,5 @@ bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
 git_override(
     module_name = "hedron_compile_commands",
     remote = "https://github.com/mikael-s-persson/bazel-compile-commands-extractor",
-    commit = "f5fbd4cee671d8d908f37c83abaf70fba5928fc7"
+    commit = "f5fbd4cee671d8d908f37c83abaf70fba5928fc7",
 )

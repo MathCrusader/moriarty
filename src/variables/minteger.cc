@@ -48,7 +48,8 @@ namespace moriarty {
 using ::moriarty::librarian::IOConfig;
 
 MInteger& MInteger::AddConstraint(const Exactly<int64_t>& constraint) {
-  bounds_.Intersect(Range(constraint.GetValue(), constraint.GetValue()));
+  bounds_.Mutable().Intersect(
+      Range(constraint.GetValue(), constraint.GetValue()));
   return *this;
 }
 
@@ -65,22 +66,22 @@ MInteger& MInteger::AddConstraint(const Exactly<std::string>& constraint) {
     return *this;
   }
 
-  bounds_.Intersect(r);
+  bounds_.Mutable().Intersect(r);
   return *this;
 }
 
 MInteger& MInteger::AddConstraint(const class Between& constraint) {
-  bounds_.Intersect(constraint.GetRange());
+  bounds_.Mutable().Intersect(constraint.GetRange());
   return *this;
 }
 
 MInteger& MInteger::AddConstraint(const class AtMost& constraint) {
-  bounds_.Intersect(constraint.GetRange());
+  bounds_.Mutable().Intersect(constraint.GetRange());
   return *this;
 }
 
 MInteger& MInteger::AddConstraint(const class AtLeast& constraint) {
-  bounds_.Intersect(constraint.GetRange());
+  bounds_.Mutable().Intersect(constraint.GetRange());
   return *this;
 }
 
@@ -151,7 +152,7 @@ std::optional<int64_t> MInteger::GetUniqueValueImpl() const {
 absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues() {
   MORIARTY_ASSIGN_OR_RETURN(
       absl::flat_hash_set<std::string> needed_dependent_variables,
-      bounds_.NeededVariables(), _ << "Error getting the needed variables");
+      bounds_->NeededVariables(), _ << "Error getting the needed variables");
 
   absl::flat_hash_map<std::string, int64_t> dependent_variables;
 
@@ -162,7 +163,7 @@ absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues() {
   }
 
   MORIARTY_ASSIGN_OR_RETURN(std::optional<Range::ExtremeValues> extremes,
-                            bounds_.Extremes(dependent_variables));
+                            bounds_->Extremes(dependent_variables));
   if (!extremes) return absl::InvalidArgumentError("Valid range is empty");
   return *extremes;
 }
@@ -170,7 +171,7 @@ absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues() {
 absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues() const {
   MORIARTY_ASSIGN_OR_RETURN(
       absl::flat_hash_set<std::string> needed_dependent_variables,
-      bounds_.NeededVariables(), _ << "Error getting the needed variables");
+      bounds_->NeededVariables(), _ << "Error getting the needed variables");
 
   absl::flat_hash_map<std::string, int64_t> dependent_variables;
 
@@ -181,7 +182,7 @@ absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues() const {
   }
 
   MORIARTY_ASSIGN_OR_RETURN(std::optional<Range::ExtremeValues> extremes,
-                            bounds_.Extremes(dependent_variables));
+                            bounds_->Extremes(dependent_variables));
   if (!extremes) return absl::InvalidArgumentError("Valid range is empty");
   return *extremes;
 }
@@ -255,7 +256,7 @@ absl::StatusOr<int64_t> MInteger::GenerateInRange(
 }
 
 absl::Status MInteger::MergeFromImpl(const MInteger& other) {
-  bounds_.Intersect(other.bounds_);
+  bounds_.Mutable().Intersect(*other.bounds_);
 
   std::optional<CommonSize> merged_size =
       librarian::MergeSizes(approx_size_, other.approx_size_);
@@ -354,7 +355,7 @@ absl::StatusOr<std::vector<MInteger>> MInteger::GetDifficultInstancesImpl()
 
 std::vector<std::string> MInteger::GetDependenciesImpl() const {
   absl::StatusOr<absl::flat_hash_set<std::string>> needed =
-      bounds_.NeededVariables();
+      bounds_->NeededVariables();
   if (!needed.ok()) return {};
   return std::vector<std::string>(needed->begin(), needed->end());
 }
@@ -363,7 +364,7 @@ std::string MInteger::ToStringImpl() const {
   std::string result;
   if (approx_size_ != CommonSize::kAny)
     absl::StrAppend(&result, "size: ", librarian::ToString(approx_size_), "; ");
-  absl::StrAppend(&result, "bounds: ", bounds_.ToString(), "; ");
+  absl::StrAppend(&result, "bounds: ", bounds_->ToString(), "; ");
   return result;
 }
 
