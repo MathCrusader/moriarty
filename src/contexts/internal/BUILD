@@ -34,11 +34,28 @@ cc_library(
 )
 
 cc_library(
+    name = "basic_istream_context",
+    srcs = ["basic_istream_context.cc"],
+    hdrs = ["basic_istream_context.h"],
+    deps = [
+        "//src:io_config",
+    ],
+)
+
+cc_library(
     name = "basic_ostream_context",
     srcs = ["basic_ostream_context.cc"],
     hdrs = ["basic_ostream_context.h"],
     deps = [
-        "//src/librarian:io_config",
+        "//src:io_config",
+    ],
+)
+
+cc_library(
+    name = "mutable_values_context",
+    hdrs = ["mutable_values_context.h"],
+    deps = [
+        "//src/internal:value_set",
     ],
 )
 
@@ -47,6 +64,16 @@ cc_library(
     # srcs = ["variable_name_context.cc"],
     hdrs = ["variable_name_context.h"],
     deps = [
+    ],
+)
+
+cc_test(
+    name = "basic_istream_context_test",
+    srcs = ["basic_istream_context_test.cc"],
+    deps = [
+        ":basic_istream_context",
+        "//src:io_config",
+        "@googletest//:gtest_main",
     ],
 )
 

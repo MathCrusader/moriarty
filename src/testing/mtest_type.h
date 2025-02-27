@@ -28,6 +28,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "src/contexts/librarian/printer_context.h"
+#include "src/contexts/librarian/reader_context.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/subvalues.h"
@@ -88,7 +89,7 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
 
   std::string Typename() const override { return "MTestType"; };
 
-  absl::StatusOr<TestType> ReadImpl() override;
+  TestType ReadImpl(moriarty::librarian::ReaderContext ctx) const override;
 
   void PrintImpl(moriarty::librarian::PrinterContext ctx,
                  const TestType& value) const override;

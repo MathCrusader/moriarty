@@ -35,8 +35,8 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/printer_context.h"
+#include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
@@ -117,7 +117,8 @@ class MTuple : public librarian::MVariable<
   template <std::size_t I>
   absl::Status GenerateSingleElement(tuple_value_type& result);
   template <std::size_t I>
-  absl::Status TryReadAndSet(tuple_value_type& read_values);
+  void TryReadAndSet(librarian::ReaderContext ctx,
+                     tuple_value_type& read_values) const;
   template <std::size_t I>
   void PrintElementWithLeadingSeparator(librarian::PrinterContext ctx,
                                         const tuple_value_type& value) const;
@@ -128,7 +129,7 @@ class MTuple : public librarian::MVariable<
   absl::Status IsSatisfiedWithImpl(
       const tuple_value_type& value) const override;
   absl::Status MergeFromImpl(const MTuple& other) override;
-  absl::StatusOr<tuple_value_type> ReadImpl() override;
+  tuple_value_type ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const tuple_value_type& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;
@@ -148,7 +149,8 @@ class MTuple : public librarian::MVariable<
   template <std::size_t... I>
   absl::Status MergeFromImpl(const MTuple& other, std::index_sequence<I...>);
   template <std::size_t... I>
-  absl::StatusOr<tuple_value_type> ReadImpl(std::index_sequence<I...>);
+  tuple_value_type ReadImpl(librarian::ReaderContext ctx,
+                            std::index_sequence<I...>) const;
   template <std::size_t... I>
   void PrintImpl(librarian::PrinterContext ctx, const tuple_value_type& value,
                  std::index_sequence<I...>) const;
@@ -331,36 +333,26 @@ absl::Status MTuple<MElementTypes...>::IsSatisfiedWithImpl(
 }
 
 template <typename... MElementTypes>
-absl::StatusOr<typename MTuple<MElementTypes...>::tuple_value_type>
-MTuple<MElementTypes...>::ReadImpl() {
-  return ReadImpl(std::index_sequence_for<MElementTypes...>());
+MTuple<MElementTypes...>::tuple_value_type MTuple<MElementTypes...>::ReadImpl(
+    librarian::ReaderContext ctx) const {
+  return ReadImpl(ctx, std::index_sequence_for<MElementTypes...>());
 }
 
 template <typename... MElementTypes>
 template <std::size_t... I>
-absl::StatusOr<typename MTuple<MElementTypes...>::tuple_value_type>
-MTuple<MElementTypes...>::ReadImpl(std::index_sequence<I...>) {
-  // TODO(b/208295758): This should be shortcircuited.
-  absl::Status status;
+MTuple<MElementTypes...>::tuple_value_type MTuple<MElementTypes...>::ReadImpl(
+    librarian::ReaderContext ctx, std::index_sequence<I...>) const {
   tuple_value_type result;
-  (status.Update(TryReadAndSet<I>(result)), ...);
-  if (!status.ok()) return status;
+  (TryReadAndSet<I>(ctx, result), ...);
   return result;
 }
 
 template <typename... MElementTypes>
 template <std::size_t I>
-absl::Status MTuple<MElementTypes...>::TryReadAndSet(
-    tuple_value_type& read_values) {
-  if (I > 0) {
-    MORIARTY_ASSIGN_OR_RETURN(librarian::IOConfig * io_config,
-                              this->GetIOConfig());
-    MORIARTY_RETURN_IF_ERROR(io_config->ReadWhitespace(GetSeparator()));
-  }
-  MORIARTY_ASSIGN_OR_RETURN(
-      std::get<I>(read_values),
-      this->Read(absl::StrCat("element<", I, ">"), std::get<I>(elements_)));
-  return absl::OkStatus();
+void MTuple<MElementTypes...>::TryReadAndSet(
+    librarian::ReaderContext ctx, tuple_value_type& read_values) const {
+  if (I > 0) ctx.ReadWhitespace(GetSeparator());
+  std::get<I>(read_values) = std::get<I>(elements_).Read(ctx);
 }
 
 template <typename... MElementTypes>

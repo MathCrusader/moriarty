@@ -43,6 +43,7 @@
 #include "absl/strings/substitute.h"
 #include "src/constraint_values.h"
 #include "src/contexts/librarian/printer_context.h"
+#include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
@@ -208,10 +209,18 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // Print()
   //
-  // Print `value` into `ctx` using any configuration provided to this variable
+  // Prints `value` into `ctx` using any formatting provided to this variable
   // (as I/O constraints).
   void Print(PrinterContext ctx, const ValueType& value) const {
     PrintImpl(ctx, value);
+  }
+
+  // Read()
+  //
+  // Reads a value from `ctx` using any formatting provided to this variable (as
+  // I/O constraints).
+  [[nodiscard]] ValueType Read(ReaderContext ctx) const {
+    return ReadImpl(ctx);
   }
 
  protected:
@@ -263,10 +272,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Users should not call this directly. Call `Read()` instead.
   //
-  // Reads a value from the input stream provided by the IOConfig.
-  //
-  // * Return a non-OK status if parsing fails.
-  virtual absl::StatusOr<ValueType> ReadImpl();
+  // Reads a value from `ctx` using any formatting provided to this variable.
+  virtual ValueType ReadImpl(ReaderContext ctx) const;
 
   // PrintImpl() [virtual/optional]
   //
@@ -674,19 +681,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   absl::Status MergeFrom(
       const moriarty_internal::AbstractVariable& other) override;
 
-  // TryRead() [Internal Extended API]
-  //
-  // Reads a value using any configuration provided by your
-  // `VariableType` (whitespace separators, etc) using the underlying istream.
-  //
-  // If the read is invalid, the underlying istream is now in an unspecified
-  // state.
-  //
-  // The underlying istream is set by a Moriarty component (Generator,
-  // Exporter, Moriarty, etc) via its Universe.
-  // TODO(darcybest): Remove Try.
-  absl::StatusOr<ValueType> TryRead();
-
   // GetSubvalue() [Internal Extended API]
   //
   // `my_value` will be of the ValueType of this variable.
@@ -775,7 +769,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // `SetUniverse`.
   //
   // If reading is not successful, `is` is left in an undefined state.
-  absl::Status ReadValue() override;
+  absl::Status ReadValue(ReaderContext ctx) override;
 
   // PrintValue()
   //
@@ -834,7 +828,6 @@ class MVariableManager {
   absl::StatusOr<ValueType> Generate();
   absl::Status IsSatisfiedWith(const ValueType& value) const;
   absl::Status MergeFrom(const AbstractVariable& other);
-  absl::StatusOr<ValueType> TryRead();
   absl::StatusOr<std::any> GetSubvalue(const std::any& my_value,
                                        absl::string_view subvalue_name);
   RandomEngine& GetRandomEngine();
@@ -1013,8 +1006,8 @@ absl::StatusOr<std::vector<V>> MVariable<V, G>::GetDifficultInstances() const {
 //  Protected functions' implementations
 
 template <typename V, typename G>
-absl::StatusOr<G> MVariable<V, G>::ReadImpl() {
-  return absl::UnimplementedError(
+G MVariable<V, G>::ReadImpl(ReaderContext ctx) const {
+  throw std::runtime_error(
       absl::StrCat("Read() not implemented for ", Typename()));
 }
 
@@ -1095,27 +1088,6 @@ absl::Status MVariable<V, G>::SatisfiesConstraints(
   moriarty_internal::MVariableManager(&m).SetUniverse(
       universe_, absl::Substitute("SatisfiesConstraints::$0", m.Typename()));
   return moriarty_internal::MVariableManager(&m).IsSatisfiedWith(value);
-}
-
-template <typename V, typename G>
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<typename T::value_type> MVariable<V, G>::Read(
-    absl::string_view debug_name, T m) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "Read",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetIOConfig()) {
-    return MisconfiguredError(Typename(), "Read",
-                              InternalConfigurationType::kInputStream);
-  }
-
-  moriarty_internal::MVariableManager(&m).SetUniverse(
-      universe_,
-      /* my_name_in_universe = */ moriarty_internal::ConstructVariableName(
-          variable_name_inside_universe_, debug_name));
-  return moriarty_internal::MVariableManager(&m).TryRead();
 }
 
 template <typename V, typename G>
@@ -1491,12 +1463,6 @@ absl::Status MVariable<V, G>::MergeFrom(
 }
 
 template <typename V, typename G>
-absl::StatusOr<G> MVariable<V, G>::TryRead() {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-  return ReadImpl();
-}
-
-template <typename V, typename G>
 absl::StatusOr<std::any> MVariable<V, G>::GetSubvalue(
     const std::any& my_value, absl::string_view subvalue_name) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
@@ -1648,18 +1614,10 @@ absl::Status MVariable<V, G>::ValueSatisfiesConstraints() const {
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::ReadValue() {
+absl::Status MVariable<V, G>::ReadValue(ReaderContext ctx) {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "ReadValue",
-                              InternalConfigurationType::kUniverse);
-  }
-
-  MORIARTY_ASSIGN_OR_RETURN(
-      G value, TryRead(),
-      _ << "failed to read " << variable_name_inside_universe_);
-  return universe_->SetValue<V>(variable_name_inside_universe_,
-                                std::move(value));
+  ctx.SetValue<V>(ctx.GetVariableName(), Read(ctx));
+  return absl::OkStatus();
 }
 
 template <typename V, typename G>
@@ -1718,11 +1676,6 @@ template <typename VariableType, typename ValueType>
 absl::Status MVariableManager<VariableType, ValueType>::MergeFrom(
     const moriarty_internal::AbstractVariable& other) {
   return managed_mvariable_.MergeFrom(other);
-}
-
-template <typename VariableType, typename ValueType>
-absl::StatusOr<ValueType> MVariableManager<VariableType, ValueType>::TryRead() {
-  return managed_mvariable_.TryRead();
 }
 
 template <typename VariableType, typename ValueType>

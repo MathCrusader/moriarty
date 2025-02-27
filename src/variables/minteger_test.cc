@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,9 +21,9 @@
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/status/status.h"
 #include "src/librarian/size_property.h"
 #include "src/librarian/test_utils.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -33,6 +34,8 @@
 namespace moriarty {
 namespace {
 
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GenerateDifficultInstancesValues;
@@ -52,8 +55,6 @@ using ::testing::IsSupersetOf;
 using ::testing::Le;
 using ::testing::Optional;
 using ::testing::UnorderedElementsAre;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 TEST(MIntegerTest, TypenameIsCorrect) {
   EXPECT_EQ(MInteger().Typename(), "MInteger");
@@ -84,22 +85,17 @@ TEST(MIntegerTest, ReadWithTokensAfterwardsIsFine) {
 
 TEST(MIntegerTest, InvalidReadShouldFail) {
   // EOF
-  EXPECT_THAT(Read(MInteger(), ""),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THROW({ Read(MInteger(), "").IgnoreError(); }, std::runtime_error);
   // EOF with whitespace
-  EXPECT_THAT(Read(MInteger(), " "),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THROW({ Read(MInteger(), " ").IgnoreError(); }, std::runtime_error);
 
   // Double negative
-  EXPECT_THAT(Read(MInteger(), "--123"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THROW(
+      { Read(MInteger(), "--123").IgnoreError(); }, std::runtime_error);
   // Invalid character start/middle/end
-  EXPECT_THAT(Read(MInteger(), "c123"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(Read(MInteger(), "12c3"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(Read(MInteger(), "123c"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THROW({ Read(MInteger(), "c123").IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ Read(MInteger(), "12c3").IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ Read(MInteger(), "123c").IgnoreError(); }, std::runtime_error);
 }
 
 TEST(MIntegerTest, GenerateShouldSuccessfullyComplete) {
@@ -365,9 +361,8 @@ TEST(MIntegerTest, GetDifficultInstancesValuesAreNotRepeated) {
 
 TEST(MIntegerTest,
      GetDifficultInstancesForFixedNonDifficultValueFailsGeneration) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<MInteger> instances,
-      MInteger().Is(1234).GetDifficultInstances());
+  MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<MInteger> instances,
+                                MInteger().Is(1234).GetDifficultInstances());
 
   for (MInteger instance : instances) {
     EXPECT_THAT(Generate(instance),

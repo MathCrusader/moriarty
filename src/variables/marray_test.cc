@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,11 +19,10 @@
 #include <utility>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
-#include "src/librarian/io_config.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/test_utils.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -37,6 +37,8 @@
 namespace moriarty {
 namespace {
 
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::moriarty_testing::AllGenerateSameValues;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
@@ -59,8 +61,6 @@ using ::testing::Le;
 using ::testing::Not;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 TEST(MArrayTest, TypenameIsCorrect) {
   EXPECT_EQ(MArray(MInteger()).Typename(), "MArray<MInteger>");
@@ -87,8 +87,9 @@ TEST(MArrayTest, TypicalReadCaseWorks) {
 }
 
 TEST(MArrayTest, ReadingTheWrongLengthOfMArrayShouldFail) {
-  EXPECT_THAT(Read(MArray(MInteger()).OfLength(6), "1 2 3 4"),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THROW(
+      { Read(MArray(MInteger()).OfLength(6), "1 2 3 4").IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MArrayTest, SimpleGenerateCaseWorks) {
@@ -407,10 +408,13 @@ TEST(MArrayTest, WhitespaceSeparatorShouldAffectRead) {
       IsOkAndHolds(ElementsAre(3, 2, 1)));
 
   // Read wrong whitespace between characters.
-  EXPECT_THAT(
-      Read(MArray(MInteger()).WithSeparator(Whitespace::kNewline).OfLength(6),
-           "1\n2\n3 4\n5\n6"),
-      StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THROW(
+      {
+        Read(MArray(MInteger()).WithSeparator(Whitespace::kNewline).OfLength(6),
+             "1\n2\n3 4\n5\n6")
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MArrayTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
@@ -423,6 +427,8 @@ TEST(MArrayTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
 }
 
 TEST(MArrayTest, WhitespaceSeparatorShouldFailWithTwoSeparators) {
+  // TODO: This will eventually throw an exception (once DeclareSelfAsInvalid is
+  // gone).
   EXPECT_THAT(Read(MArray(MInteger())
                        .WithSeparator(Whitespace::kNewline)
                        .WithSeparator(Whitespace::kTab)
@@ -458,18 +464,20 @@ TEST(MArrayTest, ReadShouldBeAbleToDetermineLengthFromAnotherVariable) {
 
 TEST(MArrayTest,
      ReadShouldFailIfLengthDependsOnAnUnknownVariableOrNonUniqueInteger) {
-  EXPECT_THAT(Read(MArray(MInteger()).OfLength("N"), "1 2 3"),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("length of array")));
+  EXPECT_THROW(
+      { Read(MArray(MInteger()).OfLength("N"), "1 2 3").IgnoreError(); },
+      std::runtime_error);
 
-  EXPECT_THAT(Read(MArray(MInteger()).OfLength(2, 3), "1 2 3"),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("length of array")));
+  EXPECT_THROW(
+      { Read(MArray(MInteger()).OfLength(2, 3), "1 2 3").IgnoreError(); },
+      std::runtime_error);
 
-  EXPECT_THAT(
-      Read(MArray(MInteger()).OfLength(MInteger().Between(3, 4)), "1 2 3"),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               HasSubstr("length of array")));
+  EXPECT_THROW(
+      {
+        Read(MArray(MInteger()).OfLength(MInteger().Between(3, 4)), "1 2 3")
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MArrayTest, LengthPropertyIsProcessedProperly) {
@@ -542,8 +550,9 @@ TEST(MArrayNonBuilderTest, TypicalReadCaseWorks) {
 }
 
 TEST(MArrayNonBuilderTest, ReadingTheWrongLengthOfMArrayShouldFail) {
-  EXPECT_THAT(Read(MArray<MInteger>(Length(6)), "1 2 3 4"),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THROW(
+      { Read(MArray<MInteger>(Length(6)), "1 2 3 4").IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MArrayNonBuilderTest, SimpleGenerateCaseWorks) {
@@ -829,10 +838,13 @@ TEST(MArrayNonBuilderTest, WhitespaceSeparatorShouldAffectRead) {
               IsOkAndHolds(ElementsAre(3, 2, 1)));
 
   // Read wrong whitespace between characters.
-  EXPECT_THAT(
-      Read(MArray<MInteger>().WithSeparator(Whitespace::kNewline).OfLength(6),
-           "1\n2\n3 4\n5\n6"),
-      StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THROW(
+      {
+        Read(MArray<MInteger>(IOSeparator(Whitespace::kNewline), Length(6)),
+             "1\n2\n3 4\n5\n6")
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MArrayNonBuilderTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
@@ -844,6 +856,8 @@ TEST(MArrayNonBuilderTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
 }
 
 TEST(MArrayNonBuilderTest, WhitespaceSeparatorShouldFailWithTwoSeparators) {
+  // TODO: This will eventually throw an exception (once DeclareSelfAsInvalid is
+  // gone).
   EXPECT_THAT(Read(MArray<MInteger>(IOSeparator(Whitespace::kNewline),
                                     IOSeparator(Whitespace::kTab), Length(6)),
                    "1\n2\n3\n4\n5\n6"),
@@ -877,17 +891,17 @@ TEST(MArrayNonBuilderTest,
 
 TEST(MArrayNonBuilderTest,
      ReadShouldFailIfLengthDependsOnAnUnknownVariableOrNonUniqueInteger) {
-  EXPECT_THAT(Read(MArray<MInteger>(Length("N")), "1 2 3"),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("length of array")));
+  EXPECT_THROW(
+      { Read(MArray<MInteger>(Length("N")), "1 2 3").IgnoreError(); },
+      std::runtime_error);
 
-  EXPECT_THAT(Read(MArray<MInteger>(Length(Between(2, 3))), "1 2 3"),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("length of array")));
+  EXPECT_THROW(
+      { Read(MArray<MInteger>(Length(Between(2, 3))), "1 2 3").IgnoreError(); },
+      std::runtime_error);
 
-  EXPECT_THAT(Read(MArray<MInteger>(Length(Between(3, 4))), "1 2 3"),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("length of array")));
+  EXPECT_THROW(
+      { Read(MArray<MInteger>(Length(Between(3, 4))), "1 2 3").IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MArrayNonBuilderTest, LengthPropertyIsProcessedProperly) {

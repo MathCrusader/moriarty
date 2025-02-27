@@ -39,6 +39,7 @@ cc_library(
     hdrs = ["io_config.h"],
     deps = [
         "//src:errors",
+        "//src:io_config",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
@@ -51,12 +52,12 @@ cc_library(
         "mvariable.h",
     ],
     deps = [
-        ":io_config",
         ":subvalues",
         "//src:constraint_values",
         "//src:errors",
         "//src:property",
         "//src/contexts/librarian:printer_context",
+        "//src/contexts/librarian:reader_context",
         "//src/internal:abstract_variable",
         "//src/internal:generation_config",
         "//src/internal:random_config",
@@ -110,6 +111,8 @@ cc_library(
         ":io_config",
         ":mvariable",
         "//src:errors",
+        "//src/contexts/librarian:printer_context",
+        "//src/contexts/librarian:reader_context",
         "//src/internal:abstract_variable",
         "//src/internal:analysis_bootstrap",
         "//src/internal:generation_bootstrap",
@@ -138,26 +141,12 @@ cc_test(
 )
 
 cc_test(
-    name = "io_config_test",
-    srcs = ["io_config_test.cc"],
-    deps = [
-        ":io_config",
-        "//src:errors",
-        "//src/testing:status_test_util",
-        "//src/util/test_status_macro:status_testutil",
-        "@abseil-cpp//absl/status",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
     name = "mvariable_test",
     size = "small",
     srcs = [
         "mvariable_test.cc",
     ],
     deps = [
-        ":io_config",
         ":mvariable",
         ":test_utils",
         "//src:constraint_values",

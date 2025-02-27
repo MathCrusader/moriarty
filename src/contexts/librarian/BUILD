@@ -31,3 +31,15 @@ cc_library(
         "//src/contexts/internal:variable_name_context",
     ],
 )
+
+cc_library(
+    name = "reader_context",
+    hdrs = ["reader_context.h"],
+    deps = [
+        "//src:io_config",
+        "//src/contexts/internal:analysis_context",
+        "//src/contexts/internal:basic_istream_context",
+        "//src/contexts/internal:mutable_values_context",
+        "//src/contexts/internal:variable_name_context",
+    ],
+)

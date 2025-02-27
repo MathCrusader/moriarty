@@ -21,7 +21,7 @@
 #include <ostream>
 #include <string_view>
 
-#include "src/librarian/io_config.h"
+#include "src/io_config.h"
 
 namespace moriarty {
 namespace moriarty_internal {

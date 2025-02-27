@@ -31,10 +31,10 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/printer_context.h"
+#include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/simple_pattern.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
@@ -46,8 +46,6 @@
 #include "src/variables/minteger.h"
 
 namespace moriarty {
-
-using moriarty::librarian::IOConfig;
 
 MString& MString::AddConstraint(const Exactly<std::string>& constraint) {
   return Is(constraint.GetValue());
@@ -301,9 +299,8 @@ std::vector<std::string> MString::GetDependenciesImpl() const {
   return length_ ? GetDependencies(*length_) : std::vector<std::string>();
 }
 
-absl::StatusOr<std::string> MString::ReadImpl() {
-  MORIARTY_ASSIGN_OR_RETURN(IOConfig * io_config, GetIOConfig());
-  return io_config->ReadToken();
+std::string MString::ReadImpl(librarian::ReaderContext ctx) const {
+  return ctx.ReadToken();
 }
 
 void MString::PrintImpl(librarian::PrinterContext ctx,

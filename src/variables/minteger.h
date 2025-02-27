@@ -29,6 +29,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "src/contexts/librarian/printer_context.h"
+#include "src/contexts/librarian/reader_context.h"
 #include "src/internal/range.h"
 #include "src/librarian/cow_ptr.h"
 #include "src/librarian/mvariable.h"
@@ -187,7 +188,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   absl::StatusOr<int64_t> GenerateImpl() override;
   absl::Status IsSatisfiedWithImpl(const int64_t& value) const override;
   absl::Status MergeFromImpl(const MInteger& other) override;
-  absl::StatusOr<int64_t> ReadImpl() override;
+  int64_t ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const int64_t& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;

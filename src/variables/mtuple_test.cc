@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +18,9 @@
 #include <cstdint>
 #include <tuple>
 
+#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/status/status.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/test_utils.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -30,6 +30,8 @@
 namespace moriarty {
 namespace {
 
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GenerateSameValues;
@@ -42,8 +44,6 @@ using ::testing::FieldsAre;
 using ::testing::Ge;
 using ::testing::Le;
 using ::testing::SizeIs;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 TEST(MTupleTest, TypenameIsCorrect) {
   EXPECT_EQ(MTuple(MInteger()).Typename(), "MTuple<MInteger>");
@@ -94,25 +94,44 @@ TEST(MTupleTest, ReadWithProperSeparatorShouldSucceed) {
 }
 
 TEST(MTupleTest, ReadWithIncorrectSeparatorShouldFail) {
-  EXPECT_THAT(Read(MTuple(MInteger(), MInteger(), MInteger()), "1\t22\t333"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(Read(MTuple(MInteger(), MInteger(), MInteger())
-                       .WithSeparator(Whitespace::kNewline),
-                   "1 22 333"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(Read(MTuple(MInteger(), MString(), MInteger())
-                       .WithSeparator(Whitespace::kTab),
-                   "1\ttwotwo 333"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THROW(
+      {
+        Read(MTuple(MInteger(), MInteger(), MInteger()), "1\t22\t333")
+            .IgnoreError();
+      },
+      std::runtime_error);
+  EXPECT_THROW(
+      {
+        Read(MTuple(MInteger(), MInteger(), MInteger())
+                 .WithSeparator(Whitespace::kNewline),
+             "1 22 333")
+            .IgnoreError();
+      },
+      std::runtime_error);
+  EXPECT_THROW(
+      {
+        Read(MTuple(MInteger(), MString(), MInteger())
+                 .WithSeparator(Whitespace::kTab),
+             "1\ttwotwo 333")
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MTupleTest, ReadingTheWrongTypeShouldFail) {
   // MString where MInteger should be
-  EXPECT_THAT(Read(MTuple(MInteger(), MInteger(), MInteger()), "1 two 3"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THROW(
+      {
+        Read(MTuple(MInteger(), MInteger(), MInteger()), "1 two 3")
+            .IgnoreError();
+      },
+      std::runtime_error);
   // Not enough input
-  EXPECT_THAT(Read(MTuple(MInteger(), MInteger(), MInteger()), "1 22"),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THROW(
+      {
+        Read(MTuple(MInteger(), MInteger(), MInteger()), "1 22").IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MTupleTest, SimpleGenerateCaseWorks) {
@@ -274,6 +293,8 @@ TEST(MTupleTest, PropertiesCanBePassedToMultipleDifferentTypes) {
       GeneratedValuesAre(FieldsAre(Le(100L), SizeIs(Le(100L)))));
 }
 
+// TODO: These tests only work because of DeclareSelfAsInvalid. They will be
+// exceptions in the future.
 TEST(MTupleTest, MultipleIOSeparatorsShouldFailGenerationAndReadAndPrint) {
   EXPECT_THAT(Generate(MTuple(MInteger(), MInteger())
                            .WithSeparator(Whitespace::kNewline)

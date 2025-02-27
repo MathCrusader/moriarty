@@ -1,3 +1,4 @@
+# Copyright 2025 Darcy Best
 # Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,9 +15,12 @@
 
 # The core parts of the Moriarty library.
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 package(
     default_visibility = [
-        "//visibility:public"
+        "//visibility:public",
     ],
 )
 
@@ -45,9 +49,6 @@ cc_library(
     deps = [
         ":errors",
         ":test_case",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "//src/internal:abstract_variable",
         "//src/internal:status_utils",
         "//src/internal:universe",
@@ -55,6 +56,9 @@ cc_library(
         "//src/internal:variable_set",
         "//src/librarian:io_config",
         "//src/librarian:mvariable",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -71,12 +75,6 @@ cc_library(
         ":property",
         ":scenario",
         ":test_case",
-        "@abseil-cpp//absl/base:nullability",
-        "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/types:span",
         "//src/internal:analysis_bootstrap",
         "//src/internal:generation_config",
         "//src/internal:random_config",
@@ -87,6 +85,12 @@ cc_library(
         "//src/internal:variable_set",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",
+        "@abseil-cpp//absl/base:nullability",
+        "@abseil-cpp//absl/log:check",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/types:span",
     ],
 )
 
@@ -95,9 +99,6 @@ cc_library(
     srcs = ["importer.cc"],
     hdrs = ["importer.h"],
     deps = [
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "//src/internal:abstract_variable",
         "//src/internal:analysis_bootstrap",
         "//src/internal:universe",
@@ -106,7 +107,15 @@ cc_library(
         "//src/librarian:io_config",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
     ],
+)
+
+cc_library(
+    name = "io_config",
+    hdrs = ["io_config.h"],
 )
 
 cc_library(
@@ -122,16 +131,16 @@ cc_library(
         ":generator",
         ":importer",
         ":test_case",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/types:span",
         "//src/internal:status_utils",
         "//src/internal:universe",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
+        "@abseil-cpp//absl/types:span",
     ],
 )
 
@@ -166,14 +175,16 @@ cc_library(
     deps = [
         ":exporter",
         ":importer",
+        "//src/contexts/librarian:printer_context",
+        "//src/contexts/librarian:reader_context",
+        "//src/internal:abstract_variable",
+        "//src/librarian:io_config",
+        "//src/util/status_macro:status_macros",
         "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
         "@abseil-cpp//absl/types:span",
-        "//src/internal:abstract_variable",
-        "//src/librarian:io_config",
-        "//src/util/status_macro:status_macros",
     ],
 )
 
@@ -187,10 +198,6 @@ cc_library(
     ],
     deps = [
         ":scenario",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "//src/internal:abstract_variable",
         "//src/internal:generation_bootstrap",
         "//src/internal:random_engine",
@@ -198,6 +205,10 @@ cc_library(
         "//src/internal:variable_set",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -206,11 +217,11 @@ cc_test(
     srcs = ["errors_test.cc"],
     deps = [
         ":errors",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -224,11 +235,6 @@ cc_test(
         ":errors",
         ":exporter",
         ":test_case",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "//src/internal:abstract_variable",
         "//src/internal:value_set",
         "//src/internal:variable_set",
@@ -236,6 +242,11 @@ cc_test(
         "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
+        "@abseil-cpp//absl/algorithm:container",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -250,11 +261,6 @@ cc_test(
         ":generator",
         ":scenario",
         ":test_case",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:size_property",
@@ -265,6 +271,11 @@ cc_test(
         "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/types:span",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -273,8 +284,6 @@ cc_test(
     srcs = ["importer_test.cc"],
     deps = [
         ":importer",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/status",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:io_config",
@@ -282,6 +291,8 @@ cc_test(
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
         "//src/variables:mstring",
+        "@abseil-cpp//absl/status",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -294,8 +305,6 @@ cc_test(
     deps = [
         ":moriarty",
         ":test_case",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/status",
         "//src/testing:exporter_test_util",
         "//src/testing:generator_test_util",
         "//src/testing:importer_test_util",
@@ -303,6 +312,8 @@ cc_test(
         "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
+        "@abseil-cpp//absl/status",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -314,14 +325,14 @@ cc_test(
         ":importer",
         ":simple_io",
         ":test_case",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/testing:exporter_test_util",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/status",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -341,10 +352,6 @@ cc_test(
     deps = [
         ":scenario",
         ":test_case",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
@@ -354,6 +361,10 @@ cc_test(
         "//src/util/status_macro:status_macros",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/types:span",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -362,14 +373,14 @@ cc_test(
     srcs = ["constraint_values_test.cc"],
     deps = [
         ":constraint_values",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/log:absl_check",
         "//src/internal:universe",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/testing:mtest_type",
         "//src/variables:minteger",
         "//src/variables:mstring",
+        "@abseil-cpp//absl/log:absl_check",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -377,8 +388,8 @@ cc_library(
     name = "constraint_values",
     hdrs = ["constraint_values.h"],
     deps = [
+        "//src/internal:universe",
         "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/status:statusor",
-        "//src/internal:universe",
     ],
 )

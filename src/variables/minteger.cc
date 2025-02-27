@@ -20,6 +20,7 @@
 #include <limits>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -33,10 +34,10 @@
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
 #include "src/contexts/librarian/printer_context.h"
+#include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/range.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/size_property.h"
 #include "src/property.h"
@@ -46,8 +47,6 @@
 #include "src/variables/constraints/size_constraints.h"
 
 namespace moriarty {
-
-using ::moriarty::librarian::IOConfig;
 
 MInteger& MInteger::AddConstraint(const Exactly<int64_t>& constraint) {
   bounds_.Mutable().Intersect(
@@ -271,19 +270,15 @@ absl::Status MInteger::MergeFromImpl(const MInteger& other) {
   return absl::OkStatus();
 }
 
-absl::StatusOr<int64_t> MInteger::ReadImpl() {
-  MORIARTY_ASSIGN_OR_RETURN(IOConfig * io_config, GetIOConfig());
-  // TODO(darcybest): do parsing ourselves?
-  MORIARTY_ASSIGN_OR_RETURN(std::string token, io_config->ReadToken());
+int64_t MInteger::ReadImpl(librarian::ReaderContext ctx) const {
+  std::string token = ctx.ReadToken();
   std::stringstream is(token);
 
   int64_t value;
-  if (!(is >> value))
-    return absl::InvalidArgumentError("Unable to read an integer.");
+  if (!(is >> value)) throw std::runtime_error("Unable to read an integer");
   std::string garbage;
   if (is >> garbage)
-    return absl::InvalidArgumentError(
-        "Found extra characters after reading an integer!");
+    throw std::runtime_error("Token contains non-integer items");
   return value;
 }
 

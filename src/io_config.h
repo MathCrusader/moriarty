@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Google LLC
+ * Copyright 2025 Darcy Best
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,27 +14,21 @@
  * limitations under the License.
  */
 
-#include "src/variables/constraints/io_constraints.h"
-
-#include <string>
-
-#include "src/io_config.h"
+#ifndef MORIARTY_SRC_IO_CONFIG_H_
+#define MORIARTY_SRC_IO_CONFIG_H_
 
 namespace moriarty {
 
-IOSeparator::IOSeparator(Whitespace separator) : separator_(separator) {}
+// How to handle whitespace when reading from an input stream.
+//
+// * Precise means that the whitespace must be exactly as expected.
+// * Flexible treats all whitespace characters as the same, and collapses all
+//   back-to-back whitespace together.
+enum class WhitespaceStrictness { kPrecise, kFlexible };
 
-Whitespace IOSeparator::GetSeparator() const { return separator_; }
-
-std::string IOSeparator::ToString() const {
-  switch (separator_) {
-    case Whitespace::kSpace:
-      return "IOSeparator(Space)";
-    case Whitespace::kTab:
-      return "IOSeparator(Tab)";
-    case Whitespace::kNewline:
-      return "IOSeparator(Newline)";
-  }
-}
+// Various kinds of whitespace characters.
+enum class Whitespace { kSpace, kTab, kNewline };
 
 }  // namespace moriarty
+
+#endif  // MORIARTY_SRC_IO_CONFIG_H_

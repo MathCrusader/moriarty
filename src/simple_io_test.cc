@@ -343,9 +343,8 @@ TEST(SimpleIOImporterTest,
   moriarty_internal::ImporterManager(&importer).SetGeneralConstraints(
       variable_set);
 
-  EXPECT_THAT(importer.ImportTestCases(),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("but got EOF")));
+  EXPECT_THROW(
+      { importer.ImportTestCases().IgnoreError(); }, std::runtime_error);
 }
 
 TEST(SimpleIOImporterTest,

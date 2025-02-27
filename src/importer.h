@@ -277,6 +277,12 @@ class ImporterManager {
   const moriarty_internal::ValueSet& GetCurrentTestCase() const;
   librarian::IOConfig* GetIOConfig();
 
+  // FIXME: Remove this hack after Context refactor is done.
+  std::pair<ValueSet&, const VariableSet&> UnsafeGetInternals() {
+    return {managed_importer_.current_test_case_,
+            managed_importer_.general_constraints_};
+  }
+
  private:
   moriarty::Importer& managed_importer_;
 };

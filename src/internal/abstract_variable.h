@@ -32,7 +32,8 @@
 
 namespace moriarty::librarian {
 class PrinterContext;  // Forward declaring PrinterContext
-}
+class ReaderContext;   // Forward declaring ReaderContext
+}  // namespace moriarty::librarian
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -121,17 +122,14 @@ class AbstractVariable {
 
   // ReadValue() [pure virtual]
   //
-  // Given all current I/O constraints on this variable, read a value from the
-  // Universe's IOConfig and store it in its Universe under the
-  // name provided via `SetUniverse`.
-  virtual absl::Status ReadValue() = 0;
+  // Reads a value from `ctx` using the constraints of this variable to
+  // determine formatting, etc.
+  virtual absl::Status ReadValue(librarian::ReaderContext ctx) = 0;
 
   // PrintValue() [pure virtual]
   //
-  // Given all current I/O constraints on this variable, print the value
-  // currently stored in Universe under the name provided by
-  // SetUniverse into the output stream in its Universe's
-  // IOConfig.
+  // Prints the value of this variable to `ctx` using the constraints on this
+  // variable to determine formatting, etc.
   virtual absl::Status PrintValue(librarian::PrinterContext ctx) = 0;
 
   // MergeFrom() [pure virtual]

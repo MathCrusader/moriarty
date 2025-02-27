@@ -457,7 +457,12 @@ absl::StatusOr<typename T::value_type> Read(T variable, std::istream& is,
   MORIARTY_ASSIGN_OR_RETURN(
       moriarty::moriarty_internal::AbstractVariable * var,
       manager.GetVariables()->GetAbstractVariable(var_name));
-  MORIARTY_RETURN_IF_ERROR(var->ReadValue());
+
+  moriarty::librarian::ReaderContext reader_context(
+      var_name, is, moriarty::WhitespaceStrictness::kPrecise,
+      *manager.GetVariables(), *manager.GetValues());
+
+  MORIARTY_RETURN_IF_ERROR(var->ReadValue(reader_context));
   return manager.GetValues()->Get<T>(var_name);
 }
 

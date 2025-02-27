@@ -31,6 +31,8 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
+#include "src/contexts/librarian/printer_context.h"
+#include "src/contexts/librarian/reader_context.h"
 #include "src/exporter.h"
 #include "src/importer.h"
 #include "src/internal/abstract_variable.h"
@@ -218,7 +220,14 @@ absl::Status SimpleIOImporter::ReadVariable(absl::string_view variable_name) {
       moriarty_internal::ImporterManager(this).GetAbstractVariable(
           variable_name),
       _ << "Unknown variable name: " << variable_name);
-  return var->ReadValue();
+  // FIXME: Remove this hack once the context refactor is done.
+  auto [value_set, variable_set] =
+      moriarty_internal::ImporterManager(this).UnsafeGetInternals();
+  std::string tmp_var_name(variable_name);  // Need a local copy
+  librarian::ReaderContext ctx(tmp_var_name, *io_config_.UnsafeGetInputStream(),
+                               WhitespaceStrictness::kPrecise, variable_set,
+                               value_set);
+  return var->ReadValue(ctx);
 }
 
 absl::Status SimpleIOImporter::ReadToken(const SimpleIOToken& token) {

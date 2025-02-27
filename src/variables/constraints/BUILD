@@ -14,6 +14,9 @@
 
 # The core variables that are a part of the Moriarty library.
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 package(
     default_visibility = [
         "//visibility:public",
@@ -60,7 +63,7 @@ cc_library(
     hdrs = ["io_constraints.h"],
     deps = [
         ":base_constraints",
-        "//src/librarian:io_config",
+        "//src:io_config",
     ],
 )
 

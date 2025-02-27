@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <iterator>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -37,8 +38,8 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/printer_context.h"
+#include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
@@ -186,7 +187,7 @@ class MArray : public librarian::MVariable<
   absl::Status IsSatisfiedWithImpl(
       const vector_value_type& value) const override;
   absl::Status MergeFromImpl(const MArray<MElementType>& other) override;
-  absl::StatusOr<vector_value_type> ReadImpl() override;
+  vector_value_type ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const vector_value_type& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;
@@ -490,31 +491,24 @@ void MArray<MoriartyElementType>::PrintImpl(
 }
 
 template <typename MoriartyElementType>
-absl::StatusOr<typename MArray<MoriartyElementType>::vector_value_type>
-MArray<MoriartyElementType>::ReadImpl() {
-  if (!length_) {
-    return absl::FailedPreconditionError(
-        "Unknown length of array before read.");
-  }
+MArray<MoriartyElementType>::vector_value_type
+MArray<MoriartyElementType>::ReadImpl(librarian::ReaderContext ctx) const {
+  if (!length_)
+    throw std::runtime_error("Unknown length of array before read.");
+
+  // FIXME: This should be length_->GetUniqueValue(ctx)
   std::optional<int64_t> length = this->GetUniqueValue("length", *length_);
 
   if (!length) {
-    return absl::FailedPreconditionError(
+    throw std::runtime_error(
         "Cannot determine the length of array before read.");
   }
 
-  MORIARTY_ASSIGN_OR_RETURN(librarian::IOConfig * io_config,
-                            this->GetIOConfig());
   vector_value_type res;
   res.reserve(*length);
   for (int i = 0; i < *length; i++) {
-    if (i > 0) {
-      MORIARTY_RETURN_IF_ERROR(io_config->ReadWhitespace(GetSeparator()));
-    }
-    MORIARTY_ASSIGN_OR_RETURN(
-        element_value_type elem,
-        this->Read(absl::StrCat("element[", i, "]"), element_constraints_));
-    res.push_back(std::move(elem));
+    if (i > 0) ctx.ReadWhitespace(GetSeparator());
+    res.push_back(element_constraints_.Read(ctx));
   }
   return res;
 }

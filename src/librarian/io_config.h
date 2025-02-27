@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,11 +25,9 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "src/io_config.h"  // For Whitespace
 
 namespace moriarty {
-
-enum class Whitespace { kSpace, kTab, kNewline };
-
 namespace librarian {
 
 class IOConfig {
@@ -85,6 +84,10 @@ class IOConfig {
   //
   // Sets the output stream to `os`.
   IOConfig& SetOutputStream(std::ostream& os);
+
+  // FIXME: Remove after refactor of contexts.
+  [[nodiscard]] std::istream* UnsafeGetInputStream() const { return is_; }
+  [[nodiscard]] std::ostream* UnsafeGetOutputStream() const { return os_; }
 
  private:
   WhitespacePolicy whitespace_policy_ = WhitespacePolicy::kExact;

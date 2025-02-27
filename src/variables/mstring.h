@@ -29,6 +29,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "src/contexts/librarian/printer_context.h"
+#include "src/contexts/librarian/reader_context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/librarian/mvariable.h"
 #include "src/property.h"
@@ -160,7 +161,7 @@ class MString : public librarian::MVariable<MString, std::string> {
   absl::StatusOr<std::string> GenerateImpl() override;
   absl::Status IsSatisfiedWithImpl(const std::string& value) const override;
   absl::Status MergeFromImpl(const MString& other) override;
-  absl::StatusOr<std::string> ReadImpl() override;
+  std::string ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const std::string& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;

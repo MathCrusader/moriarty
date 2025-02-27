@@ -19,7 +19,7 @@
 
 #include <string>
 
-#include "src/librarian/io_config.h"
+#include "src/io_config.h"
 #include "src/variables/constraints/base_constraints.h"
 
 namespace moriarty {

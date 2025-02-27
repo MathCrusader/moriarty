@@ -28,6 +28,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/printer_context.h"
+#include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/subvalues.h"
@@ -47,15 +48,12 @@ MTestType2::MTestType2() {
   RegisterKnownProperty("size", &MTestType2::WithSizeProperty);
 }
 
-absl::StatusOr<TestType2> MTestType2::ReadImpl() {
-  MORIARTY_ASSIGN_OR_RETURN(moriarty::librarian::IOConfig * io_config,
-                            GetIOConfig());
-  MORIARTY_ASSIGN_OR_RETURN(std::string token, io_config->ReadToken());
+TestType2 MTestType2::ReadImpl(moriarty::librarian::ReaderContext ctx) const {
+  std::string token = ctx.ReadToken();
   std::stringstream is(token);
 
   int64_t value;
-  if (!(is >> value))
-    return absl::InvalidArgumentError("Unable to read a TestType2.");
+  if (!(is >> value)) throw std::runtime_error("Unable to read a TestType.");
   return value;
 }
 

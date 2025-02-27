@@ -38,7 +38,6 @@
 #include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/test_utils.h"
 #include "src/property.h"
 #include "src/testing/mtest_type.h"
@@ -550,8 +549,8 @@ TEST(MVariableTest, ToStringShouldIncludeOneOfOptions) {
 }
 
 TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToRead) {
-  EXPECT_THAT(Read(MEmptyClass(), "1234"),
-              StatusIs(absl::StatusCode::kUnimplemented));
+  EXPECT_THROW(
+      { Read(MEmptyClass(), "1234").IgnoreError(); }, std::runtime_error);
 }
 
 TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToPrint) {
@@ -565,96 +564,11 @@ TEST(MVariableTest, ReadValueShouldBeSuccessfulInNormalState) {
 }
 
 TEST(MVariableTest, FailedReadShouldFail) {
-  EXPECT_THAT(Read(MTestType(), "bad"),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("failed to read")));
-}
-
-TEST(MVariableTest, CannotReadValueWhenThereIsAConstValueSet) {
-  moriarty_internal::VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("x", MTestType()));
-
-  moriarty_internal::ValueSet values;
-
-  std::stringstream ss("12345");
-  librarian::IOConfig io_config = librarian::IOConfig().SetInputStream(ss);
-
-  moriarty_internal::Universe universe = moriarty_internal::Universe()
-                                             .SetMutableVariableSet(&variables)
-                                             .SetConstValueSet(&values)
-                                             .SetIOConfig(&io_config);
-  variables.SetUniverse(&universe);
-
-  EXPECT_THAT((*universe.GetAbstractVariable("x"))->ReadValue(),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("without a mutable ValueSet")));
+  EXPECT_THROW({ Read(MTestType(), "bad").IgnoreError(); }, std::runtime_error);
 }
 
 TEST(MVariableTest, PrintValueShouldBeSuccessfulInNormalState) {
   EXPECT_THAT(Print(MTestType(), TestType(1234)), IsOkAndHolds("1234"));
-}
-
-TEST(MVariableTest, ReadValueWithoutAUniverseShouldFail) {
-  moriarty_internal::VariableSet variables;
-  MORIARTY_EXPECT_OK(variables.AddVariable("x", MTestType()));
-  moriarty_internal::ValueSet values;
-  moriarty_internal::Universe universe = moriarty_internal::Universe()
-                                             .SetMutableVariableSet(&variables)
-                                             .SetConstValueSet(&values);
-
-  {  // No Universe...
-    EXPECT_THAT((*variables.GetAbstractVariable("x"))->ReadValue(),
-                IsMisconfigured(InternalConfigurationType::kUniverse));
-  }
-}
-
-class ProtectedIOMethodsInMVariable : public MTestType {
- public:  // Promote protected methods to public for testing
-  using MTestType::Print;
-  using MTestType::Read;
-};
-
-TEST(MVariableTest, ReadWithNoUniverseShouldFail) {
-  EXPECT_THAT(ProtectedIOMethodsInMVariable().Read("var_name", MInteger()),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-}
-
-TEST(MVariableTest, ReadWithNoIOConfigShouldFail) {
-  ProtectedIOMethodsInMVariable var;
-  moriarty_internal::Universe universe;  // Has no I/O config
-  moriarty_internal::MVariableManager(&var).SetUniverse(&universe, "var_name");
-  EXPECT_THAT(var.Read("var_name", MInteger()),
-              IsMisconfigured(InternalConfigurationType::kInputStream));
-}
-
-TEST(MVariableTest, ReadWithNoInputStreamShouldFail) {
-  ProtectedIOMethodsInMVariable var;
-  librarian::IOConfig io_config;  // No InputStream
-  moriarty_internal::Universe universe =
-      moriarty_internal::Universe().SetIOConfig(&io_config);
-  moriarty_internal::MVariableManager(&var).SetUniverse(&universe, "var_name");
-  EXPECT_THAT(var.Read("var_name", MInteger()),
-              IsMisconfigured(InternalConfigurationType::kInputStream));
-}
-
-TEST(MVariableTest, ReadShouldUseTheBaseMVariablesInputStream) {
-  ProtectedIOMethodsInMVariable var1;
-  std::stringstream ss1("123");  // Should read from here
-  librarian::IOConfig io_config1 = librarian::IOConfig().SetInputStream(ss1);
-  moriarty_internal::Universe universe1 =
-      moriarty_internal::Universe().SetIOConfig(&io_config1);
-  moriarty_internal::MVariableManager(&var1).SetUniverse(&universe1,
-                                                         "var_name");
-
-  ProtectedIOMethodsInMVariable var2;
-  std::stringstream ss2("789");
-  librarian::IOConfig io_config2 = librarian::IOConfig().SetInputStream(ss2);
-  moriarty_internal::Universe universe2 =
-      moriarty_internal::Universe().SetIOConfig(&io_config2);
-  moriarty_internal::MVariableManager(&var2).SetUniverse(&universe2,
-                                                         "var_name");
-
-  EXPECT_THAT(var1.Read<MTestType>("var_name", var2), IsOkAndHolds(123));
 }
 
 TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {
@@ -671,38 +585,6 @@ TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {
                                 variables.GetAbstractVariable("x"));
   MORIARTY_ASSERT_OK(var->PrintValue(ctx));
   EXPECT_EQ(ss.str(), "12345");
-}
-
-TEST(MVariableTest, IOConfigShouldBeAvailable) {
-  moriarty_internal::VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("x", MTestType()));
-
-  moriarty_internal::ValueSet values;
-  values.Set<MTestType>("x", TestType(12345));
-
-  std::stringstream ss;
-  librarian::IOConfig io_config = librarian::IOConfig().SetOutputStream(ss);
-
-  moriarty_internal::Universe universe = moriarty_internal::Universe()
-                                             .SetMutableVariableSet(&variables)
-                                             .SetConstValueSet(&values)
-                                             .SetIOConfig(&io_config);
-  variables.SetUniverse(&universe);
-
-  // Check 1
-  io_config.SetWhitespacePolicy(librarian::IOConfig::WhitespacePolicy::kExact);
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var,
-                                universe.GetAbstractVariable("x"));
-  EXPECT_EQ(dynamic_cast<MTestType*>(var)->GetWhitespacePolicy(),
-            IOConfig::WhitespacePolicy::kExact);
-
-  // Check 2
-  io_config.SetWhitespacePolicy(
-      librarian::IOConfig::WhitespacePolicy::kIgnoreWhitespace);
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var2,
-                                universe.GetAbstractVariable("x"));
-  EXPECT_EQ(dynamic_cast<MTestType*>(var2)->GetWhitespacePolicy(),
-            IOConfig::WhitespacePolicy::kIgnoreWhitespace);
 }
 
 TEST(MVariableTest, GetUniqueValueShouldReturnUniqueValueViaIsMethod) {

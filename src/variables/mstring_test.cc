@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,12 +18,12 @@
 #include <algorithm>
 #include <string>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/test_utils.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -34,6 +35,8 @@
 namespace moriarty {
 namespace {
 
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::moriarty_testing::AllGenerateSameValues;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GenerateDifficultInstancesValues;
@@ -53,8 +56,6 @@ using ::testing::MatchesRegex;
 using ::testing::Not;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAreArray;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 TEST(MStringTest, TypenameIsCorrect) {
   EXPECT_EQ(MString().Typename(), "MString");
@@ -79,13 +80,12 @@ TEST(MStringTest, InputWithTokenWithWhitespaceAfterShouldReadToken) {
 }
 
 TEST(MStringTest, ReadATokenWithLeadingWhitespaceShouldFail) {
-  EXPECT_THAT(Read(MString(), " spacebefore"),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THROW(
+      { Read(MString(), " spacebefore").IgnoreError(); }, std::runtime_error);
 }
 
 TEST(MStringTest, ReadAtEofShouldFail) {
-  EXPECT_THAT(Read(MString(), ""),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THROW({ Read(MString(), "").IgnoreError(); }, std::runtime_error);
 }
 
 TEST(MStringTest, GenerateShouldSuccessfullyComplete) {
