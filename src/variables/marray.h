@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -35,6 +36,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/librarian/printer_context.h"
 #include "src/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
@@ -185,7 +187,8 @@ class MArray : public librarian::MVariable<
       const vector_value_type& value) const override;
   absl::Status MergeFromImpl(const MArray<MElementType>& other) override;
   absl::StatusOr<vector_value_type> ReadImpl() override;
-  absl::Status PrintImpl(const vector_value_type& value) override;
+  void PrintImpl(librarian::PrinterContext ctx,
+                 const vector_value_type& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;
   absl::StatusOr<std::vector<MArray<MElementType>>> GetDifficultInstancesImpl()
       const override;
@@ -478,18 +481,12 @@ std::vector<std::string> MArray<MElementType>::GetDependenciesImpl() const {
 }
 
 template <typename MoriartyElementType>
-absl::Status MArray<MoriartyElementType>::PrintImpl(
-    const vector_value_type& value) {
+void MArray<MoriartyElementType>::PrintImpl(
+    librarian::PrinterContext ctx, const vector_value_type& value) const {
   for (int i = 0; i < value.size(); i++) {
-    if (i > 0) {
-      MORIARTY_ASSIGN_OR_RETURN(librarian::IOConfig * io_config,
-                                this->GetIOConfig());
-      MORIARTY_RETURN_IF_ERROR(io_config->PrintWhitespace(GetSeparator()));
-    }
-    MORIARTY_RETURN_IF_ERROR(this->Print(absl::StrCat("element[", i, "]"),
-                                         element_constraints_, value[i]));
+    if (i > 0) ctx.PrintWhitespace(GetSeparator());
+    element_constraints_.Print(ctx, value[i]);
   }
-  return absl::OkStatus();
 }
 
 template <typename MoriartyElementType>

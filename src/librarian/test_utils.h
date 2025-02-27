@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -96,14 +97,14 @@
 #include <utility>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/algorithm/container.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/analysis_bootstrap.h"
@@ -480,21 +481,15 @@ absl::StatusOr<std::string> Print(T variable, typename T::value_type value,
   context.WithValue<T>(var_name, value);
   moriarty_testing_internal::ContextManager manager(&context);
 
-  moriarty::librarian::IOConfig io_config;
   std::ostringstream ss;
-  io_config.SetOutputStream(ss);
-
-  moriarty::moriarty_internal::Universe universe =
-      moriarty::moriarty_internal::Universe()
-          .SetMutableVariableSet(manager.GetVariables())
-          .SetMutableValueSet(manager.GetValues())
-          .SetIOConfig(&io_config);
-  manager.GetVariables()->SetUniverse(&universe);
 
   MORIARTY_ASSIGN_OR_RETURN(
       moriarty::moriarty_internal::AbstractVariable * var,
       manager.GetVariables()->GetAbstractVariable(var_name));
-  MORIARTY_RETURN_IF_ERROR(var->PrintValue());
+
+  moriarty::librarian::PrinterContext printer_context(
+      var_name, ss, *manager.GetVariables(), *manager.GetValues());
+  MORIARTY_RETURN_IF_ERROR(var->PrintValue(printer_context));
   return ss.str();
 }
 

@@ -33,6 +33,7 @@ cc_library(
         ":minteger",
         "//src:errors",
         "//src:property",
+        "//src/contexts/librarian:printer_context",
         "//src/librarian:io_config",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",
@@ -60,6 +61,7 @@ cc_library(
     deps = [
         "//src:errors",
         "//src:property",
+        "//src/contexts/librarian:printer_context",
         "//src/internal:random_engine",
         "//src/internal:range",
         "//src/librarian:cow_ptr",
@@ -92,6 +94,7 @@ cc_library(
         ":minteger",
         "//src:errors",
         "//src:property",
+        "//src/contexts/librarian:printer_context",
         "//src/internal:random_engine",
         "//src/internal:simple_pattern",
         "//src/librarian:io_config",
@@ -117,6 +120,7 @@ cc_library(
     deps = [
         "//src:errors",
         "//src:property",
+        "//src/contexts/librarian:printer_context",
         "//src/librarian:io_config",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",

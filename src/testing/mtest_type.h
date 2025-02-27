@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +27,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "src/contexts/librarian/printer_context.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/subvalues.h"
@@ -88,7 +90,8 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
 
   absl::StatusOr<TestType> ReadImpl() override;
 
-  absl::Status PrintImpl(const TestType& value) override;
+  void PrintImpl(moriarty::librarian::PrinterContext ctx,
+                 const TestType& value) const override;
 
   absl::Status MergeFromImpl(const MTestType& other) override;
 

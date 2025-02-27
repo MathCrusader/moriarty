@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +28,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "src/contexts/librarian/printer_context.h"
 #include "src/internal/range.h"
 #include "src/librarian/cow_ptr.h"
 #include "src/librarian/mvariable.h"
@@ -186,7 +188,8 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   absl::Status IsSatisfiedWithImpl(const int64_t& value) const override;
   absl::Status MergeFromImpl(const MInteger& other) override;
   absl::StatusOr<int64_t> ReadImpl() override;
-  absl::Status PrintImpl(const int64_t& value) override;
+  void PrintImpl(librarian::PrinterContext ctx,
+                 const int64_t& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;
   absl::StatusOr<std::vector<MInteger>> GetDifficultInstancesImpl()
       const override;

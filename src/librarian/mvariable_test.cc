@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,16 +19,17 @@
 #include <cstdint>
 #include <optional>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/constraint_values.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
@@ -49,6 +51,8 @@ namespace moriarty {
 namespace librarian {
 namespace {
 
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::moriarty::moriarty_internal::MVariableManager;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
@@ -69,8 +73,6 @@ using ::testing::HasSubstr;
 using ::testing::Optional;
 using ::testing::SizeIs;
 using ::testing::Truly;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 TEST(MVariableTest, PrintShouldSucceed) {
   EXPECT_THAT(Print(MTestType(), -1), IsOkAndHolds("-1"));
@@ -227,9 +229,8 @@ TEST(MVariableTest, GeneratingDependentVariableWithNoUniverseShouldFail) {
       variables.AddVariable("var1", MTestType().SetAdder("var2")));
   MORIARTY_EXPECT_OK(variables.AddVariable("var2", MTestType()));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty_internal::AbstractVariable * var,
-      variables.GetAbstractVariable("var1"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var,
+                                variables.GetAbstractVariable("var1"));
   MVariableManager<MTestType, TestType> manager1(dynamic_cast<MTestType*>(var));
 
   EXPECT_THAT(var->AssignValue(),
@@ -293,18 +294,15 @@ TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
           .SetRandomEngine(&engine);
   variables.SetUniverse(&universe);
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty_internal::AbstractVariable * var_A,
-      universe.GetAbstractVariable("A"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_A,
+                                universe.GetAbstractVariable("A"));
   MORIARTY_ASSERT_OK(var_A->AssignValue());  // By assigning A, we assigned N.
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty_internal::AbstractVariable * var_B,
-      universe.GetAbstractVariable("B"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_B,
+                                universe.GetAbstractVariable("B"));
   MORIARTY_ASSERT_OK(
       var_B->AssignValue());  // Should use the already generated N.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(int N,
-                                         universe.GetValue<MInteger>("N"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(int N, universe.GetValue<MInteger>("N"));
 
   EXPECT_THAT(universe.GetValue<MInteger>("A"), IsOkAndHolds(N));
   EXPECT_THAT(universe.GetValue<MInteger>("B"), IsOkAndHolds(N));
@@ -510,9 +508,8 @@ TEST(MVariableTest, GetDifficultInstancesPassesTheInstancesThrough) {
 
 TEST(MVariableTest, GetDifficultInstanceReturnsMergedInstance) {
   MTestType original = MTestType();
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<MTestType> difficult_instances,
-      original.GetDifficultInstances());
+  MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<MTestType> difficult_instances,
+                                original.GetDifficultInstances());
 
   EXPECT_THAT(difficult_instances, SizeIs(2));
   EXPECT_TRUE(difficult_instances[0].WasMerged());
@@ -542,7 +539,7 @@ class MEmptyClass : public MVariable<MEmptyClass, EmptyClass> {
   }
 };
 
-TEST(MVariableTest, ToStringByDefaultPrintsTypename) {
+TEST(MVariableTest, ToStringByDefaultIncludesTypename) {
   EXPECT_THAT(MEmptyClass().ToString(), HasSubstr("MEmptyClass"));
 }
 
@@ -558,8 +555,9 @@ TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToRead) {
 }
 
 TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToPrint) {
-  EXPECT_THAT(Print(MEmptyClass(), EmptyClass()),
-              StatusIs(absl::StatusCode::kUnimplemented));
+  EXPECT_THROW(
+      { Print(MEmptyClass(), EmptyClass()).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MVariableTest, ReadValueShouldBeSuccessfulInNormalState) {
@@ -596,7 +594,7 @@ TEST(MVariableTest, PrintValueShouldBeSuccessfulInNormalState) {
   EXPECT_THAT(Print(MTestType(), TestType(1234)), IsOkAndHolds("1234"));
 }
 
-TEST(MVariableTest, PrintValueAndReadValueWithoutAUniverseShouldFail) {
+TEST(MVariableTest, ReadValueWithoutAUniverseShouldFail) {
   moriarty_internal::VariableSet variables;
   MORIARTY_EXPECT_OK(variables.AddVariable("x", MTestType()));
   moriarty_internal::ValueSet values;
@@ -606,8 +604,6 @@ TEST(MVariableTest, PrintValueAndReadValueWithoutAUniverseShouldFail) {
 
   {  // No Universe...
     EXPECT_THAT((*variables.GetAbstractVariable("x"))->ReadValue(),
-                IsMisconfigured(InternalConfigurationType::kUniverse));
-    EXPECT_THAT((*variables.GetAbstractVariable("x"))->PrintValue(),
                 IsMisconfigured(InternalConfigurationType::kUniverse));
   }
 }
@@ -661,51 +657,6 @@ TEST(MVariableTest, ReadShouldUseTheBaseMVariablesInputStream) {
   EXPECT_THAT(var1.Read<MTestType>("var_name", var2), IsOkAndHolds(123));
 }
 
-TEST(MVariableTest, PrintWithNoUniverseShouldFail) {
-  EXPECT_THAT(
-      ProtectedIOMethodsInMVariable().Print("var_name", MInteger(), 123),
-      IsMisconfigured(InternalConfigurationType::kUniverse));
-}
-
-TEST(MVariableTest, PrintWithNoIOConfigShouldFail) {
-  ProtectedIOMethodsInMVariable var;
-  moriarty_internal::Universe universe;  // Has no I/O config
-  moriarty_internal::MVariableManager(&var).SetUniverse(&universe, "var_name");
-  EXPECT_THAT(var.Print("var_name", MInteger(), 123),
-              IsMisconfigured(InternalConfigurationType::kOutputStream));
-}
-
-TEST(MVariableTest, PrintWithNoOutputStreamShouldFail) {
-  ProtectedIOMethodsInMVariable var;
-  librarian::IOConfig io_config;  // No OutputStream
-  moriarty_internal::Universe universe =
-      moriarty_internal::Universe().SetIOConfig(&io_config);
-  moriarty_internal::MVariableManager(&var).SetUniverse(&universe, "var_name");
-  EXPECT_THAT(var.Print("var_name", MInteger(), 123),
-              IsMisconfigured(InternalConfigurationType::kOutputStream));
-}
-
-TEST(MVariableTest, PrintShouldUseTheBaseMVariablesOutputStream) {
-  ProtectedIOMethodsInMVariable var1;
-  std::stringstream ss1;  // Should print to here
-  librarian::IOConfig io_config1 = librarian::IOConfig().SetOutputStream(ss1);
-  moriarty_internal::Universe universe1 =
-      moriarty_internal::Universe().SetIOConfig(&io_config1);
-  moriarty_internal::MVariableManager(&var1).SetUniverse(&universe1,
-                                                         "var1_name");
-
-  ProtectedIOMethodsInMVariable var2;
-  std::stringstream ss2;
-  librarian::IOConfig io_config2 = librarian::IOConfig().SetOutputStream(ss2);
-  moriarty_internal::Universe universe2 =
-      moriarty_internal::Universe().SetIOConfig(&io_config2);
-  moriarty_internal::MVariableManager(&var2).SetUniverse(&universe2,
-                                                         "var2_name");
-  MORIARTY_EXPECT_OK(var1.Print<MTestType>("var2_name", var2, 123));
-  EXPECT_EQ(ss1.str(), "123");
-  EXPECT_EQ(ss2.str(), "");
-}
-
 TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {
   moriarty_internal::VariableSet variables;
   MORIARTY_ASSERT_OK(variables.AddVariable("x", MTestType()));
@@ -714,14 +665,11 @@ TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {
   values.Set<MTestType>("x", TestType(12345));
 
   std::stringstream ss;
-  librarian::IOConfig io_config = librarian::IOConfig().SetOutputStream(ss);
 
-  moriarty_internal::Universe universe = moriarty_internal::Universe()
-                                             .SetMutableVariableSet(&variables)
-                                             .SetConstValueSet(&values)
-                                             .SetIOConfig(&io_config);
-  variables.SetUniverse(&universe);
-  MORIARTY_EXPECT_OK((*universe.GetAbstractVariable("x"))->PrintValue());
+  PrinterContext ctx("x", ss, variables, values);
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var,
+                                variables.GetAbstractVariable("x"));
+  MORIARTY_ASSERT_OK(var->PrintValue(ctx));
   EXPECT_EQ(ss.str(), "12345");
 }
 
@@ -743,18 +691,16 @@ TEST(MVariableTest, IOConfigShouldBeAvailable) {
 
   // Check 1
   io_config.SetWhitespacePolicy(librarian::IOConfig::WhitespacePolicy::kExact);
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty_internal::AbstractVariable * var,
-      universe.GetAbstractVariable("x"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var,
+                                universe.GetAbstractVariable("x"));
   EXPECT_EQ(dynamic_cast<MTestType*>(var)->GetWhitespacePolicy(),
             IOConfig::WhitespacePolicy::kExact);
 
   // Check 2
   io_config.SetWhitespacePolicy(
       librarian::IOConfig::WhitespacePolicy::kIgnoreWhitespace);
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty_internal::AbstractVariable * var2,
-      universe.GetAbstractVariable("x"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var2,
+                                universe.GetAbstractVariable("x"));
   EXPECT_EQ(dynamic_cast<MTestType*>(var2)->GetWhitespacePolicy(),
             IOConfig::WhitespacePolicy::kIgnoreWhitespace);
 }
@@ -812,17 +758,14 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
           .SetRandomEngine(&engine);
   variables.SetUniverse(&universe);
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty_internal::AbstractVariable * var_A,
-      universe.GetAbstractVariable("A"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_A,
+                                universe.GetAbstractVariable("A"));
   MORIARTY_ASSERT_OK(var_A->AssignValue());  // By assigning A, we assigned N.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(int N,
-                                         universe.GetValue<MInteger>("N"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(int N, universe.GetValue<MInteger>("N"));
 
   // Attempt to re-assign N.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty_internal::AbstractVariable * var_N,
-      universe.GetAbstractVariable("N"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_N,
+                                universe.GetAbstractVariable("N"));
   MORIARTY_ASSERT_OK(var_N->AssignValue());
 
   // Should not have changed.

@@ -1,3 +1,4 @@
+# Copyright 2025 Darcy Best
 # Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,9 +16,11 @@
 # Several classes in Moriarty must be derived to work. These classes provide simple
 # derived classes to be used for testing.
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 package(
     default_visibility = [
-        "//visibility:public"
+        "//visibility:public",
     ],
 )
 
@@ -31,13 +34,13 @@ cc_library(
     ],
     deps = [
         ":mtest_type",
-        "@abseil-cpp//absl/status:statusor",
         "//src:exporter",
         "//src:test_case",
         "//src/internal:value_set",
         "//src/util/status_macro:status_macros",
         "//src/variables:minteger",
         "//src/variables:mstring",
+        "@abseil-cpp//absl/status:statusor",
     ],
 )
 
@@ -49,14 +52,14 @@ cc_library(
     ],
     deps = [
         ":mtest_type",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
         "//src:generator",
         "//src:test_case",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/variables:minteger",
         "//src/variables:mstring",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/types:span",
     ],
 )
 
@@ -67,10 +70,10 @@ cc_library(
         "importer_test_util.h",
     ],
     deps = [
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
         "//src:importer",
         "//src/variables:minteger",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/status",
     ],
 )
 
@@ -84,17 +87,18 @@ cc_library(
         "mtest_type.h",
     ],
     deps = [
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "//src:errors",
         "//src:property",
+        "//src/contexts/librarian:printer_context",
         "//src/librarian:io_config",
         "//src/librarian:mvariable",
         "//src/librarian:subvalues",
         "//src/util/status_macro:status_macros",
         "//src/variables:minteger",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -108,17 +112,18 @@ cc_library(
         "mtest_type2.h",
     ],
     deps = [
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "//src:errors",
         "//src:property",
+        "//src/contexts/librarian:printer_context",
         "//src/librarian:io_config",
         "//src/librarian:mvariable",
         "//src/librarian:subvalues",
         "//src/util/status_macro:status_macros",
         "//src/variables:minteger",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -129,13 +134,13 @@ cc_library(
         "random_test_util.h",
     ],
     deps = [
-        "@googletest//:gtest",
+        "//src/util/test_status_macro:status_testutil",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
-        "//src/util/test_status_macro:status_testutil",
+        "@googletest//:gtest",
     ],
 )
 
@@ -146,10 +151,10 @@ cc_library(
         "status_test_util.h",
     ],
     deps = [
-        "@googletest//:gtest",
+        "//src:errors",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
-        "//src:errors",
+        "@googletest//:gtest",
     ],
 )

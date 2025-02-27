@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -27,6 +28,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "src/contexts/librarian/printer_context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/librarian/mvariable.h"
 #include "src/property.h"
@@ -159,7 +161,8 @@ class MString : public librarian::MVariable<MString, std::string> {
   absl::Status IsSatisfiedWithImpl(const std::string& value) const override;
   absl::Status MergeFromImpl(const MString& other) override;
   absl::StatusOr<std::string> ReadImpl() override;
-  absl::Status PrintImpl(const std::string& value) override;
+  void PrintImpl(librarian::PrinterContext ctx,
+                 const std::string& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;
   absl::StatusOr<std::vector<MString>> GetDifficultInstancesImpl()
       const override;

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +34,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/librarian/printer_context.h"
 #include "src/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
@@ -117,7 +119,8 @@ class MTuple : public librarian::MVariable<
   template <std::size_t I>
   absl::Status TryReadAndSet(tuple_value_type& read_values);
   template <std::size_t I>
-  absl::Status PrintElementWithLeadingSeparator(const tuple_value_type& value);
+  void PrintElementWithLeadingSeparator(librarian::PrinterContext ctx,
+                                        const tuple_value_type& value) const;
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
@@ -126,7 +129,8 @@ class MTuple : public librarian::MVariable<
       const tuple_value_type& value) const override;
   absl::Status MergeFromImpl(const MTuple& other) override;
   absl::StatusOr<tuple_value_type> ReadImpl() override;
-  absl::Status PrintImpl(const tuple_value_type& value) override;
+  void PrintImpl(librarian::PrinterContext ctx,
+                 const tuple_value_type& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;
   // ---------------------------------------------------------------------------
 
@@ -146,8 +150,8 @@ class MTuple : public librarian::MVariable<
   template <std::size_t... I>
   absl::StatusOr<tuple_value_type> ReadImpl(std::index_sequence<I...>);
   template <std::size_t... I>
-  absl::Status PrintImpl(const tuple_value_type& value,
-                         std::index_sequence<I...>);
+  void PrintImpl(librarian::PrinterContext ctx, const tuple_value_type& value,
+                 std::index_sequence<I...>) const;
   template <std::size_t... I>
   std::vector<std::string> GetDependenciesImpl(std::index_sequence<I...>) const;
   // ---------------------------------------------------------------------------
@@ -285,32 +289,25 @@ std::vector<std::string> MTuple<MElementTypes...>::GetDependenciesImpl(
 }
 
 template <typename... MElementTypes>
-absl::Status MTuple<MElementTypes...>::PrintImpl(
-    const tuple_value_type& value) {
-  return PrintImpl(value, std::index_sequence_for<MElementTypes...>());
+void MTuple<MElementTypes...>::PrintImpl(librarian::PrinterContext ctx,
+                                         const tuple_value_type& value) const {
+  PrintImpl(ctx, value, std::index_sequence_for<MElementTypes...>());
 }
 
 template <typename... MElementTypes>
 template <std::size_t I>
-absl::Status MTuple<MElementTypes...>::PrintElementWithLeadingSeparator(
-    const tuple_value_type& value) {
-  if (I > 0) {
-    MORIARTY_ASSIGN_OR_RETURN(librarian::IOConfig * io_config,
-                              this->GetIOConfig());
-    MORIARTY_RETURN_IF_ERROR(io_config->PrintWhitespace(GetSeparator()));
-  }
-
-  return this->Print(absl::StrCat("element<", I, ">"), std::get<I>(elements_),
-                     std::get<I>(value));
+void MTuple<MElementTypes...>::PrintElementWithLeadingSeparator(
+    librarian::PrinterContext ctx, const tuple_value_type& value) const {
+  if (I > 0) ctx.PrintWhitespace(GetSeparator());
+  std::get<I>(elements_).Print(ctx, std::get<I>(value));
 }
 
 template <typename... MElementTypes>
 template <std::size_t... I>
-absl::Status MTuple<MElementTypes...>::PrintImpl(const tuple_value_type& value,
-                                                 std::index_sequence<I...>) {
-  absl::Status status;
-  (status.Update(PrintElementWithLeadingSeparator<I>(value)), ...);
-  return status;
+void MTuple<MElementTypes...>::PrintImpl(librarian::PrinterContext ctx,
+                                         const tuple_value_type& value,
+                                         std::index_sequence<I...>) const {
+  (PrintElementWithLeadingSeparator<I>(ctx, value), ...);
 }
 
 template <typename... MElementTypes>

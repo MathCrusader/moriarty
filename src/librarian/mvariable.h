@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,6 +26,7 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -40,6 +42,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/constraint_values.h"
+#include "src/contexts/librarian/printer_context.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
@@ -203,6 +206,14 @@ class MVariable : public moriarty_internal::AbstractVariable {
   [[nodiscard]] absl::StatusOr<std::vector<VariableType>>
   GetDifficultInstances() const;
 
+  // Print()
+  //
+  // Print `value` into `ctx` using any configuration provided to this variable
+  // (as I/O constraints).
+  void Print(PrinterContext ctx, const ValueType& value) const {
+    PrintImpl(ctx, value);
+  }
+
  protected:
   // ---------------------------------------------------------------------------
   //  Functions that need to be overridden by all `MVariable`s.
@@ -261,9 +272,9 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Users should not call this directly. Call `Print()` instead.
   //
-  // Print `value` into `os` using any configuration provided by your
+  // Print `value` into `ctx` using any configuration provided by your
   // VariableType (whitespace separators, etc).
-  virtual absl::Status PrintImpl(const ValueType& value);
+  virtual void PrintImpl(PrinterContext ctx, const ValueType& value) const;
 
   // GetDependenciesImpl() [virtual/optional]
   //
@@ -408,25 +419,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
                                librarian::MVariable<T, typename T::value_type>>
   absl::StatusOr<typename T::value_type> Read(absl::string_view debug_name,
                                               T m);
-
-  // Print() [Helper for Librarians]
-  //
-  // Print `value` into *this* variable's underlying ostream using any
-  // configuration (whitespace separators, etc) provided by `m`.
-  //
-  // The underlying ostream is set by a Moriarty component (Generator, Exporter,
-  // Moriarty, etc) via its Universe.
-  //
-  // `debug_name` is for better debugging messages on failure and is local
-  // only to this function call.
-  //
-  // Example usage:
-  //    absl::Status success = Print("my_int", MInteger(), 5);
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
-  absl::Status Print(absl::string_view debug_name, T m,
-                     const T::value_type& value);
 
   // GetKnownValue() [Helper for Librarians]
   //
@@ -597,6 +589,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Moriarty Status. Almost surely an `UnsatisfiedConstraintError()`. All
   // future calls to FooImpl() that return an absl::Status will be intercepted
   // and return this instead. (E.g., GenerateImpl(), PrintImpl(), etc.)
+  //
+  // FIXME: PrintImpl (and others with Context) ignores this flag.
   void DeclareSelfAsInvalid(absl::Status status);
 
  private:
@@ -693,16 +687,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // TODO(darcybest): Remove Try.
   absl::StatusOr<ValueType> TryRead();
 
-  // TryPrint() [Internal Extended API]
-  //
-  // Print `value` into the underlying ostream using any configuration
-  // provided by your VariableType (whitespace separators, etc).
-  //
-  // The underlying ostream is set by a Moriarty component (Generator,
-  // Exporter, Moriarty, etc) via its Universe.
-  // TODO(darcybest): Remove Try.
-  absl::Status TryPrint(const ValueType& value);
-
   // GetSubvalue() [Internal Extended API]
   //
   // `my_value` will be of the ValueType of this variable.
@@ -798,7 +782,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Given all current I/O constraints on this variable, print the value
   // currently stored in Universe under the name provided by
   // SetUniverse into `os`.
-  absl::Status PrintValue() override;
+  absl::Status PrintValue(librarian::PrinterContext ctx) override;
 
   // GetDependencies()
   //
@@ -851,7 +835,6 @@ class MVariableManager {
   absl::Status IsSatisfiedWith(const ValueType& value) const;
   absl::Status MergeFrom(const AbstractVariable& other);
   absl::StatusOr<ValueType> TryRead();
-  absl::Status TryPrint(const ValueType& value);
   absl::StatusOr<std::any> GetSubvalue(const std::any& my_value,
                                        absl::string_view subvalue_name);
   RandomEngine& GetRandomEngine();
@@ -1036,8 +1019,8 @@ absl::StatusOr<G> MVariable<V, G>::ReadImpl() {
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::PrintImpl(const G& value) {
-  return absl::UnimplementedError(
+void MVariable<V, G>::PrintImpl(PrinterContext ctx, const G& value) const {
+  throw std::runtime_error(
       absl::StrCat("Print() not implemented for ", Typename()));
 }
 
@@ -1133,27 +1116,6 @@ absl::StatusOr<typename T::value_type> MVariable<V, G>::Read(
       /* my_name_in_universe = */ moriarty_internal::ConstructVariableName(
           variable_name_inside_universe_, debug_name));
   return moriarty_internal::MVariableManager(&m).TryRead();
-}
-
-template <typename V, typename G>
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::Status MVariable<V, G>::Print(absl::string_view debug_name, T m,
-                                    const T::value_type& value) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "Print",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetIOConfig()) {
-    return MisconfiguredError(Typename(), "Print",
-                              InternalConfigurationType::kOutputStream);
-  }
-
-  moriarty_internal::MVariableManager(&m).SetUniverse(
-      universe_,
-      /* my_name_in_universe = */ moriarty_internal::ConstructVariableName(
-          variable_name_inside_universe_, debug_name));
-  return moriarty_internal::MVariableManager(&m).TryPrint(value);
 }
 
 template <typename V, typename G>
@@ -1535,12 +1497,6 @@ absl::StatusOr<G> MVariable<V, G>::TryRead() {
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::TryPrint(const G& value) {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-  return PrintImpl(value);
-}
-
-template <typename V, typename G>
 absl::StatusOr<std::any> MVariable<V, G>::GetSubvalue(
     const std::any& my_value, absl::string_view subvalue_name) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
@@ -1707,16 +1663,11 @@ absl::Status MVariable<V, G>::ReadValue() {
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::PrintValue() {
+absl::Status MVariable<V, G>::PrintValue(PrinterContext ctx) {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "PrintValue",
-                              InternalConfigurationType::kUniverse);
-  }
-
-  MORIARTY_ASSIGN_OR_RETURN(
-      G value, universe_->GetValue<V>(variable_name_inside_universe_));
-  return TryPrint(value);
+  MORIARTY_ASSIGN_OR_RETURN(G value, ctx.GetValue<V>(ctx.GetVariableName()));
+  Print(ctx, value);
+  return absl::OkStatus();
 }
 
 template <typename V, typename G>
@@ -1772,12 +1723,6 @@ absl::Status MVariableManager<VariableType, ValueType>::MergeFrom(
 template <typename VariableType, typename ValueType>
 absl::StatusOr<ValueType> MVariableManager<VariableType, ValueType>::TryRead() {
   return managed_mvariable_.TryRead();
-}
-
-template <typename VariableType, typename ValueType>
-absl::Status MVariableManager<VariableType, ValueType>::TryPrint(
-    const ValueType& value) {
-  return managed_mvariable_.TryPrint(value);
 }
 
 template <typename VariableType, typename ValueType>

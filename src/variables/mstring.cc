@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,6 +30,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/librarian/printer_context.h"
 #include "src/errors.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/simple_pattern.h"
@@ -304,9 +306,9 @@ absl::StatusOr<std::string> MString::ReadImpl() {
   return io_config->ReadToken();
 }
 
-absl::Status MString::PrintImpl(const std::string& value) {
-  MORIARTY_ASSIGN_OR_RETURN(IOConfig * io_config, GetIOConfig());
-  return io_config->PrintToken(value);
+void MString::PrintImpl(librarian::PrinterContext ctx,
+                        const std::string& value) const {
+  ctx.PrintToken(value);
 }
 
 std::string MString::ToStringImpl() const {

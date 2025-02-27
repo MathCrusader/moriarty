@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -233,6 +234,13 @@ class ExporterManager {
       absl::string_view variable_name);
   void SetGeneralConstraints(VariableSet general_constraints);
   librarian::IOConfig* GetIOConfig();
+
+  // FIXME: Remove this. This is only here for the Context-transition.
+  std::pair<ValueSet&, VariableSet&> UnsafeGetInternals() const {
+    assert(managed_exporter_.current_values_.has_value());
+    return {managed_exporter_.current_values_.value(),
+            managed_exporter_.general_constraints_};
+  }
 
  private:
   moriarty::Exporter& managed_exporter_;

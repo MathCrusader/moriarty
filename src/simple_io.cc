@@ -130,7 +130,16 @@ void SimpleIOExporter::PrintVariable(absl::string_view variable_name) {
       moriarty_internal::ExporterManager(this).GetAbstractVariable(
           variable_name);
   ABSL_CHECK_OK(var) << "Unknown variable name: " << variable_name;
-  ABSL_CHECK_OK((*var)->PrintValue());
+
+  // FIXME: Remove this hack once the context refactor is done.
+  auto [value_set, variable_set] =
+      moriarty_internal::ExporterManager(this).UnsafeGetInternals();
+  std::string tmp_var_name(variable_name);  // Need a local copy
+  librarian::PrinterContext ctx(tmp_var_name,
+                                *io_config_.UnsafeGetOutputStream(),
+                                variable_set, value_set);
+
+  ABSL_CHECK_OK((*var)->PrintValue(ctx));
 }
 
 void SimpleIOExporter::PrintToken(const SimpleIOToken& token) {

@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +32,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
+#include "src/contexts/librarian/printer_context.h"
 #include "src/errors.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/range.h"
@@ -285,9 +287,9 @@ absl::StatusOr<int64_t> MInteger::ReadImpl() {
   return value;
 }
 
-absl::Status MInteger::PrintImpl(const int64_t& value) {
-  MORIARTY_ASSIGN_OR_RETURN(IOConfig * io_config, GetIOConfig());
-  return io_config->PrintToken(std::to_string(value));
+void MInteger::PrintImpl(librarian::PrinterContext ctx,
+                         const int64_t& value) const {
+  ctx.PrintToken(std::to_string(value));
 }
 
 absl::Status MInteger::IsSatisfiedWithImpl(const int64_t& value) const {

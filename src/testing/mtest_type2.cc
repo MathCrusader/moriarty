@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,6 +27,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/librarian/printer_context.h"
 #include "src/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/subvalues.h"
@@ -57,10 +59,9 @@ absl::StatusOr<TestType2> MTestType2::ReadImpl() {
   return value;
 }
 
-absl::Status MTestType2::PrintImpl(const TestType2& value) {
-  MORIARTY_ASSIGN_OR_RETURN(moriarty::librarian::IOConfig * io_config,
-                            GetIOConfig());
-  return io_config->PrintToken(std::to_string(value));
+void MTestType2::PrintImpl(moriarty::librarian::PrinterContext ctx,
+                           const TestType2& value) const {
+  ctx.PrintToken(std::to_string(value));
 }
 
 absl::Status MTestType2::MergeFromImpl(const MTestType2& other) {

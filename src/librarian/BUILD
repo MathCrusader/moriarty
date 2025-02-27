@@ -56,6 +56,7 @@ cc_library(
         "//src:constraint_values",
         "//src:errors",
         "//src:property",
+        "//src/contexts/librarian:printer_context",
         "//src/internal:abstract_variable",
         "//src/internal:generation_config",
         "//src/internal:random_config",

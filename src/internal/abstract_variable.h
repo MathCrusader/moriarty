@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +29,10 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/property.h"
+
+namespace moriarty::librarian {
+class PrinterContext;  // Forward declaring PrinterContext
+}
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -127,7 +132,7 @@ class AbstractVariable {
   // currently stored in Universe under the name provided by
   // SetUniverse into the output stream in its Universe's
   // IOConfig.
-  virtual absl::Status PrintValue() = 0;
+  virtual absl::Status PrintValue(librarian::PrinterContext ctx) = 0;
 
   // MergeFrom() [pure virtual]
   //
