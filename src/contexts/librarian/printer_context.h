@@ -17,6 +17,7 @@
 #ifndef MORIARTY_SRC_CONTEXTS_LIBRARIAN_PRINTER_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_LIBRARIAN_PRINTER_CONTEXT_H_
 
+#include <ostream>
 #include <string>
 
 #include "src/contexts/internal/analysis_context.h"
@@ -28,8 +29,7 @@ namespace librarian {
 
 // PrinterContext
 //
-// Handles all printing of MVariables. See the API in BasicOStreamContext for
-// more information.
+// All context that MVariable<>::Print() has access to.
 class PrinterContext : public moriarty_internal::AnalysisContext,
                        public moriarty_internal::BasicOStreamContext,
                        public moriarty_internal::VariableNameContext {
@@ -62,11 +62,6 @@ class PrinterContext : public moriarty_internal::AnalysisContext,
   //
   // Prints the whitespace character to the output stream.
   using OStreamBase::PrintWhitespace;
-
-  // SetOutputStream()
-  //
-  // Sets the output stream to `os`.
-  using OStreamBase::SetOutputStream;
 
   // GetValue()
   //

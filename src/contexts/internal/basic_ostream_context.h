@@ -19,6 +19,7 @@
 
 #include <functional>
 #include <ostream>
+#include <string_view>
 
 #include "src/librarian/io_config.h"
 
@@ -43,13 +44,11 @@ class BasicOStreamContext {
   // Prints the whitespace character to the output stream.
   void PrintWhitespace(moriarty::Whitespace whitespace);
 
-  // SetOutputStream()
-  //
-  // Sets the output stream to `os`.
-  void SetOutputStream(std::ostream& os);
-
  private:
   std::reference_wrapper<std::ostream> os_;
+
+  // TODO: Determine if we should provide an API for:
+  //  * update/access os_.
 };
 
 }  // namespace moriarty_internal

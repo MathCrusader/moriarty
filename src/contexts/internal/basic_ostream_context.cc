@@ -43,7 +43,5 @@ void BasicOStreamContext::PrintWhitespace(Whitespace whitespace) {
   }
 }
 
-void BasicOStreamContext::SetOutputStream(std::ostream& os) { os_ = os; }
-
 }  // namespace moriarty_internal
 }  // namespace moriarty

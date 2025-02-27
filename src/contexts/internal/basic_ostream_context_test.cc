@@ -43,17 +43,6 @@ TEST(BasicOStreamContextTest, PrintTokenShouldPrintProperly) {
   EXPECT_EQ(ss.str(), "Hello!bye");
 }
 
-TEST(BasicOStreamContextTest, SetOutputStreamShouldChangeTheStream) {
-  std::stringstream ss1, ss2;
-  BasicOStreamContext c(ss1);
-  c.PrintToken("Hello 111!");
-
-  c.SetOutputStream(ss2);
-  c.PrintToken("Hello 222!");
-  EXPECT_EQ(ss1.str(), "Hello 111!");
-  EXPECT_EQ(ss2.str(), "Hello 222!");
-}
-
 TEST(BasicOStreamContextTest, PrintingToABadStreamShouldThrow) {
   // Error in stream before construction
   std::stringstream ss1;
