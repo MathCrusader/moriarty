@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_ANALYSIS_CONTEXT_H_
-#define MORIARTY_SRC_CONTEXTS_INTERNAL_ANALYSIS_CONTEXT_H_
+#ifndef MORIARTY_SRC_CONTEXTS_LIBRARIAN_ANALYSIS_CONTEXT_H_
+#define MORIARTY_SRC_CONTEXTS_LIBRARIAN_ANALYSIS_CONTEXT_H_
 
 #include <functional>
 
@@ -25,7 +25,7 @@
 #include "src/internal/variable_set.h"
 
 namespace moriarty {
-namespace moriarty_internal {
+namespace librarian {
 
 // AnalysisContext
 //
@@ -34,30 +34,31 @@ namespace moriarty_internal {
 // or values.
 class AnalysisContext {
  public:
-  explicit AnalysisContext(const VariableSet& variables, const ValueSet& values)
+  explicit AnalysisContext(const moriarty_internal::VariableSet& variables,
+                           const moriarty_internal::ValueSet& values)
       : variables_(variables), values_(values) {}
 
   // FIXME: This is a placeholder for testing.
 
   template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+    requires std::derived_from<T, moriarty_internal::AbstractVariable>
   absl::StatusOr<T> GetVariable(std::string_view variable_name) const {
     return variables_.get().GetVariable<T>(variable_name);
   }
 
   template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+    requires std::derived_from<T, moriarty_internal::AbstractVariable>
   absl::StatusOr<typename T::value_type> GetValue(
       std::string_view variable_name) const {
     return values_.get().Get<T>(variable_name);
   }
 
  private:
-  std::reference_wrapper<const VariableSet> variables_;
-  std::reference_wrapper<const ValueSet> values_;
+  std::reference_wrapper<const moriarty_internal::VariableSet> variables_;
+  std::reference_wrapper<const moriarty_internal::ValueSet> values_;
 };
 
-}  // namespace moriarty_internal
+}  // namespace librarian
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_CONTEXTS_INTERNAL_ANALYSIS_CONTEXT_H_
+#endif  // MORIARTY_SRC_CONTEXTS_LIBRARIAN_ANALYSIS_CONTEXT_H_

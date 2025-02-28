@@ -24,16 +24,6 @@ package(
 licenses(["notice"])
 
 cc_library(
-    name = "analysis_context",
-    # srcs = ["analysis_context.cc"],
-    hdrs = ["analysis_context.h"],
-    deps = [
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
-    ],
-)
-
-cc_library(
     name = "basic_istream_context",
     srcs = ["basic_istream_context.cc"],
     hdrs = ["basic_istream_context.h"],

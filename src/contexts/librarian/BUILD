@@ -23,10 +23,20 @@ package(
 licenses(["notice"])
 
 cc_library(
+    name = "analysis_context",
+    # srcs = ["analysis_context.cc"],
+    hdrs = ["analysis_context.h"],
+    deps = [
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
+    ],
+)
+
+cc_library(
     name = "printer_context",
     hdrs = ["printer_context.h"],
     deps = [
-        "//src/contexts/internal:analysis_context",
+        ":analysis_context",
         "//src/contexts/internal:basic_ostream_context",
         "//src/contexts/internal:variable_name_context",
     ],
@@ -36,8 +46,8 @@ cc_library(
     name = "reader_context",
     hdrs = ["reader_context.h"],
     deps = [
+        ":analysis_context",
         "//src:io_config",
-        "//src/contexts/internal:analysis_context",
         "//src/contexts/internal:basic_istream_context",
         "//src/contexts/internal:mutable_values_context",
         "//src/contexts/internal:variable_name_context",

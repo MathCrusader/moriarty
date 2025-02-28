@@ -20,10 +20,10 @@
 #include <istream>
 #include <string>
 
-#include "src/contexts/internal/analysis_context.h"
 #include "src/contexts/internal/basic_istream_context.h"
 #include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/internal/variable_name_context.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/io_config.h"
 
 namespace moriarty {
@@ -32,11 +32,11 @@ namespace librarian {
 // ReaderContext
 //
 // All context that MVariable<>::Read() has access to.
-class ReaderContext : public moriarty_internal::AnalysisContext,
+class ReaderContext : public AnalysisContext,
                       public moriarty_internal::BasicIStreamContext,
                       public moriarty_internal::MutableValuesContext,
                       public moriarty_internal::VariableNameContext {
-  using AnalysisBase = moriarty_internal::AnalysisContext;
+  using AnalysisBase = AnalysisContext;
   using IStreamBase = moriarty_internal::BasicIStreamContext;
   using ValuesBase = moriarty_internal::MutableValuesContext;
   using NameBase = moriarty_internal::VariableNameContext;

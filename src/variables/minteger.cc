@@ -33,6 +33,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
@@ -142,7 +143,8 @@ MInteger& MInteger::AtMost(absl::string_view maximum_integer_expression) {
   return AddConstraint(::moriarty::AtMost(maximum_integer_expression));
 }
 
-std::optional<int64_t> MInteger::GetUniqueValueImpl() const {
+std::optional<int64_t> MInteger::GetUniqueValueImpl(
+    librarian::AnalysisContext ctx) const {
   absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues();
   if (!extremes.ok()) return std::nullopt;
   if (extremes->min != extremes->max) return std::nullopt;

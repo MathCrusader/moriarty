@@ -41,6 +41,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/constraint_values.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
@@ -221,6 +222,18 @@ class MVariable : public moriarty_internal::AbstractVariable {
     return ReadImpl(ctx);
   }
 
+  // GetUniqueValue()
+  //
+  // Determines if there is exactly one value that this variable can be assigned
+  // to. If so, return that value. If there is not a unique value (or it is too
+  // hard to determine that there is a unique value), returns `std::nullopt`.
+  // Returning `std::nullopt` does not guarantee there is not a unique value,
+  // just that it is too hard to determine it.
+  [[nodiscard]] std::optional<ValueType> GetUniqueValue(
+      AnalysisContext ctx) const {
+    return GetUniqueValueImpl(ctx);
+  }
+
  protected:
   // ---------------------------------------------------------------------------
   //  Functions that need to be overridden by all `MVariable`s.
@@ -321,7 +334,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // GetUniqueValueImpl() [virtual/optional]
   //
-  // Users should not call this directly. Call `MergeFrom()` instead.
+  // Users should not call this directly. Call `GetUniqueValue()` instead.
   //
   // Determines if there is exactly one value that this variable can be assigned
   // to. If so, return that value. If there is not a unique value (or it is too
@@ -330,7 +343,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // just that it is too hard to determine it.
   //
   // By default, this returns `std::nullopt`.
-  virtual std::optional<ValueType> GetUniqueValueImpl() const;
+  virtual std::optional<ValueType> GetUniqueValueImpl(
+      AnalysisContext ctx) const;
 
   // ToStringImpl() [virtual/optional]
   //
@@ -736,7 +750,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Returns the unique value that this variable can be assigned to. If there
   // is not a unique value (or it is too hard to determine that there is one),
   // returns `std::nullopt`. The `std::any` will be a `ValueType`.
-  std::optional<std::any> GetUniqueValueUntyped() const override;
+  std::optional<std::any> GetUniqueValueUntyped(
+      librarian::AnalysisContext ctx) const override;
 
   // ValueSatisfiesConstraints()
   //
@@ -819,7 +834,6 @@ class MVariableManager {
   RandomEngine& GetRandomEngine();
   void SetUniverse(moriarty_internal::Universe* universe,
                    absl::string_view my_name_in_universe);
-  std::optional<std::any> GetUniqueValueUntyped() const;
   std::vector<std::string> GetDependencies() const;
 
  private:
@@ -1022,7 +1036,8 @@ absl::StatusOr<std::vector<V>> MVariable<V, G>::GetDifficultInstancesImpl()
 }
 
 template <typename V, typename G>
-std::optional<G> MVariable<V, G>::GetUniqueValueImpl() const {
+std::optional<G> MVariable<V, G>::GetUniqueValueImpl(
+    AnalysisContext ctx) const {
   return std::nullopt;  // By default, return no unique value.
 }
 
@@ -1100,32 +1115,6 @@ absl::StatusOr<typename T::value_type> MVariable<V, G>::GenerateValue(
   }
 
   return universe_->GetOrGenerateAndSetValue<T>(variable_name);
-}
-
-template <typename V, typename G>
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-std::optional<typename T::value_type> MVariable<V, G>::GetUniqueValue(
-    absl::string_view debug_name, T m) const {
-  if (!universe_) return std::nullopt;
-
-  moriarty_internal::MVariableManager(&m).SetUniverse(
-      universe_, /* my_name_in_universe = */ debug_name);
-
-  std::optional<std::any> value =
-      moriarty_internal::MVariableManager(&m).GetUniqueValueUntyped();
-
-  if (!value) return std::nullopt;
-
-  typename T::value_type* typed_value =
-      std::any_cast<typename T::value_type>(&(*value));
-
-  // This should not happen. It means the MVariable is returning the
-  // wrong type from GetUniqueValue(). It must be exactly the right type.
-  ABSL_CHECK_NE(typed_value, nullptr)
-      << "Unable to cast value from GetUniqueValue to the appropriate type.";
-
-  return *typed_value;
 }
 
 template <typename V, typename G>
@@ -1533,24 +1522,17 @@ absl::Status MVariable<V, G>::AssignUniqueValue() {
   if (universe_->ValueIsKnown(variable_name_inside_universe_))
     return absl::OkStatus();
 
-  std::optional<std::any> value = GetUniqueValueUntyped();
+  auto [variables, values] = universe_->UnsafeGetConstVariableAndValueSets();
+  AnalysisContext ctx(variables, values);
+  std::optional<G> value = GetUniqueValue(ctx);
 
   if (!value) return absl::OkStatus();
-
-  G* typed_value = std::any_cast<G>(&(*value));
-  if (typed_value == nullptr) {
-    // This should not happen. It means the MVariable is returning the
-    // wrong type from GetUniqueValueUntyped(). It must be exactly the right
-    // type.
-    return absl::InternalError(
-        "Unable to cast value from GetUniqueValueUntyped to the correct type.");
-  }
-
-  return universe_->SetValue<V>(variable_name_inside_universe_, *typed_value);
+  return universe_->SetValue<V>(variable_name_inside_universe_, *value);
 }
 
 template <typename V, typename G>
-std::optional<std::any> MVariable<V, G>::GetUniqueValueUntyped() const {
+std::optional<std::any> MVariable<V, G>::GetUniqueValueUntyped(
+    AnalysisContext ctx) const {
   if (!overall_status_.ok()) return std::nullopt;
   if (is_one_of_) {
     if (is_one_of_->size() == 1) return is_one_of_->at(0);
@@ -1558,7 +1540,7 @@ std::optional<std::any> MVariable<V, G>::GetUniqueValueUntyped() const {
   }
 
   // Casting std::optional<G> to std::optional<std::any>.
-  std::optional<G> value = GetUniqueValueImpl();
+  std::optional<G> value = GetUniqueValueImpl(ctx);
   if (!value) return std::nullopt;
   return *value;
 }
@@ -1658,12 +1640,6 @@ void MVariableManager<VariableType, ValueType>::SetUniverse(
     moriarty_internal::Universe* universe,
     absl::string_view my_name_in_universe) {
   managed_mvariable_.SetUniverse(universe, my_name_in_universe);
-}
-
-template <typename VariableType, typename ValueType>
-std::optional<std::any>
-MVariableManager<VariableType, ValueType>::GetUniqueValueUntyped() const {
-  return managed_mvariable_.GetUniqueValueUntyped();
 }
 
 template <typename VariableType, typename ValueType>

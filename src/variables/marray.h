@@ -496,8 +496,7 @@ MArray<MoriartyElementType>::ReadImpl(librarian::ReaderContext ctx) const {
   if (!length_)
     throw std::runtime_error("Unknown length of array before read.");
 
-  // FIXME: This should be length_->GetUniqueValue(ctx)
-  std::optional<int64_t> length = this->GetUniqueValue("length", *length_);
+  std::optional<int64_t> length = length_->GetUniqueValue(ctx);
 
   if (!length) {
     throw std::runtime_error(

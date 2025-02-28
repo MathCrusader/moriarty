@@ -31,6 +31,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
@@ -197,6 +198,12 @@ class Universe {
   // determined by the caller of `SetGenerationConfig()`.
   GenerationConfig* GetGenerationConfig();
 
+  // FIXME: Remove after Context refactor
+  std::pair<const VariableSet&, const ValueSet&>
+  UnsafeGetConstVariableAndValueSets() {
+    return {*GetVariableSet(), *GetValueSet()};
+  }
+
  private:
   // None of these pointers are owned by this class
 
@@ -282,7 +289,8 @@ absl::StatusOr<typename T::value_type> Universe::GetValue(
   MORIARTY_ASSIGN_OR_RETURN(const AbstractVariable* var,
                             GetAbstractVariable(variable_name));
 
-  std::optional<std::any> unique_value = var->GetUniqueValueUntyped();
+  librarian::AnalysisContext ctx(*GetVariableSet(), *GetValueSet());
+  std::optional<std::any> unique_value = var->GetUniqueValueUntyped(ctx);
   if (!unique_value.has_value()) {
     return ValueNotFoundError(variable_name);
   }

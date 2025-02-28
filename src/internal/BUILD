@@ -180,6 +180,7 @@ cc_library(
         ":variable_name_utils",
         ":variable_set",
         "//src:errors",
+        "//src/contexts/librarian:analysis_context",
         "//src/util/status_macro:status_macros",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/log:absl_check",

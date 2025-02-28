@@ -31,8 +31,9 @@
 #include "src/property.h"
 
 namespace moriarty::librarian {
-class PrinterContext;  // Forward declaring PrinterContext
-class ReaderContext;   // Forward declaring ReaderContext
+class AnalysisContext;  // Forward declaring AnalysisContext
+class PrinterContext;   // Forward declaring PrinterContext
+class ReaderContext;    // Forward declaring ReaderContext
 }  // namespace moriarty::librarian
 
 namespace moriarty {
@@ -118,7 +119,8 @@ class AbstractVariable {
   //
   // Example: MInteger().Between(7, 7) might be able to determine that its
   // unique value is 7.
-  virtual std::optional<std::any> GetUniqueValueUntyped() const = 0;
+  virtual std::optional<std::any> GetUniqueValueUntyped(
+      librarian::AnalysisContext ctx) const = 0;
 
   // ReadValue() [pure virtual]
   //

@@ -28,6 +28,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/internal/range.h"
@@ -194,7 +195,8 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   std::vector<std::string> GetDependenciesImpl() const override;
   absl::StatusOr<std::vector<MInteger>> GetDifficultInstancesImpl()
       const override;
-  std::optional<int64_t> GetUniqueValueImpl() const override;
+  std::optional<int64_t> GetUniqueValueImpl(
+      librarian::AnalysisContext ctx) const override;
   std::string ToStringImpl() const override;
   absl::StatusOr<std::string> ValueToStringImpl(
       const int64_t& value) const override;

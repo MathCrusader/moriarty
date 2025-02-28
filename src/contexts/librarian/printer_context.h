@@ -20,9 +20,9 @@
 #include <ostream>
 #include <string>
 
-#include "src/contexts/internal/analysis_context.h"
 #include "src/contexts/internal/basic_ostream_context.h"
 #include "src/contexts/internal/variable_name_context.h"
+#include "src/contexts/librarian/analysis_context.h"
 
 namespace moriarty {
 namespace librarian {
@@ -30,10 +30,10 @@ namespace librarian {
 // PrinterContext
 //
 // All context that MVariable<>::Print() has access to.
-class PrinterContext : public moriarty_internal::AnalysisContext,
+class PrinterContext : public AnalysisContext,
                        public moriarty_internal::BasicOStreamContext,
                        public moriarty_internal::VariableNameContext {
-  using AnalysisBase = moriarty_internal::AnalysisContext;
+  using AnalysisBase = AnalysisContext;
   using OStreamBase = moriarty_internal::BasicOStreamContext;
   using NameBase = moriarty_internal::VariableNameContext;
 
