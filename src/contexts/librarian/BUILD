@@ -38,7 +38,6 @@ cc_library(
     deps = [
         ":analysis_context",
         "//src/contexts/internal:basic_ostream_context",
-        "//src/contexts/internal:variable_name_context",
     ],
 )
 
@@ -50,6 +49,5 @@ cc_library(
         "//src:io_config",
         "//src/contexts/internal:basic_istream_context",
         "//src/contexts/internal:mutable_values_context",
-        "//src/contexts/internal:variable_name_context",
     ],
 )

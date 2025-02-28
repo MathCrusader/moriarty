@@ -132,8 +132,7 @@ void SimpleIOExporter::PrintVariable(absl::string_view variable_name) {
   // FIXME: Remove this hack once the context refactor is done.
   auto [value_set, variable_set] =
       moriarty_internal::ExporterManager(this).UnsafeGetInternals();
-  std::string tmp_var_name(variable_name);  // Need a local copy
-  librarian::PrinterContext ctx(tmp_var_name, os_, variable_set, value_set);
+  librarian::PrinterContext ctx(variable_name, os_, variable_set, value_set);
 
   ABSL_CHECK_OK((*var)->PrintValue(ctx));
 }
@@ -213,8 +212,7 @@ absl::Status SimpleIOImporter::ReadVariable(absl::string_view variable_name) {
   // FIXME: Remove this hack once the context refactor is done.
   auto [value_set, variable_set] =
       moriarty_internal::ImporterManager(this).UnsafeGetInternals();
-  std::string tmp_var_name(variable_name);  // Need a local copy
-  librarian::ReaderContext ctx(tmp_var_name, is_,
+  librarian::ReaderContext ctx(variable_name, is_,
                                WhitespaceStrictness::kPrecise, variable_set,
                                value_set);
   return var->ReadValue(ctx);

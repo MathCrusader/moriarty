@@ -18,6 +18,9 @@
 #define MORIARTY_SRC_CONTEXTS_LIBRARIAN_ANALYSIS_CONTEXT_H_
 
 #include <functional>
+#include <optional>
+#include <string>
+#include <string_view>
 
 #include "absl/status/statusor.h"
 #include "src/internal/abstract_variable.h"
@@ -34,11 +37,14 @@ namespace librarian {
 // or values.
 class AnalysisContext {
  public:
-  explicit AnalysisContext(const moriarty_internal::VariableSet& variables,
+  explicit AnalysisContext(std::string_view variable_name,
+                           const moriarty_internal::VariableSet& variables,
                            const moriarty_internal::ValueSet& values)
-      : variables_(variables), values_(values) {}
+      : name_(variable_name), variables_(variables), values_(values) {}
 
   // FIXME: This is a placeholder for testing.
+
+  [[nodiscard]] std::string GetVariableName() const { return name_; }
 
   template <typename T>
     requires std::derived_from<T, moriarty_internal::AbstractVariable>
@@ -53,7 +59,18 @@ class AnalysisContext {
     return values_.get().Get<T>(variable_name);
   }
 
+  template <typename T>
+    requires std::derived_from<T, moriarty_internal::AbstractVariable>
+  std::optional<typename T::value_type> GetValueIfKnown(
+      std::string_view variable_name) const {
+    absl::StatusOr<typename T::value_type> value =
+        values_.get().Get<T>(variable_name);
+    if (value.ok()) return *value;
+    return std::nullopt;
+  }
+
  private:
+  std::string name_;
   std::reference_wrapper<const moriarty_internal::VariableSet> variables_;
   std::reference_wrapper<const moriarty_internal::ValueSet> values_;
 };

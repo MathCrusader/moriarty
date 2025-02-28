@@ -19,10 +19,10 @@
 
 #include <istream>
 #include <string>
+#include <string_view>
 
 #include "src/contexts/internal/basic_istream_context.h"
 #include "src/contexts/internal/mutable_values_context.h"
-#include "src/contexts/internal/variable_name_context.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/io_config.h"
 
@@ -34,30 +34,28 @@ namespace librarian {
 // All context that MVariable<>::Read() has access to.
 class ReaderContext : public AnalysisContext,
                       public moriarty_internal::BasicIStreamContext,
-                      public moriarty_internal::MutableValuesContext,
-                      public moriarty_internal::VariableNameContext {
+                      public moriarty_internal::MutableValuesContext {
   using AnalysisBase = AnalysisContext;
   using IStreamBase = moriarty_internal::BasicIStreamContext;
   using ValuesBase = moriarty_internal::MutableValuesContext;
-  using NameBase = moriarty_internal::VariableNameContext;
 
  public:
   // Note: Users should not need to create this object. This object will be
   // created by Moriarty and passed to you. See `src/Moriarty.h` for
   // entry-points.
-  ReaderContext(const std::string& variable_name, std::istream& is,
+  ReaderContext(std::string_view variable_name, std::istream& is,
                 WhitespaceStrictness strictness,
                 const moriarty_internal::VariableSet& variables,
                 moriarty_internal::ValueSet& values)
-      : AnalysisBase(variables, values),
+      : AnalysisBase(variable_name, variables, values),
         IStreamBase(is, strictness),
         ValuesBase(values),
-        NameBase(variable_name) {}
+        name_(variable_name) {}
 
   // GetVariableName()
   //
-  // Returns the name of the variable being printed.
-  using NameBase::GetVariableName;
+  // Returns the name of the variable being read.
+  [[nodiscard]] std::string GetVariableName() const { return name_; }
 
   // ReadToken()
   //
@@ -102,6 +100,9 @@ class ReaderContext : public AnalysisContext,
   //
   // Sets the value of the variable `variable_name`.
   using ValuesBase::SetValue;
+
+ private:
+  std::string name_;
 };
 
 }  // namespace librarian

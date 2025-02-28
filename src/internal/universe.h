@@ -289,7 +289,8 @@ absl::StatusOr<typename T::value_type> Universe::GetValue(
   MORIARTY_ASSIGN_OR_RETURN(const AbstractVariable* var,
                             GetAbstractVariable(variable_name));
 
-  librarian::AnalysisContext ctx(*GetVariableSet(), *GetValueSet());
+  librarian::AnalysisContext ctx(variable_name, *GetVariableSet(),
+                                 *GetValueSet());
   std::optional<std::any> unique_value = var->GetUniqueValueUntyped(ctx);
   if (!unique_value.has_value()) {
     return ValueNotFoundError(variable_name);

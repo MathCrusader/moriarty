@@ -429,7 +429,7 @@ std::optional<typename T::value_type> GetUniqueValue(T variable,
   // The next line hides a *StatusOr<>. Should crash if not okay.
   moriarty::moriarty_internal::AbstractVariable* var =
       *manager.GetVariables()->GetAbstractVariable(var_name);
-  moriarty::librarian::AnalysisContext ctx(*manager.GetVariables(),
+  moriarty::librarian::AnalysisContext ctx(var_name, *manager.GetVariables(),
                                            *manager.GetValues());
   std::optional<std::any> value = var->GetUniqueValueUntyped(ctx);
   if (!value) return std::nullopt;

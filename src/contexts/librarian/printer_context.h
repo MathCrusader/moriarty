@@ -19,9 +19,9 @@
 
 #include <ostream>
 #include <string>
+#include <string_view>
 
 #include "src/contexts/internal/basic_ostream_context.h"
-#include "src/contexts/internal/variable_name_context.h"
 #include "src/contexts/librarian/analysis_context.h"
 
 namespace moriarty {
@@ -31,27 +31,25 @@ namespace librarian {
 //
 // All context that MVariable<>::Print() has access to.
 class PrinterContext : public AnalysisContext,
-                       public moriarty_internal::BasicOStreamContext,
-                       public moriarty_internal::VariableNameContext {
+                       public moriarty_internal::BasicOStreamContext {
   using AnalysisBase = AnalysisContext;
   using OStreamBase = moriarty_internal::BasicOStreamContext;
-  using NameBase = moriarty_internal::VariableNameContext;
 
  public:
   // Note: Users should not need to create this object. This object will be
   // created by Moriarty and passed to you. See `src/Moriarty.h` for
   // entry-points.
-  PrinterContext(const std::string& variable_name, std::ostream& os,
+  PrinterContext(std::string_view variable_name, std::ostream& os,
                  const moriarty_internal::VariableSet& variables,
                  const moriarty_internal::ValueSet& values)
-      : AnalysisBase(variables, values),
+      : AnalysisBase(variable_name, variables, values),
         OStreamBase(os),
-        NameBase(variable_name) {}
+        name_(variable_name) {}
 
   // GetVariableName()
   //
   // Returns the name of the variable being printed.
-  using NameBase::GetVariableName;
+  [[nodiscard]] std::string GetVariableName() const { return name_; }
 
   // PrintToken()
   //
@@ -72,6 +70,9 @@ class PrinterContext : public AnalysisContext,
   //
   // Returns the variable `variable_name`.
   using AnalysisBase::GetVariable;
+
+ private:
+  std::string name_;
 };
 
 }  // namespace librarian

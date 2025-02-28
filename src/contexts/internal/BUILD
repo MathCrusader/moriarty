@@ -49,14 +49,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "variable_name_context",
-    # srcs = ["variable_name_context.cc"],
-    hdrs = ["variable_name_context.h"],
-    deps = [
-    ],
-)
-
 cc_test(
     name = "basic_istream_context_test",
     srcs = ["basic_istream_context_test.cc"],

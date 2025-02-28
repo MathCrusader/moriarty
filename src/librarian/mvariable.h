@@ -231,6 +231,18 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // just that it is too hard to determine it.
   [[nodiscard]] std::optional<ValueType> GetUniqueValue(
       AnalysisContext ctx) const {
+    // FIXME: Placeholder until Context refactor is done.
+    std::optional<ValueType> known =
+        ctx.GetValueIfKnown<VariableType>(ctx.GetVariableName());
+    if (known) return *known;
+
+    if (!overall_status_.ok()) return std::nullopt;
+    if (is_one_of_) {
+      // TODO: Check if all constraints are satisfied?
+      if (is_one_of_->size() == 1) return is_one_of_->at(0);
+      return std::nullopt;  // Not sure which one is correct.
+    }
+
     return GetUniqueValueImpl(ctx);
   }
 
@@ -464,25 +476,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
                                librarian::MVariable<T, typename T::value_type>>
   absl::StatusOr<typename T::value_type> GenerateValue(
       absl::string_view variable_name);
-
-  // GetUniqueValue() [Helper for Librarians]
-  //
-  // Determines if there is exactly one value that `m` can be assigned to. If
-  // so, return that value. If there is not a unique value (or it is too hard to
-  // determine that there is a unique value), returns `std::nullopt`.
-  // Returning `std::nullopt` does not guarantee there is not a unique value,
-  // just that it is too hard to determine it.
-  //
-  // `debug_name` is for better debugging messages on failure and is local
-  // only to this function call.
-  //
-  // Example Usage:
-  //  std::optional<int64_t> N = GetUniqueValue("N", MInteger().Between(7, 7));
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
-  std::optional<typename T::value_type> GetUniqueValue(
-      absl::string_view debug_name, T m) const;
 
   // RandomInteger() [Helper for Librarians]
   //
@@ -1523,7 +1516,7 @@ absl::Status MVariable<V, G>::AssignUniqueValue() {
     return absl::OkStatus();
 
   auto [variables, values] = universe_->UnsafeGetConstVariableAndValueSets();
-  AnalysisContext ctx(variables, values);
+  AnalysisContext ctx(variable_name_inside_universe_, variables, values);
   std::optional<G> value = GetUniqueValue(ctx);
 
   if (!value) return absl::OkStatus();
@@ -1533,14 +1526,8 @@ absl::Status MVariable<V, G>::AssignUniqueValue() {
 template <typename V, typename G>
 std::optional<std::any> MVariable<V, G>::GetUniqueValueUntyped(
     AnalysisContext ctx) const {
-  if (!overall_status_.ok()) return std::nullopt;
-  if (is_one_of_) {
-    if (is_one_of_->size() == 1) return is_one_of_->at(0);
-    return std::nullopt;  // Not sure which one is correct.
-  }
-
   // Casting std::optional<G> to std::optional<std::any>.
-  std::optional<G> value = GetUniqueValueImpl(ctx);
+  std::optional<G> value = GetUniqueValue(ctx);
   if (!value) return std::nullopt;
   return *value;
 }
