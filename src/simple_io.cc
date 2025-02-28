@@ -27,16 +27,15 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/numbers.h"
-#include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
+#include "src/contexts/internal/basic_istream_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/exporter.h"
 #include "src/importer.h"
 #include "src/internal/abstract_variable.h"
-#include "src/librarian/io_config.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
@@ -95,15 +94,12 @@ SimpleIOImporter SimpleIO::Importer(std::istream& is) const {
 //  SimpleIOExporter
 
 SimpleIOExporter::SimpleIOExporter(SimpleIO simple_io, std::ostream& os)
-    : simple_io_(std::move(simple_io)) {
-  io_config_.SetOutputStream(os);
-  SetIOConfig(&io_config_);
-}
+    : simple_io_(std::move(simple_io)), ctx_(os), os_(os) {}
 
 void SimpleIOExporter::StartExport() {
   if (simple_io_.HasNumberOfTestCasesInHeader()) {
-    ABSL_CHECK_OK(io_config_.PrintToken(absl::StrCat(NumTestCases())));
-    ABSL_CHECK_OK(io_config_.PrintWhitespace(Whitespace::kNewline));
+    ctx_.PrintToken(std::to_string(NumTestCases()));
+    ctx_.PrintWhitespace(Whitespace::kNewline);
   }
 
   PrintLines(simple_io_.LinesInHeader());
@@ -121,10 +117,10 @@ void SimpleIOExporter::PrintLines(absl::Span<const SimpleIO::Line> lines) {
 
 void SimpleIOExporter::PrintLine(const SimpleIO::Line& line) {
   for (int i = 0; i < line.size(); i++) {
-    if (i != 0) ABSL_CHECK_OK(io_config_.PrintWhitespace(Whitespace::kSpace));
+    if (i != 0) ctx_.PrintWhitespace(Whitespace::kSpace);
     PrintToken(line[i]);
   }
-  ABSL_CHECK_OK(io_config_.PrintWhitespace(Whitespace::kNewline));
+  ctx_.PrintWhitespace(Whitespace::kNewline);
 }
 
 void SimpleIOExporter::PrintVariable(absl::string_view variable_name) {
@@ -137,9 +133,7 @@ void SimpleIOExporter::PrintVariable(absl::string_view variable_name) {
   auto [value_set, variable_set] =
       moriarty_internal::ExporterManager(this).UnsafeGetInternals();
   std::string tmp_var_name(variable_name);  // Need a local copy
-  librarian::PrinterContext ctx(tmp_var_name,
-                                *io_config_.UnsafeGetOutputStream(),
-                                variable_set, value_set);
+  librarian::PrinterContext ctx(tmp_var_name, os_, variable_set, value_set);
 
   ABSL_CHECK_OK((*var)->PrintValue(ctx));
 }
@@ -148,18 +142,16 @@ void SimpleIOExporter::PrintToken(const SimpleIOToken& token) {
   if (std::holds_alternative<std::string>(token))
     PrintVariable(std::get<std::string>(token));
   else
-    ABSL_CHECK_OK(
-        io_config_.PrintToken(std::string(std::get<StringLiteral>(token))));
+    ctx_.PrintToken(std::string(std::get<StringLiteral>(token)));
 }
 
 // -----------------------------------------------------------------------------
 //  SimpleIOImporter
 
 SimpleIOImporter::SimpleIOImporter(SimpleIO simple_io, std::istream& is)
-    : simple_io_(std::move(simple_io)) {
-  io_config_.SetInputStream(is);
-  SetIOConfig(&io_config_);
-}
+    : simple_io_(std::move(simple_io)),
+      ctx_(is, WhitespaceStrictness::kPrecise),
+      is_(is) {}
 
 void SimpleIOImporter::SetNumTestCases(int num_test_cases) {
   num_test_cases_ = num_test_cases;
@@ -167,8 +159,7 @@ void SimpleIOImporter::SetNumTestCases(int num_test_cases) {
 
 absl::Status SimpleIOImporter::StartImport() {
   if (simple_io_.HasNumberOfTestCasesInHeader()) {
-    MORIARTY_ASSIGN_OR_RETURN(std::string num_cases_str, io_config_.ReadToken(),
-                              _ << "Unable to read number of cases.");
+    std::string num_cases_str = ctx_.ReadToken();
     int num_test_cases = 0;
     if (!absl::SimpleAtoi(num_cases_str, &num_test_cases)) {
       return absl::InvalidArgumentError(absl::Substitute(
@@ -180,7 +171,7 @@ absl::Status SimpleIOImporter::StartImport() {
           num_test_cases));
     }
     SetNumTestCases(num_test_cases);
-    MORIARTY_RETURN_IF_ERROR(io_config_.ReadWhitespace(Whitespace::kNewline));
+    ctx_.ReadWhitespace(Whitespace::kNewline);
   }
 
   MORIARTY_RETURN_IF_ERROR(ReadLines(simple_io_.LinesInHeader()));
@@ -206,12 +197,11 @@ absl::Status SimpleIOImporter::ReadLines(
 
 absl::Status SimpleIOImporter::ReadLine(const SimpleIO::Line& line) {
   for (int i = 0; i < line.size(); i++) {
-    if (i != 0) {
-      MORIARTY_RETURN_IF_ERROR(io_config_.ReadWhitespace(Whitespace::kSpace));
-    }
+    if (i != 0) ctx_.ReadWhitespace(Whitespace::kSpace);
     MORIARTY_RETURN_IF_ERROR(ReadToken(line[i]));
   }
-  return io_config_.ReadWhitespace(Whitespace::kNewline);
+  ctx_.ReadWhitespace(Whitespace::kNewline);
+  return absl::OkStatus();
 }
 
 absl::Status SimpleIOImporter::ReadVariable(absl::string_view variable_name) {
@@ -224,7 +214,7 @@ absl::Status SimpleIOImporter::ReadVariable(absl::string_view variable_name) {
   auto [value_set, variable_set] =
       moriarty_internal::ImporterManager(this).UnsafeGetInternals();
   std::string tmp_var_name(variable_name);  // Need a local copy
-  librarian::ReaderContext ctx(tmp_var_name, *io_config_.UnsafeGetInputStream(),
+  librarian::ReaderContext ctx(tmp_var_name, is_,
                                WhitespaceStrictness::kPrecise, variable_set,
                                value_set);
   return var->ReadValue(ctx);
@@ -235,7 +225,7 @@ absl::Status SimpleIOImporter::ReadToken(const SimpleIOToken& token) {
     return ReadVariable(std::get<std::string>(token));
   }
 
-  MORIARTY_ASSIGN_OR_RETURN(std::string read_token, io_config_.ReadToken());
+  std::string read_token = ctx_.ReadToken();
   std::string expected = std::string(std::get<StringLiteral>(token));
   if (read_token != expected) {
     return absl::InvalidArgumentError(absl::Substitute(

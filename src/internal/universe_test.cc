@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,10 +18,10 @@
 #include <type_traits>
 #include <utility>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/types/span.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
@@ -29,7 +30,6 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_name_utils.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 #include "src/testing/mtest_type.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -39,14 +39,14 @@ namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::moriarty_testing::IsMisconfigured;
 using ::moriarty_testing::IsValueNotFound;
 using ::moriarty_testing::IsVariableNotFound;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::TestType;
 using ::testing::HasSubstr;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 TEST(UniverseDeathTest, OnlyOneVariableSetAndOneValueSetCanBeSet) {
   VariableSet c1, c2;
@@ -261,21 +261,6 @@ TEST(UniverseTest, DependentVariablesAreEvaluatedAndPropagated) {
               IsOkAndHolds(MTestType::kGeneratedValue + 20));
   EXPECT_THAT(universe.GetOrGenerateAndSetValue<MTestType>("B"),
               IsOkAndHolds(20));
-}
-
-TEST(UniverseTest, GetAndSetIOConfigShouldBehave) {
-  Universe universe;
-
-  // Initially should be `nullptr`.
-  EXPECT_EQ(universe.GetIOConfig(), nullptr);
-  EXPECT_EQ(std::as_const(universe).GetIOConfig(), nullptr);
-
-  librarian::IOConfig io_config;
-  universe.SetIOConfig(&io_config);
-
-  // Comparing pointers.
-  EXPECT_EQ(universe.GetIOConfig(), &io_config);
-  EXPECT_EQ(std::as_const(universe).GetIOConfig(), &io_config);
 }
 
 TEST(UniverseTest, GetAndSetRandomEngineShouldBehave) {

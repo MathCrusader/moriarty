@@ -17,7 +17,7 @@
 #include "src/variables/constraints/io_constraints.h"
 
 #include "gtest/gtest.h"
-#include "src/librarian/io_config.h"
+#include "src/io_config.h"
 
 namespace {
 

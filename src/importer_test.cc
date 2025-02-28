@@ -16,12 +16,11 @@
 
 #include <vector>
 
+#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/status/status.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/minteger.h"
@@ -30,14 +29,14 @@
 namespace moriarty {
 namespace {
 
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::moriarty_testing::IsVariableNotFound;
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::IsNull;
 using ::testing::SizeIs;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 // ProtectedImporter
 //
@@ -54,7 +53,6 @@ class ProtectedImporter : public Importer {
   using Importer::GetTestCaseMetadata;
   using Importer::IsDone;
   using Importer::SatisfiesConstraints;
-  using Importer::SetIOConfig;
   using Importer::SetNumTestCases;
   using Importer::SetValue;
 };
@@ -369,23 +367,6 @@ TEST(ImporterTest, CallingDoneShouldUpdateIsDone) {
   ProtectedImporter importer;
   importer.Done();
   EXPECT_TRUE(importer.IsDone());
-}
-
-TEST(ImporterTest, GetIOConfigIsNullByDefault) {
-  ProtectedImporter importer;
-  EXPECT_THAT(moriarty_internal::ImporterManager(&importer).GetIOConfig(),
-              IsNull());
-}
-
-TEST(ImporterTest, SetIOConfigUpdatesGetIOConfig) {
-  ProtectedImporter importer;
-  librarian::IOConfig io_config;
-
-  importer.SetIOConfig(&io_config);
-
-  // Checking the memory is identical.
-  EXPECT_EQ(moriarty_internal::ImporterManager(&importer).GetIOConfig(),
-            &io_config);
 }
 
 TEST(ImporterTest, SatisfiesConstraintsWorksBasicCase) {

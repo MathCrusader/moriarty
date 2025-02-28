@@ -17,7 +17,6 @@
 
 #include <stdint.h>
 
-#include <optional>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -30,7 +29,6 @@
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/subvalues.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
@@ -41,7 +39,6 @@
 namespace moriarty_testing {
 
 using ::moriarty::MInteger;
-using ::moriarty::librarian::IOConfig;
 using ::moriarty::librarian::Subvalues;
 
 MTestType2::MTestType2() {
@@ -136,12 +133,6 @@ absl::Status MTestType2::IsSatisfiedWithImpl(const TestType2& value) const {
   }
 
   return absl::OkStatus();
-}
-
-moriarty::librarian::IOConfig::WhitespacePolicy
-MTestType2::GetWhitespacePolicy() {
-  IOConfig* io_config = *GetIOConfig();  // Hides a StatusOr
-  return io_config->GetWhitespacePolicy();
 }
 
 std::vector<std::string> MTestType2::GetDependenciesImpl() const {

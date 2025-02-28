@@ -80,12 +80,6 @@ constexpr absl::string_view ToString(InternalConfigurationType type) {
   switch (type) {
     case InternalConfigurationType::kUniverse:
       return "Universe";
-    case InternalConfigurationType::kIOConfig:
-      return "IOConfig";
-    case InternalConfigurationType::kInputStream:
-      return "InputStream";
-    case InternalConfigurationType::kOutputStream:
-      return "OutputStream";
     case InternalConfigurationType::kRandomEngine:
       return "RandomEngine";
     case InternalConfigurationType::kVariableName:

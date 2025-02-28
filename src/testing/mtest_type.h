@@ -29,7 +29,6 @@
 #include "absl/strings/string_view.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/subvalues.h"
 #include "src/property.h"
@@ -111,8 +110,6 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   //   (valid - other_variable) / multiplier
   // must be an integer.
   absl::Status IsSatisfiedWithImpl(const TestType& value) const override;
-
-  moriarty::librarian::IOConfig::WhitespacePolicy GetWhitespacePolicy();
 
   absl::StatusOr<std::vector<MTestType>> GetDifficultInstancesImpl()
       const override;

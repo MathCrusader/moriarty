@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -29,7 +30,6 @@
 #include "src/internal/analysis_bootstrap.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 
 namespace moriarty {
@@ -180,13 +180,6 @@ class Importer {
   absl::Status SatisfiesConstraints(T constraints,
                                     const T::value_type& value) const;
 
-  // SetIOConfig()
-  //
-  // Sets the internal IOConfig to be passed to all variables.
-  // TODO(darcybest): Hide this implementation detail. We should have
-  // `SetInputStream()` instead so they don't need to know about `IOConfig`.
-  void SetIOConfig(librarian::IOConfig* io_config);
-
   // TODO(darcybest): Add `Read()`
 
  private:
@@ -196,8 +189,6 @@ class Importer {
   TestCaseMetadata metadata_;
   std::optional<int> num_test_cases_;
   bool done_ = false;
-
-  librarian::IOConfig* io_config_ = nullptr;
 
   // ---------------------------------------------------------------------------
   //    Start of Internal Extended API
@@ -222,11 +213,6 @@ class Importer {
   //
   // Returns the current test case.
   const moriarty_internal::ValueSet& GetCurrentTestCase() const;
-
-  // GetIOConfig() [Internal Extended API]
-  //
-  // Returns the IOConfig if it has been set. `nullptr` otherwise.
-  librarian::IOConfig* GetIOConfig();
 
   // GetAbstractVariable() [Internal Extended API]
   //
@@ -275,7 +261,6 @@ class ImporterManager {
   absl::StatusOr<AbstractVariable*> GetAbstractVariable(
       absl::string_view variable_name);
   const moriarty_internal::ValueSet& GetCurrentTestCase() const;
-  librarian::IOConfig* GetIOConfig();
 
   // FIXME: Remove this hack after Context refactor is done.
   std::pair<ValueSet&, const VariableSet&> UnsafeGetInternals() {

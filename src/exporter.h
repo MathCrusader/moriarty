@@ -29,7 +29,6 @@
 #include "src/internal/status_utils.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/test_case.h"
 
@@ -140,11 +139,6 @@ class Exporter {
   // Returns the number of test cases to be exported.
   [[nodiscard]] int NumTestCases() const;
 
-  // SetIOConfig()
-  //
-  // Sets the internal IOConfig to be passed to all variables.
-  void SetIOConfig(librarian::IOConfig* io_config);
-
   // TODO(darcybest): Add `Print()`
 
  private:
@@ -155,7 +149,6 @@ class Exporter {
   std::optional<TestCaseMetadata> current_metadata_;
 
   moriarty_internal::VariableSet general_constraints_;
-  librarian::IOConfig* io_config_ = nullptr;
 
   // ---------------------------------------------------------------------------
   //    Start of Internal Extended API
@@ -191,11 +184,6 @@ class Exporter {
   // Sets the general constraints.
   void SetGeneralConstraints(
       moriarty_internal::VariableSet general_constraints);
-
-  // GetIOConfig() [Internal Extended API]
-  //
-  // Returns the IOConfig if it has been set. `nullptr` otherwise.
-  [[nodiscard]] librarian::IOConfig* GetIOConfig();
 
   //    End of Internal Extended API
   // ---------------------------------------------------------------------------
@@ -233,7 +221,6 @@ class ExporterManager {
   absl::StatusOr<AbstractVariable*> GetAbstractVariable(
       absl::string_view variable_name);
   void SetGeneralConstraints(VariableSet general_constraints);
-  librarian::IOConfig* GetIOConfig();
 
   // FIXME: Remove this. This is only here for the Context-transition.
   std::pair<ValueSet&, VariableSet&> UnsafeGetInternals() const {

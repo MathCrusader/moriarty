@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,7 +24,6 @@
 #include <string>
 #include <utility>
 
-#include "absl/base/nullability.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/check.h"
 #include "absl/status/status.h"
@@ -39,7 +39,6 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_name_utils.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
@@ -182,24 +181,6 @@ class Universe {
   RandomConfig& GetRandomConfig();
 
   // ---------------------------------------------------------------------------
-  //  IOConfig
-
-  // SetIOConfig()
-  //
-  // Sets the internal IOConfig. Ownership is not transferred to this class.
-  Universe& SetIOConfig(librarian::IOConfig* io_config);
-
-  // GetIOConfig()
-  //
-  // Returns the IOConfig, or nullptr if it hasn't been set.
-  absl::Nullable<const librarian::IOConfig*> GetIOConfig() const;
-
-  // GetIOConfig()
-  //
-  // Returns the IOConfig, or nullptr if it hasn't been set.
-  absl::Nullable<librarian::IOConfig*> GetIOConfig();
-
-  // ---------------------------------------------------------------------------
   //  GenerationConfig
 
   // SetGenerationConfig()
@@ -228,9 +209,6 @@ class Universe {
   const ValueSet* const_value_set_ = nullptr;
 
   RandomConfig random_config_;
-
-  // IOConfig. Do not use this directly. Access via GetIOConfig().
-  librarian::IOConfig* io_config_ = nullptr;
 
   // Variables that are in the process of being assigned. Used to catch cycles.
   absl::flat_hash_set<std::string> currently_generating_variables_;

@@ -30,9 +30,10 @@
 #include "absl/status/status.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
+#include "src/contexts/internal/basic_istream_context.h"
+#include "src/contexts/internal/basic_ostream_context.h"
 #include "src/exporter.h"
 #include "src/importer.h"
-#include "src/librarian/io_config.h"
 
 namespace moriarty {
 
@@ -190,7 +191,8 @@ class SimpleIOImporter : public Importer {
 
  private:
   SimpleIO simple_io_;
-  librarian::IOConfig io_config_;
+  moriarty_internal::BasicIStreamContext ctx_;
+  std::istream& is_;
   int num_test_cases_ = 1;
 
   absl::Status ReadLines(absl::Span<const SimpleIO::Line> lines);
@@ -223,7 +225,8 @@ class SimpleIOExporter : public Exporter {
 
  private:
   SimpleIO simple_io_;
-  librarian::IOConfig io_config_;
+  moriarty_internal::BasicOStreamContext ctx_;
+  std::ostream& os_;
 
   void PrintLines(absl::Span<const SimpleIO::Line> lines);
   void PrintLine(const std::vector<SimpleIOToken>& line);

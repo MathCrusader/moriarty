@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +17,6 @@
 
 #include <string>
 
-#include "absl/base/nullability.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
@@ -30,7 +30,6 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
@@ -158,22 +157,6 @@ RandomEngine* Universe::GetRandomEngine() {
 }
 
 RandomConfig& Universe::GetRandomConfig() { return random_config_; }
-
-// ---------------------------------------------------------------------------
-//  IOConfig
-
-Universe& Universe::SetIOConfig(librarian::IOConfig* io_config) {
-  io_config_ = io_config;
-  return *this;
-}
-
-absl::Nullable<const librarian::IOConfig*> Universe::GetIOConfig() const {
-  return io_config_;
-}
-
-absl::Nullable<librarian::IOConfig*> Universe::GetIOConfig() {
-  return io_config_;
-}
 
 // ---------------------------------------------------------------------------
 //  GenerationConfig

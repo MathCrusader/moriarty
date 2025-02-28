@@ -118,7 +118,7 @@ cc_test(
     srcs = ["io_constraints_test.cc"],
     deps = [
         ":io_constraints",
-        "//src/librarian:io_config",
+        "//src:io_config",
         "@googletest//:gtest_main",
     ],
 )

@@ -16,10 +16,10 @@
 
 #include <optional>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 
@@ -130,14 +130,15 @@ TEST(StatusTest, IsMisconfiguredErrorsGoogleTestMatcherWorks) {
       MisconfiguredError("a", "b", InternalConfigurationType::kUniverse),
       IsMisconfigured(InternalConfigurationType::kUniverse));
   EXPECT_THAT(absl::StatusOr<int>(MisconfiguredError(
-                  "a", "b", InternalConfigurationType::kInputStream)),
-              IsMisconfigured(InternalConfigurationType::kInputStream));
+                  "a", "b", InternalConfigurationType::kGenerationConfig)),
+              IsMisconfigured(InternalConfigurationType::kGenerationConfig));
 
   EXPECT_THAT(UnsatisfiedConstraintError("some reason"),
               Not(IsMisconfigured(InternalConfigurationType::kUniverse)));
-  EXPECT_THAT(absl::StatusOr<int>(MisconfiguredError(
-                  "a", "b", InternalConfigurationType::kRandomEngine)),
-              Not(IsMisconfigured(InternalConfigurationType::kInputStream)));
+  EXPECT_THAT(
+      absl::StatusOr<int>(MisconfiguredError(
+          "a", "b", InternalConfigurationType::kRandomEngine)),
+      Not(IsMisconfigured(InternalConfigurationType::kGenerationConfig)));
 }
 
 // -----------------------------------------------------------------------------

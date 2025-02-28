@@ -68,9 +68,6 @@ std::optional<std::string> GetUnknownVariableName(const absl::Status& status);
 // this, it means that you have not set up your ecosystem properly.
 enum class InternalConfigurationType {
   kUniverse,
-  kIOConfig,
-  kInputStream,
-  kOutputStream,
   kRandomEngine,
   kVariableName,
   kVariableSet,

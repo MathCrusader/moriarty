@@ -32,7 +32,6 @@
 #include <vector>
 
 #include "absl/algorithm/container.h"
-#include "absl/base/nullability.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/check.h"
@@ -52,7 +51,6 @@
 #include "src/internal/status_utils.h"
 #include "src/internal/universe.h"
 #include "src/internal/variable_name_utils.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/subvalues.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
@@ -553,18 +551,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
     requires std::integral<T>
   absl::StatusOr<std::vector<T>> RandomComposition(T n, int k,
                                                    T min_bucket_size = 1);
-
-  // GetIOConfig() [Helper for Librarians]
-  //
-  // Returns the IOConfig. All reading/writing in Moriarty should be aided by
-  // this IOConfig.
-  absl::StatusOr<absl::Nonnull<const IOConfig*>> GetIOConfig() const;
-
-  // GetIOConfig() [Helper for Librarians]
-  //
-  // Returns the IOConfig. All reading/writing in Moriarty should be aided by
-  // this IOConfig.
-  absl::StatusOr<absl::Nonnull<IOConfig*>> GetIOConfig();
 
   // GetApproximateGenerationLimit() [Helper for Librarians]
   //
@@ -1305,29 +1291,6 @@ absl::StatusOr<std::vector<T>> MVariable<V, G>::RandomComposition(
 
   return moriarty_internal::RandomComposition(*universe_->GetRandomEngine(), n,
                                               k, min_bucket_size);
-}
-
-template <typename V, typename G>
-absl::StatusOr<absl::Nonnull<const IOConfig*>> MVariable<V, G>::GetIOConfig()
-    const {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "GetIOConfig",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetIOConfig()) {
-    return MisconfiguredError(Typename(), "GetIOConfig",
-                              InternalConfigurationType::kIOConfig);
-  }
-  return universe_->GetIOConfig();
-}
-
-template <typename V, typename G>
-absl::StatusOr<absl::Nonnull<IOConfig*>> MVariable<V, G>::GetIOConfig() {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "GetIOConfig",
-                              InternalConfigurationType::kUniverse);
-  }
-  return universe_->GetIOConfig();
 }
 
 template <typename V, typename G>

@@ -34,19 +34,6 @@ cc_library(
 )
 
 cc_library(
-    name = "io_config",
-    srcs = ["io_config.cc"],
-    hdrs = ["io_config.h"],
-    deps = [
-        "//src:errors",
-        "//src:io_config",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-    ],
-)
-
-cc_library(
     name = "mvariable",
     hdrs = [
         "mvariable.h",
@@ -108,7 +95,6 @@ cc_library(
     testonly = True,
     hdrs = ["test_utils.h"],
     deps = [
-        ":io_config",
         ":mvariable",
         "//src:errors",
         "//src/contexts/librarian:printer_context",

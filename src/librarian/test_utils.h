@@ -114,7 +114,6 @@
 #include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/util/status_macro/status_macros.h"
 
@@ -444,14 +443,10 @@ absl::StatusOr<typename T::value_type> Read(T variable, std::istream& is,
   context.WithVariable(var_name, variable);
   moriarty_testing_internal::ContextManager manager(&context);
 
-  moriarty::librarian::IOConfig io_config;
-  io_config.SetInputStream(is);
-
   moriarty::moriarty_internal::Universe universe =
       moriarty::moriarty_internal::Universe()
           .SetMutableVariableSet(manager.GetVariables())
-          .SetMutableValueSet(manager.GetValues())
-          .SetIOConfig(&io_config);
+          .SetMutableValueSet(manager.GetValues());
   manager.GetVariables()->SetUniverse(&universe);
 
   MORIARTY_ASSIGN_OR_RETURN(

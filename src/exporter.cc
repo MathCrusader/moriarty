@@ -14,7 +14,6 @@
 
 #include "src/exporter.h"
 
-#include <optional>
 #include <utility>
 #include <vector>
 
@@ -27,7 +26,6 @@
 #include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 #include "src/test_case.h"
 
 namespace moriarty {
@@ -35,9 +33,8 @@ namespace moriarty {
 void Exporter::ExportTestCases() {
   StartExport();
 
-  auto universe = moriarty_internal::Universe()
-                      .SetConstVariableSet(&general_constraints_)
-                      .SetIOConfig(io_config_);
+  auto universe =
+      moriarty_internal::Universe().SetConstVariableSet(&general_constraints_);
   general_constraints_.SetUniverse(&universe);
 
   for (int index = 0; index < all_values_.size(); index++) {
@@ -69,12 +66,6 @@ absl::StatusOr<TestCaseMetadata> Exporter::TryGetTestCaseMetadata() const {
 }
 
 int Exporter::NumTestCases() const { return all_values_.size(); }
-
-void Exporter::SetIOConfig(librarian::IOConfig* io_config) {
-  io_config_ = io_config;
-}
-
-librarian::IOConfig* Exporter::GetIOConfig() { return io_config_; }
 
 void Exporter::SetAllValues(std::vector<moriarty_internal::ValueSet> values) {
   all_values_ = std::move(values);
@@ -119,10 +110,6 @@ absl::StatusOr<AbstractVariable*> ExporterManager::GetAbstractVariable(
 
 void ExporterManager::SetGeneralConstraints(VariableSet general_constraints) {
   managed_exporter_.SetGeneralConstraints(std::move(general_constraints));
-}
-
-librarian::IOConfig* ExporterManager::GetIOConfig() {
-  return managed_exporter_.GetIOConfig();
 }
 
 }  // namespace moriarty_internal

@@ -16,6 +16,7 @@
 #include "src/simple_io.h"
 
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -305,9 +306,8 @@ TEST(SimpleIOImporterTest, ImportWrongWhitespaceFails) {
   moriarty_internal::ImporterManager(&importer).SetGeneralConstraints(
       variable_set);
 
-  EXPECT_THAT(importer.ImportTestCases(),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("Expected ' ', but got '\\t'")));
+  EXPECT_THROW(
+      { importer.ImportTestCases().IgnoreError(); }, std::runtime_error);
 }
 
 TEST(SimpleIOImporterTest, ImportWithNumberOfTestCasesInHeaderWorksAsExpected) {

@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +26,6 @@
 #include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
@@ -45,9 +45,8 @@ absl::Status Importer::ImportTestCases() {
 }
 
 absl::Status Importer::ImportTestCasesWithKnownNumberOfCases() {
-  auto universe = moriarty_internal::Universe()
-                      .SetConstVariableSet(&general_constraints_)
-                      .SetIOConfig(io_config_);
+  auto universe =
+      moriarty_internal::Universe().SetConstVariableSet(&general_constraints_);
   general_constraints_.SetUniverse(&universe);
 
   metadata_.num_test_cases = *num_test_cases_;
@@ -73,9 +72,8 @@ absl::Status Importer::ImportTestCasesWithKnownNumberOfCases() {
 }
 
 absl::Status Importer::ImportTestCasesWithUnknownNumberOfCases() {
-  auto universe = moriarty_internal::Universe()
-                      .SetConstVariableSet(&general_constraints_)
-                      .SetIOConfig(io_config_);
+  auto universe =
+      moriarty_internal::Universe().SetConstVariableSet(&general_constraints_);
   general_constraints_.SetUniverse(&universe);
 
   metadata_.num_test_cases = 0;
@@ -106,10 +104,6 @@ Importer::TestCaseMetadata Importer::GetTestCaseMetadata() const {
   return metadata_;
 }
 
-void Importer::SetIOConfig(librarian::IOConfig* io_config) {
-  io_config_ = io_config;
-}
-
 void Importer::SetGeneralConstraints(
     moriarty_internal::VariableSet general_constraints) {
   general_constraints_ = std::move(general_constraints);
@@ -127,8 +121,6 @@ Importer::GetAbstractVariable(absl::string_view variable_name) {
 const moriarty_internal::ValueSet& Importer::GetCurrentTestCase() const {
   return current_test_case_;
 }
-
-librarian::IOConfig* Importer::GetIOConfig() { return io_config_; }
 
 namespace moriarty_internal {
 
@@ -150,10 +142,6 @@ absl::StatusOr<AbstractVariable*> ImporterManager::GetAbstractVariable(
 
 const ValueSet& ImporterManager::GetCurrentTestCase() const {
   return managed_importer_.GetCurrentTestCase();
-}
-
-librarian::IOConfig* ImporterManager::GetIOConfig() {
-  return managed_importer_.GetIOConfig();
 }
 
 }  // namespace moriarty_internal

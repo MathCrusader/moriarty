@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,17 +18,15 @@
 #include <cstdint>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/algorithm/container.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 #include "src/test_case.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -36,16 +35,15 @@
 namespace moriarty {
 namespace {
 
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::moriarty_testing::IsMisconfigured;
 using ::moriarty_testing::IsValueNotFound;
 using ::moriarty_testing::IsVariableNotFound;
 using ::testing::Each;
 using ::testing::ElementsAre;
-using ::testing::IsNull;
 using ::testing::Pointee;
 using ::testing::Property;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 // ProtectedExporter
 //
@@ -57,7 +55,6 @@ class ProtectedExporter : public Exporter {
 
   using Exporter::GetValue;
   using Exporter::NumTestCases;
-  using Exporter::SetIOConfig;
   using Exporter::TryGetTestCaseMetadata;
   using Exporter::TryGetValue;
 };
@@ -363,23 +360,6 @@ TEST(ExporterTest, GetValueCannotBeCalledInOtherOverridedFunctions) {
     EXPECT_THAT(exporter.ResultsOfCallsToGetValueB(),
                 Each(IsMisconfigured(InternalConfigurationType::kValueSet)));
   }
-}
-
-TEST(ExporterTest, GetIOConfigIsNullByDefault) {
-  ProtectedExporter exporter;
-  EXPECT_THAT(moriarty_internal::ExporterManager(&exporter).GetIOConfig(),
-              IsNull());
-}
-
-TEST(ExporterTest, SetIOConfigUpdatesGetIOConfig) {
-  ProtectedExporter exporter;
-  librarian::IOConfig io_config;
-
-  exporter.SetIOConfig(&io_config);
-
-  // Checking the memory is identical.
-  EXPECT_EQ(moriarty_internal::ExporterManager(&exporter).GetIOConfig(),
-            &io_config);
 }
 
 TEST(ExporterTest, ExportingZeroCasesIsFine) {
