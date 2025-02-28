@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,50 +18,22 @@
 #ifndef MORIARTY_SRC_INTERNAL_ANALYSIS_BOOTSTRAP_H_
 #define MORIARTY_SRC_INTERNAL_ANALYSIS_BOOTSTRAP_H_
 
-#include <concepts>
-
 #include "absl/status/status.h"
-#include "absl/strings/string_view.h"
-#include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/mvariable.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-// SatisfiesConstraints()
+// AllVariablesSatisfyConstraints()
 //
-// Determines if `value` satisfies the constraints defined by `constraints`.
-// `known_values` contains all values that are known in the universe.
-// `variables` can sometimes provide uniquely determined values (e.g.,
-// `MInteger().Is(5)`). Note that no generation will occur inside of
-// `variables`. `name` is used for debugging.
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::Status SatisfiesConstraints(T constraints,
-                                  const typename T::value_type& value,
-                                  const ValueSet& known_values = {},
-                                  const VariableSet& variables = {},
-                                  absl::string_view name = "constraints");
-
-// -----------------------------------------------------------------------------
-//  Template implementation below
-
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::Status SatisfiesConstraints(T constraints,
-                                  const typename T::value_type& value,
-                                  const ValueSet& known_values,
-                                  const VariableSet& variables,
-                                  absl::string_view name) {
-  Universe universe = Universe()
-                          .SetConstValueSet(&known_values)
-                          .SetConstVariableSet(&variables);
-  MVariableManager(&constraints).SetUniverse(&universe, name);
-
-  return MVariableManager(&constraints).IsSatisfiedWith(value);
-}
+// Determines if all variable constraints specified here have a corresponding
+// value that satisfies the constraints.
+//
+// If a variable does not have a value, this will return not ok.
+// If a value does not have a variable, this will return ok.
+absl::Status AllVariablesSatisfyConstraints(const VariableSet& variables,
+                                            const ValueSet& values);
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

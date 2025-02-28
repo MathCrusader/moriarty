@@ -37,6 +37,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
@@ -185,6 +186,7 @@ class MArray : public librarian::MVariable<
   //  MVariable overrides
   absl::StatusOr<vector_value_type> GenerateImpl() override;
   absl::Status IsSatisfiedWithImpl(
+      librarian::AnalysisContext ctx,
       const vector_value_type& value) const override;
   absl::Status MergeFromImpl(const MArray<MElementType>& other) override;
   vector_value_type ReadImpl(librarian::ReaderContext ctx) const override;
@@ -514,17 +516,16 @@ MArray<MoriartyElementType>::ReadImpl(librarian::ReaderContext ctx) const {
 
 template <typename MoriartyElementType>
 absl::Status MArray<MoriartyElementType>::IsSatisfiedWithImpl(
-    const vector_value_type& value) const {
+    librarian::AnalysisContext ctx, const vector_value_type& value) const {
   if (length_) {
-    MORIARTY_RETURN_IF_ERROR(
-        CheckConstraint(this->SatisfiesConstraints(*length_, value.size()),
-                        "invalid MArray length"));
+    MORIARTY_RETURN_IF_ERROR(CheckConstraint(
+        length_->IsSatisfiedWith(ctx, value.size()), "invalid MArray length"));
   }
 
   for (int i = 0; i < value.size(); i++) {
-    MORIARTY_RETURN_IF_ERROR(CheckConstraint(
-        this->SatisfiesConstraints(element_constraints_, value[i]),
-        absl::Substitute("invalid element $0 (0-based)", i)));
+    MORIARTY_RETURN_IF_ERROR(
+        CheckConstraint(element_constraints_.IsSatisfiedWith(ctx, value[i]),
+                        absl::Substitute("invalid element $0 (0-based)", i)));
   }
 
   if (distinct_elements_) {

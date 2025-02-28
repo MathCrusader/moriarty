@@ -27,7 +27,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "src/internal/abstract_variable.h"
-#include "src/internal/analysis_bootstrap.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/mvariable.h"
@@ -287,11 +286,9 @@ template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
 absl::Status Importer::SatisfiesConstraints(T constraints,
                                             const T::value_type& value) const {
-  return moriarty_internal::SatisfiesConstraints(
-      std::move(constraints), value,
-      /* known_values = */ current_test_case_,
-      /* variables = */ general_constraints_,
-      "Generator::SatisfiesConstraints");
+  librarian::AnalysisContext ctx("Importer::SatisfiesConstraints",
+                                 general_constraints_, current_test_case_);
+  return constraints.IsSatisfiedWith(ctx, value);
 }
 
 }  // namespace moriarty

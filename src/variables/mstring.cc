@@ -30,6 +30,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
@@ -164,10 +165,11 @@ absl::Status MString::MergeFromImpl(const MString& other) {
   return absl::OkStatus();
 }
 
-absl::Status MString::IsSatisfiedWithImpl(const std::string& value) const {
+absl::Status MString::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
+                                          const std::string& value) const {
   if (length_) {
     MORIARTY_RETURN_IF_ERROR(
-        CheckConstraint(SatisfiesConstraints(*length_, value.length()),
+        CheckConstraint(length_->IsSatisfiedWith(ctx, value.length()),
                         "length of string is invalid"));
   }
 

@@ -28,6 +28,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
@@ -100,11 +101,12 @@ MTestType& MTestType::SetMultiplier(moriarty::MInteger multiplier) {
 // I am == "multiplier * value + other_variable", so to be valid,
 //   (valid - other_variable) / multiplier
 // must be an integer.
-absl::Status MTestType::IsSatisfiedWithImpl(const TestType& value) const {
+absl::Status MTestType::IsSatisfiedWithImpl(
+    moriarty::librarian::AnalysisContext ctx, const TestType& value) const {
   TestType val = value;
   if (adder_variable_name_) {
     MORIARTY_ASSIGN_OR_RETURN(
-        TestType subtract_me, GetKnownValue<MTestType>(*adder_variable_name_),
+        TestType subtract_me, ctx.GetValue<MTestType>(*adder_variable_name_),
         _ << "Unknown adder variable: " << *adder_variable_name_);
     val = val - subtract_me;
   }
@@ -119,11 +121,11 @@ absl::Status MTestType::IsSatisfiedWithImpl(const TestType& value) const {
     bool found_divisor = false;
     for (int div = 1; div * div <= val; div++) {
       if (val % div == 0) {
-        absl::Status status1 = SatisfiesConstraints(multiplier_, div);
+        absl::Status status1 = multiplier_.IsSatisfiedWith(ctx, div);
         if (!status1.ok() && !moriarty::IsUnsatisfiedConstraintError(status1))
           return status1;
 
-        absl::Status status2 = SatisfiesConstraints(multiplier_, val / div);
+        absl::Status status2 = multiplier_.IsSatisfiedWith(ctx, val / div);
         if (!status2.ok() && !moriarty::IsUnsatisfiedConstraintError(status2))
           return status2;
 

@@ -27,6 +27,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/librarian/mvariable.h"
@@ -109,7 +110,8 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   // I am == "multiplier * value + other_variable", so to be valid,
   //   (valid - other_variable) / multiplier
   // must be an integer.
-  absl::Status IsSatisfiedWithImpl(const TestType& value) const override;
+  absl::Status IsSatisfiedWithImpl(moriarty::librarian::AnalysisContext ctx,
+                                   const TestType& value) const override;
 
   absl::StatusOr<std::vector<MTestType>> GetDifficultInstancesImpl()
       const override;

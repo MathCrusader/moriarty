@@ -33,8 +33,8 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/errors.h"
-#include "src/internal/analysis_bootstrap.h"
 #include "src/internal/generation_config.h"
 #include "src/internal/random_config.h"
 #include "src/internal/random_engine.h"
@@ -954,10 +954,10 @@ absl::Status Generator::SatisfiesConstraints(T constraints,
                               InternalConfigurationType::kVariableSet);
   }
 
-  return moriarty_internal::SatisfiesConstraints(
-      std::move(constraints), value,
-      /*known_values = */ {}, *general_constraints_,
-      "Generator::SatisfiesConstraints");
+  moriarty_internal::ValueSet values;  // No known values
+  librarian::AnalysisContext ctx("Generator::SatisfiesConstraints",
+                                 *general_constraints_, values);
+  return constraints.IsSatisfiedWith(ctx, value);
 }
 
 }  // namespace moriarty

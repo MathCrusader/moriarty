@@ -34,6 +34,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/errors.h"
@@ -127,6 +128,7 @@ class MTuple : public librarian::MVariable<
   //  MVariable overrides
   absl::StatusOr<tuple_value_type> GenerateImpl() override;
   absl::Status IsSatisfiedWithImpl(
+      librarian::AnalysisContext ctx,
       const tuple_value_type& value) const override;
   absl::Status MergeFromImpl(const MTuple& other) override;
   tuple_value_type ReadImpl(librarian::ReaderContext ctx) const override;
@@ -144,7 +146,8 @@ class MTuple : public librarian::MVariable<
   template <std::size_t... I>
   absl::StatusOr<tuple_value_type> GenerateImpl(std::index_sequence<I...>);
   template <std::size_t... I>
-  absl::Status IsSatisfiedWithImpl(const tuple_value_type& value,
+  absl::Status IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
+                                   const tuple_value_type& value,
                                    std::index_sequence<I...>) const;
   template <std::size_t... I>
   absl::Status MergeFromImpl(const MTuple& other, std::index_sequence<I...>);
@@ -314,19 +317,20 @@ void MTuple<MElementTypes...>::PrintImpl(librarian::PrinterContext ctx,
 
 template <typename... MElementTypes>
 absl::Status MTuple<MElementTypes...>::IsSatisfiedWithImpl(
-    const tuple_value_type& value) const {
-  return IsSatisfiedWithImpl(value,
+    librarian::AnalysisContext ctx, const tuple_value_type& value) const {
+  return IsSatisfiedWithImpl(ctx, value,
                              std::index_sequence_for<MElementTypes...>());
 }
 
 template <typename... MElementTypes>
 template <std::size_t... I>
 absl::Status MTuple<MElementTypes...>::IsSatisfiedWithImpl(
-    const tuple_value_type& value, std::index_sequence<I...>) const {
+    librarian::AnalysisContext ctx, const tuple_value_type& value,
+    std::index_sequence<I...>) const {
   // TODO(b/208295758): This should be shortcircuited.
   absl::Status status;
   (status.Update(
-       this->SatisfiesConstraints(std::get<I>(elements_), std::get<I>(value))),
+       std::get<I>(elements_).IsSatisfiedWith(ctx, std::get<I>(value))),
    ...);
 
   return status;

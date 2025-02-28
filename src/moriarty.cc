@@ -28,8 +28,8 @@
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
 #include "src/generator.h"
+#include "src/internal/analysis_bootstrap.h"
 #include "src/internal/status_utils.h"
-#include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/test_case.h"
@@ -151,21 +151,12 @@ absl::Status Moriarty::TryValidateTestCases() {
 
   int case_num = 1;
   for (const moriarty_internal::ValueSet& test_case : assigned_test_cases_) {
-    MORIARTY_RETURN_IF_ERROR(TryValidateSingleTestCase(test_case))
+    MORIARTY_RETURN_IF_ERROR(moriarty_internal::AllVariablesSatisfyConstraints(
+        variables_, test_case))
         << "Case " << case_num << " invalid";
     case_num++;
   }
   return absl::OkStatus();
-}
-
-absl::Status Moriarty::TryValidateSingleTestCase(
-    const moriarty_internal::ValueSet& values) {
-  moriarty_internal::Universe universe = moriarty_internal::Universe()
-                                             .SetConstValueSet(&values)
-                                             .SetConstVariableSet(&variables_);
-
-  variables_.SetUniverse(&universe);
-  return variables_.AllVariablesSatisfyConstraints();
 }
 
 void Moriarty::SetApproximateGenerationLimit(int64_t limit) {

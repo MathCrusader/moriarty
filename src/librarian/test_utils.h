@@ -105,9 +105,9 @@
 #include "absl/strings/substitute.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
-#include "src/internal/analysis_bootstrap.h"
 #include "src/internal/generation_bootstrap.h"
 #include "src/internal/generation_config.h"
 #include "src/internal/random_engine.h"
@@ -587,9 +587,9 @@ MATCHER_P2(IsSatisfiedWith, value, context, "") {
 
   std::string var_name =
       absl::Substitute("$0::IsSatisfiedWith", arg.Typename());
-  absl::Status satisfies = moriarty::moriarty_internal::SatisfiesConstraints(
-      arg, ValueType(value), *manager.GetValues(), *manager.GetVariables(),
-      var_name);
+  moriarty::librarian::AnalysisContext ctx(var_name, *manager.GetVariables(),
+                                           *manager.GetValues());
+  absl::Status satisfies = arg.IsSatisfiedWith(ctx, ValueType(value));
 
   if (moriarty::IsUnsatisfiedConstraintError(satisfies)) {
     *result_listener << "value does not satisfy constraints: "
@@ -634,9 +634,10 @@ MATCHER_P3(IsNotSatisfiedWith, value, reason, context, "") {
 
   std::string var_name =
       absl::Substitute("$0::IsNotSatisfiedWith", arg.Typename());
-  absl::Status satisfies = moriarty::moriarty_internal::SatisfiesConstraints(
-      arg, ValueType(value), *manager.GetValues(), *manager.GetVariables(),
-      var_name);
+  moriarty::librarian::AnalysisContext ctx(var_name, *manager.GetVariables(),
+                                           *manager.GetValues());
+
+  absl::Status satisfies = arg.IsSatisfiedWith(ctx, ValueType(value));
 
   if (moriarty::IsUnsatisfiedConstraintError(satisfies)) {
     if (!testing::Value(satisfies.message(), testing::HasSubstr(reason))) {

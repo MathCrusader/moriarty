@@ -246,6 +246,11 @@ class MVariable : public moriarty_internal::AbstractVariable {
     return GetUniqueValueImpl(ctx);
   }
 
+  absl::Status IsSatisfiedWith(AnalysisContext ctx,
+                               const ValueType& value) const;
+
+  moriarty_internal::Universe* UnsafeGetUniverse() const { return universe_; }
+
  protected:
   // ---------------------------------------------------------------------------
   //  Functions that need to be overridden by all `MVariable`s.
@@ -269,7 +274,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // IsSatisfiedWithImpl() [virtual]
   //
-  // Users should not call this directly. Call `SatisfiesConstraints()` instead.
+  // Users should not call this directly. Call `IsSatisfiedWith()` instead.
   //
   // Determines if `value` satisfies all of the constraints specified by this
   // variable.
@@ -279,7 +284,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // are `VariableNotFoundError` and `ValueNotFoundError`, which will be
   // converted into an `UnsatisfiedConstraintError` before returning to the
   // user. You may find the `CheckConstraint()` helpers useful.
-  virtual absl::Status IsSatisfiedWithImpl(const ValueType& value) const = 0;
+  virtual absl::Status IsSatisfiedWithImpl(AnalysisContext ctx,
+                                           const ValueType& value) const = 0;
 
   // MergeFromImpl() [virtual]
   //
@@ -417,18 +423,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
                                librarian::MVariable<T, typename T::value_type>>
   absl::StatusOr<typename T::value_type> Random(absl::string_view debug_name,
                                                 T m);
-
-  // SatisfiesConstraints() [Helper for Librarians]
-  //
-  // Determines if `value` satisfies the constraints of `m`. Any global context
-  // needed will come from *this* variable, not `m`.
-  //
-  // For example, if `m = MInteger().Between(1, "N")`, then the value of "N" is
-  // from *this* variable's context, not `m`'s context.
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
-  absl::Status SatisfiesConstraints(T m, const T::value_type& value) const;
 
   // Read() [Helper for Librarians]
   //
@@ -650,21 +644,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // random values.
   absl::StatusOr<ValueType> Generate();
 
-  // IsSatisfiedWith() [Internal Extended API]
-  //
-  // Determines if `value` satisfies all of the constraints spcecified by this
-  // variable, both built-in ones and custom ones added via
-  // `AddCustomConstraint()`.
-  //
-  // * If `value` satisfies all constraints, return `absl::OkStatus()`.
-  // * If `value` does not satisfy some constraint, returns an
-  //   `UnsatisfiedConstraintError()`.
-  // * Otherwise, some other status will be returned and the validity of
-  // `value`
-  //   is unspecified (this should be rare and is dependent on the specific
-  //   MVariable).
-  absl::Status IsSatisfiedWith(const ValueType& value) const;
-
   // MergeFrom() [Internal Extended API]
   //
   // Merges my current constraints with the constraints of the `other`
@@ -748,13 +727,12 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // ValueSatisfiesConstraints()
   //
-  // Determines if all variable constraints specified here have a
-  // corresponding values (accessed via its Universe) that satisfies the
-  // constraints.
+  // Determines if the value stored in `ctx` satisfies all constraints for this
+  // variable.
   //
   // If a variable does not have a value, this will return not ok.
   // If a value does not have a variable, this will return ok.
-  absl::Status ValueSatisfiesConstraints() const override;
+  absl::Status ValueSatisfiesConstraints(AnalysisContext ctx) const override;
 
   // ReadValue()
   //
@@ -820,7 +798,6 @@ class MVariableManager {
       librarian::MVariable<VariableType, ValueType>* mvariable_to_manage);
 
   absl::StatusOr<ValueType> Generate();
-  absl::Status IsSatisfiedWith(const ValueType& value) const;
   absl::Status MergeFrom(const AbstractVariable& other);
   absl::StatusOr<std::any> GetSubvalue(const std::any& my_value,
                                        absl::string_view subvalue_name);
@@ -1067,21 +1044,6 @@ absl::StatusOr<typename T::value_type> MVariable<V, G>::Random(
       /* my_name_in_universe = */ moriarty_internal::ConstructVariableName(
           variable_name_inside_universe_, debug_name));
   return moriarty_internal::MVariableManager(&m).Generate();
-}
-
-template <typename V, typename G>
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::Status MVariable<V, G>::SatisfiesConstraints(
-    T m, const T::value_type& value) const {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "SatisfiesConstraints",
-                              InternalConfigurationType::kUniverse);
-  }
-
-  moriarty_internal::MVariableManager(&m).SetUniverse(
-      universe_, absl::Substitute("SatisfiesConstraints::$0", m.Typename()));
-  return moriarty_internal::MVariableManager(&m).IsSatisfiedWith(value);
 }
 
 template <typename V, typename G>
@@ -1364,20 +1326,16 @@ absl::StatusOr<G> MVariable<V, G>::Generate() {
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::IsSatisfiedWith(const G& value) const {
+absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
+                                              const G& value) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "IsSatisfiedWith",
-                              InternalConfigurationType::kUniverse);
-  }
-
   if (is_one_of_) {
     MORIARTY_RETURN_IF_ERROR(CheckConstraint(
         absl::c_binary_search(*is_one_of_, value),
         "`value` must be one of the options in Is() and IsOneOf()"));
   }
 
-  absl::Status status = IsSatisfiedWithImpl(value);
+  absl::Status status = IsSatisfiedWithImpl(ctx, value);
   if (!status.ok()) {
     if (IsVariableNotFoundError(status) || IsValueNotFoundError(status))
       return UnsatisfiedConstraintError(status.message());
@@ -1483,7 +1441,9 @@ absl::StatusOr<G> MVariable<V, G>::GenerateOnce() {
     MORIARTY_RETURN_IF_ERROR(var->AssignValue());
   }
 
-  absl::Status satisfies = IsSatisfiedWith(potential_value);
+  auto [variables, values] = universe_->UnsafeGetConstVariableAndValueSets();
+  AnalysisContext ctx(variable_name_inside_universe_, variables, values);
+  absl::Status satisfies = IsSatisfiedWith(ctx, potential_value);
   if (!satisfies.ok()) return satisfies;
 
   return potential_value;
@@ -1533,16 +1493,12 @@ std::optional<std::any> MVariable<V, G>::GetUniqueValueUntyped(
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::ValueSatisfiesConstraints() const {
+absl::Status MVariable<V, G>::ValueSatisfiesConstraints(
+    AnalysisContext ctx) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "ValueSatisfiesConstraints",
-                              InternalConfigurationType::kUniverse);
-  }
 
-  MORIARTY_ASSIGN_OR_RETURN(
-      G value, universe_->GetValue<V>(variable_name_inside_universe_));
-  return IsSatisfiedWith(value);
+  MORIARTY_ASSIGN_OR_RETURN(G value, ctx.GetValue<V>(ctx.GetVariableName()));
+  return IsSatisfiedWith(ctx, value);
 }
 
 template <typename V, typename G>
@@ -1596,12 +1552,6 @@ template <typename VariableType, typename ValueType>
 absl::StatusOr<ValueType>
 MVariableManager<VariableType, ValueType>::Generate() {
   return managed_mvariable_.Generate();
-}
-
-template <typename VariableType, typename ValueType>
-absl::Status MVariableManager<VariableType, ValueType>::IsSatisfiedWith(
-    const ValueType& value) const {
-  return managed_mvariable_.IsSatisfiedWith(value);
 }
 
 template <typename VariableType, typename ValueType>

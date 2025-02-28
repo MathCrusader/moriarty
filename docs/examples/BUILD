@@ -14,6 +14,9 @@
 
 # Example code from the Moriarty codelabs.
 
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 package(
     default_visibility = [
         "//visibility:public",
@@ -48,6 +51,7 @@ cc_library(
     deps = [
         ":example_graph",
         "//src:errors",
+        "//src/contexts/librarian:analysis_context",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",
         "//src/variables:minteger",

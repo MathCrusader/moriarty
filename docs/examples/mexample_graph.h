@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -23,6 +24,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "docs/examples/example_graph.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/librarian/mvariable.h"
 #include "src/variables/minteger.h"
 
@@ -53,7 +55,8 @@ class MExampleGraph
   bool is_connected_ = false;
 
   absl::StatusOr<ExampleGraph> GenerateImpl() override;
-  absl::Status IsSatisfiedWithImpl(const ExampleGraph& g) const override;
+  absl::Status IsSatisfiedWithImpl(moriarty::librarian::AnalysisContext ctx,
+                                   const ExampleGraph& g) const override;
 
   absl::Status MergeFromImpl(const MExampleGraph& other) override;
 };

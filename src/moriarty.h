@@ -282,10 +282,6 @@ class Moriarty {
   // for specialized generators (e.g., min_, max_, random_ generators).
   absl::StatusOr<absl::Span<const int64_t>> GetSeedForGenerator(int index);
 
-  // Determines if a single test case is valid
-  absl::Status TryValidateSingleTestCase(
-      const moriarty_internal::ValueSet& values);
-
   // Determines if a variable name is valid.
   static absl::Status ValidateVariableName(absl::string_view name);
 };

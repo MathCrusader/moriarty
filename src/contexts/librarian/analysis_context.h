@@ -17,6 +17,7 @@
 #ifndef MORIARTY_SRC_CONTEXTS_LIBRARIAN_ANALYSIS_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_LIBRARIAN_ANALYSIS_CONTEXT_H_
 
+#include <format>
 #include <functional>
 #include <optional>
 #include <string>
@@ -26,6 +27,7 @@
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
 namespace librarian {
@@ -57,6 +59,20 @@ class AnalysisContext {
   absl::StatusOr<typename T::value_type> GetValue(
       std::string_view variable_name) const {
     return values_.get().Get<T>(variable_name);
+  }
+
+  template <typename T>
+    requires std::derived_from<T, moriarty_internal::AbstractVariable>
+  absl::StatusOr<typename T::value_type> GetUniqueValue(
+      std::string_view variable_name) const {
+    auto stored_value = GetValueIfKnown<T>(variable_name);
+    if (stored_value) return *stored_value;
+
+    MORIARTY_ASSIGN_OR_RETURN(T variable, GetVariable<T>(variable_name));
+    auto value = variable.GetUniqueValue(*this);
+    if (value) return *value;
+    return absl::FailedPreconditionError(
+        std::format("Unable to get a unique value for {}.", variable_name));
   }
 
   template <typename T>

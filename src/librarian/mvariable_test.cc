@@ -98,13 +98,6 @@ TEST(MVariableTest, CannotGenerateAValueBeforeRngIsSet) {
               IsMisconfigured(InternalConfigurationType::kUniverse));
 }
 
-TEST(MVariableTest, CannotCallSatisfiesConstraintsWithoutAUniverse) {
-  MTestType variable;
-  EXPECT_THAT(moriarty_internal::MVariableManager(&variable).IsSatisfiedWith(
-                  MTestType::kGeneratedValue),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-}
-
 TEST(MVariableTest, MergeFromShouldWork) {
   MTestType var1;
   MTestType var2;
@@ -344,7 +337,7 @@ TEST(MVariableTest, SatisfiesConstraintsWorksForValid) {
 TEST(MVariableTest, SatisfiesConstraintsNeedsDependentValues) {
   // No value known
   EXPECT_THAT(MTestType().SetAdder("t").SetMultiplier(MInteger().Between(3, 3)),
-              IsNotSatisfiedWith(1, "Unknown variable"));
+              IsNotSatisfiedWith(1, "Value for `t` not found"));
   // Variable, but no value known.
   EXPECT_THAT(MTestType().SetAdder("t").SetMultiplier(MInteger().Between(3, 3)),
               IsNotSatisfiedWith(1, "Value for `t` not found",
@@ -530,7 +523,8 @@ class MEmptyClass : public MVariable<MEmptyClass, EmptyClass> {
   absl::StatusOr<EmptyClass> GenerateImpl() override {
     return absl::UnimplementedError("GenerateImpl");
   }
-  absl::Status IsSatisfiedWithImpl(const EmptyClass& c) const override {
+  absl::Status IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
+                                   const EmptyClass& c) const override {
     return absl::UnimplementedError("IsSatisfiedWith");
   }
   absl::Status MergeFromImpl(const MEmptyClass& c) override {

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,15 +99,6 @@ class VariableSet {
   // Adds a scenario to all variables in this object. Calls `WithProperty`
   // on all applicable types.
   absl::Status WithScenario(const Scenario& scenario);
-
-  // AllVariablesSatisfyConstraints()
-  //
-  // Determines if all variable constraints specified here have a corresponding
-  // values (accessed via its Universe) that satisfies the constraints.
-  //
-  // If a variable does not have a value, this will return not ok.
-  // If a value does not have a variable, this will return ok.
-  absl::Status AllVariablesSatisfyConstraints() const;
 
  private:
   absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>

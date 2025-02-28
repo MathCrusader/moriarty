@@ -99,7 +99,6 @@ cc_library(
     hdrs = ["importer.h"],
     deps = [
         "//src/internal:abstract_variable",
-        "//src/internal:analysis_bootstrap",
         "//src/internal:universe",
         "//src/internal:value_set",
         "//src/internal:variable_set",
@@ -130,7 +129,6 @@ cc_library(
         ":importer",
         ":test_case",
         "//src/internal:status_utils",
-        "//src/internal:universe",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:mvariable",

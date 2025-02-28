@@ -158,12 +158,13 @@ class AbstractVariable {
 
   // ValueSatisfiesConstraints() [pure virtual]
   //
-  // Determines if all variable constraints specified here have a corresponding
-  // values (accessed via its Universe) that satisfies the constraints.
+  // Determines if the value stored in `ctx` satisfies all constraints for this
+  // variable.
   //
   // If a variable does not have a value, this will return not ok.
   // If a value does not have a variable, this will return ok.
-  virtual absl::Status ValueSatisfiesConstraints() const = 0;
+  virtual absl::Status ValueSatisfiesConstraints(
+      librarian::AnalysisContext ctx) const = 0;
 
   // GetDifficultAbstractVariables() [pure virtual]
   //

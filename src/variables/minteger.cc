@@ -39,6 +39,8 @@
 #include "src/errors.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/range.h"
+#include "src/internal/value_set.h"
+#include "src/internal/variable_set.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/size_property.h"
 #include "src/property.h"
@@ -145,7 +147,7 @@ MInteger& MInteger::AtMost(absl::string_view maximum_integer_expression) {
 
 std::optional<int64_t> MInteger::GetUniqueValueImpl(
     librarian::AnalysisContext ctx) const {
-  absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues();
+  absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
   if (!extremes.ok()) return std::nullopt;
   if (extremes->min != extremes->max) return std::nullopt;
 
@@ -171,7 +173,8 @@ absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues() {
   return *extremes;
 }
 
-absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues() const {
+absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues(
+    librarian::AnalysisContext ctx) const {
   MORIARTY_ASSIGN_OR_RETURN(
       absl::flat_hash_set<std::string> needed_dependent_variables,
       bounds_->NeededVariables(), _ << "Error getting the needed variables");
@@ -180,7 +183,7 @@ absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues() const {
 
   for (absl::string_view name : needed_dependent_variables) {
     MORIARTY_ASSIGN_OR_RETURN(
-        dependent_variables[name], GetKnownValue<MInteger>(name),
+        dependent_variables[name], ctx.GetUniqueValue<MInteger>(name),
         _ << "Error getting the dependent variable " << name);
   }
 
@@ -289,8 +292,9 @@ void MInteger::PrintImpl(librarian::PrinterContext ctx,
   ctx.PrintToken(std::to_string(value));
 }
 
-absl::Status MInteger::IsSatisfiedWithImpl(const int64_t& value) const {
-  absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues();
+absl::Status MInteger::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
+                                           const int64_t& value) const {
+  absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
   MORIARTY_RETURN_IF_ERROR(
       CheckConstraint(extremes.status(), "range should be valid"));
 
@@ -304,7 +308,19 @@ absl::Status MInteger::IsSatisfiedWithImpl(const int64_t& value) const {
 
 absl::StatusOr<std::vector<MInteger>> MInteger::GetDifficultInstancesImpl()
     const {
-  absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues();
+  // FIXME: This is a complete hack until the Context refactor is done.
+  moriarty_internal::VariableSet tmp_vars;
+  moriarty_internal::ValueSet tmp_values;
+  auto [vvariables,
+        vvalues] = [&]() -> std::pair<const moriarty_internal::VariableSet&,
+                                      const moriarty_internal::ValueSet&> {
+    moriarty_internal::Universe* universe = UnsafeGetUniverse();
+    if (universe != nullptr)
+      return universe->UnsafeGetConstVariableAndValueSets();
+    return {tmp_vars, tmp_values};
+  }();
+  librarian::AnalysisContext ctx("FIXME", vvariables, vvalues);
+  absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
 
   int64_t min =
       extremes.ok() ? extremes->min : std::numeric_limits<int64_t>::min();

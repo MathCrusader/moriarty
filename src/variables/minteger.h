@@ -178,7 +178,8 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // Computes and returns the minimum and maximum of `bounds_`. Returns
   // `kInvalidArgumentError` if the range is empty. The `non-const` version
   // may generate other dependent variables if needed along the way.
-  absl::StatusOr<Range::ExtremeValues> GetExtremeValues() const;
+  absl::StatusOr<Range::ExtremeValues> GetExtremeValues(
+      librarian::AnalysisContext ctx) const;
   absl::StatusOr<Range::ExtremeValues> GetExtremeValues();
 
   // Generates a value between `minimum` and `maximum`.
@@ -187,7 +188,8 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // ---------------------------------------------------------------------------
   //  MVariable overrides
   absl::StatusOr<int64_t> GenerateImpl() override;
-  absl::Status IsSatisfiedWithImpl(const int64_t& value) const override;
+  absl::Status IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
+                                   const int64_t& value) const override;
   absl::Status MergeFromImpl(const MInteger& other) override;
   int64_t ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,

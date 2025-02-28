@@ -41,14 +41,13 @@ cc_library(
 
 cc_library(
     name = "analysis_bootstrap",
+    srcs = ["analysis_bootstrap.cc"],
     hdrs = ["analysis_bootstrap.h"],
     deps = [
-        ":universe",
         ":value_set",
         ":variable_set",
-        "//src/librarian:mvariable",
+        "//src/contexts/librarian:analysis_context",
         "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -234,6 +233,8 @@ cc_test(
         ":analysis_bootstrap",
         ":value_set",
         ":variable_set",
+        "//src/librarian:test_utils",
+        "//src/testing:mtest_type",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
         "@abseil-cpp//absl/status",
@@ -398,13 +399,10 @@ cc_test(
         "variable_set_test.cc",
     ],
     deps = [
-        ":abstract_variable",
         ":generation_bootstrap",
         ":random_engine",
-        ":universe",
         ":value_set",
         ":variable_set",
-        "//src:errors",
         "//src:scenario",
         "//src/librarian:test_utils",
         "//src/testing:mtest_type",
@@ -412,7 +410,6 @@ cc_test(
         "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
         "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/types:span",
         "@googletest//:gtest_main",
     ],
 )

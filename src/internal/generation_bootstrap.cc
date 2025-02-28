@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -163,7 +164,8 @@ absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
   for (const std::string& name : variable_names) {
     MORIARTY_ASSIGN_OR_RETURN(AbstractVariable * var,
                               variables.GetAbstractVariable(name));
-    MORIARTY_RETURN_IF_ERROR(var->ValueSatisfiesConstraints());
+    librarian::AnalysisContext ctx(name, variables, known_values);
+    MORIARTY_RETURN_IF_ERROR(var->ValueSatisfiesConstraints(ctx));
   }
 
   return known_values;

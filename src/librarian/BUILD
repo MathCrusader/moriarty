@@ -97,10 +97,10 @@ cc_library(
     deps = [
         ":mvariable",
         "//src:errors",
+        "//src/contexts/librarian:analysis_context",
         "//src/contexts/librarian:printer_context",
         "//src/contexts/librarian:reader_context",
         "//src/internal:abstract_variable",
-        "//src/internal:analysis_bootstrap",
         "//src/internal:generation_bootstrap",
         "//src/internal:generation_config",
         "//src/internal:random_engine",

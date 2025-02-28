@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -93,14 +94,6 @@ absl::Status VariableSet::WithScenario(const Scenario& scenario) {
          scenario.GetTypeSpecificProperties(var_ptr->Typename())) {
       MORIARTY_RETURN_IF_ERROR(var_ptr->WithProperty(property));
     }
-  }
-  return absl::OkStatus();
-}
-
-absl::Status VariableSet::AllVariablesSatisfyConstraints() const {
-  for (const auto& [var_name, var_ptr] : variables_) {
-    MORIARTY_RETURN_IF_ERROR(var_ptr->ValueSatisfiesConstraints())
-        << "'" << var_name << "' does not satisfy constraints";
   }
   return absl::OkStatus();
 }

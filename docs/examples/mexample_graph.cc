@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,6 +21,7 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "docs/examples/example_graph.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/errors.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/variables/minteger.h"
@@ -87,13 +89,14 @@ absl::StatusOr<ExampleGraph> MExampleGraph::GenerateImpl() {
   return ExampleGraph({.num_nodes = num_nodes, .edges = edges});
 }
 
-absl::Status MExampleGraph::IsSatisfiedWithImpl(const ExampleGraph& g) const {
+absl::Status MExampleGraph::IsSatisfiedWithImpl(
+    moriarty::librarian::AnalysisContext ctx, const ExampleGraph& g) const {
   if (num_nodes_.has_value()) {
-    MORIARTY_RETURN_IF_ERROR(SatisfiesConstraints(*num_nodes_, g.num_nodes));
+    MORIARTY_RETURN_IF_ERROR(num_nodes_->IsSatisfiedWith(ctx, g.num_nodes));
   }
 
   if (num_edges_.has_value()) {
-    MORIARTY_RETURN_IF_ERROR(SatisfiesConstraints(*num_edges_, g.edges.size()));
+    MORIARTY_RETURN_IF_ERROR(num_edges_->IsSatisfiedWith(ctx, g.edges.size()));
   }
 
   if (is_connected_) {
