@@ -42,6 +42,15 @@ cc_library(
 )
 
 cc_library(
+    name = "basic_random_context",
+    srcs = ["basic_random_context.cc"],
+    hdrs = ["basic_random_context.h"],
+    deps = [
+        "//src/internal:random_engine",
+    ],
+)
+
+cc_library(
     name = "mutable_values_context",
     hdrs = ["mutable_values_context.h"],
     deps = [
@@ -64,6 +73,16 @@ cc_test(
     srcs = ["basic_ostream_context_test.cc"],
     deps = [
         ":basic_ostream_context",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "basic_random_context_test",
+    srcs = ["basic_random_context_test.cc"],
+    deps = [
+        ":basic_random_context",
+        "//src/internal:random_engine",
         "@googletest//:gtest_main",
     ],
 )
