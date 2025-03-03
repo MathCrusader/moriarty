@@ -36,12 +36,11 @@
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
-#include "src/internal/random_engine.h"
 #include "src/internal/range.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/mvariable.h"
 #include "src/librarian/size_property.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
@@ -154,7 +153,8 @@ std::optional<int64_t> MInteger::GetUniqueValueImpl(
   return extremes->min;
 }
 
-absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues() {
+absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues(
+    librarian::ResolverContext ctx) const {
   MORIARTY_ASSIGN_OR_RETURN(
       absl::flat_hash_set<std::string> needed_dependent_variables,
       bounds_->NeededVariables(), _ << "Error getting the needed variables");
@@ -162,9 +162,7 @@ absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues() {
   absl::flat_hash_map<std::string, int64_t> dependent_variables;
 
   for (absl::string_view name : needed_dependent_variables) {
-    MORIARTY_ASSIGN_OR_RETURN(
-        dependent_variables[name], GenerateValue<MInteger>(name),
-        _ << "Error getting the dependent variable " << name);
+    dependent_variables[name] = ctx.GenerateVariable<MInteger>(name);
   }
 
   MORIARTY_ASSIGN_OR_RETURN(std::optional<Range::ExtremeValues> extremes,
@@ -213,52 +211,46 @@ absl::Status MInteger::OfSizeProperty(Property property) {
   return absl::OkStatus();
 }
 
-absl::StatusOr<int64_t> MInteger::GenerateImpl() {
-  MORIARTY_ASSIGN_OR_RETURN(
-      Range::ExtremeValues extremes, GetExtremeValues(),
-      _ << "Error while getting the min/max of the range in MInteger");
-
-  if (approx_size_ == CommonSize::kAny) return GenerateInRange(extremes);
+int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
+  auto extremes = GetExtremeValues(ctx);
+  if (!extremes.ok()) {
+    throw std::runtime_error(std::string(extremes.status().message()));
+  }
+  if (approx_size_ == CommonSize::kAny)
+    return ctx.RandomInteger(extremes->min, extremes->max);
 
   // TODO(darcybest): Make this work for larger ranges.
-  if ((extremes.min <= std::numeric_limits<int64_t>::min() / 2) &&
-      (extremes.max >= std::numeric_limits<int64_t>::max() / 2)) {
-    absl::StatusOr<int64_t> value = GenerateInRange(extremes);
-    if (value.ok()) return value;
+  if ((extremes->min <= std::numeric_limits<int64_t>::min() / 2) &&
+      (extremes->max >= std::numeric_limits<int64_t>::max() / 2)) {
+    return ctx.RandomInteger(extremes->min, extremes->max);
   }
 
   // Note: `max - min + 1` does not overflow because of the check above.
   Range range =
-      librarian::GetRange(approx_size_, extremes.max - extremes.min + 1);
+      librarian::GetRange(approx_size_, extremes->max - extremes->min + 1);
 
-  MORIARTY_ASSIGN_OR_RETURN(std::optional<Range::ExtremeValues> rng_extremes,
-                            range.Extremes());
+  absl::StatusOr<std::optional<Range::ExtremeValues>> rng_extremes =
+      range.Extremes();
+  if (!rng_extremes.ok()) {
+    throw std::runtime_error(std::string(rng_extremes.status().message()));
+  }
 
   // If a special size has been requested, attempt to generate that. If that
   // fails, generate the full range.
-  if (rng_extremes) {
+  if (*rng_extremes) {
     // Offset the values appropriately. These ranges were supposed to be for
     // [1, N].
-    rng_extremes->min += extremes.min - 1;
-    rng_extremes->max += extremes.min - 1;
+    (*rng_extremes)->min += extremes->min - 1;
+    (*rng_extremes)->max += extremes->min - 1;
 
-    absl::StatusOr<int64_t> value = GenerateInRange(*rng_extremes);
-    if (value.ok()) return value;
+    try {
+      return ctx.RandomInteger((*rng_extremes)->min, (*rng_extremes)->max);
+    } catch (const std::exception& e) {
+      // If the special size fails, simply pass through.
+    }
   }
 
-  return GenerateInRange(extremes);
-}
-
-absl::StatusOr<int64_t> MInteger::GenerateInRange(
-    Range::ExtremeValues extremes) {
-  // moriarty::MInteger needs direct access its RandomEngine. All other
-  // variables should call Random(MInteger().Between(x, y)) to get a random
-  // integer.
-  moriarty_internal::RandomEngine& rng =
-      moriarty_internal::MVariableManager<MInteger, int64_t>(this)
-          .GetRandomEngine();
-
-  return rng.RandInt(extremes.min, extremes.max);
+  return ctx.RandomInteger(extremes->min, extremes->max);
 }
 
 absl::Status MInteger::MergeFromImpl(const MInteger& other) {

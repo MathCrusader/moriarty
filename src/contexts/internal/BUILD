@@ -58,6 +58,14 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "generation_orchestration_context",
+    hdrs = ["generation_orchestration_context.h"],
+    deps = [
+        "//src/internal:generation_config",
+    ],
+)
+
 cc_test(
     name = "basic_istream_context_test",
     srcs = ["basic_istream_context_test.cc"],

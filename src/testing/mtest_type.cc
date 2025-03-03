@@ -31,6 +31,7 @@
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
 #include "src/librarian/subvalues.h"
 #include "src/property.h"
@@ -159,15 +160,14 @@ absl::StatusOr<moriarty::librarian::Subvalues> MTestType::GetSubvaluesImpl(
 // Always returns pi. Does not directly depend on `rng`, but we generate a
 // random number between 1 and 1 (aka, 1) to ensure the RandomEngine is
 // available for use if we wanted to.
-absl::StatusOr<TestType> MTestType::GenerateImpl() {
+TestType MTestType::GenerateImpl(
+    moriarty::librarian::ResolverContext ctx) const {
   TestType addition = 0;
   if (adder_variable_name_) {
-    MORIARTY_ASSIGN_OR_RETURN(addition,
-                              GenerateValue<MTestType>(*adder_variable_name_));
+    addition = ctx.GenerateVariable<MTestType>(*adder_variable_name_);
   }
 
-  MORIARTY_ASSIGN_OR_RETURN(int64_t multiplier,
-                            Random("multiplier", multiplier_));
+  int64_t multiplier = multiplier_.Generate(ctx.WithSubVariable("multiplier"));
   return kGeneratedValue * multiplier + addition;
 }
 

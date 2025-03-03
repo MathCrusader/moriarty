@@ -30,6 +30,7 @@
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/subvalues.h"
 #include "src/property.h"
@@ -128,7 +129,8 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   // Always returns pi. Does not directly depend on `rng`, but we generate a
   // random number between 1 and 1 (aka, 1) to ensure the RandomEngine is
   // available for use if we wanted to.
-  absl::StatusOr<TestType> GenerateImpl() override;
+  TestType GenerateImpl(
+      moriarty::librarian::ResolverContext ctx) const override;
 
   std::vector<std::string> GetDependenciesImpl() const override;
 };

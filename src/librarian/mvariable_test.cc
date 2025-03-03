@@ -30,19 +30,14 @@
 #include "absl/types/span.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/constraint_values.h"
-#include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
 #include "src/internal/random_engine.h"
-#include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/test_utils.h"
 #include "src/property.h"
 #include "src/testing/mtest_type.h"
-#include "src/testing/random_test_util.h"
-#include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/minteger.h"
 
@@ -57,7 +52,6 @@ using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GetUniqueValue;
-using ::moriarty_testing::IsMisconfigured;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
 using ::moriarty_testing::MTestType;
@@ -90,12 +84,6 @@ TEST(MVariableTest, GenerateShouldObserveIsOneOf) {
   EXPECT_THAT(GenerateN(MTestType().IsOneOf({50, 60, 70, 80, 90, 100}), 100),
               IsOkAndHolds(AllOf(Contains(50), Contains(60), Contains(70),
                                  Contains(80), Contains(90), Contains(100))));
-}
-
-TEST(MVariableTest, CannotGenerateAValueBeforeRngIsSet) {
-  MTestType variable;
-  EXPECT_THAT(moriarty_internal::MVariableManager(&variable).Generate(),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
 }
 
 TEST(MVariableTest, MergeFromShouldWork) {
@@ -167,10 +155,7 @@ TEST(MVariableTest, MergeFromUsingAbstractVariablesShouldRespectIsAndIsOneOf) {
     MTestType var2 = MTestType().Is(20);
 
     merge_from(var1, var2);
-    EXPECT_THAT(
-        Generate(var1),
-        StatusIs(absl::StatusCode::kFailedPrecondition,
-                 HasSubstr("Is/IsOneOf used, but no viable value found")));
+    EXPECT_THROW({ Generate(var1).IgnoreError(); }, std::runtime_error);
     EXPECT_TRUE(var1.WasMerged());  // Was merged, but bad options.
   }
 
@@ -215,20 +200,6 @@ TEST(MVariableTest, SubvaluesThatDontExistFail) {
               StatusIs(absl::StatusCode::kNotFound));
 }
 
-TEST(MVariableTest, GeneratingDependentVariableWithNoUniverseShouldFail) {
-  moriarty_internal::VariableSet variables;
-  MORIARTY_EXPECT_OK(
-      variables.AddVariable("var1", MTestType().SetAdder("var2")));
-  MORIARTY_EXPECT_OK(variables.AddVariable("var2", MTestType()));
-
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var,
-                                variables.GetAbstractVariable("var1"));
-  MVariableManager<MTestType, TestType> manager1(dynamic_cast<MTestType*>(var));
-
-  EXPECT_THAT(var->AssignValue(),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-}
-
 TEST(MVariableTest, BasingMyVariableOnAnotherSetValueShouldWorkBasicCase) {
   EXPECT_THAT(Generate(MTestType().SetAdder("x"),
                        Context().WithValue<MTestType>("x", TestType(20))),
@@ -242,16 +213,19 @@ TEST(MVariableTest, BasingMyVariableOnAnotherUnSetVariableShouldWorkBasicCase) {
 }
 
 TEST(MVariableTest, BasingMyVariableOnANonexistentOneShouldFail) {
-  EXPECT_THAT(Generate(MTestType().SetAdder("x")),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Unknown variable: `x`")));
+  EXPECT_THROW(
+      { Generate(MTestType().SetAdder("x")).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MVariableTest, DependentVariableOfTheWrongTypeShouldFail) {
-  EXPECT_THAT(Generate(MTestType().SetAdder("x"),
-                       Context().WithVariable("x", MInteger())),  // Wrong type
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Unable to cast x")));
+  EXPECT_THROW(
+      {
+        Generate(MTestType().SetAdder("x"),
+                 Context().WithVariable("x", MInteger()))
+            .IgnoreError();
+      },  // Wrong type
+      std::runtime_error);
 }
 
 TEST(MVariableTest, DependentVariablesInSubvariablesCanChain) {
@@ -278,41 +252,42 @@ TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
   moriarty_internal::GenerationConfig generation_config;
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
-  moriarty_internal::Universe universe =
-      moriarty_internal::Universe()
-          .SetMutableVariableSet(&variables)
-          .SetMutableValueSet(&values)
-          .SetGenerationConfig(&generation_config)
-          .SetRandomEngine(&engine);
-  variables.SetUniverse(&universe);
-
   MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_A,
-                                universe.GetAbstractVariable("A"));
-  MORIARTY_ASSERT_OK(var_A->AssignValue());  // By assigning A, we assigned N.
+                                variables.GetAbstractVariable("A"));
+  ResolverContext ctxA("A", variables, values, engine, generation_config);
+  MORIARTY_ASSERT_OK(
+      var_A->AssignValue(ctxA));  // By assigning A, we assigned N.
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_B,
-                                universe.GetAbstractVariable("B"));
+                                variables.GetAbstractVariable("B"));
+  ResolverContext ctxB("B", variables, values, engine, generation_config);
   MORIARTY_ASSERT_OK(
-      var_B->AssignValue());  // Should use the already generated N.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(int N, universe.GetValue<MInteger>("N"));
+      var_B->AssignValue(ctxB));  // Should use the already generated N.
+  MORIARTY_ASSERT_OK_AND_ASSIGN(int N, values.Get<MInteger>("N"));
 
-  EXPECT_THAT(universe.GetValue<MInteger>("A"), IsOkAndHolds(N));
-  EXPECT_THAT(universe.GetValue<MInteger>("B"), IsOkAndHolds(N));
+  EXPECT_THAT(values.Get<MInteger>("A"), IsOkAndHolds(N));
+  EXPECT_THAT(values.Get<MInteger>("B"), IsOkAndHolds(N));
 }
 
 TEST(MVariableTest, CyclicDependenciesShouldFail) {
-  EXPECT_THAT(Generate(MTestType().SetAdder("y"),
-                       Context()
-                           .WithVariable("y", MTestType().SetAdder("z"))
-                           .WithVariable("z", MTestType().SetAdder("y"))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("cyclic dependency")));
+  EXPECT_THROW(
+      {
+        Generate(MTestType().SetAdder("y"),
+                 Context()
+                     .WithVariable("y", MTestType().SetAdder("z"))
+                     .WithVariable("z", MTestType().SetAdder("y")))
+            .IgnoreError();
+      },
+      std::runtime_error);
 
   // Self-loop
-  EXPECT_THAT(Generate(MTestType().SetAdder("y"),
-                       Context().WithVariable("y", MTestType().SetAdder("y"))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("cyclic dependency")));
+  EXPECT_THROW(
+      {
+        Generate(MTestType().SetAdder("y"),
+                 Context().WithVariable("y", MTestType().SetAdder("y")))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MVariableTest, SatisfiesConstraintsWorksForValid) {
@@ -430,10 +405,10 @@ TEST(MVariableTest, CustomConstraintWithDependentVariables) {
                    .SetMultiplier(MInteger().Is(2))
                    .AddCustomConstraint(
                        "Custom1", {"A"},
-                       [](const TestType value,
-                          const ConstraintValues& known_values) -> bool {
-                         return known_values.GetValue<MTestType>("A").value ==
-                                value;
+                       [](const TestType value, AnalysisContext ctx) -> bool {
+                         auto A = ctx.GetValue<MTestType>("A");
+                         if (!A.ok()) return false;
+                         return A->value == value;
                        }),
                Context().WithVariable(
                    "A", MTestType().SetMultiplier(MInteger().Is(2)))),
@@ -441,54 +416,63 @@ TEST(MVariableTest, CustomConstraintWithDependentVariables) {
 }
 
 TEST(MVariableTest, CustomConstraintInvalidFailsToGenerate) {
-  EXPECT_THAT(
-      Generate(MTestType()
-                   .SetMultiplier(MInteger().Is(1))
-                   .AddCustomConstraint(
-                       "Custom1", {"A"},
-                       [](const TestType value,
-                          const ConstraintValues& known_values) -> bool {
-                         return known_values.GetValue<MTestType>("A").value ==
-                                value;
-                       }),
-               Context().WithVariable(
-                   "A", MTestType().SetMultiplier(MInteger().Is(2)))),
-      StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THROW(
+      {
+        Generate(MTestType()
+                     .SetMultiplier(MInteger().Is(1))
+                     .AddCustomConstraint(
+                         "Custom1", {"A"},
+                         [](const TestType value, AnalysisContext ctx) -> bool {
+                           auto A = ctx.GetValue<MTestType>("A");
+                           if (!A.ok()) return false;
+                           return A->value == value;
+                         }),
+                 Context().WithVariable(
+                     "A", MTestType().SetMultiplier(MInteger().Is(2))))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
-TEST(MVariableDeathTest, CustomConstraintsWithInvalidDependentVariableCrashes) {
-  EXPECT_DEATH(
-      auto status = Generate(
-          MTestType()
-              .SetMultiplier(MInteger().Is(1))
-              .AddCustomConstraint(
-                  "Custom1", {},
-                  [](const TestType value,
-                     const ConstraintValues& known_values) -> bool {
-                    return known_values.GetValue<MTestType>("A").value == value;
-                  })),
-      "NOT_FOUND: Unknown variable");
+TEST(MVariableTest, CustomConstraintsWithInvalidDependentVariableCrashes) {
+  EXPECT_THROW(
+      {
+        Generate(MTestType()
+                     .SetMultiplier(MInteger().Is(1))
+                     .AddCustomConstraint(
+                         "Custom1", {},
+                         [](const TestType value, AnalysisContext ctx) -> bool {
+                           auto A = ctx.GetValue<MTestType>("A");
+                           if (!A.ok()) return false;
+                           return A->value == value;
+                         }))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
-TEST(MVariableDeathTest,
+TEST(MVariableTest,
      CustomConstraintsKnownVariableButNotAddedAsDependencyFailsGeneration) {
   // Note that "L"'s value is not known since the generated variable's name is
   // "Generate(MTestType)" -- which comes before "L" alphabetically. If the
   // dependent's name was "A" instead of "L", this would pass, but it is not
   // guaranteed to since the user didn't specify it as a constraint.
-  EXPECT_DEATH(
-      auto status = Generate(
-          MTestType()
-              .SetMultiplier(MInteger().Is(1))
-              .AddCustomConstraint(
-                  "Custom1", {},
-                  [](const TestType value,
-                     const ConstraintValues& known_values) -> bool {
-                    return known_values.GetValue<MTestType>("L").value == value;
-                  }),
-          Context().WithVariable("L",
-                                 MTestType().SetMultiplier(MInteger().Is(2)))),
-      "NOT_FOUND: Value");
+  EXPECT_THROW(
+      {
+        Generate(MTestType()
+                     .SetMultiplier(MInteger().Is(1))
+                     .AddCustomConstraint(
+                         "Custom1", {},
+                         [](const TestType value, AnalysisContext ctx) -> bool {
+                           auto A = ctx.GetValue<MTestType>("A");
+                           if (!A.ok()) return false;
+                           return A->value == value;
+                         }),
+                 Context().WithVariable(
+                     "L", MTestType().SetMultiplier(MInteger().Is(2))))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 // TODO(hivini): Test that by default, nothing is returned from
@@ -520,8 +504,8 @@ class MEmptyClass : public MVariable<MEmptyClass, EmptyClass> {
   std::string Typename() const override { return "MEmptyClass"; }
 
  private:
-  absl::StatusOr<EmptyClass> GenerateImpl() override {
-    return absl::UnimplementedError("GenerateImpl");
+  EmptyClass GenerateImpl(ResolverContext) const override {
+    throw std::runtime_error("Unimplemented: GenerateImpl");
   }
   absl::Status IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
                                    const EmptyClass& c) const override {
@@ -626,40 +610,21 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
   moriarty_internal::GenerationConfig generation_config;
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
-  moriarty_internal::Universe universe =
-      moriarty_internal::Universe()
-          .SetMutableVariableSet(&variables)
-          .SetMutableValueSet(&values)
-          .SetGenerationConfig(&generation_config)
-          .SetRandomEngine(&engine);
-  variables.SetUniverse(&universe);
-
   MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_A,
-                                universe.GetAbstractVariable("A"));
-  MORIARTY_ASSERT_OK(var_A->AssignValue());  // By assigning A, we assigned N.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(int N, universe.GetValue<MInteger>("N"));
+                                variables.GetAbstractVariable("A"));
+  ResolverContext ctxA("A", variables, values, engine, generation_config);
+  MORIARTY_ASSERT_OK(
+      var_A->AssignValue(ctxA));  // By assigning A, we assigned N.
+  MORIARTY_ASSERT_OK_AND_ASSIGN(int N, values.Get<MInteger>("N"));
 
   // Attempt to re-assign N.
+  ResolverContext ctxN("N", variables, values, engine, generation_config);
   MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_N,
-                                universe.GetAbstractVariable("N"));
-  MORIARTY_ASSERT_OK(var_N->AssignValue());
+                                variables.GetAbstractVariable("N"));
+  MORIARTY_ASSERT_OK(var_N->AssignValue(ctxN));
 
   // Should not have changed.
-  EXPECT_THAT(universe.GetValue<MInteger>("N"), IsOkAndHolds(N));
-}
-
-TEST(MVariableTest, AssignValueWithoutAUniverseShouldFail) {
-  moriarty_internal::VariableSet variables;
-  MORIARTY_EXPECT_OK(variables.AddVariable("x", MTestType()));
-  moriarty_internal::ValueSet values;
-  moriarty_internal::Universe universe = moriarty_internal::Universe()
-                                             .SetMutableVariableSet(&variables)
-                                             .SetConstValueSet(&values);
-
-  {  // No Universe...
-    EXPECT_THAT((*variables.GetAbstractVariable("x"))->AssignValue(),
-                IsMisconfigured(InternalConfigurationType::kUniverse));
-  }
+  EXPECT_THAT(values.Get<MInteger>("N"), IsOkAndHolds(N));
 }
 
 TEST(MVariableTest, KnownPropertyCallsCorrectCallbackOnCopiedVariable) {
@@ -727,149 +692,6 @@ TEST(MVariableTest,
               IsOkAndHolds(MTestType::kGeneratedValue));
 }
 
-// A silly class that simply calls the underlying protected functions. This is
-// just used for testing to ensure that it fails properly when the universe is
-// not set up properly.
-class BadMTestType : public MTestType {
- public:
-  absl::StatusOr<TestType> CallRandom(MTestType m) {
-    return MTestType::Random<MTestType>("var_name", m);
-  }
-
-  template <typename MType>
-  absl::StatusOr<typename MType::value_type> CallGenerateValue(
-      absl::string_view name) {
-    return GenerateValue<MType>(name);
-  }
-};
-
-TEST(MVariableTest, RandomWithoutAUniverseShouldFail) {
-  EXPECT_THAT(BadMTestType().CallRandom(MTestType()),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-}
-
-TEST(MVariableTest, RandomWithoutGenerationConfigShouldFail) {
-  moriarty_internal::Universe universe;
-  BadMTestType m;
-  moriarty_internal::MVariableManager(&m).SetUniverse(&universe, "var_name");
-  EXPECT_THAT(m.CallRandom(MTestType()),
-              IsMisconfigured(InternalConfigurationType::kGenerationConfig));
-}
-
-TEST(MVariableTest, GetDependentVariableValueWithoutAUniverseShouldFail) {
-  EXPECT_THAT(BadMTestType().CallGenerateValue<MTestType>("x"),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-}
-
 }  // namespace
 }  // namespace librarian
 }  // namespace moriarty
-
-// Test Randomness below
-namespace moriarty_testing {
-namespace {
-
-using ::moriarty::InternalConfigurationType;
-
-// SeededProtectedMVariable simply exposes the functions for randomness so they
-// may be tested.
-class MVariableRandom : public MTestType {
- public:
-  MVariableRandom() : engine_({1, 2, 3}, "v0.1") {
-    universe_.SetRandomEngine(&engine_).SetGenerationConfig(
-        &generation_config_);
-    moriarty::moriarty_internal::MVariableManager(this).SetUniverse(&universe_,
-                                                                    "var_name");
-  }
-  enum class SeedStyle {
-    kNone,
-    kUniverseButNoRandomEngine,
-    kBothUniverseAndRandomEngine
-  };
-  explicit MVariableRandom(SeedStyle seed) : engine_({1, 2, 3}, "v0.1") {
-    if (seed == SeedStyle::kBothUniverseAndRandomEngine) {
-      universe_.SetRandomEngine(&engine_);
-    }
-    if (seed != SeedStyle::kNone) {
-      moriarty::moriarty_internal::MVariableManager(this).SetUniverse(
-          &universe_, "var_name");
-    }
-  }
-
-  // Promote the random functions from protected to public for this test.
-  using MTestType::DistinctIntegers;
-  using MTestType::RandomComposition;
-  using MTestType::RandomElement;
-  using MTestType::RandomElementsWithoutReplacement;
-  using MTestType::RandomElementsWithReplacement;
-  using MTestType::RandomInteger;
-  using MTestType::RandomPermutation;
-  using MTestType::Shuffle;
-
- private:
-  moriarty::moriarty_internal::Universe universe_;
-  moriarty::moriarty_internal::RandomEngine engine_;
-  moriarty::moriarty_internal::GenerationConfig generation_config_;
-};
-
-// Tests the basic functionality of the above functions.
-INSTANTIATE_TYPED_TEST_SUITE_P(MVariableRandom, ValidInputRandomnessTests,
-                               MVariableRandom);
-INSTANTIATE_TYPED_TEST_SUITE_P(MVariableRandom, InvalidInputRandomnessTests,
-                               MVariableRandom);
-
-TEST(MVariableTest, RandomFunctionsWithoutUniverseShouldFail) {
-  MVariableRandom unseeded(MVariableRandom::SeedStyle::kNone);
-  std::vector<int> helper = {1, 2, 3};
-
-  EXPECT_THAT(unseeded.DistinctIntegers(10, 2),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-  EXPECT_THAT(unseeded.RandomInteger(1, 10),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-  EXPECT_THAT(unseeded.RandomInteger(10),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-  EXPECT_THAT(unseeded.RandomComposition(10, 2),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-  EXPECT_THAT(unseeded.RandomElement(helper),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-  EXPECT_THAT(unseeded.RandomElementsWithoutReplacement(helper, 2),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-  EXPECT_THAT(unseeded.RandomElementsWithReplacement(helper, 2),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-  EXPECT_THAT(unseeded.RandomPermutation(2),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-  EXPECT_THAT(unseeded.RandomPermutation(2, 6),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-  EXPECT_THAT(unseeded.Shuffle(helper),
-              IsMisconfigured(InternalConfigurationType::kUniverse));
-}
-
-TEST(MVariableTest, RandomFunctionsWithoutRandomConfigShouldFail) {
-  MVariableRandom unseeded(
-      MVariableRandom::SeedStyle::kUniverseButNoRandomEngine);
-  std::vector<int> helper = {1, 2, 3};
-
-  EXPECT_THAT(unseeded.DistinctIntegers(10, 2),
-              IsMisconfigured(InternalConfigurationType::kRandomEngine));
-  EXPECT_THAT(unseeded.RandomInteger(1, 10),
-              IsMisconfigured(InternalConfigurationType::kRandomEngine));
-  EXPECT_THAT(unseeded.RandomInteger(10),
-              IsMisconfigured(InternalConfigurationType::kRandomEngine));
-  EXPECT_THAT(unseeded.RandomComposition(10, 2),
-              IsMisconfigured(InternalConfigurationType::kRandomEngine));
-  EXPECT_THAT(unseeded.RandomElement(helper),
-              IsMisconfigured(InternalConfigurationType::kRandomEngine));
-  EXPECT_THAT(unseeded.RandomElementsWithoutReplacement(helper, 2),
-              IsMisconfigured(InternalConfigurationType::kRandomEngine));
-  EXPECT_THAT(unseeded.RandomElementsWithReplacement(helper, 2),
-              IsMisconfigured(InternalConfigurationType::kRandomEngine));
-  EXPECT_THAT(unseeded.RandomPermutation(2),
-              IsMisconfigured(InternalConfigurationType::kRandomEngine));
-  EXPECT_THAT(unseeded.RandomPermutation(2, 6),
-              IsMisconfigured(InternalConfigurationType::kRandomEngine));
-  EXPECT_THAT(unseeded.Shuffle(helper),
-              IsMisconfigured(InternalConfigurationType::kRandomEngine));
-}
-
-}  // namespace
-}  // namespace moriarty_testing

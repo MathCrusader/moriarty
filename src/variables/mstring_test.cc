@@ -19,7 +19,6 @@
 #include <string>
 
 #include "absl/container/flat_hash_set.h"
-#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "gmock/gmock.h"
@@ -36,7 +35,6 @@ namespace moriarty {
 namespace {
 
 using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 using ::moriarty_testing::AllGenerateSameValues;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GenerateDifficultInstancesValues;
@@ -127,13 +125,16 @@ TEST(MStringTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
 }
 
 TEST(MStringTest, InvalidLengthShouldFail) {
-  EXPECT_THAT(Generate(MString().OfLength(-1).WithAlphabet("a")),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
-  EXPECT_THAT(
-      Generate(MString().OfLength(MInteger().Between(0, -1)).WithAlphabet("a")),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MString().OfLength(-1).WithAlphabet("a")).IgnoreError(); },
+      std::runtime_error);
+  EXPECT_THROW(
+      {
+        Generate(
+            MString().OfLength(MInteger().Between(0, -1)).WithAlphabet("a"))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MStringTest, LengthZeroProcudesTheEmptyString) {
@@ -142,12 +143,11 @@ TEST(MStringTest, LengthZeroProcudesTheEmptyString) {
 }
 
 TEST(MStringTest, AlphabetIsRequiredForGenerate) {
-  EXPECT_THAT(
-      Generate(MString().OfLength(10)),
-      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("alphabet")));
-  EXPECT_THAT(
-      Generate(MString().OfLength(10).WithAlphabet("")),
-      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("alphabet")));
+  EXPECT_THROW(
+      { Generate(MString().OfLength(10)).IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW(
+      { Generate(MString().OfLength(10).WithAlphabet("")).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MStringTest, MergeFromCorrectlyMergesOnLength) {
@@ -171,10 +171,12 @@ TEST(MStringTest, MergeFromCorrectlyMergesOnLength) {
       get_str().OfLength(1, 8).MergeFrom(get_str().OfLength(8, 10)),
       get_str().OfLength(8)));  // Singleton range
 
-  EXPECT_THAT(
-      Generate(get_str().OfLength(1, 6).MergeFrom(get_str().OfLength(10, 20))),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               HasSubstr("range is empty")));
+  EXPECT_THROW(
+      {
+        Generate(get_str().OfLength(1, 6).MergeFrom(get_str().OfLength(10, 20)))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MStringTest, MergeFromCorrectlyMergesOnAlphabet) {
@@ -193,10 +195,13 @@ TEST(MStringTest, MergeFromCorrectlyMergesOnAlphabet) {
       string_with_alphabet("ab").MergeFrom(string_with_alphabet("bc")),
       string_with_alphabet("b")));  // Non-empty intersection
 
-  EXPECT_THAT(Generate(string_with_alphabet("ab").MergeFrom(
-                  string_with_alphabet("cd"))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("empty alphabet")));
+  EXPECT_THROW(
+      {
+        Generate(
+            string_with_alphabet("ab").MergeFrom(string_with_alphabet("cd")))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MStringTest, LengthIsSatisfied) {
@@ -355,12 +360,15 @@ TEST(MStringTest, DistinctCharactersWorksInTheSimpleCase) {
 }
 
 TEST(MStringTest, DistinctCharactersRequiresAShortLength) {
-  EXPECT_THAT(Generate(MString()
-                           .OfLength(5, 5)
-                           .WithAlphabet("abc")
-                           .WithDistinctCharacters()),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("length of the string")));
+  EXPECT_THROW(
+      {
+        Generate(MString()
+                     .OfLength(5, 5)
+                     .WithAlphabet("abc")
+                     .WithDistinctCharacters())
+            .IgnoreError();
+      },
+      std::runtime_error);
 
   // Most of the range is too large, the only way to succeed is for it to make a
   // string of length 10.
@@ -390,20 +398,15 @@ TEST(MStringTest, MergingTwoDifferentSimplePatternsTogetherShouldWork) {
 
 TEST(MStringTest, GenerateWithoutSimplePatternOrLengthOrAlphabetShouldFail) {
   // No simple pattern and no alphabet
-  EXPECT_THAT(
-      Generate(MString()),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               AllOf(HasSubstr("simple pattern"), HasSubstr("alphabet"))));
-  EXPECT_THAT(
-      Generate(MString().WithAlphabet("")),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               AllOf(HasSubstr("simple pattern"), HasSubstr("alphabet"))));
+  EXPECT_THROW({ Generate(MString()).IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW(
+      { Generate(MString().WithAlphabet("")).IgnoreError(); },
+      std::runtime_error);
 
   // Has Alphabet, but not simple pattern or length.
-  EXPECT_THAT(
-      Generate(MString().WithAlphabet("abc")),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               AllOf(HasSubstr("simple pattern"), HasSubstr("length"))));
+  EXPECT_THROW(
+      { Generate(MString().WithAlphabet("abc")).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MStringTest, SizePropertiesGiveDifferentSizes) {
@@ -449,10 +452,12 @@ TEST(MStringTest, SatisfiesConstraintsShouldCheck) {
 }
 
 TEST(MStringTest, SimplePatternWithWildcardsShouldFailGeneration) {
-  EXPECT_THAT(Generate(MString().WithSimplePattern("a*")),
-              StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("*")));
-  EXPECT_THAT(Generate(MString().WithSimplePattern("a+")),
-              StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("+")));
+  EXPECT_THROW(
+      { Generate(MString().WithSimplePattern("a*")).IgnoreError(); },
+      std::runtime_error);
+  EXPECT_THROW(
+      { Generate(MString().WithSimplePattern("a+")).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MStringTest, SimplePatternWithWildcardsShouldWorkForSatisfiesConstraints) {
@@ -541,12 +546,14 @@ TEST(MStringNonBuilderTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
 }
 
 TEST(MStringNonBuilderTest, InvalidLengthShouldFail) {
-  EXPECT_THAT(Generate(MString(Length(-1), Alphabet("a"))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
-  EXPECT_THAT(Generate(MString(Length(Between(0, -1)), Alphabet("a"))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MString(Length(-1), Alphabet("a"))).IgnoreError(); },
+      std::runtime_error);
+  EXPECT_THROW(
+      {
+        Generate(MString(Length(Between(0, -1)), Alphabet("a"))).IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MStringNonBuilderTest, LengthZeroProcudesTheEmptyString) {
@@ -554,12 +561,11 @@ TEST(MStringNonBuilderTest, LengthZeroProcudesTheEmptyString) {
 }
 
 TEST(MStringNonBuilderTest, AlphabetIsRequiredForGenerate) {
-  EXPECT_THAT(
-      Generate(MString(Length(10))),
-      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("alphabet")));
-  EXPECT_THAT(
-      Generate(MString(Length(10), Alphabet(""))),
-      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("alphabet")));
+  EXPECT_THROW(
+      { Generate(MString(Length(10))).IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW(
+      { Generate(MString(Length(10), Alphabet(""))).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MStringNonBuilderTest, MergeFromCorrectlyMergesOnLength) {
@@ -580,9 +586,9 @@ TEST(MStringNonBuilderTest, MergeFromCorrectlyMergesOnLength) {
   EXPECT_TRUE(GenerateSameValues(get_str(1, 8).MergeFrom(get_str(8, 10)),
                                  get_str(8, 8)));  // Singleton range
 
-  EXPECT_THAT(Generate(get_str(1, 6).MergeFrom(get_str(10, 20))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("range is empty")));
+  EXPECT_THROW(
+      { Generate(get_str(1, 6).MergeFrom(get_str(10, 20))).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MStringNonBuilderTest, MergeFromCorrectlyMergesOnAlphabet) {
@@ -601,10 +607,13 @@ TEST(MStringNonBuilderTest, MergeFromCorrectlyMergesOnAlphabet) {
       string_with_alphabet("ab").MergeFrom(string_with_alphabet("bc")),
       string_with_alphabet("b")));  // Non-empty intersection
 
-  EXPECT_THAT(Generate(string_with_alphabet("ab").MergeFrom(
-                  string_with_alphabet("cd"))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("empty alphabet")));
+  EXPECT_THROW(
+      {
+        Generate(
+            string_with_alphabet("ab").MergeFrom(string_with_alphabet("cd")))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MStringNonBuilderTest, LengthIsSatisfied) {
@@ -735,10 +744,13 @@ TEST(MStringNonBuilderTest, DistinctCharactersWorksInTheSimpleCase) {
 }
 
 TEST(MStringNonBuilderTest, DistinctCharactersRequiresAShortLength) {
-  EXPECT_THAT(Generate(MString(Length(Between(5, 5)), Alphabet("abc"),
-                               DistinctCharacters())),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("length of the string")));
+  EXPECT_THROW(
+      {
+        Generate(MString(Length(Between(5, 5)), Alphabet("abc"),
+                         DistinctCharacters()))
+            .IgnoreError();
+      },
+      std::runtime_error);
 
   // Most of the range is too large, the only way to succeed is for it to make a
   // string of length 10.
@@ -773,29 +785,26 @@ TEST(MStringNonBuilderTest,
       GeneratedValuesAre(MatchesRegex("[cd]{10,15}")));
 
   // Note, we don't know which simple pattern the generated value doesn't match.
-  EXPECT_THAT(Generate(MString(SimplePattern("[abc]{1, 10}"),
-                               SimplePattern("[abc]{15}"))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("does not match simple pattern")));
+  EXPECT_THROW(
+      {
+        Generate(
+            MString(SimplePattern("[abc]{1, 10}"), SimplePattern("[abc]{15}")))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MStringNonBuilderTest,
      GenerateWithoutSimplePatternOrLengthOrAlphabetShouldFail) {
   // No simple pattern and no alphabet
-  EXPECT_THAT(
-      Generate(MString()),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               AllOf(HasSubstr("simple pattern"), HasSubstr("alphabet"))));
-  EXPECT_THAT(
-      Generate(MString(Alphabet(""))),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               AllOf(HasSubstr("simple pattern"), HasSubstr("alphabet"))));
+  EXPECT_THROW({ Generate(MString()).IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW(
+      { Generate(MString(Alphabet(""))).IgnoreError(); }, std::runtime_error);
 
   // Has Alphabet, but not simple pattern or length.
-  EXPECT_THAT(
-      Generate(MString(Alphabet("abc"))),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               AllOf(HasSubstr("simple pattern"), HasSubstr("length"))));
+  EXPECT_THROW(
+      { Generate(MString(Alphabet("abc"))).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MStringNonBuilderTest, SizePropertiesGiveDifferentSizes) {
@@ -839,10 +848,12 @@ TEST(MStringNonBuilderTest, SatisfiesConstraintsShouldCheck) {
 }
 
 TEST(MStringNonBuilderTest, SimplePatternWithWildcardsShouldFailGeneration) {
-  EXPECT_THAT(Generate(MString(SimplePattern("a*"))),
-              StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("*")));
-  EXPECT_THAT(Generate(MString(SimplePattern("a+"))),
-              StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("+")));
+  EXPECT_THROW(
+      { Generate(MString(SimplePattern("a*"))).IgnoreError(); },
+      std::runtime_error);
+  EXPECT_THROW(
+      { Generate(MString(SimplePattern("a+"))).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MStringNonBuilderTest,

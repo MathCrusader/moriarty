@@ -31,15 +31,14 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/strings/substitute.h"
 #include "absl/types/span.h"
 #include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
 #include "src/internal/generation_config.h"
 #include "src/internal/random_config.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/status_utils.h"
-#include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/mvariable.h"
@@ -667,19 +666,10 @@ absl::StatusOr<typename T::value_type> Generator::TryRandom(T m) {
   moriarty_internal::ValueSet values;
   moriarty_internal::GenerationConfig generation_config;
 
-  moriarty_internal::Universe universe =
-      moriarty_internal::Universe()
-          .SetRandomEngine(&(*rng_))
-          .SetMutableVariableSet(&variables)
-          .SetMutableValueSet(&values)
-          .SetGenerationConfig(&generation_config);
+  librarian::ResolverContext ctx(std::format("TryRandom({})", m.Typename()),
+                                 variables, values, *rng_, generation_config);
 
-  moriarty_internal::MVariableManager(&m).SetUniverse(
-      &universe,
-      /* my_name_in_universe = */ absl::Substitute("TryRandom($0)",
-                                                   m.Typename()));
-
-  return moriarty_internal::MVariableManager(&m).Generate();
+  return m.Generate(ctx);
 }
 
 template <typename T>

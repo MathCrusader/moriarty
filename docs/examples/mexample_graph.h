@@ -22,9 +22,9 @@
 #include <string>
 
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "docs/examples/example_graph.h"
 #include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/librarian/mvariable.h"
 #include "src/variables/minteger.h"
 
@@ -54,7 +54,8 @@ class MExampleGraph
   std::optional<moriarty::MInteger> num_edges_;
   bool is_connected_ = false;
 
-  absl::StatusOr<ExampleGraph> GenerateImpl() override;
+  ExampleGraph GenerateImpl(
+      moriarty::librarian::ResolverContext ctx) const override;
   absl::Status IsSatisfiedWithImpl(moriarty::librarian::AnalysisContext ctx,
                                    const ExampleGraph& g) const override;
 

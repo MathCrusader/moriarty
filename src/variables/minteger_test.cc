@@ -18,6 +18,7 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -136,19 +137,19 @@ TEST(MIntegerTest, RepeatedBetweenCallsShouldBeIntersectedTogether) {
 
 TEST(MIntegerTest, InvalidBoundsShouldCrash) {
   // Min > Max
-  EXPECT_THAT(Generate(MInteger().Between(0, -1)),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MInteger().Between(0, -1)).IgnoreError(); },
+      std::runtime_error);
 
   // Empty intersection (First interval to the left)
-  EXPECT_THAT(Generate(MInteger().Between(1, 10).Between(20, 30)),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MInteger().Between(1, 10).Between(20, 30)).IgnoreError(); },
+      std::runtime_error);
 
   // Empty intersection (First interval to the right)
-  EXPECT_THAT(Generate(MInteger().Between(20, 30).Between(1, 10)),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MInteger().Between(20, 30).Between(1, 10)).IgnoreError(); },
+      std::runtime_error);
 }
 
 // TODO(darcybest): MInteger should have an equality operator instead of this.
@@ -216,14 +217,17 @@ TEST(MIntegerTest, AtMostAndAtLeastShouldLimitTheOutputRange) {
 }
 
 TEST(MIntegerTest, AtMostLargerThanAtLeastShouldFail) {
-  EXPECT_THAT(Generate(MInteger().AtLeast(10).AtMost(0)),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MInteger().AtLeast(10).AtMost(0)).IgnoreError(); },
+      std::runtime_error);
 
-  EXPECT_THAT(Generate(MInteger().AtLeast(0).AtMost("3 * N + 1"),
-                       Context().WithValue<MInteger>("N", -3)),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      {
+        Generate(MInteger().AtLeast(0).AtMost("3 * N + 1"),
+                 Context().WithValue<MInteger>("N", -3))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MIntegerTest,
@@ -233,12 +237,9 @@ TEST(MIntegerTest,
   MInteger y = MInteger().AtMost("12345678901234567890");  // Overflow
   MInteger z = MInteger().Between("N + 2", "* M + M");
 
-  EXPECT_THAT(Generate(x), StatusIs(absl::StatusCode::kFailedPrecondition,
-                                    HasSubstr("invalid expression")));
-  EXPECT_THAT(Generate(y), StatusIs(absl::StatusCode::kFailedPrecondition,
-                                    HasSubstr("invalid expression")));
-  EXPECT_THAT(Generate(z), StatusIs(absl::StatusCode::kFailedPrecondition,
-                                    HasSubstr("invalid expression")));
+  EXPECT_THROW({ Generate(x).IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ Generate(y).IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ Generate(z).IgnoreError(); }, std::runtime_error);
 }
 
 TEST(MIntegerTest, AtMostAndAtLeastWithExpressionsShouldLimitTheOutputRange) {
@@ -365,9 +366,7 @@ TEST(MIntegerTest,
                                 MInteger().Is(1234).GetDifficultInstances());
 
   for (MInteger instance : instances) {
-    EXPECT_THAT(Generate(instance),
-                StatusIs(absl::StatusCode::kFailedPrecondition,
-                         HasSubstr("no viable value found")));
+    EXPECT_THROW({ Generate(instance).IgnoreError(); }, std::runtime_error);
   }
 }
 
@@ -461,19 +460,19 @@ TEST(MIntegerNonBuilderTest, RepeatedBetweenCallsShouldBeIntersectedTogether) {
 
 TEST(MIntegerNonBuilderTest, InvalidBoundsShouldCrash) {
   // Min > Max
-  EXPECT_THAT(Generate(MInteger(Between(0, -1))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MInteger(Between(0, -1))).IgnoreError(); },
+      std::runtime_error);
 
   // Empty intersection (First interval to the left)
-  EXPECT_THAT(Generate(MInteger(Between(1, 10), Between(20, 30))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MInteger(Between(1, 10), Between(20, 30))).IgnoreError(); },
+      std::runtime_error);
 
   // Empty intersection (First interval to the right)
-  EXPECT_THAT(Generate(MInteger(Between(20, 30), Between(1, 10))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MInteger(Between(20, 30), Between(1, 10))).IgnoreError(); },
+      std::runtime_error);
 }
 
 // TODO(darcybest): MInteger should have an equality operator instead of this.
@@ -541,14 +540,17 @@ TEST(MIntegerNonBuilderTest, AtMostAndAtLeastShouldLimitTheOutputRange) {
 }
 
 TEST(MIntegerNonBuilderTest, AtMostLargerThanAtLeastShouldFail) {
-  EXPECT_THAT(Generate(MInteger(AtLeast(10), AtMost(0))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MInteger(AtLeast(10), AtMost(0))).IgnoreError(); },
+      std::runtime_error);
 
-  EXPECT_THAT(Generate(MInteger(AtLeast(0), AtMost("3 * N + 1")),
-                       Context().WithValue<MInteger>("N", -3)),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      {
+        Generate(MInteger(AtLeast(0), AtMost("3 * N + 1")),
+                 Context().WithValue<MInteger>("N", -3))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MIntegerNonBuilderTest,
@@ -558,12 +560,9 @@ TEST(MIntegerNonBuilderTest,
   MInteger y = MInteger(AtMost("12345678901234567890"));  // Overflow
   MInteger z = MInteger(Between("N + 2", "* M + M"));
 
-  EXPECT_THAT(Generate(x), StatusIs(absl::StatusCode::kFailedPrecondition,
-                                    HasSubstr("invalid expression")));
-  EXPECT_THAT(Generate(y), StatusIs(absl::StatusCode::kFailedPrecondition,
-                                    HasSubstr("invalid expression")));
-  EXPECT_THAT(Generate(z), StatusIs(absl::StatusCode::kFailedPrecondition,
-                                    HasSubstr("invalid expression")));
+  EXPECT_THROW({ Generate(x).IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ Generate(y).IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ Generate(z).IgnoreError(); }, std::runtime_error);
 }
 
 TEST(MIntegerNonBuilderTest,
@@ -761,21 +760,20 @@ TEST(MIntegerNonBuilderTest, InvalidSizeCombinationsFailGeneration) {
 }
 
 TEST(MIntegerNonBuilderTest, InvalidExpressionsShouldFail) {
+  // TODO: This should throw
   EXPECT_THAT(Generate(MInteger(Exactly("N + "))),
               StatusIs(absl::StatusCode::kFailedPrecondition,
                        HasSubstr("invalid expression")));
 
-  EXPECT_THAT(Generate(MInteger(AtMost("N + "))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("invalid expression")));
-
-  EXPECT_THAT(Generate(MInteger(AtLeast("N + "))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("invalid expression")));
-
-  EXPECT_THAT(Generate(MInteger(Between("& x", "N + "))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("invalid expression")));
+  EXPECT_THROW(
+      { Generate(MInteger(AtMost("N + "))).IgnoreError(); },
+      std::runtime_error);
+  EXPECT_THROW(
+      { Generate(MInteger(AtLeast("N + "))).IgnoreError(); },
+      std::runtime_error);
+  EXPECT_THROW(
+      { Generate(MInteger(Between("& x", "N + "))).IgnoreError(); },
+      std::runtime_error);
 }
 
 }  // namespace

@@ -15,13 +15,14 @@
 
 #include "docs/examples/mexample_graph.h"
 
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "docs/examples/example_graph.h"
 #include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/variables/minteger.h"
@@ -53,36 +54,35 @@ MExampleGraph& MExampleGraph::IsConnected() {
   return *this;
 }
 
-absl::StatusOr<ExampleGraph> MExampleGraph::GenerateImpl() {
+ExampleGraph MExampleGraph::GenerateImpl(
+    moriarty::librarian::ResolverContext ctx) const {
   if (!num_nodes_.has_value()) {
-    return absl::FailedPreconditionError("Number of nodes must be constrained");
+    throw std::runtime_error("Number of nodes must be constrained");
   }
   if (!num_edges_.has_value()) {
-    return absl::FailedPreconditionError("Number of edges must be constrained");
+    throw std::runtime_error("Number of edges must be constrained");
   }
 
-  MORIARTY_ASSIGN_OR_RETURN(int num_nodes, Random("num_nodes", *num_nodes_));
-  MORIARTY_ASSIGN_OR_RETURN(int num_edges, Random("num_edges", *num_edges_));
+  int num_nodes = num_nodes_->Generate(ctx.WithSubVariable("num_nodes"));
+  int num_edges = num_edges_->Generate(ctx.WithSubVariable("num_edges"));
 
   if (is_connected_ && num_edges < num_nodes - 1) {
     moriarty::MInteger num_edges_copy = *num_edges_;
     num_edges_copy.AtLeast(num_nodes - 1);
-    MORIARTY_ASSIGN_OR_RETURN(num_edges, Random("num_edges", num_edges_copy));
+    num_edges = num_edges_copy.Generate(ctx.WithSubVariable("num_edges"));
   }
 
   std::vector<std::pair<int, int>> edges;
   if (is_connected_) {
     // This part is not important to understanding Moriarty. We are simply
     // adding edges here to guarantee that we get a connected graph.
-    for (int i = 1; i < num_nodes; i++) {
-      MORIARTY_ASSIGN_OR_RETURN(int v, RandomInteger(i));
-      edges.push_back({v, i});
-    }
+    for (int i = 1; i < num_nodes; i++)
+      edges.push_back({ctx.RandomInteger(i), i});
   }
 
   while (edges.size() < num_edges) {
-    MORIARTY_ASSIGN_OR_RETURN(int u, RandomInteger(num_nodes));
-    MORIARTY_ASSIGN_OR_RETURN(int v, RandomInteger(num_nodes));
+    int u = ctx.RandomInteger(num_nodes);
+    int v = ctx.RandomInteger(num_nodes);
     edges.push_back({u, v});
   }
 

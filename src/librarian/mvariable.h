@@ -21,13 +21,15 @@
 #include <algorithm>
 #include <any>
 #include <concepts>
-#include <cstdint>
+#include <exception>
+#include <format>
 #include <functional>
 #include <iterator>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -40,15 +42,14 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
-#include "src/constraint_values.h"
 #include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/librarian/assignment_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
-#include "src/internal/random_config.h"
-#include "src/internal/random_engine.h"
 #include "src/internal/status_utils.h"
 #include "src/internal/universe.h"
 #include "src/internal/variable_name_utils.h"
@@ -169,6 +170,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::function<bool(const ValueType&)> checker);
 
   // AddCustomConstraint()
+  // FIXME: Fix comments
   //
   // Adds a constraint to this variable. `checker` must take exactly two
   // parameters of type `ValueType` and `ConstraintValues`. `checker` should
@@ -179,8 +181,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // to access that variable's value.
   VariableType& AddCustomConstraint(
       absl::string_view constraint_name, std::vector<std::string> deps,
-      std::function<bool(const ValueType&, const ConstraintValues& variables)>
-          checker);
+      std::function<bool(const ValueType&, AnalysisContext ctx)> checker);
 
   // WithKnownProperty()
   //
@@ -249,6 +250,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   absl::Status IsSatisfiedWith(AnalysisContext ctx,
                                const ValueType& value) const;
 
+  ValueType Generate(ResolverContext ctx) const;
+
   moriarty_internal::Universe* UnsafeGetUniverse() const { return universe_; }
 
  protected:
@@ -270,7 +273,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // const so you are future compatible.
   //
   // GenerateImpl() will only be called if Is()/IsOneOf() have not been called.
-  virtual absl::StatusOr<ValueType> GenerateImpl() = 0;
+  virtual ValueType GenerateImpl(ResolverContext ctx) const = 0;
 
   // IsSatisfiedWithImpl() [virtual]
   //
@@ -405,46 +408,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   void RegisterKnownProperty(absl::string_view property_category,
                              PropertyCallbackFunction property_fn);
 
-  // ---------------------------------------------------------------------------
-  //  Functions for librarian use only
-
-  // Random() [Helper for Librarians]
-  //
-  // Generates a random value that is described by `m`.
-  //
-  // `debug_name` is for better debugging messages on failure and is local
-  // only to this function call.
-  //
-  // Example usage:
-  //    absl::StatusOr<int64_t> x = Random("my_int",
-  //                                       MInteger().Between(1, 10));
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
-  absl::StatusOr<typename T::value_type> Random(absl::string_view debug_name,
-                                                T m);
-
-  // Read() [Helper for Librarians]
-  //
-  // Reads a value using any configuration provided by `m` (whitespace
-  // separators, etc) using *this* variable's underlying istream. The underlying
-  // istream is set by a Moriarty component (Generator, Exporter, Moriarty, etc)
-  // via its Universe.
-  //
-  // If the read is invalid, the underlying istream is now in an unspecified
-  // state.
-  //
-  // `debug_name` is for better debugging messages on failure and is local
-  // only to this function call.
-  //
-  // Example usage:
-  //    absl::StatusOr<int64_t> x = Read("my_int", MInteger().Between(1, 10));
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
-  absl::StatusOr<typename T::value_type> Read(absl::string_view debug_name,
-                                              T m);
-
   // GetKnownValue() [Helper for Librarians]
   //
   // Returns the value of a known variable. If the variable is not known,
@@ -457,117 +420,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
                                librarian::MVariable<T, typename T::value_type>>
   absl::StatusOr<typename T::value_type> GetKnownValue(
       absl::string_view variable_name) const;
-
-  // GenerateValue() [Helper for Librarians]
-  //
-  // Returns the value of a variable. If the variable's value is not known, it
-  // will be generated now.
-  //
-  // Example Usage:
-  //  int64_t N = GenerateValue<MInteger>("N");
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
-  absl::StatusOr<typename T::value_type> GenerateValue(
-      absl::string_view variable_name);
-
-  // RandomInteger() [Helper for Librarians]
-  //
-  // Returns a random integer in the closed interval [min, max].
-  absl::StatusOr<int64_t> RandomInteger(int64_t min, int64_t max);
-
-  // RandomInteger() [Helper for Librarians]
-  //
-  // Returns a random integer in the semi-closed interval [0, n). Useful for
-  // random indices.
-  absl::StatusOr<int64_t> RandomInteger(int64_t n);
-
-  // Shuffle() [Helper for Librarians]
-  //
-  // Shuffles the elements in `container`.
-  template <typename T>
-  absl::Status Shuffle(std::vector<T>& container);
-
-  // RandomElement() [Helper for Librarians]
-  //
-  // Returns a random element of `container`.
-  template <typename T>
-  absl::StatusOr<T> RandomElement(const std::vector<T>& container);
-
-  // RandomElementsWithReplacement() [Helper for Librarians]
-  //
-  // Returns k (randomly ordered) elements of `container`, possibly with
-  // duplicates.
-  template <typename T>
-  absl::StatusOr<std::vector<T>> RandomElementsWithReplacement(
-      const std::vector<T>& container, int k);
-
-  // RandomElementsWithoutReplacement() [Helper for Librarians]
-  //
-  // Returns k (randomly ordered) elements of `container`, without duplicates.
-  //
-  // Each element may appear at most once. Note that if there are duplicates
-  // in `container`, each of those could be returned once each.
-  //
-  // So RandomElementsWithoutReplacement({0, 1, 1, 1}, 2) could return {1, 1}.
-  template <typename T>
-  absl::StatusOr<std::vector<T>> RandomElementsWithoutReplacement(
-      const std::vector<T>& container, int k);
-
-  // RandomPermutation() [Helper for Librarians]
-  //
-  // Returns a random permutation of {0, 1, ... , n-1}.
-  absl::StatusOr<std::vector<int>> RandomPermutation(int n);
-
-  // RandomPermutation() [Helper for Librarians]
-  //
-  // Returns a random permutation of {min, min + 1, ... , min + (n-1)}.
-  //
-  // Requires min + (n-1) to not overflow T.
-  template <typename T>
-    requires std::integral<T>
-  absl::StatusOr<std::vector<T>> RandomPermutation(int n, T min);
-
-  // DistinctIntegers() [Helper for Librarians]
-  //
-  // Returns k (randomly ordered) distinct integers from
-  // {min, min + 1, ... , min + (n-1)}.
-  //
-  // Requires min + (n-1) to not overflow T.
-  template <typename T>
-    requires std::integral<T>
-  absl::StatusOr<std::vector<T>> DistinctIntegers(T n, int k, T min = 0);
-
-  // RandomComposition() [Helper for Librarians]
-  //
-  // Returns a random composition (a partition where the order of the buckets
-  // is important) with k buckets. Each bucket has at least `min_bucket_size`
-  // elements and the sum of the `k` bucket sizes is `n`.
-  //
-  // The returned values are the sizes of each bucket. Note that (1, 2) is
-  // different from (2, 1).
-  //
-  // Requires n + (k - 1) to not overflow T.
-  template <typename T>
-    requires std::integral<T>
-  absl::StatusOr<std::vector<T>> RandomComposition(T n, int k,
-                                                   T min_bucket_size = 1);
-
-  // GetApproximateGenerationLimit() [Helper for Librarians]
-  //
-  // Returns the threshold for approximately how much data to generate. If
-  // set, Moriarty will call generators until is has generated `limit`
-  // "units", where a "unit" is computed as: 1 for integers, size for string,
-  // and sum of number of units of its elements for arrays. All other
-  // MVariables will have a size of 1.
-  //
-  // Is the returned value is std::nullopt, then there is no limit set.
-  //
-  // None of these values are guaranteed to remain the same in the future and
-  // this function is a suggestion to Moriarty, not a guarantee that it will
-  // stop generation at any point.
-  [[nodiscard]] std::optional<int64_t> GetApproximateGenerationLimit() const;
-
   // GetDependencies() [Helper for Librarians]
   //
   // Returns the list of names of the variables that `variable` depends on,
@@ -612,7 +464,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // to check when `SatisfiesConstraints()` is called.
   struct CustomConstraint {
     std::string name;
-    std::function<bool(const ValueType&, const ConstraintValues& cv)> checker;
+    std::function<bool(const ValueType&, AnalysisContext)> checker;
   };
   std::vector<CustomConstraint> custom_constraints_;
 
@@ -632,17 +484,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Users and Librarians should not need to access these functions. See
   // `ImporterManager` for more details.
   friend class moriarty_internal::MVariableManager<VariableType, ValueType>;
-
-  // Generate() [Internal Extended API]
-  //
-  // Generates a random value for the constraints in this MVariable. This
-  // function will essentially first check `Is()` and `IsOneOf()`, then call
-  // `GenerateImpl()`.
-  //
-  // Users should not need to call this function directly. Use
-  // `Random(MVariable)` in the appropriate Moriarty component to generate
-  // random values.
-  absl::StatusOr<ValueType> Generate();
 
   // MergeFrom() [Internal Extended API]
   //
@@ -664,13 +505,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // TODO(darcybest): Consider renaming to ExtractSubvalue.
   absl::StatusOr<std::any> GetSubvalue(
       const std::any& my_value, absl::string_view subvalue_name) const override;
-
-  // GetRandomEngine() [Internal Extended API]
-  //
-  // Retrieves the internal RandomEngine used for random generation. Only
-  // built-in types should use this directly. Everyone else should call
-  // `Random<MInteger>( ... )` to get a random integer.
-  moriarty_internal::RandomEngine& GetRandomEngine();
 
   // SetUniverse() [Internal Extended API]
   //
@@ -695,15 +529,14 @@ class MVariable : public moriarty_internal::AbstractVariable {
   absl::Status WithProperty(Property property) override;
 
   // Try to generate exactly once, without any retries.
-  absl::StatusOr<ValueType> GenerateOnce();
+  ValueType GenerateOnce(ResolverContext ctx) const;
 
   // AssignValue()
   //
-  // Given all current constraints, assigns a specific value to this variable
-  // via the `Universe`. The value should be stored under the name
-  // provided by the SetUniverse method. If the `Universe`
-  // already contains a value for this variable, this is a no-op.
-  absl::Status AssignValue() override;
+  // Assigns an explicit value to this variable. The value is set into `ctx` and
+  // `ctx` gives all necessary information to set the value. If `ctx` already
+  // contains a value for this variable, this is a no-op.
+  absl::Status AssignValue(ResolverContext ctx) const override;
 
   // AssignUniqueValue()
   //
@@ -715,7 +548,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Example: MInteger().Between(7, 7) might be able to determine that its
   // unique value is 7.
-  absl::Status AssignUniqueValue() override;
+  absl::Status AssignUniqueValue(AssignmentContext ctx) const override;
 
   // GetUniqueValueUntyped()
   //
@@ -723,7 +556,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // is not a unique value (or it is too hard to determine that there is one),
   // returns `std::nullopt`. The `std::any` will be a `ValueType`.
   std::optional<std::any> GetUniqueValueUntyped(
-      librarian::AnalysisContext ctx) const override;
+      AnalysisContext ctx) const override;
 
   // ValueSatisfiesConstraints()
   //
@@ -789,7 +622,7 @@ namespace moriarty_internal {
 //     public librarian::MVariable<MCustomType, CustomType> { ... };
 //
 //   MCustomType v;
-//   moriarty_internal::MVariableManager(&v).GetRandomEngine();
+//   moriarty_internal::MVariableManager(&v).MergeFrom(x);
 template <typename VariableType, typename ValueType>
 class MVariableManager {
  public:
@@ -797,11 +630,9 @@ class MVariableManager {
   explicit MVariableManager(
       librarian::MVariable<VariableType, ValueType>* mvariable_to_manage);
 
-  absl::StatusOr<ValueType> Generate();
   absl::Status MergeFrom(const AbstractVariable& other);
   absl::StatusOr<std::any> GetSubvalue(const std::any& my_value,
                                        absl::string_view subvalue_name);
-  RandomEngine& GetRandomEngine();
   void SetUniverse(moriarty_internal::Universe* universe,
                    absl::string_view my_name_in_universe);
   std::vector<std::string> GetDependencies() const;
@@ -901,13 +732,13 @@ V& MVariable<V, G>::AddCustomConstraint(absl::string_view constraint_name,
                                         std::function<bool(const G&)> checker) {
   return AddCustomConstraint(
       constraint_name, {},
-      [checker](const G& v, const ConstraintValues& cv) { return checker(v); });
+      [checker](const G& v, AnalysisContext ctx) { return checker(v); });
 }
 
 template <typename V, typename G>
 V& MVariable<V, G>::AddCustomConstraint(
     absl::string_view constraint_name, std::vector<std::string> deps,
-    std::function<bool(const G&, const ConstraintValues& cv)> checker) {
+    std::function<bool(const G&, AnalysisContext ctx)> checker) {
   CustomConstraint c;
   c.name = constraint_name;
   c.checker = checker;
@@ -1028,24 +859,6 @@ void MVariable<V, G>::RegisterKnownProperty(
     absl::string_view property_category, PropertyCallbackFunction property_fn) {
   known_property_categories_[property_category] = property_fn;
 }
-
-template <typename V, typename G>
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<typename T::value_type> MVariable<V, G>::Random(
-    absl::string_view debug_name, T m) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "Random",
-                              InternalConfigurationType::kUniverse);
-  }
-
-  moriarty_internal::MVariableManager(&m).SetUniverse(
-      universe_,
-      /* my_name_in_universe = */ moriarty_internal::ConstructVariableName(
-          variable_name_inside_universe_, debug_name));
-  return moriarty_internal::MVariableManager(&m).Generate();
-}
-
 template <typename V, typename G>
 template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
@@ -1057,192 +870,6 @@ absl::StatusOr<typename T::value_type> MVariable<V, G>::GetKnownValue(
   }
 
   return universe_->GetValue<T>(variable_name);
-}
-
-template <typename V, typename G>
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<typename T::value_type> MVariable<V, G>::GenerateValue(
-    absl::string_view variable_name) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "GenerateValue",
-                              InternalConfigurationType::kUniverse);
-  }
-
-  return universe_->GetOrGenerateAndSetValue<T>(variable_name);
-}
-
-template <typename V, typename G>
-absl::StatusOr<int64_t> MVariable<V, G>::RandomInteger(int64_t min,
-                                                       int64_t max) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "RandomInteger",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetRandomEngine()) {
-    return MisconfiguredError(Typename(), "RandomInteger",
-                              InternalConfigurationType::kRandomEngine);
-  }
-
-  return moriarty_internal::RandomInteger(*universe_->GetRandomEngine(), min,
-                                          max);
-}
-
-template <typename V, typename G>
-absl::StatusOr<int64_t> MVariable<V, G>::RandomInteger(int64_t n) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "RandomInteger",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetRandomEngine()) {
-    return MisconfiguredError(Typename(), "RandomInteger",
-                              InternalConfigurationType::kRandomEngine);
-  }
-
-  return moriarty_internal::RandomInteger(*universe_->GetRandomEngine(), n);
-}
-
-template <typename V, typename G>
-template <typename T>
-absl::Status MVariable<V, G>::Shuffle(std::vector<T>& container) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "RandomInteger",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetRandomEngine()) {
-    return MisconfiguredError(Typename(), "RandomInteger",
-                              InternalConfigurationType::kRandomEngine);
-  }
-
-  return moriarty_internal::Shuffle(*universe_->GetRandomEngine(), container);
-}
-
-template <typename V, typename G>
-template <typename T>
-absl::StatusOr<T> MVariable<V, G>::RandomElement(
-    const std::vector<T>& container) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "RandomElement",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetRandomEngine()) {
-    return MisconfiguredError(Typename(), "RandomElement",
-                              InternalConfigurationType::kRandomEngine);
-  }
-
-  return moriarty_internal::RandomElement(*universe_->GetRandomEngine(),
-                                          container);
-}
-
-template <typename V, typename G>
-template <typename T>
-absl::StatusOr<std::vector<T>> MVariable<V, G>::RandomElementsWithReplacement(
-    const std::vector<T>& container, int k) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "RandomElementsWithReplacement",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetRandomEngine()) {
-    return MisconfiguredError(Typename(), "RandomElementsWithReplacement",
-                              InternalConfigurationType::kRandomEngine);
-  }
-
-  return moriarty_internal::RandomElementsWithReplacement(
-      *universe_->GetRandomEngine(), container, k);
-}
-
-template <typename V, typename G>
-template <typename T>
-absl::StatusOr<std::vector<T>>
-MVariable<V, G>::RandomElementsWithoutReplacement(
-    const std::vector<T>& container, int k) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "RandomElementsWithoutReplacement",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetRandomEngine()) {
-    return MisconfiguredError(Typename(), "RandomElementsWithoutReplacement",
-                              InternalConfigurationType::kRandomEngine);
-  }
-
-  return moriarty_internal::RandomElementsWithoutReplacement(
-      *universe_->GetRandomEngine(), container, k);
-}
-
-template <typename V, typename G>
-absl::StatusOr<std::vector<int>> MVariable<V, G>::RandomPermutation(int n) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "RandomPermutation",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetRandomEngine()) {
-    return MisconfiguredError(Typename(), "RandomPermutation",
-                              InternalConfigurationType::kRandomEngine);
-  }
-
-  return moriarty_internal::RandomPermutation(*universe_->GetRandomEngine(), n);
-}
-
-template <typename V, typename G>
-template <typename T>
-  requires std::integral<T>
-absl::StatusOr<std::vector<T>> MVariable<V, G>::RandomPermutation(int n,
-                                                                  T min) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "RandomPermutation",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetRandomEngine()) {
-    return MisconfiguredError(Typename(), "RandomPermutation",
-                              InternalConfigurationType::kRandomEngine);
-  }
-
-  return moriarty_internal::RandomPermutation(*universe_->GetRandomEngine(), n,
-                                              min);
-}
-
-template <typename V, typename G>
-template <typename T>
-  requires std::integral<T>
-absl::StatusOr<std::vector<T>> MVariable<V, G>::DistinctIntegers(T n, int k,
-                                                                 T min) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "DistinctIntegers",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetRandomEngine()) {
-    return MisconfiguredError(Typename(), "DistinctIntegers",
-                              InternalConfigurationType::kRandomEngine);
-  }
-
-  return moriarty_internal::DistinctIntegers(*universe_->GetRandomEngine(), n,
-                                             k, min);
-}
-
-template <typename V, typename G>
-template <typename T>
-  requires std::integral<T>
-absl::StatusOr<std::vector<T>> MVariable<V, G>::RandomComposition(
-    T n, int k, T min_bucket_size) {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "RandomComposition",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetRandomEngine()) {
-    return MisconfiguredError(Typename(), "RandomComposition",
-                              InternalConfigurationType::kRandomEngine);
-  }
-
-  return moriarty_internal::RandomComposition(*universe_->GetRandomEngine(), n,
-                                              k, min_bucket_size);
-}
-
-template <typename V, typename G>
-std::optional<int64_t> MVariable<V, G>::GetApproximateGenerationLimit() const {
-  if (!universe_) return std::nullopt;
-  if (!universe_->GetGenerationConfig()) return std::nullopt;
-
-  return universe_->GetGenerationConfig()->GetSoftGenerationLimit();
 }
 
 template <typename V, typename G>
@@ -1263,66 +890,47 @@ void MVariable<V, G>::DeclareSelfAsInvalid(absl::Status status) {
 //  Template implementation for the Internal Extended API
 
 template <typename V, typename G>
-absl::StatusOr<G> MVariable<V, G>::Generate() {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "Generate",
-                              InternalConfigurationType::kUniverse);
-  }
-  if (!universe_->GetGenerationConfig()) {
-    return MisconfiguredError(Typename(), "Generate",
-                              InternalConfigurationType::kGenerationConfig);
-  }
-  if (!universe_->GetRandomEngine()) {
-    return MisconfiguredError(Typename(), "Generate",
-                              InternalConfigurationType::kRandomEngine);
-  }
+G MVariable<V, G>::Generate(ResolverContext ctx) const {
+  std::string name = ctx.GetVariableName();
+
+  if (auto value = ctx.GetValueIfKnown<V>(name); value.has_value())
+    return *value;
 
   if (is_one_of_ && is_one_of_->empty())
-    return absl::FailedPreconditionError(
-        "Is/IsOneOf used, but no viable value found.");
+    throw std::runtime_error("Is/IsOneOf used, but no viable value found.");
 
-  moriarty_internal::GenerationConfig& generation_config =
-      *universe_->GetGenerationConfig();
+  ctx.MarkStartGeneration(name);
+  using Policy =
+      moriarty_internal::GenerationConfig::RetryRecommendation::Policy;
 
-  MORIARTY_RETURN_IF_ERROR(
-      generation_config.MarkStartGeneration(variable_name_inside_universe_));
-
+  std::exception_ptr last_exception;
   while (true) {
-    absl::StatusOr<G> value = GenerateOnce();
-    if (value.ok()) {
-      MORIARTY_RETURN_IF_ERROR(generation_config.MarkSuccessfulGeneration(
-          variable_name_inside_universe_));
+    try {
+      G value = GenerateOnce(ctx);
+      ctx.MarkSuccessfulGeneration(name);
       return value;
-    }
+    } catch (const std::exception& e) {
+      last_exception = std::current_exception();
+      auto [should_retry, delete_variables] = ctx.AddGenerationFailure(name);
+      for (std::string_view variable_name : delete_variables)
+        ctx.EraseValue(variable_name);
 
-    // TODO(darcybest): If value.status is not a Moriarty error, we should stop.
-
-    MORIARTY_ASSIGN_OR_RETURN(
-        moriarty_internal::GenerationConfig::RetryRecommendation
-            retry_recommendation,
-        generation_config.AddGenerationFailure(variable_name_inside_universe_,
-                                               value.status()));
-
-    for (absl::string_view variable_name :
-         retry_recommendation.variable_names_to_delete) {
-      MORIARTY_RETURN_IF_ERROR(universe_->EraseValue(variable_name));
-    }
-
-    if (retry_recommendation.policy ==
-        moriarty_internal::GenerationConfig::RetryRecommendation::kAbort) {
-      break;
+      if (should_retry == Policy::kAbort) break;
     }
   }
 
-  MORIARTY_RETURN_IF_ERROR(generation_config.MarkAbandonedGeneration(
-      variable_name_inside_universe_));
+  ctx.MarkAbandonedGeneration(name);
 
-  return absl::FailedPreconditionError(absl::Substitute(
-      "Error generating '$0' (even with retries). One such error: $1",
-      variable_name_inside_universe_,
-      generation_config.GetGenerationStatus(variable_name_inside_universe_)
-          .ToString()));
+  try {
+    std::rethrow_exception(last_exception);
+  } catch (const std::exception& e) {
+    throw std::runtime_error(
+        std::format("Error generating '{}' (even with retries). Last error: {}",
+                    name, e.what()));
+  }
+
+  throw std::runtime_error(std::format(
+      "Error generating '{}' (even with retries). Last error: unknown", name));
 }
 
 template <typename V, typename G>
@@ -1342,10 +950,9 @@ absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
     return status;
   }
 
-  ConstraintValues cv(universe_);
   for (const auto& [checker_name, checker] : custom_constraints_) {
     MORIARTY_RETURN_IF_ERROR(CheckConstraint(
-        checker(value, cv),
+        checker(value, ctx),
         absl::Substitute("Custom constraint '$0' not satisfied.",
                          checker_name)));
   }
@@ -1385,13 +992,6 @@ absl::StatusOr<std::any> MVariable<V, G>::GetSubvalue(
 }
 
 template <typename V, typename G>
-moriarty_internal::RandomEngine& MVariable<V, G>::GetRandomEngine() {
-  ABSL_CHECK_NE(universe_, nullptr)
-      << "GetRandomEngine() called without a Universe";
-  return *universe_->GetRandomEngine();
-}
-
-template <typename V, typename G>
 void MVariable<V, G>::SetUniverse(moriarty_internal::Universe* universe,
                                   absl::string_view my_name_in_universe) {
   universe_ = universe;
@@ -1425,62 +1025,42 @@ absl::Status MVariable<V, G>::WithProperty(Property property) {
 }
 
 template <typename V, typename G>
-absl::StatusOr<G> MVariable<V, G>::GenerateOnce() {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-  MORIARTY_ASSIGN_OR_RETURN(G potential_value, [this]() -> absl::StatusOr<G> {
-    if (is_one_of_) {
-      return RandomElement(*is_one_of_);
-    }
-    return GenerateImpl();
-  }());
+G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
+  G potential_value =
+      is_one_of_ ? ctx.RandomElement(*is_one_of_) : GenerateImpl(ctx);
 
   // Generate dependent variables used in custom constraints.
-  for (const std::string& dep : custom_constraints_deps_) {
-    MORIARTY_ASSIGN_OR_RETURN(AbstractVariable * var,
-                              universe_->GetAbstractVariable(dep));
-    MORIARTY_RETURN_IF_ERROR(var->AssignValue());
-  }
+  for (std::string_view dep : custom_constraints_deps_) ctx.AssignVariable(dep);
 
-  auto [variables, values] = universe_->UnsafeGetConstVariableAndValueSets();
-  AnalysisContext ctx(variable_name_inside_universe_, variables, values);
   absl::Status satisfies = IsSatisfiedWith(ctx, potential_value);
-  if (!satisfies.ok()) return satisfies;
+  if (!satisfies.ok())
+    throw std::runtime_error(std::string(satisfies.message()));
 
   return potential_value;
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::AssignValue() {
+absl::Status MVariable<V, G>::AssignValue(ResolverContext ctx) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "AssignValue",
-                              InternalConfigurationType::kUniverse);
-  }
 
-  if (universe_->ValueIsKnown(variable_name_inside_universe_))
-    return absl::OkStatus();
+  if (ctx.ValueIsKnown(ctx.GetVariableName())) return absl::OkStatus();
 
-  MORIARTY_ASSIGN_OR_RETURN(G value, Generate());
-  return universe_->SetValue<V>(variable_name_inside_universe_, value);
+  G value = Generate(ctx);
+  ctx.SetValue<V>(ctx.GetVariableName(), value);
+  return absl::OkStatus();
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::AssignUniqueValue() {
+absl::Status MVariable<V, G>::AssignUniqueValue(AssignmentContext ctx) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "AssignUniqueValue",
-                              InternalConfigurationType::kUniverse);
-  }
 
-  if (universe_->ValueIsKnown(variable_name_inside_universe_))
-    return absl::OkStatus();
+  if (ctx.ValueIsKnown(ctx.GetVariableName())) return absl::OkStatus();
 
-  auto [variables, values] = universe_->UnsafeGetConstVariableAndValueSets();
-  AnalysisContext ctx(variable_name_inside_universe_, variables, values);
   std::optional<G> value = GetUniqueValue(ctx);
 
   if (!value) return absl::OkStatus();
-  return universe_->SetValue<V>(variable_name_inside_universe_, *value);
+  ctx.SetValue<V>(ctx.GetVariableName(), *value);
+  return absl::OkStatus();
 }
 
 template <typename V, typename G>
@@ -1549,12 +1129,6 @@ MVariableManager<VariableType, ValueType>::MVariableManager(
     : managed_mvariable_(*mvariable_to_manage) {}
 
 template <typename VariableType, typename ValueType>
-absl::StatusOr<ValueType>
-MVariableManager<VariableType, ValueType>::Generate() {
-  return managed_mvariable_.Generate();
-}
-
-template <typename VariableType, typename ValueType>
 absl::Status MVariableManager<VariableType, ValueType>::MergeFrom(
     const moriarty_internal::AbstractVariable& other) {
   return managed_mvariable_.MergeFrom(other);
@@ -1564,12 +1138,6 @@ template <typename VariableType, typename ValueType>
 absl::StatusOr<std::any> MVariableManager<VariableType, ValueType>::GetSubvalue(
     const std::any& my_value, absl::string_view subvalue_name) {
   return managed_mvariable_.GetSubvalue(my_value, subvalue_name);
-}
-
-template <typename VariableType, typename ValueType>
-moriarty_internal::RandomEngine&
-MVariableManager<VariableType, ValueType>::GetRandomEngine() {
-  return managed_mvariable_.GetRandomEngine();
 }
 
 template <typename VariableType, typename ValueType>

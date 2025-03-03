@@ -18,6 +18,7 @@
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_
 
 #include <functional>
+#include <string_view>
 
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
@@ -38,6 +39,10 @@ class MutableValuesContext {
     requires std::derived_from<T, AbstractVariable>
   void SetValue(std::string_view variable_name, T::value_type value) {
     values_.get().Set<T>(variable_name, std::move(value));
+  }
+
+  void EraseValue(std::string_view variable_name) {
+    values_.get().Erase(variable_name);
   }
 
  private:

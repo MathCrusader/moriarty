@@ -163,12 +163,15 @@ TEST(MArrayTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
 }
 
 TEST(MArrayTest, InvalidLengthShouldFail) {
-  EXPECT_THAT(Generate(MArray(MInteger()).OfLength(-1)),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
-  EXPECT_THAT(Generate(MArray(MInteger()).OfLength(MInteger().Between(0, -1))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MArray(MInteger()).OfLength(-1)).IgnoreError(); },
+      std::runtime_error);
+  EXPECT_THROW(
+      {
+        Generate(MArray(MInteger()).OfLength(MInteger().Between(0, -1)))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MArrayTest, LengthZeroProcudesTheEmptyArray) {
@@ -200,10 +203,12 @@ TEST(MArrayTest, MergeFromCorrectlyMergesOnLength) {
       get_arr().OfLength(1, 8).MergeFrom(get_arr().OfLength(8, 10)),
       get_arr().OfLength(8)));  // Singleton range
 
-  EXPECT_THAT(
-      Generate(get_arr().OfLength(1, 6).MergeFrom(get_arr().OfLength(10, 20))),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               HasSubstr("range is empty")));
+  EXPECT_THROW(
+      {
+        Generate(get_arr().OfLength(1, 6).MergeFrom(get_arr().OfLength(10, 20)))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MArrayTest, MergeFromCorrectlyMergesElementConstraints) {
@@ -214,9 +219,9 @@ TEST(MArrayTest, MergeFromCorrectlyMergesElementConstraints) {
   EXPECT_TRUE(GenerateSameValues(int_array(1, 10).MergeFrom(int_array(6, 12)),
                                  int_array(6, 10)));
 
-  EXPECT_THAT(Generate(int_array(1, 6).MergeFrom(int_array(10, 20))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("range is empty")));
+  EXPECT_THROW(
+      { Generate(int_array(1, 6).MergeFrom(int_array(10, 20))).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MArrayTest, LengthIsSatisfied) {
@@ -375,11 +380,14 @@ TEST(MArrayTest, WithDistinctElementsReturnsOnlyDistinctValues) {
 }
 
 TEST(MArrayTest, WithDistinctElementsWithNotEnoughDistinctValuesDies) {
-  EXPECT_THAT(
-      Generate(
-          MArray(MInteger().Between(1, 5)).OfLength(10).WithDistinctElements()),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               HasSubstr("distinct values")));
+  EXPECT_THROW(
+      {
+        Generate(MArray(MInteger().Between(1, 5))
+                     .OfLength(10)
+                     .WithDistinctElements())
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MArrayTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
@@ -623,12 +631,12 @@ TEST(MArrayNonBuilderTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
 }
 
 TEST(MArrayNonBuilderTest, InvalidLengthShouldFail) {
-  EXPECT_THAT(Generate(MArray<MInteger>(Length(-1))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
-  EXPECT_THAT(Generate(MArray<MInteger>(Length(Between(0, -1)))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Valid range is empty")));
+  EXPECT_THROW(
+      { Generate(MArray<MInteger>(Length(-1))).IgnoreError(); },
+      std::runtime_error);
+  EXPECT_THROW(
+      { Generate(MArray<MInteger>(Length(Between(0, -1)))).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MArrayNonBuilderTest, LengthZeroProducesTheEmptyArray) {
@@ -654,9 +662,9 @@ TEST(MArrayNonBuilderTest, MergeFromCorrectlyMergesOnLength) {
   EXPECT_TRUE(GenerateSameValues(get_arr(1, 8).MergeFrom(get_arr(8, 10)),
                                  get_arr(8, 8)));  // Singleton range
 
-  EXPECT_THAT(Generate(get_arr(1, 6).MergeFrom(get_arr(10, 20))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("range is empty")));
+  EXPECT_THROW(
+      { Generate(get_arr(1, 6).MergeFrom(get_arr(10, 20))).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MArrayNonBuilderTest, MergeFromCorrectlyMergesElementConstraints) {
@@ -667,9 +675,9 @@ TEST(MArrayNonBuilderTest, MergeFromCorrectlyMergesElementConstraints) {
   EXPECT_TRUE(GenerateSameValues(int_array(1, 10).MergeFrom(int_array(6, 12)),
                                  int_array(6, 10)));
 
-  EXPECT_THAT(Generate(int_array(1, 6).MergeFrom(int_array(10, 20))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("range is empty")));
+  EXPECT_THROW(
+      { Generate(int_array(1, 6).MergeFrom(int_array(10, 20))).IgnoreError(); },
+      std::runtime_error);
 }
 
 TEST(MArrayNonBuilderTest, LengthIsSatisfied) {
@@ -803,10 +811,13 @@ TEST(MArrayNonBuilderTest, WithDistinctElementsReturnsOnlyDistinctValues) {
 
 TEST(MArrayNonBuilderTest,
      WithDistinctElementsWithNotEnoughDistinctValuesFails) {
-  EXPECT_THAT(Generate(MArray<MInteger>(Elements<MInteger>(Between(1, 5)),
-                                        Length(10), DistinctElements())),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("distinct values")));
+  EXPECT_THROW(
+      {
+        Generate(MArray<MInteger>(Elements<MInteger>(Between(1, 5)), Length(10),
+                                  DistinctElements()))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(MArrayNonBuilderTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {

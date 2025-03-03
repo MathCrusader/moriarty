@@ -15,7 +15,6 @@
 #include "src/internal/generation_config.h"
 
 #include <cstdint>
-#include <deque>
 #include <iterator>
 #include <optional>
 #include <stack>

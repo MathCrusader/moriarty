@@ -31,6 +31,7 @@
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/internal/range.h"
 #include "src/librarian/cow_ptr.h"
 #include "src/librarian/mvariable.h"
@@ -176,18 +177,16 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   CommonSize approx_size_ = CommonSize::kAny;
 
   // Computes and returns the minimum and maximum of `bounds_`. Returns
-  // `kInvalidArgumentError` if the range is empty. The `non-const` version
-  // may generate other dependent variables if needed along the way.
+  // `kInvalidArgumentError` if the range is empty. The `ResolverContext`
+  // version may generate other dependent variables if needed along the way.
   absl::StatusOr<Range::ExtremeValues> GetExtremeValues(
       librarian::AnalysisContext ctx) const;
-  absl::StatusOr<Range::ExtremeValues> GetExtremeValues();
-
-  // Generates a value between `minimum` and `maximum`.
-  absl::StatusOr<int64_t> GenerateInRange(Range::ExtremeValues extremes);
+  absl::StatusOr<Range::ExtremeValues> GetExtremeValues(
+      librarian::ResolverContext ctx) const;
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
-  absl::StatusOr<int64_t> GenerateImpl() override;
+  int64_t GenerateImpl(librarian::ResolverContext ctx) const override;
   absl::Status IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
                                    const int64_t& value) const override;
   absl::Status MergeFromImpl(const MInteger& other) override;

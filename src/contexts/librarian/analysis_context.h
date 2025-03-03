@@ -85,6 +85,10 @@ class AnalysisContext {
     return std::nullopt;
   }
 
+  bool ValueIsKnown(std::string_view variable_name) const {
+    return values_.get().Contains(variable_name);
+  }
+
  private:
   std::string name_;
   std::reference_wrapper<const moriarty_internal::VariableSet> variables_;

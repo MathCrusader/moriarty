@@ -31,9 +31,11 @@
 #include "src/property.h"
 
 namespace moriarty::librarian {
-class AnalysisContext;  // Forward declaring AnalysisContext
-class PrinterContext;   // Forward declaring PrinterContext
-class ReaderContext;    // Forward declaring ReaderContext
+class AnalysisContext;    // Forward declaring AnalysisContext
+class AssignmentContext;  // Forward declaring AssignmentContext
+class PrinterContext;     // Forward declaring PrinterContext
+class ReaderContext;      // Forward declaring ReaderContext
+class ResolverContext;    // Forward declaring ResolverContext
 }  // namespace moriarty::librarian
 
 namespace moriarty {
@@ -91,7 +93,7 @@ class AbstractVariable {
   //
   // Note that the variable named `X` in the universe may or may not be
   // identically `this` variable, but it should be assumed to be equivalent.
-  virtual absl::Status AssignValue() = 0;
+  virtual absl::Status AssignValue(librarian::ResolverContext ctx) const = 0;
 
   // AssignUniqueValue() [pure virtual]
   //
@@ -103,7 +105,8 @@ class AbstractVariable {
   //
   // Example: MInteger().Between(7, 7) might be able to determine that its
   // unique value is 7.
-  virtual absl::Status AssignUniqueValue() = 0;
+  virtual absl::Status AssignUniqueValue(
+      librarian::AssignmentContext ctx) const = 0;
 
   // GetUniqueValueUntyped() [pure virtual]
   //

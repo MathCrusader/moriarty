@@ -125,6 +125,10 @@ class BasicRandomContext {
     requires std::integral<T>
   std::vector<T> RandomComposition(T n, int k, T min_bucket_size = 1);
 
+  // FIXME: Remove
+  // Do not use this function unless you know what you are doing.
+  RandomEngine& UnsafeGetRandomEngine() { return engine_; }
+
  private:
   std::reference_wrapper<RandomEngine> engine_;
 

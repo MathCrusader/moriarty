@@ -52,6 +52,7 @@ cc_library(
         ":example_graph",
         "//src:errors",
         "//src/contexts/librarian:analysis_context",
+        "//src/contexts/librarian:resolver_context",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",
         "//src/variables:minteger",

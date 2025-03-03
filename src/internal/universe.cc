@@ -101,31 +101,34 @@ bool Universe::ValueIsKnown(absl::string_view variable_name) const {
 }
 
 absl::Status Universe::AssignValueToVariable(absl::string_view variable_name) {
-  if (!GetValueSet()) {
-    return MisconfiguredError("Universe", "AssignValueToVariable",
-                              InternalConfigurationType::kValueSet);
-  }
+  return MisconfiguredError("Universe", "FIXXME",
+                            InternalConfigurationType::kValueSet);
+  // if (!GetValueSet()) {
+  //   return MisconfiguredError("Universe", "AssignValueToVariable",
+  //                             InternalConfigurationType::kValueSet);
+  // }
 
-  // Value already known?
-  if (GetValueSet()->Contains(variable_name)) return absl::OkStatus();
+  // // Value already known?
+  // if (GetValueSet()->Contains(variable_name)) return absl::OkStatus();
 
-  MORIARTY_ASSIGN_OR_RETURN(AbstractVariable * var,
-                            GetAbstractVariable(variable_name));
+  // MORIARTY_ASSIGN_OR_RETURN(AbstractVariable * var,
+  //                           GetAbstractVariable(variable_name));
 
-  // Already attempting to generate?
-  auto [it, inserted] =
-      currently_generating_variables_.insert(std::string(variable_name));
-  if (!inserted) {
-    return absl::FailedPreconditionError(absl::Substitute(
-        "Found cyclic dependency in variables involving '$0'", variable_name));
-  }
+  // // Already attempting to generate?
+  // auto [it, inserted] =
+  //     currently_generating_variables_.insert(std::string(variable_name));
+  // if (!inserted) {
+  //   return absl::FailedPreconditionError(absl::Substitute(
+  //       "Found cyclic dependency in variables involving '$0'",
+  //       variable_name));
+  // }
 
-  var->SetUniverse(this, variable_name);
-  absl::Status status = var->AssignValue();
+  // var->SetUniverse(this, variable_name);
+  // absl::Status status = var->AssignValue();
 
-  currently_generating_variables_.erase(variable_name);
+  // currently_generating_variables_.erase(variable_name);
 
-  return status;
+  // return status;
 }
 
 ValueSet* Universe::GetValueSet() { return mutable_value_set_; }

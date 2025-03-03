@@ -129,10 +129,14 @@ Generator::AssignValuesInAllTestCases() {
   }
 
   for (auto& case_ptr : optional_test_cases_) {
-    absl::StatusOr<moriarty_internal::ValueSet> values =
-        moriarty_internal::TestCaseManager(case_ptr.get())
-            .AssignAllValues(*rng_, approximate_generation_limit_);
-    if (values.ok()) assigned_test_cases.push_back(*values);
+    try {
+      absl::StatusOr<moriarty_internal::ValueSet> values =
+          moriarty_internal::TestCaseManager(case_ptr.get())
+              .AssignAllValues(*rng_, approximate_generation_limit_);
+      if (values.ok()) assigned_test_cases.push_back(*values);
+    } catch (...) {
+      continue;  // Okay to fail on these.
+    }
   }
 
   return assigned_test_cases;

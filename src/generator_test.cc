@@ -19,12 +19,12 @@
 #include <optional>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/types/span.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/errors.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -42,6 +42,8 @@
 namespace moriarty {
 namespace {
 
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::moriarty::moriarty_internal::GeneratorManager;
 using ::moriarty_testing::GenerateSameValues;
 using ::moriarty_testing::IsMisconfigured;
@@ -59,8 +61,6 @@ using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Le;
 using ::testing::SizeIs;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 // EmptyGenerator
 //
@@ -137,9 +137,8 @@ TEST(GeneratorManagerTest, AssignValuesInAllTestCasesReturnsOnDefaultCase) {
   gen.AddTestCase().ConstrainVariable("X", MTestType());
   gen.AddTestCase().ConstrainVariable("Y", MInteger().Is(5));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<moriarty_internal::ValueSet> values,
-      generator_manager.AssignValuesInAllTestCases());
+  MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<moriarty_internal::ValueSet> values,
+                                generator_manager.AssignValuesInAllTestCases());
 
   ASSERT_THAT(values, SizeIs(2));
   EXPECT_THAT(values[0].Get<MTestType>("X"),
@@ -154,9 +153,8 @@ TEST(GeneratorManagerTest,
   gen.AddOptionalTestCase().ConstrainVariable("X", MTestType());
   gen.AddOptionalTestCase().ConstrainVariable("Y", MInteger().Is(5));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<moriarty_internal::ValueSet> values,
-      generator_manager.AssignValuesInAllTestCases());
+  MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<moriarty_internal::ValueSet> values,
+                                generator_manager.AssignValuesInAllTestCases());
 
   ASSERT_THAT(values, SizeIs(2));
   EXPECT_THAT(values[0].Get<MTestType>("X"),
@@ -172,9 +170,8 @@ TEST(GeneratorManagerTest,
       "Y", MInteger().Between(10, 5));  // Bad
   gen.AddOptionalTestCase().ConstrainVariable("X", MTestType());
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<moriarty_internal::ValueSet> values,
-      generator_manager.AssignValuesInAllTestCases());
+  MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<moriarty_internal::ValueSet> values,
+                                generator_manager.AssignValuesInAllTestCases());
 
   ASSERT_THAT(values, SizeIs(1));  // First case is invalid.
   EXPECT_THAT(values[0].Get<MTestType>("X"),
@@ -186,9 +183,8 @@ TEST(GeneratorManagerTest, AssignValuesInAllTestCasesAllowsRandomness) {
   moriarty_internal::GeneratorManager generator_manager(&gen);
   gen.AddOptionalTestCase().ConstrainVariable("Y", MInteger().Between(50, 100));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<moriarty_internal::ValueSet> values,
-      generator_manager.AssignValuesInAllTestCases());
+  MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<moriarty_internal::ValueSet> values,
+                                generator_manager.AssignValuesInAllTestCases());
 
   ASSERT_THAT(values, SizeIs(1));
   EXPECT_THAT(values[0].Get<MInteger>("Y"),
@@ -200,9 +196,8 @@ TEST(GeneratorTest, ScenarioShouldApplyToAllFutureAddTestCaseCalls) {
   MORIARTY_ASSERT_OK(generator.TryWithScenario(Scenario().WithGeneralProperty(
       {.category = "size", .descriptor = "small"})));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<moriarty_internal::ValueSet> values,
-      RunGenerateForTest(generator));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<moriarty_internal::ValueSet> values,
+                                RunGenerateForTest(generator));
   ASSERT_THAT(values, SizeIs(1));
 
   EXPECT_THAT(values[0].Get<MTestType>("X"),
@@ -228,9 +223,8 @@ class TestGenerator : public Generator {
 };
 
 TEST(GeneratorTest, ScenarioShouldNotApplyToCallsToAddTestCasePreviously) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<moriarty_internal::ValueSet> values,
-      RunGenerateForTest(TestGenerator()));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<moriarty_internal::ValueSet> values,
+                                RunGenerateForTest(TestGenerator()));
   ASSERT_THAT(values, SizeIs(2));
 
   EXPECT_THAT(values[0].Get<MTestType>("X"),
@@ -365,8 +359,13 @@ TEST(GeneratorTest, RandomReturnsSuccessfullyRandomValues) {
 }
 
 TEST(GeneratorTest, RandomFailsIfInvalidInputIsProvided) {
-  EXPECT_THAT(ProtectedGenerator().TryRandom(MInteger().Between(-1, -2)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THROW(
+      {
+        ProtectedGenerator()
+            .TryRandom(MInteger().Between(-1, -2))
+            .IgnoreError();
+      },
+      std::runtime_error);
 }
 
 TEST(GeneratorTest, GetVariableSuccessfullyReturnsKnownVariable) {
@@ -375,8 +374,7 @@ TEST(GeneratorTest, GetVariableSuccessfullyReturnsKnownVariable) {
   MORIARTY_ASSERT_OK(variables.AddVariable("x", MInteger().Between(111, 122)));
   moriarty_internal::GeneratorManager(&G).SetGeneralConstraints(variables);
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(MInteger x,
-                                         G.TryGetVariable<MInteger>("x"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(MInteger x, G.TryGetVariable<MInteger>("x"));
   EXPECT_TRUE(GenerateSameValues(x, MInteger().Between(111, 122)));
 }
 

@@ -33,6 +33,18 @@ cc_library(
 )
 
 cc_library(
+    name = "assignment_context",
+    hdrs = ["assignment_context.h"],
+    deps = [
+        ":analysis_context",
+        "//src/contexts/internal:mutable_values_context",
+        "//src/internal:abstract_variable",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
+    ],
+)
+
+cc_library(
     name = "printer_context",
     hdrs = ["printer_context.h"],
     deps = [
@@ -49,5 +61,20 @@ cc_library(
         "//src:io_config",
         "//src/contexts/internal:basic_istream_context",
         "//src/contexts/internal:mutable_values_context",
+    ],
+)
+
+cc_library(
+    name = "resolver_context",
+    hdrs = ["resolver_context.h"],
+    deps = [
+        ":analysis_context",
+        "//src/contexts/internal:basic_random_context",
+        "//src/contexts/internal:generation_orchestration_context",
+        "//src/contexts/internal:mutable_values_context",
+        "//src/internal:generation_config",
+        "//src/internal:random_engine",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
     ],
 )

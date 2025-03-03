@@ -31,6 +31,7 @@
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/librarian/mvariable.h"
 #include "src/property.h"
@@ -150,16 +151,17 @@ class MString : public librarian::MVariable<MString, std::string> {
 
   std::vector<moriarty_internal::SimplePattern> simple_patterns_;
 
-  absl::StatusOr<std::string> GenerateSimplePattern();
+  std::string GenerateSimplePattern(librarian::ResolverContext ctx) const;
 
   // GenerateImplWithDistinctCharacters()
   //
   // Same as GenerateImpl(), but with distinct characters.
-  absl::StatusOr<std::string> GenerateImplWithDistinctCharacters();
+  std::string GenerateImplWithDistinctCharacters(
+      librarian::ResolverContext ctx) const;
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
-  absl::StatusOr<std::string> GenerateImpl() override;
+  std::string GenerateImpl(librarian::ResolverContext ctx) const override;
   absl::Status IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
                                    const std::string& value) const override;
   absl::Status MergeFromImpl(const MString& other) override;

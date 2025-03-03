@@ -20,6 +20,7 @@
 #include <optional>
 #include <queue>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -27,9 +28,11 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/librarian/assignment_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
-#include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/util/status_macro/status_macros.h"
@@ -38,11 +41,6 @@ namespace moriarty {
 namespace moriarty_internal {
 
 namespace {
-
-void SetUniverse(VariableSet& variables, Universe* universe) {
-  for (const auto& [var_name, var_ptr] : variables.GetAllVariables())
-    var_ptr->SetUniverse(universe, var_name);
-}
 
 GenerationConfig CreateGenerationConfig(const GenerationOptions& options) {
   GenerationConfig generation_config;
@@ -129,13 +127,6 @@ absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
                                            ValueSet known_values,
                                            const GenerationOptions& options) {
   GenerationConfig generation_config = CreateGenerationConfig(options);
-  Universe universe;
-  universe.SetMutableValueSet(&known_values)
-      .SetMutableVariableSet(&variables)
-      .SetGenerationConfig(&generation_config)
-      .SetRandomEngine(&options.random_engine);
-
-  SetUniverse(variables, &universe);
 
   MORIARTY_ASSIGN_OR_RETURN(
       (absl::flat_hash_map<std::string, std::vector<std::string>> deps_map),
@@ -145,23 +136,26 @@ absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
                             GetGenerationOrder(deps_map, known_values));
 
   // First do a quick assignment of all known values.
-  for (const std::string& name : variable_names) {
+  for (std::string_view name : variable_names) {
     MORIARTY_ASSIGN_OR_RETURN(AbstractVariable * var,
                               variables.GetAbstractVariable(name));
-    MORIARTY_RETURN_IF_ERROR(var->AssignUniqueValue());
+    librarian::AssignmentContext ctx(name, variables, known_values);
+    MORIARTY_RETURN_IF_ERROR(var->AssignUniqueValue(ctx));
   }
 
   // Now do a deep generation.
-  for (const std::string& name : variable_names) {
+  for (std::string_view name : variable_names) {
     MORIARTY_ASSIGN_OR_RETURN(AbstractVariable * var,
                               variables.GetAbstractVariable(name));
-    MORIARTY_RETURN_IF_ERROR(var->AssignValue());
+    librarian::ResolverContext ctx(name, variables, known_values,
+                                   options.random_engine, generation_config);
+    MORIARTY_RETURN_IF_ERROR(var->AssignValue(ctx));
   }
 
   // We may have initially generated invalid values during the
   // AssignUniqueValues(). Let's check for those now...
   // TODO(darcybest): Determine if there's a better way of doing this...
-  for (const std::string& name : variable_names) {
+  for (std::string_view name : variable_names) {
     MORIARTY_ASSIGN_OR_RETURN(AbstractVariable * var,
                               variables.GetAbstractVariable(name));
     librarian::AnalysisContext ctx(name, variables, known_values);

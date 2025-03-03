@@ -30,17 +30,15 @@
 #include "absl/algorithm/container.h"
 #include "absl/log/check.h"
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
 #include "src/librarian/mvariable.h"
 #include "src/property.h"
-#include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
 
@@ -116,7 +114,8 @@ class MTuple : public librarian::MVariable<
                                           std::index_sequence<I...>);
 
   template <std::size_t I>
-  absl::Status GenerateSingleElement(tuple_value_type& result);
+  void GenerateSingleElement(librarian::ResolverContext ctx,
+                             tuple_value_type& result) const;
   template <std::size_t I>
   void TryReadAndSet(librarian::ReaderContext ctx,
                      tuple_value_type& read_values) const;
@@ -126,7 +125,7 @@ class MTuple : public librarian::MVariable<
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
-  absl::StatusOr<tuple_value_type> GenerateImpl() override;
+  tuple_value_type GenerateImpl(librarian::ResolverContext ctx) const override;
   absl::Status IsSatisfiedWithImpl(
       librarian::AnalysisContext ctx,
       const tuple_value_type& value) const override;
@@ -144,7 +143,8 @@ class MTuple : public librarian::MVariable<
   //    appropriate size so parameter packs can be used, and be run at compile
   //    time.
   template <std::size_t... I>
-  absl::StatusOr<tuple_value_type> GenerateImpl(std::index_sequence<I...>);
+  tuple_value_type GenerateImpl(librarian::ResolverContext ctx,
+                                std::index_sequence<I...>) const;
   template <std::size_t... I>
   absl::Status IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
                                    const tuple_value_type& value,
@@ -250,31 +250,27 @@ absl::Status MTuple<MElementTypes...>::MergeFromImpl(
 }
 
 template <typename... MElementTypes>
-absl::StatusOr<typename MTuple<MElementTypes...>::tuple_value_type>
-MTuple<MElementTypes...>::GenerateImpl() {
-  return this->GenerateImpl(std::index_sequence_for<MElementTypes...>());
+MTuple<MElementTypes...>::tuple_value_type
+MTuple<MElementTypes...>::GenerateImpl(librarian::ResolverContext ctx) const {
+  return this->GenerateImpl(ctx, std::index_sequence_for<MElementTypes...>());
 }
 
 template <typename... MElementTypes>
 template <std::size_t... I>
-absl::StatusOr<typename MTuple<MElementTypes...>::tuple_value_type>
-MTuple<MElementTypes...>::GenerateImpl(std::index_sequence<I...>) {
-  absl::Status status;
+MTuple<MElementTypes...>::tuple_value_type
+MTuple<MElementTypes...>::GenerateImpl(librarian::ResolverContext ctx,
+                                       std::index_sequence<I...>) const {
   tuple_value_type result;
-  (status.Update(GenerateSingleElement<I>(result)), ...);
-
-  if (!status.ok()) return status;
+  (GenerateSingleElement<I>(ctx, result), ...);
   return result;
 }
 
 template <typename... MElementTypes>
 template <std::size_t I>
-absl::Status MTuple<MElementTypes...>::GenerateSingleElement(
-    tuple_value_type& result) {
-  MORIARTY_ASSIGN_OR_RETURN(
-      std::get<I>(result),
-      this->Random(absl::StrCat("element<", I, ">"), std::get<I>(elements_)));
-  return absl::OkStatus();
+void MTuple<MElementTypes...>::GenerateSingleElement(
+    librarian::ResolverContext ctx, tuple_value_type& result) const {
+  std::get<I>(result) = std::get<I>(elements_).Generate(
+      ctx.WithSubVariable("<" + std::to_string(I) + ">"));
 }
 
 template <typename... MElementTypes>

@@ -33,10 +33,9 @@
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
+#include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
-#include "src/internal/random_engine.h"
 #include "src/internal/simple_pattern.h"
-#include "src/librarian/mvariable.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/variables/constraints/base_constraints.h"
@@ -224,70 +223,71 @@ absl::StatusOr<std::vector<MString>> MString::GetDifficultInstancesImpl()
   return values;
 }
 
-absl::StatusOr<std::string> MString::GenerateImpl() {
+std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
   if (simple_patterns_.empty() && (!alphabet_ || alphabet_->empty())) {
-    return absl::FailedPreconditionError(
-        "Attempting to generate a string with an empty alphabet and no simple "
+    throw std::runtime_error(
+        "Cannot generate a string with an empty alphabet and no simple "
         "pattern.");
   }
   if (simple_patterns_.empty() && !length_) {
-    return absl::FailedPreconditionError(
-        "Attempting to generate a string with no length parameter or simple "
+    throw std::runtime_error(
+        "Cannot generate a string with no length parameter or simple "
         "pattern given.");
   }
 
-  if (!simple_patterns_.empty()) return GenerateSimplePattern();
+  if (!simple_patterns_.empty()) return GenerateSimplePattern(ctx);
+
+  MInteger length_local = *length_;
 
   // Negative string length is impossible.
-  length_->AtLeast(0);
+  length_local.AtLeast(0);
 
   if (length_size_property_) {
-    MORIARTY_RETURN_IF_ERROR(length_->OfSizeProperty(*length_size_property_));
+    auto status = length_local.OfSizeProperty(*length_size_property_);
+    if (!status.ok()) {
+      throw std::runtime_error(std::string(status.message()));
+    }
   }
 
-  std::optional<int64_t> generation_limit =
-      this->GetApproximateGenerationLimit();
+  std::optional<int64_t> generation_limit = ctx.GetSoftGenerationLimit();
+  if (generation_limit) length_local.AtMost(*generation_limit);
 
-  if (generation_limit) {
-    length_->AtMost(*generation_limit);
-  }
+  if (distinct_characters_) return GenerateImplWithDistinctCharacters(ctx);
 
-  if (distinct_characters_) return GenerateImplWithDistinctCharacters();
-
-  MORIARTY_ASSIGN_OR_RETURN(int length, Random("length", *length_),
-                            _ << "Error determining the length of the string");
+  int length = length_local.Generate(ctx.WithSubVariable("length"));
 
   std::vector<char> alphabet(alphabet_->begin(), alphabet_->end());
-  MORIARTY_ASSIGN_OR_RETURN(std::vector<char> ret,
-                            RandomElementsWithReplacement(alphabet, length));
+  std::vector<char> ret = ctx.RandomElementsWithReplacement(alphabet, length);
 
   return std::string(ret.begin(), ret.end());
 }
 
-absl::StatusOr<std::string> MString::GenerateSimplePattern() {
+std::string MString::GenerateSimplePattern(
+    librarian::ResolverContext ctx) const {
   ABSL_CHECK(!simple_patterns_.empty());
 
-  // MString needs direct access its RandomEngine. Non built-in types should not
-  // access the RandomEngine directly, use Random(MInteger().Between(x, y))
-  // instead.
-  moriarty_internal::RandomEngine& rng =
-      moriarty_internal::MVariableManager(this).GetRandomEngine();
   // Use the last pattern, since it's probably the most specific. This choice is
   // arbitrary since all patterns must be satisfied.
-  return simple_patterns_.back().GenerateWithRestrictions(alphabet_, rng);
+  absl::StatusOr<std::string> result =
+      simple_patterns_.back().GenerateWithRestrictions(
+          alphabet_, ctx.UnsafeGetRandomEngine());
+  if (!result.ok()) {
+    throw std::runtime_error(result.status().ToString());
+  }
+  return *result;
 }
 
-absl::StatusOr<std::string> MString::GenerateImplWithDistinctCharacters() {
+std::string MString::GenerateImplWithDistinctCharacters(
+    librarian::ResolverContext ctx) const {
   // Creating a copy in case the alphabet changes in the future, we don't want
   // to limit the length forever.
   MInteger mlength = *length_;
   mlength.AtMost(alphabet_->size());  // Each char appears at most once.
-  MORIARTY_ASSIGN_OR_RETURN(int length, Random("length", mlength),
-                            _ << "Error determining the length of the string");
+  int length = mlength.Generate(ctx.WithSubVariable("length"));
 
   std::vector<char> alphabet(alphabet_->begin(), alphabet_->end());
-  MORIARTY_ASSIGN_OR_RETURN(std::vector<char> ret,
-                            RandomElementsWithoutReplacement(alphabet, length));
+  std::vector<char> ret =
+      ctx.RandomElementsWithoutReplacement(alphabet, length);
 
   return std::string(ret.begin(), ret.end());
 }
