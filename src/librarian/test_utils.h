@@ -86,7 +86,6 @@
 #ifndef MORIARTY_SRC_LIBRARIAN_TEST_UTILS_H_
 #define MORIARTY_SRC_LIBRARIAN_TEST_UTILS_H_
 
-#include <any>
 #include <concepts>
 #include <istream>
 #include <iterator>
@@ -419,14 +418,9 @@ std::optional<typename T::value_type> GetUniqueValue(T variable,
   context.WithVariable(var_name, variable);
   moriarty_testing_internal::ContextManager manager(&context);
 
-  // The next line hides a *StatusOr<>. Should crash if not okay.
-  moriarty::moriarty_internal::AbstractVariable* var =
-      *manager.GetVariables()->GetAbstractVariable(var_name);
   moriarty::librarian::AnalysisContext ctx(var_name, *manager.GetVariables(),
                                            *manager.GetValues());
-  std::optional<std::any> value = var->GetUniqueValueUntyped(ctx);
-  if (!value) return std::nullopt;
-  return std::any_cast<typename T::value_type>(*value);
+  return ctx.GetUniqueValue<T>(var_name);
 }
 
 template <typename T>

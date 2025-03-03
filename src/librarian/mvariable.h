@@ -518,14 +518,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // unique value is 7.
   absl::Status AssignUniqueValue(AssignmentContext ctx) const override;
 
-  // GetUniqueValueUntyped()
-  //
-  // Returns the unique value that this variable can be assigned to. If there
-  // is not a unique value (or it is too hard to determine that there is one),
-  // returns `std::nullopt`. The `std::any` will be a `ValueType`.
-  std::optional<std::any> GetUniqueValueUntyped(
-      AnalysisContext ctx) const override;
-
   // ValueSatisfiesConstraints()
   //
   // Determines if the value stored in `ctx` satisfies all constraints for this
@@ -1007,15 +999,6 @@ absl::Status MVariable<V, G>::AssignUniqueValue(AssignmentContext ctx) const {
   if (!value) return absl::OkStatus();
   ctx.SetValue<V>(ctx.GetVariableName(), *value);
   return absl::OkStatus();
-}
-
-template <typename V, typename G>
-std::optional<std::any> MVariable<V, G>::GetUniqueValueUntyped(
-    AnalysisContext ctx) const {
-  // Casting std::optional<G> to std::optional<std::any>.
-  std::optional<G> value = GetUniqueValue(ctx);
-  if (!value) return std::nullopt;
-  return *value;
 }
 
 template <typename V, typename G>

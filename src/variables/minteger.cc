@@ -178,9 +178,12 @@ absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues(
   absl::flat_hash_map<std::string, int64_t> dependent_variables;
 
   for (absl::string_view name : needed_dependent_variables) {
-    MORIARTY_ASSIGN_OR_RETURN(
-        dependent_variables[name], ctx.GetUniqueValue<MInteger>(name),
-        _ << "Error getting the dependent variable " << name);
+    std::optional<int64_t> value = ctx.GetUniqueValue<MInteger>(name);
+    if (!value) {
+      return absl::InvalidArgumentError(
+          absl::Substitute("Unknown dependent variable: $0", name));
+    }
+    dependent_variables[name] = std::move(*value);
   }
 
   MORIARTY_ASSIGN_OR_RETURN(std::optional<Range::ExtremeValues> extremes,

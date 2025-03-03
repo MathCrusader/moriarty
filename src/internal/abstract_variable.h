@@ -20,7 +20,6 @@
 
 #include <any>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -98,23 +97,6 @@ class AbstractVariable {
   // unique value is 7.
   virtual absl::Status AssignUniqueValue(
       librarian::AssignmentContext ctx) const = 0;
-
-  // GetUniqueValueUntyped() [pure virtual]
-  //
-  // Determines if there is exactly one value that this variable can be assigned
-  // to. If so, return that value.
-  //
-  // If there is not a unique value (or it is too hard to determine that there
-  // is a unique value), this returns `std::nullopt`.
-  //
-  // This function is `Untyped` since it returns an `std::any`. However, the
-  // type of `std::any` must be exactly the same as the type assigned via
-  // `AssignValue()`.
-  //
-  // Example: MInteger().Between(7, 7) might be able to determine that its
-  // unique value is 7.
-  virtual std::optional<std::any> GetUniqueValueUntyped(
-      librarian::AnalysisContext ctx) const = 0;
 
   // ReadValue() [pure virtual]
   //
