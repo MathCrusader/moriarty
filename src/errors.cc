@@ -78,8 +78,6 @@ namespace {
 
 constexpr absl::string_view ToString(InternalConfigurationType type) {
   switch (type) {
-    case InternalConfigurationType::kUniverse:
-      return "Universe";
     case InternalConfigurationType::kRandomEngine:
       return "RandomEngine";
     case InternalConfigurationType::kVariableName:

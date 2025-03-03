@@ -51,7 +51,7 @@
 //
 //    * Context
 //        When variables depend on one another (e.g., length of an array is "N",
-//        which is another MVariable), they need to live in the same Universe.
+//        which is another MVariable), they need to live in the same context.
 //        Context contains global information for several test functions.
 //
 // Matchers (for googletest):
@@ -111,7 +111,6 @@
 #include "src/internal/generation_bootstrap.h"
 #include "src/internal/generation_config.h"
 #include "src/internal/random_engine.h"
-#include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/mvariable.h"
@@ -420,12 +419,6 @@ std::optional<typename T::value_type> GetUniqueValue(T variable,
   context.WithVariable(var_name, variable);
   moriarty_testing_internal::ContextManager manager(&context);
 
-  moriarty::moriarty_internal::Universe universe =
-      moriarty::moriarty_internal::Universe()
-          .SetMutableVariableSet(manager.GetVariables())
-          .SetMutableValueSet(manager.GetValues());
-  manager.GetVariables()->SetUniverse(&universe);
-
   // The next line hides a *StatusOr<>. Should crash if not okay.
   moriarty::moriarty_internal::AbstractVariable* var =
       *manager.GetVariables()->GetAbstractVariable(var_name);
@@ -444,12 +437,6 @@ absl::StatusOr<typename T::value_type> Read(T variable, std::istream& is,
   std::string var_name = absl::Substitute("Read($0)", variable.Typename());
   context.WithVariable(var_name, variable);
   moriarty_testing_internal::ContextManager manager(&context);
-
-  moriarty::moriarty_internal::Universe universe =
-      moriarty::moriarty_internal::Universe()
-          .SetMutableVariableSet(manager.GetVariables())
-          .SetMutableValueSet(manager.GetValues());
-  manager.GetVariables()->SetUniverse(&universe);
 
   MORIARTY_ASSIGN_OR_RETURN(
       moriarty::moriarty_internal::AbstractVariable * var,
@@ -555,8 +542,9 @@ template <typename T>
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
 absl::StatusOr<std::vector<typename T::value_type>>
 GenerateDifficultInstancesValues(T variable) {
+  moriarty::librarian::AnalysisContext ctx("test", {}, {});
   MORIARTY_ASSIGN_OR_RETURN(std::vector<T> instances,
-                            variable.GetDifficultInstances());
+                            variable.GetDifficultInstances(ctx));
 
   std::vector<typename T::value_type> values;
   for (T difficult_variable : instances) {

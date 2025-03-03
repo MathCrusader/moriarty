@@ -36,8 +36,6 @@
 namespace moriarty {
 namespace moriarty_internal {
 
-class Universe;  // Forward declaring Universe
-
 // VariableSet
 //
 // A collection of (possibly interacting) variables. Constraints that reference
@@ -88,11 +86,6 @@ class VariableSet {
   // Returns the map of internal variables.
   const absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>&
   GetAllVariables() const;
-
-  // SetUniverse()
-  //
-  // Calls SetUniverse() on all variables owned by this variable set.
-  void SetUniverse(Universe* universe);
 
   // WithScenario()
   //

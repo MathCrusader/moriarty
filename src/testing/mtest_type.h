@@ -114,8 +114,8 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   absl::Status IsSatisfiedWithImpl(moriarty::librarian::AnalysisContext ctx,
                                    const TestType& value) const override;
 
-  absl::StatusOr<std::vector<MTestType>> GetDifficultInstancesImpl()
-      const override;
+  absl::StatusOr<std::vector<MTestType>> GetDifficultInstancesImpl(
+      moriarty::librarian::AnalysisContext ctx) const override;
 
  private:
   moriarty::MInteger multiplier_ = moriarty::MInteger().Between(1, 1);
@@ -124,6 +124,7 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   bool merged_ = false;
 
   absl::StatusOr<moriarty::librarian::Subvalues> GetSubvaluesImpl(
+      moriarty::librarian::AnalysisContext ctx,
       const TestType& value) const override;
 
   // Always returns pi. Does not directly depend on `rng`, but we generate a

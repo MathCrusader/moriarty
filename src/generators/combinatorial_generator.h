@@ -31,11 +31,11 @@
 #include <string>
 #include <vector>
 
-#include "absl/container/flat_hash_map.h"
 #include "absl/types/span.h"
 #include "src/generator.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/combinatorial_coverage.h"
+#include "src/internal/variable_set.h"
 
 namespace moriarty {
 
@@ -59,9 +59,7 @@ class CombinatorialCoverage : public moriarty::Generator {
   // abstract variables, the name of the variable and define the dimensions
   // array for the generation of the covering array.
   InitializeCasesInfo InitializeCases(
-      const absl::flat_hash_map<
-          std::string, std::unique_ptr<moriarty_internal::AbstractVariable>>&
-          vars);
+      const moriarty_internal::VariableSet& variables);
 
   // CreateTestCases()
   //

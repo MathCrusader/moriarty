@@ -67,7 +67,6 @@ std::optional<std::string> GetUnknownVariableName(const absl::Status& status);
 // Items that may be misconfigured by the user. In general, if you're seeing
 // this, it means that you have not set up your ecosystem properly.
 enum class InternalConfigurationType {
-  kUniverse,
   kRandomEngine,
   kVariableName,
   kVariableSet,

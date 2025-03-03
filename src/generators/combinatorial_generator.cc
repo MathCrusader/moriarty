@@ -22,7 +22,6 @@
 #include <vector>
 
 #include "absl/base/nullability.h"
-#include "absl/container/flat_hash_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/statusor.h"
 #include "absl/types/span.h"
@@ -46,7 +45,7 @@ void CombinatorialCoverage::GenerateTestCases() {
       generator_manager.GetRandomEngine();
   ABSL_CHECK_NE(random_engine, nullptr);
 
-  InitializeCasesInfo cases_info = InitializeCases(var_set.GetAllVariables());
+  InitializeCasesInfo cases_info = InitializeCases(var_set);
 
   std::function<int(int)> rand_f = [random_engine](int n) -> int {
     int result = random_engine->RandInt(n).value() % n;
@@ -75,13 +74,12 @@ void CombinatorialCoverage::CreateTestCases(
 }
 
 InitializeCasesInfo CombinatorialCoverage::InitializeCases(
-    const absl::flat_hash_map<
-        std::string, std::unique_ptr<moriarty_internal::AbstractVariable>>&
-        vars) {
+    const moriarty_internal::VariableSet& variables) {
   InitializeCasesInfo info;
-  for (const auto& [name, var_ptr] : vars) {
+  for (const auto& [name, var_ptr] : variables.GetAllVariables()) {
+    moriarty::librarian::AnalysisContext ctx(name, variables, {});
     std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
-        difficult_vars = var_ptr->GetDifficultAbstractVariables().value();
+        difficult_vars = var_ptr->GetDifficultAbstractVariables(ctx).value();
     info.dimension_sizes.push_back(difficult_vars.size());
     info.cases.push_back(std::move(difficult_vars));
     info.variable_names.push_back(name);

@@ -51,7 +51,6 @@
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
 #include "src/internal/status_utils.h"
-#include "src/internal/universe.h"
 #include "src/internal/variable_name_utils.h"
 #include "src/librarian/subvalues.h"
 #include "src/property.h"
@@ -204,8 +203,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // should give common difficult cases. Some examples of this type of cases
   // include common pitfalls for your data type (edge cases, queries of death,
   // etc).
-  [[nodiscard]] absl::StatusOr<std::vector<VariableType>>
-  GetDifficultInstances() const;
+  [[nodiscard]] absl::StatusOr<std::vector<VariableType>> GetDifficultInstances(
+      AnalysisContext ctx) const;
 
   // Print()
   //
@@ -251,8 +250,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
                                const ValueType& value) const;
 
   ValueType Generate(ResolverContext ctx) const;
-
-  moriarty_internal::Universe* UnsafeGetUniverse() const { return universe_; }
 
  protected:
   // ---------------------------------------------------------------------------
@@ -341,7 +338,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Default: No subvalues.
   virtual absl::StatusOr<Subvalues> GetSubvaluesImpl(
-      const ValueType& value) const;
+      AnalysisContext ctx, const ValueType& value) const;
 
   // GetDifficultInstancesImpl() [virtual/optional]
   //
@@ -350,8 +347,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Returns a list of complicated instances to merge from.
   // TODO(hivini): Improve comment with examples.
-  virtual absl::StatusOr<std::vector<VariableType>> GetDifficultInstancesImpl()
-      const;
+  virtual absl::StatusOr<std::vector<VariableType>> GetDifficultInstancesImpl(
+      AnalysisContext ctx) const;
 
   // GetUniqueValueImpl() [virtual/optional]
   //
@@ -408,18 +405,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   void RegisterKnownProperty(absl::string_view property_category,
                              PropertyCallbackFunction property_fn);
 
-  // GetKnownValue() [Helper for Librarians]
-  //
-  // Returns the value of a known variable. If the variable is not known,
-  // returns `ValueNotFoundError`.
-  //
-  // Example Usage:
-  //  int64_t N = GetKnownValue<MInteger>("N");
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
-  absl::StatusOr<typename T::value_type> GetKnownValue(
-      absl::string_view variable_name) const;
   // GetDependencies() [Helper for Librarians]
   //
   // Returns the list of names of the variables that `variable` depends on,
@@ -443,18 +428,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // `is_one_of_` is a list of values that Generate() should produce. If the
   // optional is set and the list is empty, then there are no viable values.
   std::optional<std::vector<ValueType>> is_one_of_;
-
-  // `universe_` is set iff SetUniverse has been called.
-  // The universe contains all context of the outside world around this
-  // variable (for example, which random generator to use and other variables
-  // it may request in the same VariableSet).
-  moriarty_internal::Universe* universe_ = nullptr;
-
-  // `variable_name_inside_universe_` is the name to look up in
-  // `universe_` when information about this variable is needed. The
-  // variable stored in `universe_` need not be exactly this variable,
-  // but an equivalent representation.
-  std::string variable_name_inside_universe_;
 
   // `custom_constraints_deps_` is a list of the needed variables for all the
   // custom constraints defined for this variable.
@@ -504,13 +477,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Returns an error if there are any issues retrieving the subvalue.
   // TODO(darcybest): Consider renaming to ExtractSubvalue.
   absl::StatusOr<std::any> GetSubvalue(
-      const std::any& my_value, absl::string_view subvalue_name) const override;
-
-  // SetUniverse() [Internal Extended API]
-  //
-  // Sets the universe for this variable as well as all subvariables.
-  void SetUniverse(moriarty_internal::Universe* universe,
-                   absl::string_view my_name_in_universe) override;
+      AnalysisContext ctx, const std::any& my_value,
+      absl::string_view subvalue_name) const override;
 
   //    End of Internal Extended API
   // ---------------------------------------------------------------------------
@@ -569,18 +537,14 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // ReadValue()
   //
-  // Given all current I/O constraints on this variable, read a value from
-  // `is` and store it in its Universe under the name provided via
-  // `SetUniverse`.
-  //
-  // If reading is not successful, `is` is left in an undefined state.
+  // Reads a value from `ctx` using the constraints of this variable to
+  // determine formatting, etc.
   absl::Status ReadValue(ReaderContext ctx) override;
 
   // PrintValue()
   //
-  // Given all current I/O constraints on this variable, print the value
-  // currently stored in Universe under the name provided by
-  // SetUniverse into `os`.
+  // Prints the value of this variable to `ctx` using the constraints on this
+  // variable to determine formatting, etc.
   absl::Status PrintValue(librarian::PrinterContext ctx) override;
 
   // GetDependencies()
@@ -595,7 +559,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // implementation of this abstract variable.
   absl::StatusOr<
       std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>>
-  GetDifficultAbstractVariables() const override;
+  GetDifficultAbstractVariables(AnalysisContext ctx) const override;
 };
 
 }  // namespace librarian
@@ -631,10 +595,9 @@ class MVariableManager {
       librarian::MVariable<VariableType, ValueType>* mvariable_to_manage);
 
   absl::Status MergeFrom(const AbstractVariable& other);
-  absl::StatusOr<std::any> GetSubvalue(const std::any& my_value,
+  absl::StatusOr<std::any> GetSubvalue(librarian::AnalysisContext ctx,
+                                       const std::any& my_value,
                                        absl::string_view subvalue_name);
-  void SetUniverse(moriarty_internal::Universe* universe,
-                   absl::string_view my_name_in_universe);
   std::vector<std::string> GetDependencies() const;
 
  private:
@@ -790,10 +753,11 @@ absl::Status MVariable<V, G>::TryWithKnownProperty(Property property) {
 }
 
 template <typename V, typename G>
-absl::StatusOr<std::vector<V>> MVariable<V, G>::GetDifficultInstances() const {
+absl::StatusOr<std::vector<V>> MVariable<V, G>::GetDifficultInstances(
+    AnalysisContext ctx) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
   MORIARTY_ASSIGN_OR_RETURN(std::vector<V> instances,
-                            this->GetDifficultInstancesImpl());
+                            this->GetDifficultInstancesImpl(ctx));
   for (V& instance : instances) {
     // TODO(hivini): When merging with a fixed value variable that has the same
     // value a difficult instance, this does not return an error. Determine if
@@ -825,14 +789,14 @@ std::vector<std::string> MVariable<V, G>::GetDependenciesImpl() const {
 
 template <typename V, typename G>
 absl::StatusOr<Subvalues> MVariable<V, G>::GetSubvaluesImpl(
-    const G& value) const {
+    AnalysisContext ctx, const G& value) const {
   return absl::UnimplementedError(
       absl::StrCat("GetSubvalues() not implemented for ", Typename()));
 }
 
 template <typename V, typename G>
-absl::StatusOr<std::vector<V>> MVariable<V, G>::GetDifficultInstancesImpl()
-    const {
+absl::StatusOr<std::vector<V>> MVariable<V, G>::GetDifficultInstancesImpl(
+    AnalysisContext ctx) const {
   return std::vector<V>();  // By default, return an empty list.
 }
 
@@ -858,18 +822,6 @@ template <typename V, typename G>
 void MVariable<V, G>::RegisterKnownProperty(
     absl::string_view property_category, PropertyCallbackFunction property_fn) {
   known_property_categories_[property_category] = property_fn;
-}
-template <typename V, typename G>
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<typename T::value_type> MVariable<V, G>::GetKnownValue(
-    absl::string_view variable_name) const {
-  if (!universe_) {
-    return MisconfiguredError(Typename(), "GetKnownValue",
-                              InternalConfigurationType::kUniverse);
-  }
-
-  return universe_->GetValue<T>(variable_name);
 }
 
 template <typename V, typename G>
@@ -974,10 +926,11 @@ absl::Status MVariable<V, G>::MergeFrom(
 
 template <typename V, typename G>
 absl::StatusOr<std::any> MVariable<V, G>::GetSubvalue(
-    const std::any& my_value, absl::string_view subvalue_name) const {
+    AnalysisContext ctx, const std::any& my_value,
+    absl::string_view subvalue_name) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
   const G val = std::any_cast<const G>(my_value);
-  MORIARTY_ASSIGN_OR_RETURN(Subvalues subvalues, GetSubvaluesImpl(val));
+  MORIARTY_ASSIGN_OR_RETURN(Subvalues subvalues, GetSubvaluesImpl(ctx, val));
 
   MORIARTY_ASSIGN_OR_RETURN(
       const moriarty_internal::VariableValue* subvalue,
@@ -988,14 +941,7 @@ absl::StatusOr<std::any> MVariable<V, G>::GetSubvalue(
 
   // Safe * on optional SubvariableName since HasSubVariable() is true.
   return subvalue->variable->GetSubvalue(
-      subvalue->value, *moriarty_internal::SubvariableName(subvalue_name));
-}
-
-template <typename V, typename G>
-void MVariable<V, G>::SetUniverse(moriarty_internal::Universe* universe,
-                                  absl::string_view my_name_in_universe) {
-  universe_ = universe;
-  variable_name_inside_universe_ = my_name_in_universe;
+      ctx, subvalue->value, *moriarty_internal::SubvariableName(subvalue_name));
 }
 
 // -----------------------------------------------------------------------------
@@ -1106,10 +1052,10 @@ std::vector<std::string> MVariable<V, G>::GetDependencies() {
 template <typename V, typename G>
 absl::StatusOr<
     std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>>
-MVariable<V, G>::GetDifficultAbstractVariables() const {
+MVariable<V, G>::GetDifficultAbstractVariables(AnalysisContext ctx) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
   MORIARTY_ASSIGN_OR_RETURN(std::vector<V> instances,
-                            this->GetDifficultInstances());
+                            this->GetDifficultInstances(ctx));
   std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>> new_vec;
   new_vec.reserve(instances.size());
   for (V& instance : instances) {
@@ -1136,15 +1082,9 @@ absl::Status MVariableManager<VariableType, ValueType>::MergeFrom(
 
 template <typename VariableType, typename ValueType>
 absl::StatusOr<std::any> MVariableManager<VariableType, ValueType>::GetSubvalue(
-    const std::any& my_value, absl::string_view subvalue_name) {
-  return managed_mvariable_.GetSubvalue(my_value, subvalue_name);
-}
-
-template <typename VariableType, typename ValueType>
-void MVariableManager<VariableType, ValueType>::SetUniverse(
-    moriarty_internal::Universe* universe,
-    absl::string_view my_name_in_universe) {
-  managed_mvariable_.SetUniverse(universe, my_name_in_universe);
+    librarian::AnalysisContext ctx, const std::any& my_value,
+    absl::string_view subvalue_name) {
+  return managed_mvariable_.GetSubvalue(ctx, my_value, subvalue_name);
 }
 
 template <typename VariableType, typename ValueType>

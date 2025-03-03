@@ -76,8 +76,8 @@ class GenerationConfig {
   // RetryRecommendation (class)
   //
   // On a failed generation attempt, this recommends if you should retry to not.
-  // Also, provides information about values of variables that should be deleted
-  // from the universe.
+  // Also, provides information about values of variables that should be
+  // deleted.
   struct RetryRecommendation {
     enum Policy {
       kAbort,  // Do not continue retrying
@@ -95,8 +95,7 @@ class GenerationConfig {
   //
   // The list of variables to be deleted in the recommendation are those that
   // were generated since this variable started its generation. This class will
-  // assume that the value for those variables have been deleted from the
-  // universe.
+  // assume that the value for those variables have been deleted.
   //
   // MarkStartGeneration(variable_name) must have been called and all generation
   // attempts for all other variables since must be complete.

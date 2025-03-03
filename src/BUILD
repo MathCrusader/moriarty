@@ -51,7 +51,6 @@ cc_library(
         ":test_case",
         "//src/internal:abstract_variable",
         "//src/internal:status_utils",
-        "//src/internal:universe",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:mvariable",
@@ -79,7 +78,6 @@ cc_library(
         "//src/internal:random_config",
         "//src/internal:random_engine",
         "//src/internal:status_utils",
-        "//src/internal:universe",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:mvariable",
@@ -99,7 +97,6 @@ cc_library(
     hdrs = ["importer.h"],
     deps = [
         "//src/internal:abstract_variable",
-        "//src/internal:universe",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:mvariable",
@@ -358,31 +355,5 @@ cc_test(
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/types:span",
         "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "constraint_values_test",
-    srcs = ["constraint_values_test.cc"],
-    deps = [
-        ":constraint_values",
-        "//src/internal:universe",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
-        "//src/testing:mtest_type",
-        "//src/variables:minteger",
-        "//src/variables:mstring",
-        "@abseil-cpp//absl/log:absl_check",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "constraint_values",
-    hdrs = ["constraint_values.h"],
-    deps = [
-        "//src/internal:universe",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status:statusor",
     ],
 )

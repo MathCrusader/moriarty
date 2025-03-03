@@ -23,7 +23,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "src/internal/abstract_variable.h"
-#include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/util/status_macro/status_macros.h"
@@ -45,15 +44,10 @@ absl::Status Importer::ImportTestCases() {
 }
 
 absl::Status Importer::ImportTestCasesWithKnownNumberOfCases() {
-  auto universe =
-      moriarty_internal::Universe().SetConstVariableSet(&general_constraints_);
-  general_constraints_.SetUniverse(&universe);
-
   metadata_.num_test_cases = *num_test_cases_;
   for (int tc = 1; tc <= *num_test_cases_; tc++) {
     metadata_.test_case_number = tc;
     current_test_case_ = {};
-    universe.SetMutableValueSet(&current_test_case_);
 
     MORIARTY_RETURN_IF_ERROR(ImportTestCase());
     test_cases_.push_back(std::move(current_test_case_));
@@ -72,15 +66,10 @@ absl::Status Importer::ImportTestCasesWithKnownNumberOfCases() {
 }
 
 absl::Status Importer::ImportTestCasesWithUnknownNumberOfCases() {
-  auto universe =
-      moriarty_internal::Universe().SetConstVariableSet(&general_constraints_);
-  general_constraints_.SetUniverse(&universe);
-
   metadata_.num_test_cases = 0;
   while (!IsDone()) {
     metadata_.test_case_number = test_cases_.size() + 1;
     current_test_case_ = {};
-    universe.SetMutableValueSet(&current_test_case_);
 
     MORIARTY_RETURN_IF_ERROR(ImportTestCase());
     if (IsDone()) break;

@@ -170,10 +170,6 @@ TEST(VariableSetTest, UnknownMandatoryPropertyInScenarioShouldFail) {
                        HasSubstr("Property with non-optional category")));
 }
 
-// TODO(darcybest): Consider adding tests for `SetUniverse()`. There
-// is currently no public API to check that it has been set. It is implicitly
-// checked via other methods (particularly, `AssignAllValues`).
-
 }  // namespace
 }  // namespace moriarty_internal
 }  // namespace moriarty

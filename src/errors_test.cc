@@ -37,7 +37,7 @@ using ::testing::Not;
 
 TEST(StatusTest, IsMoriartyErrorAcceptsAllErrorFunctions) {
   EXPECT_TRUE(IsMoriartyError(
-      MisconfiguredError("", "", InternalConfigurationType::kUniverse)));
+      MisconfiguredError("", "", InternalConfigurationType::kValueSet)));
   // EXPECT_TRUE(IsMoriartyError(NonRetryableGenerationError("")));
   // EXPECT_TRUE(IsMoriartyError(RetryableGenerationError("")));
   EXPECT_TRUE(IsMoriartyError(UnsatisfiedConstraintError("")));
@@ -59,8 +59,8 @@ TEST(StatusTest, IsMoriartyErrorDoesNotAcceptGenericStatuses) {
 
 TEST(StatusTest, MoriartyErrorsRecognizeAppropriateError) {
   EXPECT_TRUE(IsMisconfiguredError(
-      MisconfiguredError("a", "b", InternalConfigurationType::kUniverse),
-      InternalConfigurationType::kUniverse));
+      MisconfiguredError("a", "b", InternalConfigurationType::kValueSet),
+      InternalConfigurationType::kValueSet));
   // EXPECT_TRUE(IsNonRetryableGenerationError(NonRetryableGenerationError("")));
   // EXPECT_TRUE(IsRetryableGenerationError(RetryableGenerationError("")));
   EXPECT_TRUE(IsUnsatisfiedConstraintError(UnsatisfiedConstraintError("")));
@@ -72,10 +72,10 @@ TEST(StatusTest, MoriartyErrorsDoNotAcceptUnderlyingTypesAlone) {
   // All "" are irrelevant, just creating empty statuses with a specific code.
   EXPECT_FALSE(IsMisconfiguredError(
       absl::Status(
-          MisconfiguredError("", "", InternalConfigurationType::kUniverse)
+          MisconfiguredError("", "", InternalConfigurationType::kValueSet)
               .code(),
           ""),
-      InternalConfigurationType::kUniverse));
+      InternalConfigurationType::kValueSet));
   // EXPECT_FALSE(IsNonRetryableGenerationError(
   //     absl::Status(NonRetryableGenerationError("").code(), "")));
   // EXPECT_FALSE(IsRetryableGenerationError(
@@ -90,7 +90,7 @@ TEST(StatusTest, MoriartyErrorsDoNotAcceptUnderlyingTypesAlone) {
 
 TEST(StatusTest, MoriartyErrorsDoNotAcceptOkStatus) {
   EXPECT_FALSE(IsMisconfiguredError(absl::OkStatus(),
-                                    InternalConfigurationType::kUniverse));
+                                    InternalConfigurationType::kValueSet));
   // EXPECT_FALSE(IsNonRetryableGenerationError(absl::OkStatus()));
   // EXPECT_FALSE(IsRetryableGenerationError(absl::OkStatus()));
   EXPECT_FALSE(IsUnsatisfiedConstraintError(absl::OkStatus()));
@@ -127,14 +127,14 @@ TEST(StatusTest, GetUnknownVariableNameReturnsNulloptForDifferentErrors) {
 
 TEST(StatusTest, IsMisconfiguredErrorsGoogleTestMatcherWorks) {
   EXPECT_THAT(
-      MisconfiguredError("a", "b", InternalConfigurationType::kUniverse),
-      IsMisconfigured(InternalConfigurationType::kUniverse));
+      MisconfiguredError("a", "b", InternalConfigurationType::kValueSet),
+      IsMisconfigured(InternalConfigurationType::kValueSet));
   EXPECT_THAT(absl::StatusOr<int>(MisconfiguredError(
                   "a", "b", InternalConfigurationType::kGenerationConfig)),
               IsMisconfigured(InternalConfigurationType::kGenerationConfig));
 
   EXPECT_THAT(UnsatisfiedConstraintError("some reason"),
-              Not(IsMisconfigured(InternalConfigurationType::kUniverse)));
+              Not(IsMisconfigured(InternalConfigurationType::kValueSet)));
   EXPECT_THAT(
       absl::StatusOr<int>(MisconfiguredError(
           "a", "b", InternalConfigurationType::kRandomEngine)),

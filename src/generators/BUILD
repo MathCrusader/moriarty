@@ -12,9 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 package(
     default_visibility = [
-        "//visibility:public"
+        "//visibility:public",
     ],
 )
 
@@ -25,17 +28,16 @@ cc_library(
     srcs = ["combinatorial_generator.cc"],
     hdrs = ["combinatorial_generator.h"],
     deps = [
-        "@abseil-cpp//absl/base:nullability",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
         "//src:generator",
         "//src:test_case",
         "//src/internal:abstract_variable",
         "//src/internal:combinatorial_coverage",
         "//src/internal:random_engine",
         "//src/internal:variable_set",
+        "@abseil-cpp//absl/base:nullability",
+        "@abseil-cpp//absl/log:absl_check",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/types:span",
     ],
 )
 
@@ -44,9 +46,6 @@ cc_test(
     srcs = ["combinatorial_generator_test.cc"],
     deps = [
         ":combinatorial_generator",
-        "@googletest//:gtest_main",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
         "//src:generator",
         "//src/internal:combinatorial_coverage",
         "//src/internal:combinatorial_coverage_test_util",
@@ -54,5 +53,8 @@ cc_test(
         "//src/internal:variable_set",
         "//src/testing:mtest_type",
         "//src/util/test_status_macro:status_testutil",
+        "@abseil-cpp//absl/status:statusor",
+        "@abseil-cpp//absl/types:span",
+        "@googletest//:gtest_main",
     ],
 )

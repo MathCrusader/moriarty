@@ -188,15 +188,17 @@ TEST(MVariableTest, SubvariablesShouldBeSetableAndUseable) {
 // if A is an array of strings then we should be able to ask for A.2.length
 TEST(MVariableTest, SubvaluesAreRetrievable) {
   MTestType M = MTestType();
+  AnalysisContext ctx("test", {}, {});
   EXPECT_THAT(MVariableManager(&M).GetSubvalue(
-                  TestType(2 * MTestType::kGeneratedValue), "multiplier"),
+                  ctx, TestType(2 * MTestType::kGeneratedValue), "multiplier"),
               IsOkAndHolds(AnyWith<int64_t>(2)));
 }
 
 TEST(MVariableTest, SubvaluesThatDontExistFail) {
   MTestType M = MTestType();
+  AnalysisContext ctx("test", {}, {});
   EXPECT_THAT(MVariableManager(&M).GetSubvalue(
-                  TestType(2 * MTestType::kGeneratedValue), "hat"),
+                  ctx, TestType(2 * MTestType::kGeneratedValue), "hat"),
               StatusIs(absl::StatusCode::kNotFound));
 }
 
@@ -479,13 +481,15 @@ TEST(MVariableTest,
 // GetDifficultInstances.
 
 TEST(MVariableTest, GetDifficultInstancesPassesTheInstancesThrough) {
-  EXPECT_THAT(MTestType().GetDifficultInstances(), IsOkAndHolds(SizeIs(2)));
+  AnalysisContext ctx("test", {}, {});
+  EXPECT_THAT(MTestType().GetDifficultInstances(ctx), IsOkAndHolds(SizeIs(2)));
 }
 
 TEST(MVariableTest, GetDifficultInstanceReturnsMergedInstance) {
   MTestType original = MTestType();
+  AnalysisContext ctx("test", {}, {});
   MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<MTestType> difficult_instances,
-                                original.GetDifficultInstances());
+                                original.GetDifficultInstances(ctx));
 
   EXPECT_THAT(difficult_instances, SizeIs(2));
   EXPECT_TRUE(difficult_instances[0].WasMerged());

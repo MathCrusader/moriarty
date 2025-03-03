@@ -41,8 +41,6 @@ class ResolverContext;    // Forward declaring ResolverContext
 namespace moriarty {
 namespace moriarty_internal {
 
-class Universe;  // Forward declaring Universe
-
 // AbstractVariable
 //
 // This class should not be directly derived from. See `MVariable<>`.
@@ -82,16 +80,9 @@ class AbstractVariable {
   // AssignValue() [pure virtual]
   //
   // Given all current constraints, assigns a specific value to this variable
-  // via the `Universe`. The value will be stored under the name
-  // provided when calling `SetUniverse` (Let's say it's `X`).
+  // in `ctx`.
   //
-  // 1. Asks Universe (Uni) for a value for `X`.
-  // 2. Uni checks its ValueSet. If it has it, we're done!
-  // 3. If not, Uni tells the variable named `X` to generate a value.
-  // 4. `X` generates itself.
-  // 5. Stores that value into the ValueSet.
-  //
-  // Note that the variable named `X` in the universe may or may not be
+  // Note that the variable stored in `ctx` with the same name may or may not be
   // identically `this` variable, but it should be assumed to be equivalent.
   virtual absl::Status AssignValue(librarian::ResolverContext ctx) const = 0;
 
@@ -117,8 +108,8 @@ class AbstractVariable {
   // is a unique value), this returns `std::nullopt`.
   //
   // This function is `Untyped` since it returns an `std::any`. However, the
-  // type of `std::any` must be exactly the same as the type assigned to the
-  // universe via `AssignValue()`.
+  // type of `std::any` must be exactly the same as the type assigned via
+  // `AssignValue()`.
   //
   // Example: MInteger().Between(7, 7) might be able to determine that its
   // unique value is 7.
@@ -145,15 +136,6 @@ class AbstractVariable {
   // should have 5 <= x <= 10.
   virtual absl::Status MergeFrom(const AbstractVariable& other) = 0;
 
-  // SetUniverse() [pure virtual]
-  //
-  // Sets the universe for this variable.
-  //
-  // `my_name_in_universe` is the name of this variable in the context
-  // of `universe`.
-  virtual void SetUniverse(Universe* universe,
-                           absl::string_view my_name_in_universe) = 0;
-
   // WithProperty() [pure virtual]
   //
   // Tells this variable that it should satisfy `property`.
@@ -175,7 +157,7 @@ class AbstractVariable {
   // variable.
   virtual absl::StatusOr<
       std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>>
-  GetDifficultAbstractVariables() const = 0;
+  GetDifficultAbstractVariables(librarian::AnalysisContext ctx) const = 0;
 
   // GetDependencies() [pure virtual]
   //
@@ -197,7 +179,8 @@ class AbstractVariable {
   // Where the value of the std::any is an int64_t (the length of the 2nd
   // element).
   virtual absl::StatusOr<std::any> GetSubvalue(
-      const std::any& my_value, absl::string_view subvalue_name) const = 0;
+      librarian::AnalysisContext ctx, const std::any& my_value,
+      absl::string_view subvalue_name) const = 0;
 };
 
 // A simple pair of name and variable.

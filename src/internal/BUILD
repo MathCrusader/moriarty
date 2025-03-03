@@ -163,34 +163,6 @@ cc_library(
 )
 
 cc_library(
-    name = "universe",
-    srcs = [
-        "universe.cc",
-    ],
-    hdrs = [
-        "universe.h",
-    ],
-    deps = [
-        ":abstract_variable",
-        ":generation_config",
-        ":random_config",
-        ":random_engine",
-        ":value_set",
-        ":variable_name_utils",
-        ":variable_set",
-        "//src:errors",
-        "//src/contexts/librarian:analysis_context",
-        "//src/util/status_macro:status_macros",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-    ],
-)
-
-cc_library(
     name = "value_set",
     srcs = ["value_set.cc"],
     hdrs = ["value_set.h"],
@@ -346,32 +318,6 @@ cc_test(
         ":status_utils",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "universe_test",
-    size = "small",
-    srcs = [
-        "universe_test.cc",
-    ],
-    deps = [
-        ":abstract_variable",
-        ":generation_config",
-        ":random_config",
-        ":random_engine",
-        ":universe",
-        ":value_set",
-        ":variable_name_utils",
-        ":variable_set",
-        "//src:errors",
-        "//src/testing:mtest_type",
-        "//src/testing:status_test_util",
-        "//src/util/test_status_macro:status_testutil",
-        "//src/variables:minteger",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/types:span",
         "@googletest//:gtest_main",
     ],
 )

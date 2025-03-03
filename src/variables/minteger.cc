@@ -39,8 +39,6 @@
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
 #include "src/internal/range.h"
-#include "src/internal/value_set.h"
-#include "src/internal/variable_set.h"
 #include "src/librarian/size_property.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
@@ -298,20 +296,8 @@ absl::Status MInteger::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
   return absl::OkStatus();
 }
 
-absl::StatusOr<std::vector<MInteger>> MInteger::GetDifficultInstancesImpl()
-    const {
-  // FIXME: This is a complete hack until the Context refactor is done.
-  moriarty_internal::VariableSet tmp_vars;
-  moriarty_internal::ValueSet tmp_values;
-  auto [vvariables,
-        vvalues] = [&]() -> std::pair<const moriarty_internal::VariableSet&,
-                                      const moriarty_internal::ValueSet&> {
-    moriarty_internal::Universe* universe = UnsafeGetUniverse();
-    if (universe != nullptr)
-      return universe->UnsafeGetConstVariableAndValueSets();
-    return {tmp_vars, tmp_values};
-  }();
-  librarian::AnalysisContext ctx("FIXME", vvariables, vvalues);
+absl::StatusOr<std::vector<MInteger>> MInteger::GetDifficultInstancesImpl(
+    librarian::AnalysisContext ctx) const {
   absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
 
   int64_t min =

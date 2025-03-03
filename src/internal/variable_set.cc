@@ -66,11 +66,6 @@ absl::StatusOr<AbstractVariable*> VariableSet::GetAbstractVariable(
   return var;
 }
 
-void VariableSet::SetUniverse(Universe* universe) {
-  for (const auto& [var_name, var_ptr] : variables_)
-    var_ptr->SetUniverse(universe, var_name);
-}
-
 AbstractVariable* VariableSet::GetAbstractVariableOrNull(
     absl::string_view name) {
   auto it = variables_.find(name);

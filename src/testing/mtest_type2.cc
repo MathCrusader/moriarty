@@ -144,11 +144,11 @@ std::vector<std::string> MTestType2::GetDependenciesImpl() const {
 }
 
 absl::StatusOr<Subvalues> MTestType2::GetSubvaluesImpl(
-    const TestType2& value) const {
+    moriarty::librarian::AnalysisContext ctx, const TestType2& value) const {
   TestType2 addition = 0;
   if (adder_variable_name_) {
     MORIARTY_ASSIGN_OR_RETURN(addition,
-                              GetKnownValue<MTestType2>(*adder_variable_name_));
+                              ctx.GetValue<MTestType2>(*adder_variable_name_));
   }
   return Subvalues().AddSubvalue<MInteger>(
       "multiplier", (value - addition.value) / kGeneratedValue);
@@ -168,8 +168,8 @@ TestType2 MTestType2::GenerateImpl(
   return kGeneratedValue * multiplier + addition;
 }
 
-absl::StatusOr<std::vector<MTestType2>> MTestType2::GetDifficultInstancesImpl()
-    const {
+absl::StatusOr<std::vector<MTestType2>> MTestType2::GetDifficultInstancesImpl(
+    moriarty::librarian::AnalysisContext ctx) const {
   return std::vector<MTestType2>({MTestType2().Is(2), MTestType2().Is(3)});
 }
 

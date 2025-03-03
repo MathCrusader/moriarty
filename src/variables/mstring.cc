@@ -202,8 +202,8 @@ absl::Status MString::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
   return absl::OkStatus();
 }
 
-absl::StatusOr<std::vector<MString>> MString::GetDifficultInstancesImpl()
-    const {
+absl::StatusOr<std::vector<MString>> MString::GetDifficultInstancesImpl(
+    librarian::AnalysisContext ctx) const {
   if (!length_) {
     return absl::FailedPreconditionError(
         "Attempting to get difficult instances of a string with no "
@@ -211,7 +211,7 @@ absl::StatusOr<std::vector<MString>> MString::GetDifficultInstancesImpl()
   }
   std::vector<MString> values = {};
   MORIARTY_ASSIGN_OR_RETURN(std::vector<MInteger> lengthCases,
-                            length_->GetDifficultInstances());
+                            length_->GetDifficultInstances(ctx));
 
   values.reserve(lengthCases.size());
   for (const auto& c : lengthCases) {

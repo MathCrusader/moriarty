@@ -40,7 +40,6 @@ cc_library(
     ],
     deps = [
         ":subvalues",
-        "//src:constraint_values",
         "//src:errors",
         "//src:property",
         "//src/contexts/librarian:assignment_context",
@@ -52,7 +51,6 @@ cc_library(
         "//src/internal:random_config",
         "//src/internal:random_engine",
         "//src/internal:status_utils",
-        "//src/internal:universe",
         "//src/internal:variable_name_utils",
         "//src/util/status_macro:status_macros",
         "@abseil-cpp//absl/algorithm:container",
@@ -106,7 +104,6 @@ cc_library(
         "//src/internal:generation_bootstrap",
         "//src/internal:generation_config",
         "//src/internal:random_engine",
-        "//src/internal:universe",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/util/status_macro:status_macros",
@@ -137,7 +134,6 @@ cc_test(
     deps = [
         ":mvariable",
         ":test_utils",
-        "//src:constraint_values",
         "//src:errors",
         "//src:property",
         "//src/internal:abstract_variable",

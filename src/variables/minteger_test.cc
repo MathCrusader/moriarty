@@ -25,6 +25,7 @@
 #include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/librarian/size_property.h"
 #include "src/librarian/test_utils.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -362,8 +363,9 @@ TEST(MIntegerTest, GetDifficultInstancesValuesAreNotRepeated) {
 
 TEST(MIntegerTest,
      GetDifficultInstancesForFixedNonDifficultValueFailsGeneration) {
+  librarian::AnalysisContext ctx("test", {}, {});
   MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<MInteger> instances,
-                                MInteger().Is(1234).GetDifficultInstances());
+                                MInteger().Is(1234).GetDifficultInstances(ctx));
 
   for (MInteger instance : instances) {
     EXPECT_THROW({ Generate(instance).IgnoreError(); }, std::runtime_error);

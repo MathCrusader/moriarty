@@ -23,7 +23,6 @@
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/status_utils.h"
-#include "src/internal/universe.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/test_case.h"
@@ -33,14 +32,9 @@ namespace moriarty {
 void Exporter::ExportTestCases() {
   StartExport();
 
-  auto universe =
-      moriarty_internal::Universe().SetConstVariableSet(&general_constraints_);
-  general_constraints_.SetUniverse(&universe);
-
   for (int index = 0; index < all_values_.size(); index++) {
     current_values_ = all_values_[index];
     current_metadata_ = all_metadata_[index];
-    universe.SetConstValueSet(&(*current_values_));
 
     ExportTestCase();
     current_values_ = std::nullopt;  // Unset it so they do not access it later.
