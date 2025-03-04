@@ -17,13 +17,10 @@
 #ifndef MORIARTY_SRC_CONTEXTS_LIBRARIAN_ANALYSIS_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_LIBRARIAN_ANALYSIS_CONTEXT_H_
 
-#include <functional>
-#include <optional>
-#include <string>
 #include <string_view>
 
-#include "absl/status/statusor.h"
-#include "src/internal/abstract_variable.h"
+#include "src/contexts/internal/name_context.h"
+#include "src/contexts/internal/view_only_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 
@@ -35,60 +32,29 @@ namespace librarian {
 // Allows you to inspect the current state of the variables and values.
 // AnalysisContext is read-only. It does not allow you to modify the variables
 // or values.
-class AnalysisContext {
+//
+// Note: All Librarian contexts can be implicitly converted to this type.
+class AnalysisContext : public moriarty_internal::NameContext,
+                        public moriarty_internal::ViewOnlyContext {
+  using NameContext = moriarty_internal::NameContext;
+  using ViewOnlyContext = moriarty_internal::ViewOnlyContext;
+
  public:
+  // Created by Moriarty and passed to you; no need to instantiate.
+  // See `src/Moriarty.h` for entry points.
   explicit AnalysisContext(std::string_view variable_name,
                            const moriarty_internal::VariableSet& variables,
                            const moriarty_internal::ValueSet& values)
-      : name_(variable_name), variables_(variables), values_(values) {}
-
-  // FIXME: This is a placeholder for testing.
-
-  [[nodiscard]] std::string GetVariableName() const { return name_; }
-
+      : NameContext(variable_name), ViewOnlyContext(variables, values) {}
+  AnalysisContext(std::string_view name, const ViewOnlyContext& other)
+      : NameContext(name), ViewOnlyContext(other) {}
   template <typename T>
-    requires std::derived_from<T, moriarty_internal::AbstractVariable>
-  absl::StatusOr<T> GetVariable(std::string_view variable_name) const {
-    return variables_.get().GetVariable<T>(variable_name);
-  }
+  AnalysisContext(const T& other)
+      : NameContext(other.GetVariableName()), ViewOnlyContext(other) {}
 
-  template <typename T>
-    requires std::derived_from<T, moriarty_internal::AbstractVariable>
-  absl::StatusOr<typename T::value_type> GetValue(
-      std::string_view variable_name) const {
-    return values_.get().Get<T>(variable_name);
-  }
-
-  template <typename T>
-    requires std::derived_from<T, moriarty_internal::AbstractVariable>
-  std::optional<typename T::value_type> GetUniqueValue(
-      std::string_view variable_name) const {
-    auto stored_value = GetValueIfKnown<T>(variable_name);
-    if (stored_value) return *stored_value;
-
-    auto variable = GetVariable<T>(variable_name);
-    if (!variable.ok()) return std::nullopt;
-    return variable->GetUniqueValue(*this);
-  }
-
-  template <typename T>
-    requires std::derived_from<T, moriarty_internal::AbstractVariable>
-  std::optional<typename T::value_type> GetValueIfKnown(
-      std::string_view variable_name) const {
-    absl::StatusOr<typename T::value_type> value =
-        values_.get().Get<T>(variable_name);
-    if (value.ok()) return *value;
-    return std::nullopt;
-  }
-
-  bool ValueIsKnown(std::string_view variable_name) const {
-    return values_.get().Contains(variable_name);
-  }
-
- private:
-  std::string name_;
-  std::reference_wrapper<const moriarty_internal::VariableSet> variables_;
-  std::reference_wrapper<const moriarty_internal::ValueSet> values_;
+  // ********************************************
+  // ** See parent classes for more functions. **
+  // ********************************************
 };
 
 }  // namespace librarian

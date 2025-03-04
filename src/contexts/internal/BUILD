@@ -66,6 +66,22 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "name_context",
+    hdrs = ["name_context.h"],
+    deps = [
+    ],
+)
+
+cc_library(
+    name = "view_only_context",
+    hdrs = ["view_only_context.h"],
+    deps = [
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
+    ],
+)
+
 cc_test(
     name = "basic_istream_context_test",
     srcs = ["basic_istream_context_test.cc"],

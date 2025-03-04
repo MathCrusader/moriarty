@@ -41,6 +41,7 @@ cc_library(
     deps = [
         "//src:errors",
         "//src:property",
+        "//src/contexts/librarian:analysis_context",
         "//src/contexts/librarian:assignment_context",
         "//src/contexts/librarian:printer_context",
         "//src/contexts/librarian:reader_context",

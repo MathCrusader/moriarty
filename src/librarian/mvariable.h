@@ -41,6 +41,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/internal/view_only_context.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/assignment_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -235,6 +236,12 @@ class MVariable : public moriarty_internal::AbstractVariable {
     }
 
     return GetUniqueValueImpl(ctx);
+  }
+
+  [[nodiscard]] std::optional<ValueType> GetUniqueValueFromViewOnly(
+      std::string_view variable_name,
+      moriarty_internal::ViewOnlyContext ctx) const {
+    return GetUniqueValue(AnalysisContext(variable_name, ctx));
   }
 
   absl::Status IsSatisfiedWith(AnalysisContext ctx,

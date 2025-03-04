@@ -20,8 +20,8 @@
 #include <string_view>
 
 #include "src/contexts/internal/mutable_values_context.h"
-#include "src/contexts/librarian/analysis_context.h"
-#include "src/internal/abstract_variable.h"
+#include "src/contexts/internal/name_context.h"
+#include "src/contexts/internal/view_only_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 
@@ -31,24 +31,26 @@ namespace librarian {
 // AssignmentContext
 //
 // Allows you to inspect the current state of the variables and set values.
-class AssignmentContext : public librarian::AnalysisContext,
+class AssignmentContext : public moriarty_internal::NameContext,
+                          public moriarty_internal::ViewOnlyContext,
                           public moriarty_internal::MutableValuesContext {
-  using AnalysisBase = AnalysisContext;
-  using ValuesBase = moriarty_internal::MutableValuesContext;
+  using NameContext = moriarty_internal::NameContext;
+  using ViewOnlyContext = moriarty_internal::ViewOnlyContext;
+  using MutableValuesContext = moriarty_internal::MutableValuesContext;
 
  public:
+  // Created by Moriarty and passed to you; no need to instantiate.
+  // See `src/Moriarty.h` for entry points.
   explicit AssignmentContext(std::string_view variable_name,
                              const moriarty_internal::VariableSet& variables,
                              moriarty_internal::ValueSet& values)
-      : AnalysisBase(variable_name, variables, values), ValuesBase(values) {}
+      : NameContext(variable_name),
+        ViewOnlyContext(variables, values),
+        MutableValuesContext(values) {}
 
-  using AnalysisContext::GetUniqueValue;
-  using AnalysisContext::GetValueIfKnown;
-  using AnalysisContext::GetVariable;
-  using AnalysisContext::GetVariableName;
-  using AnalysisContext::ValueIsKnown;
-  using ValuesBase::EraseValue;
-  using ValuesBase::SetValue;
+  // ********************************************
+  // ** See parent classes for more functions. **
+  // ********************************************
 };
 
 }  // namespace librarian

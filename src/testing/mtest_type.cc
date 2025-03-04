@@ -152,7 +152,7 @@ TestType MTestType::GenerateImpl(
     addition = ctx.GenerateVariable<MTestType>(*adder_variable_name_);
   }
 
-  int64_t multiplier = multiplier_.Generate(ctx.WithSubVariable("multiplier"));
+  int64_t multiplier = multiplier_.Generate(ctx.ForSubVariable("multiplier"));
   return kGeneratedValue * multiplier + addition;
 }
 

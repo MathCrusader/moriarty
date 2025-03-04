@@ -254,7 +254,7 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
 
   if (distinct_characters_) return GenerateImplWithDistinctCharacters(ctx);
 
-  int length = length_local.Generate(ctx.WithSubVariable("length"));
+  int length = length_local.Generate(ctx.ForSubVariable("length"));
 
   std::vector<char> alphabet(alphabet_->begin(), alphabet_->end());
   std::vector<char> ret = ctx.RandomElementsWithReplacement(alphabet, length);
@@ -283,7 +283,7 @@ std::string MString::GenerateImplWithDistinctCharacters(
   // to limit the length forever.
   MInteger mlength = *length_;
   mlength.AtMost(alphabet_->size());  // Each char appears at most once.
-  int length = mlength.Generate(ctx.WithSubVariable("length"));
+  int length = mlength.Generate(ctx.ForSubVariable("length"));
 
   std::vector<char> alphabet(alphabet_->begin(), alphabet_->end());
   std::vector<char> ret =

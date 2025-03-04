@@ -63,13 +63,13 @@ ExampleGraph MExampleGraph::GenerateImpl(
     throw std::runtime_error("Number of edges must be constrained");
   }
 
-  int num_nodes = num_nodes_->Generate(ctx.WithSubVariable("num_nodes"));
-  int num_edges = num_edges_->Generate(ctx.WithSubVariable("num_edges"));
+  int num_nodes = num_nodes_->Generate(ctx.ForSubVariable("num_nodes"));
+  int num_edges = num_edges_->Generate(ctx.ForSubVariable("num_edges"));
 
   if (is_connected_ && num_edges < num_nodes - 1) {
     moriarty::MInteger num_edges_copy = *num_edges_;
     num_edges_copy.AtLeast(num_nodes - 1);
-    num_edges = num_edges_copy.Generate(ctx.WithSubVariable("num_edges"));
+    num_edges = num_edges_copy.Generate(ctx.ForSubVariable("num_edges"));
   }
 
   std::vector<std::pair<int, int>> edges;

@@ -18,12 +18,12 @@
 #define MORIARTY_SRC_CONTEXTS_LIBRARIAN_READER_CONTEXT_H_
 
 #include <istream>
-#include <string>
 #include <string_view>
 
 #include "src/contexts/internal/basic_istream_context.h"
 #include "src/contexts/internal/mutable_values_context.h"
-#include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/internal/name_context.h"
+#include "src/contexts/internal/view_only_context.h"
 #include "src/io_config.h"
 
 namespace moriarty {
@@ -32,77 +32,30 @@ namespace librarian {
 // ReaderContext
 //
 // All context that MVariable<>::Read() has access to.
-class ReaderContext : public AnalysisContext,
+class ReaderContext : public moriarty_internal::NameContext,
+                      public moriarty_internal::ViewOnlyContext,
                       public moriarty_internal::BasicIStreamContext,
                       public moriarty_internal::MutableValuesContext {
-  using AnalysisBase = AnalysisContext;
-  using IStreamBase = moriarty_internal::BasicIStreamContext;
-  using ValuesBase = moriarty_internal::MutableValuesContext;
+  using NameContext = moriarty_internal::NameContext;
+  using ViewOnlyContext = moriarty_internal::ViewOnlyContext;
+  using BasicIStreamContext = moriarty_internal::BasicIStreamContext;
+  using MutableValuesContext = moriarty_internal::MutableValuesContext;
 
  public:
-  // Note: Users should not need to create this object. This object will be
-  // created by Moriarty and passed to you. See `src/Moriarty.h` for
-  // entry-points.
+  // Created by Moriarty and passed to you; no need to instantiate.
+  // See `src/Moriarty.h` for entry points.
   ReaderContext(std::string_view variable_name, std::istream& is,
-                WhitespaceStrictness strictness,
+                WhitespaceStrictness whitespace_strictness,
                 const moriarty_internal::VariableSet& variables,
                 moriarty_internal::ValueSet& values)
-      : AnalysisBase(variable_name, variables, values),
-        IStreamBase(is, strictness),
-        ValuesBase(values),
-        name_(variable_name) {}
+      : NameContext(variable_name),
+        ViewOnlyContext(variables, values),
+        BasicIStreamContext(is, whitespace_strictness),
+        MutableValuesContext(values) {}
 
-  // GetVariableName()
-  //
-  // Returns the name of the variable being read.
-  [[nodiscard]] std::string GetVariableName() const { return name_; }
-
-  // ReadToken()
-  //
-  // Reads the next token in the input stream.
-  //
-  // If there is whitespace before the next token, depending on the whitespace
-  // strictness:
-  //
-  //  * If `WhitespaceStrictness::kFlexible`, then leading whitespace
-  //    will be ignored.
-  //  * If `WhitespaceStrictness::kPrecise`, then an exception will be thrown.
-  //
-  // End of file will throw an exception.
-  using IStreamBase::ReadToken;
-
-  // ReadEof()
-  //
-  // Reads the end of file character from the input stream. If the end of file
-  // character is not found, an exception is thrown.
-  using IStreamBase::ReadEof;
-
-  // ReadWhitespace()
-  //
-  // Attempts to reads the next whitespace character from the input stream. If
-  // reading is not successful or the whitespace is not what is requested, an
-  // exception is thrown.
-  //
-  // If `WhitespaceMode() == kIgnoreWhitespace`, then this function is a no-op.
-  using IStreamBase::ReadWhitespace;
-
-  // GetValue()
-  //
-  // Returns the value of the variable `variable_name`.
-  using AnalysisBase::GetValue;
-
-  // GetVariable()
-  //
-  // Returns the variable `variable_name`.
-  using AnalysisBase::GetVariable;
-
-  // SetValue()
-  //
-  // Sets the value of the variable `variable_name`.
-  using ValuesBase::SetValue;
-
- private:
-  std::string name_;
+  // ********************************************
+  // ** See parent classes for more functions. **
+  // ********************************************
 };
 
 }  // namespace librarian

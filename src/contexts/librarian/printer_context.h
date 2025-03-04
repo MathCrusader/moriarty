@@ -18,11 +18,11 @@
 #define MORIARTY_SRC_CONTEXTS_LIBRARIAN_PRINTER_CONTEXT_H_
 
 #include <ostream>
-#include <string>
 #include <string_view>
 
 #include "src/contexts/internal/basic_ostream_context.h"
-#include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/internal/name_context.h"
+#include "src/contexts/internal/view_only_context.h"
 
 namespace moriarty {
 namespace librarian {
@@ -30,49 +30,26 @@ namespace librarian {
 // PrinterContext
 //
 // All context that MVariable<>::Print() has access to.
-class PrinterContext : public AnalysisContext,
+class PrinterContext : public moriarty_internal::NameContext,
+                       public moriarty_internal::ViewOnlyContext,
                        public moriarty_internal::BasicOStreamContext {
-  using AnalysisBase = AnalysisContext;
+  using NameContext = moriarty_internal::NameContext;
+  using ViewOnlyContext = moriarty_internal::ViewOnlyContext;
   using OStreamBase = moriarty_internal::BasicOStreamContext;
 
  public:
-  // Note: Users should not need to create this object. This object will be
-  // created by Moriarty and passed to you. See `src/Moriarty.h` for
-  // entry-points.
+  // Created by Moriarty and passed to you; no need to instantiate.
+  // See `src/Moriarty.h` for entry points.
   PrinterContext(std::string_view variable_name, std::ostream& os,
                  const moriarty_internal::VariableSet& variables,
                  const moriarty_internal::ValueSet& values)
-      : AnalysisBase(variable_name, variables, values),
-        OStreamBase(os),
-        name_(variable_name) {}
+      : NameContext(variable_name),
+        ViewOnlyContext(variables, values),
+        OStreamBase(os) {}
 
-  // GetVariableName()
-  //
-  // Returns the name of the variable being printed.
-  [[nodiscard]] std::string GetVariableName() const { return name_; }
-
-  // PrintToken()
-  //
-  // Prints a single token to the output stream.
-  using OStreamBase::PrintToken;
-
-  // PrintWhitespace()
-  //
-  // Prints the whitespace character to the output stream.
-  using OStreamBase::PrintWhitespace;
-
-  // GetValue()
-  //
-  // Returns the value of the variable `variable_name`.
-  using AnalysisBase::GetValue;
-
-  // GetVariable()
-  //
-  // Returns the variable `variable_name`.
-  using AnalysisBase::GetVariable;
-
- private:
-  std::string name_;
+  // ********************************************
+  // ** See parent classes for more functions. **
+  // ********************************************
 };
 
 }  // namespace librarian

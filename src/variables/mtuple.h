@@ -270,7 +270,7 @@ template <std::size_t I>
 void MTuple<MElementTypes...>::GenerateSingleElement(
     librarian::ResolverContext ctx, tuple_value_type& result) const {
   std::get<I>(result) = std::get<I>(elements_).Generate(
-      ctx.WithSubVariable("<" + std::to_string(I) + ">"));
+      ctx.ForSubVariable("<" + std::to_string(I) + ">"));
 }
 
 template <typename... MElementTypes>

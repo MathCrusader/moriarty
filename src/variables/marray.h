@@ -400,7 +400,7 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
   std::optional<int64_t> generation_limit = ctx.GetSoftGenerationLimit();
   if (generation_limit) length_local.AtMost(*generation_limit);
 
-  int length = length_local.Generate(ctx.WithSubVariable("length"));
+  int length = length_local.Generate(ctx.ForSubVariable("length"));
 
   if (distinct_elements_) return GenerateNDistinctImpl(ctx, length);
 
@@ -409,7 +409,7 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
 
   for (int i = 0; i < length; i++) {
     res.push_back(element_constraints_.Generate(
-        ctx.WithSubVariable("elem[" + std::to_string(i) + "]")));
+        ctx.ForSubVariable("elem[" + std::to_string(i) + "]")));
   }
 
   return res;
@@ -447,7 +447,7 @@ auto MArray<MElementType>::GenerateUnseenElement(
     int index) const -> element_value_type {
   for (; remaining_retries > 0; remaining_retries--) {
     element_value_type value =
-        element_constraints_.Generate(ctx.WithSubVariable("elem"));
+        element_constraints_.Generate(ctx.ForSubVariable("elem"));
     if (!seen.contains(value)) return value;
   }
 
