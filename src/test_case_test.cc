@@ -17,6 +17,7 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 
@@ -25,6 +26,7 @@
 #include "absl/types/span.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/internal/generation_bootstrap.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -41,74 +43,64 @@ namespace {
 
 using ::moriarty::IsOkAndHolds;
 using ::moriarty::StatusIs;
+using ::moriarty::moriarty_internal::GenerateAllValues;
 using ::moriarty::moriarty_internal::RandomEngine;
-using ::moriarty::moriarty_internal::TestCaseManager;
 using ::moriarty::moriarty_internal::ValueSet;
-using ::moriarty::moriarty_internal::VariableSet;
 using ::moriarty_testing::IsVariableNotFound;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::MTestType2;
 using ::moriarty_testing::TestType;
 using ::testing::HasSubstr;
 
+template <typename T>
+absl::StatusOr<T> GetVariable(const TestCase& test_case,
+                              std::string_view name) {
+  auto [variables, values, scenarios] =
+      UnsafeExtractTestCaseInternals(test_case);
+  return variables.GetVariable<T>(name);
+}
+
+template <typename T>
+absl::StatusOr<typename T::value_type> GetValue(const TestCase& test_case,
+                                                std::string_view name) {
+  auto [variables, values, scenarios] =
+      UnsafeExtractTestCaseInternals(test_case);
+  return values.Get<T>(name);
+}
+
+absl::StatusOr<ValueSet> AssignAllValues(const TestCase& test_case) {
+  auto [variables, values, scenarios] =
+      UnsafeExtractTestCaseInternals(test_case);
+  for (const Scenario& scenario : scenarios) {
+    MORIARTY_RETURN_IF_ERROR(variables.WithScenario(scenario));
+  }
+  RandomEngine rng({1, 2, 3}, "v0.1");
+  return GenerateAllValues(variables, values, {rng, std::nullopt});
+}
+
 TEST(TestCaseTest, ConstrainVariableAndGetVariableWorkInGeneralCase) {
   TestCase T;
   T.ConstrainVariable("A", MTestType());
-  MORIARTY_EXPECT_OK(TestCaseManager(&T).GetVariable<MTestType>("A"));
+  MORIARTY_EXPECT_OK(GetVariable<MTestType>(T, "A"));
 }
 
 TEST(TestCaseTest, SetValueWithSpecificValueAndGetVariableWorkInGeneralCase) {
   TestCase T;
   T.SetValue<MTestType>("A", TestType());
-  MORIARTY_EXPECT_OK(TestCaseManager(&T).GetVariable<MTestType>("A"));
+  EXPECT_THAT(GetValue<MTestType>(T, "A"), IsOkAndHolds(TestType()));
 }
 
 TEST(TestCaseTest, GetVariableWithWrongTypeShouldFail) {
   TestCase T;
   T.ConstrainVariable("A", MTestType());
-  EXPECT_THAT(TestCaseManager(&T).GetVariable<MInteger>("A"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-}
-
-TEST(TestCaseTest, GetVariableWithSpecificValueWithWrongTypeShouldFail) {
-  TestCase T;
-  T.SetValue<MTestType>("A", TestType());
-  EXPECT_THAT(TestCaseManager(&T).GetVariable<MInteger>("A"),
+  EXPECT_THAT(GetVariable<MInteger>(T, "A"),
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
 TEST(TestCaseTest, GetVariableWithWrongNameShouldNotFind) {
   TestCase T;
   T.ConstrainVariable("A", MTestType());
-  EXPECT_THAT(TestCaseManager(&T).GetVariable<MTestType>("xxx"),
-              IsVariableNotFound("xxx"));
-}
-
-TEST(TestCaseTest, SetVariablesAndGetVariableWorkInGeneralCase) {
-  TestCase T;
-  VariableSet variable_set;
-  MORIARTY_ASSERT_OK(variable_set.AddVariable("A", MTestType()));
-
-  TestCaseManager(&T).SetVariables(variable_set);
-  MORIARTY_EXPECT_OK(TestCaseManager(&T).GetVariable<MTestType>("A"));
-  EXPECT_THAT(TestCaseManager(&T).GetVariable<MTestType>("xxx"),
-              IsVariableNotFound("xxx"));
-}
-
-TEST(TestCaseTest, SetVariablesOverwritesAllVariablesPreviouslyThere) {
-  TestCase T;
-
-  VariableSet variable_set_orig;
-  MORIARTY_ASSERT_OK(variable_set_orig.AddVariable("A", MTestType()));
-  TestCaseManager(&T).SetVariables(variable_set_orig);
-
-  VariableSet variable_set_new;
-  MORIARTY_ASSERT_OK(variable_set_new.AddVariable("B", MTestType()));
-  TestCaseManager(&T).SetVariables(variable_set_new);
-
-  EXPECT_THAT(TestCaseManager(&T).GetVariable<MTestType>("A"),
-              IsVariableNotFound("A"));
-  MORIARTY_EXPECT_OK(TestCaseManager(&T).GetVariable<MTestType>("B"));
+  EXPECT_THAT(GetVariable<MTestType>(T, "xxx"), IsVariableNotFound("xxx"));
 }
 
 TEST(TestCaseTest, AssignAllValuesGivesSomeValueForEachVariable) {
@@ -116,10 +108,7 @@ TEST(TestCaseTest, AssignAllValuesGivesSomeValueForEachVariable) {
   T.ConstrainVariable("A", MTestType());
   T.ConstrainVariable("B", MTestType());
 
-  RandomEngine rng({}, "v0.1");
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet value_set,
-      TestCaseManager(&T).AssignAllValues(rng, std::nullopt));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
 
   EXPECT_TRUE(value_set.Contains("A"));
   EXPECT_TRUE(value_set.Contains("B"));
@@ -131,10 +120,7 @@ TEST(TestCaseTest, ConstrainAnonymousVariableAndGetVariableWorkInGeneralCase) {
   T.ConstrainAnonymousVariable("A", MTestType());
   T.ConstrainAnonymousVariable("B", MTestType());
 
-  RandomEngine rng({}, "v0.1");
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet value_set,
-      TestCaseManager(&T).AssignAllValues(rng, std::nullopt));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
 
   EXPECT_TRUE(value_set.Contains("A"));
   EXPECT_TRUE(value_set.Contains("B"));
@@ -155,9 +141,7 @@ TEST(TestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
     T.ConstrainVariable(third.first, third.second);
 
     RandomEngine rng({1, 2, 3}, "v0.1");
-    MORIARTY_ASSIGN_OR_RETURN(
-        ValueSet value_set,
-        TestCaseManager(&T).AssignAllValues(rng, std::nullopt));
+    MORIARTY_ASSIGN_OR_RETURN(ValueSet value_set, AssignAllValues(T));
     MORIARTY_ASSIGN_OR_RETURN(TestType a, value_set.Get<MTestType>("A"));
     MORIARTY_ASSIGN_OR_RETURN(TestType b, value_set.Get<MTestType>("B"));
     MORIARTY_ASSIGN_OR_RETURN(TestType c, value_set.Get<MTestType>("C"));
@@ -183,10 +167,7 @@ TEST(TestCaseTest, AssignAllValuesShouldRespectSpecificValuesSet) {
   T.SetValue<MTestType>("A", TestType(789));
   T.SetValue<MTestType>("B", TestType(654));
 
-  RandomEngine rng({}, "v0.1");
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet value_set,
-      TestCaseManager(&T).AssignAllValues(rng, std::nullopt));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
 
   EXPECT_THAT(value_set.Get<MTestType>("A"), IsOkAndHolds(TestType(789)));
   EXPECT_THAT(value_set.Get<MTestType>("B"), IsOkAndHolds(TestType(654)));
@@ -198,11 +179,8 @@ TEST(TestCaseTest, GeneralScenariosShouldBeRespected) {
                    .ConstrainVariable("B", MTestType())
                    .WithScenario(Scenario().WithGeneralProperty(
                        {.category = "size", .descriptor = "small"}));
-  RandomEngine rng({}, "v0.1");
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet value_set,
-      TestCaseManager(&T).AssignAllValues(rng, std::nullopt));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
 
   EXPECT_THAT(value_set.Get<MTestType>("A"),
               IsOkAndHolds(MTestType::kGeneratedValueSmallSize));
@@ -219,11 +197,8 @@ TEST(TestCaseTest, TypeSpecificScenariosAreAppliedToAllAppropriateVariables) {
           .ConstrainVariable("D", MTestType2())
           .WithScenario(Scenario().WithTypeSpecificProperty(
               "MTestType", {.category = "size", .descriptor = "small"}));
-  RandomEngine rng({}, "v0.1");
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet value_set,
-      TestCaseManager(&T).AssignAllValues(rng, std::nullopt));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
 
   EXPECT_THAT(value_set.Get<MTestType>("A"),
               IsOkAndHolds(MTestType::kGeneratedValueSmallSize));
@@ -247,11 +222,8 @@ TEST(TestCaseTest,
               "MTestType", {.category = "size", .descriptor = "small"}))
           .WithScenario(Scenario().WithTypeSpecificProperty(
               "MTestType2", {.category = "size", .descriptor = "large"}));
-  RandomEngine rng({}, "v0.1");
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet value_set,
-      TestCaseManager(&T).AssignAllValues(rng, std::nullopt));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
 
   EXPECT_THAT(value_set.Get<MTestType>("A"),
               IsOkAndHolds(MTestType::kGeneratedValueSmallSize));
@@ -272,9 +244,8 @@ TEST(TestCaseTest, UnknownMandatoryPropertyInScenarioShouldFail) {
           .ConstrainVariable("D", MTestType2())
           .WithScenario(Scenario().WithTypeSpecificProperty(
               "MTestType", {.category = "unknown", .descriptor = "???"}));
-  RandomEngine rng({}, "v0.1");
 
-  EXPECT_THAT(TestCaseManager(&T).AssignAllValues(rng, std::nullopt),
+  EXPECT_THAT(AssignAllValues(T),
               StatusIs(absl::StatusCode::kInvalidArgument,
                        HasSubstr("Property with non-optional category")));
 }

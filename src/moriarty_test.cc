@@ -268,7 +268,8 @@ TEST(MoriartyTest, GeneralConstraintsSetValueAreConsideredInGenerators) {
 
   // Internally, this value is being set to 0, so it should fail since we said
   // here it must be exactly 5.
-  EXPECT_THROW({ M.GenerateTestCases(); }, std::runtime_error);
+  EXPECT_THAT(M.TryGenerateTestCases(),
+              StatusIs(absl::StatusCode::kFailedPrecondition));
 }
 
 TEST(MoriartyTest, GeneralConstraintsAreConsideredInGenerators) {

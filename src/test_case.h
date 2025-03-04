@@ -18,20 +18,18 @@
 #ifndef MORIARTY_SRC_TEST_CASE_H_
 #define MORIARTY_SRC_TEST_CASE_H_
 
-#include <stdint.h>
-
+#include <any>
 #include <concepts>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "src/internal/abstract_variable.h"
-#include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/mvariable.h"
@@ -39,9 +37,12 @@
 
 namespace moriarty {
 
-namespace moriarty_internal {
-class TestCaseManager;  // Forward declaring the internal API
-}  // namespace moriarty_internal
+// FIXME: Remove after Context refactor
+struct TCInternals {
+  moriarty_internal::VariableSet variables;
+  moriarty_internal::ValueSet values;
+  std::vector<Scenario> scenarios;
+};
 
 // TestCase
 //
@@ -57,13 +58,13 @@ class TestCase {
   //
   // Example:
   //
-  //     AddTestCase()
+  //     TestCase()
   //        .SetValue<MString>("X", "hello")
   //        .SetValue<MInteger>("Y", 3);
   //
   // The following are logically equivalent:
   //  * SetValue<MCustomType>("X", value);
-  //  * ConstrainVariable("X", MCustomType().Is(value));
+  //  * ConstrainVariable("X", Exactly(value));
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
@@ -77,20 +78,20 @@ class TestCase {
   // Examples:
   //
   //     // X is one of {10, 11, 12, ... , 20}.
-  //     AddTestCase().ConstrainVariable("X", MInteger().Between(10, 20));
+  //     TestCase().ConstrainVariable("X", MInteger().Between(10, 20));
   //
   //     // X is one of {11, 13, 15}.
-  //     AddTestCase()
+  //     TestCase()
   //         .ConstrainVariable("X", MInteger().Between(10, 15).IsOdd());
   //
   //     // Equivalent to above. X is one of {11, 13, 15}.
-  //     AddTestCase()
+  //     TestCase()
   //         .ConstrainVariable("X", MInteger().Between(10, 15))
   //         .ConstrainVariable("X", MInteger().IsOdd());
   //
   //     // If "X" was `Between(1, 12)` in the global context, then it is one
   //     // of {10, 11, 12} now.
-  //     AddTestCase().ConstrainVariable("X", MInteger().Between(10, 20));
+  //     TestCase().ConstrainVariable("X", MInteger().Between(10, 20));
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
@@ -106,61 +107,65 @@ class TestCase {
       absl::string_view variable_name,
       const moriarty_internal::AbstractVariable& constraints);
 
+  // This is a dangerous function that should only be used if you know what
+  // you're doing. `value` must have a particular memory layout, and if you pass
+  // the wrong type, this will invoke undefined behaviour. Your program may or
+  // may not not crash, and will likely give weird or inconsistent results.
+  TestCase& UnsafeSetAnonymousValue(std::string_view variable_name,
+                                    std::any value);
+
   // WithScenario()
   //
   // This TestCase is covering this `scenario`.
   TestCase& WithScenario(Scenario scenario);
 
+  // FIXME: Remove after Context refactor
+  void SetVariables(moriarty_internal::VariableSet variables) {
+    variables_ = std::move(variables);
+  }
+
  private:
   moriarty_internal::VariableSet variables_;
+  moriarty_internal::ValueSet values_;
   std::vector<Scenario> scenarios_;
-
-  // ---------------------------------------------------------------------------
-  //    Start of Internal Extended API
-  //
-  // These functions can be accessed via `moriarty_internal::TestCaseManager`.
-  // Users and Librarians should not need to access these functions. See
-  // `TestCaseManager` for more details.
-  friend class moriarty_internal::TestCaseManager;
-
-  // SetVariables() [Internal Extended API]
-  //
-  // Sets the variables in the TestCase. This overwrites *all* previous
-  // variables that were set in the test case.
-  void SetVariables(moriarty_internal::VariableSet variables);
-
-  // AssignAllValues() [Internal Extended API]
-  //
-  // Assigns the value of all variables in this test case, with all
-  // randomization provided by `rng`.
-  absl::StatusOr<moriarty_internal::ValueSet> AssignAllValues(
-      moriarty_internal::RandomEngine& rng,
-      std::optional<int64_t> approximate_generation_limit);
-
-  // GetVariable() [Internal Extended API]
-  //
-  // Returns the variable named `variable_name`.
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
-  absl::StatusOr<T> GetVariable(absl::string_view variable_name) const;
-
-  // ConstrainVariable() [Internal Extended API]
-  //
-  // Adds extra constraints to `variable_name`. `constraints` will be
-  // merged with the variable at global context.
-  //
-  // Example:
-  //
-  //     AddTestCase().ConstrainVariable("X", MInteger().Between(10, 20));
-  TestCase& ConstrainVariable(absl::string_view variable_name,
-                              const moriarty_internal::AbstractVariable& var);
-
-  //    End of Internal Extended API
-  // ---------------------------------------------------------------------------
 
   // Distributes all known scenarios to the variable set.
   absl::Status DistributeScenarios();
+
+  friend TCInternals UnsafeExtractTestCaseInternals(const TestCase& test_case);
+};
+
+// ConcreteTestCase
+//
+// Actual values for all variables of interest.
+class ConcreteTestCase {
+ public:
+  // SetValue()
+  //
+  // Sets the variable `variable_name` to a specific `value`.
+  //
+  // Example:
+  //     ConcreteTestCase()
+  //        .SetValue<MString>("X", "hello")
+  //        .SetValue<MInteger>("Y", 3);
+  template <typename T>
+    requires std::derived_from<T,
+                               librarian::MVariable<T, typename T::value_type>>
+  ConcreteTestCase& SetValue(absl::string_view variable_name,
+                             T::value_type value);
+
+  // This is a dangerous function that should only be used if you know what
+  // you're doing. `value` must have a particular memory layout, and if you pass
+  // the wrong type, this will invoke undefined behaviour. Your program may or
+  // may not not crash, and will likely give weird or inconsistent results.
+  ConcreteTestCase& UnsafeSetAnonymousValue(std::string_view variable_name,
+                                            std::any value);
+
+ private:
+  moriarty_internal::ValueSet values_;
+
+  friend moriarty_internal::ValueSet UnsafeExtractConcreteTestCaseInternals(
+      const ConcreteTestCase& test_case);
 };
 
 // TestCaseMetadata
@@ -214,49 +219,6 @@ class TestCaseMetadata {
   std::optional<GeneratedTestCaseMetadata> generator_metadata_;
 };
 
-namespace moriarty_internal {
-
-// TestCaseManager [Internal Extended API]
-//
-// Contains functions that are public with respect to `TestCase`, but should be
-// considered `private` with respect to users of Moriarty. (Effectively Java's
-// package-private.)
-//
-// Users and Librarians of Moriarty should not need any of these functions, and
-// the base functionality of Moriarty assumes these functions are not called.
-//
-// One potential exception is if you are creating very generic Moriarty code and
-// need access to the underlying `moriarty_internal::AbstractVariable` pointer.
-// This should be extremely rare and is at your own risk.
-//
-// See corresponding functions in `TestCase` for documentation.
-//
-// Example usage:
-//
-//   TestCase t;
-//   moriarty_internal::TestCaseManager(&t).SetVariables( ... );
-class TestCaseManager {
- public:
-  // This class does not take ownership of `test_case_to_manage`
-  explicit TestCaseManager(moriarty::TestCase* test_case_to_manage);
-
-  void SetVariables(VariableSet variables);
-  absl::StatusOr<ValueSet> AssignAllValues(
-      moriarty_internal::RandomEngine& rng,
-      std::optional<int64_t> approximate_generation_limit);
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
-  absl::StatusOr<T> GetVariable(absl::string_view variable_name) const;
-  TestCase& ConstrainVariable(absl::string_view variable_name,
-                              const moriarty_internal::AbstractVariable& var);
-
- private:
-  TestCase& managed_test_case_;  // Not owned by this class
-};
-
-}  // namespace moriarty_internal
-
 // -----------------------------------------------------------------------------
 //  Template implementation below
 
@@ -264,7 +226,7 @@ template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
 TestCase& TestCase::SetValue(absl::string_view variable_name,
                              T::value_type value) {
-  ConstrainVariable(variable_name, T().Is(std::move(value)));
+  values_.Set<T>(variable_name, std::move(value));
   return *this;
 }
 
@@ -279,20 +241,20 @@ TestCase& TestCase::ConstrainVariable(absl::string_view variable_name,
 
 template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<T> TestCase::GetVariable(absl::string_view variable_name) const {
-  return variables_.GetVariable<T>(variable_name);
+ConcreteTestCase& ConcreteTestCase::SetValue(absl::string_view variable_name,
+                                             T::value_type value) {
+  values_.Set<T>(variable_name, std::move(value));
+  return *this;
 }
 
-namespace moriarty_internal {
+}  // namespace moriarty
 
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<T> TestCaseManager::GetVariable(
-    absl::string_view variable_name) const {
-  return managed_test_case_.GetVariable<T>(variable_name);
-}
+namespace moriarty {
+// Convenience functions for internal use only.
 
-}  // namespace moriarty_internal
+TCInternals UnsafeExtractTestCaseInternals(const TestCase& test_case);
+moriarty_internal::ValueSet UnsafeExtractConcreteTestCaseInternals(
+    const ConcreteTestCase& test_case);
 
 }  // namespace moriarty
 

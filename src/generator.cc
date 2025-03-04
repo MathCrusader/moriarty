@@ -26,6 +26,7 @@
 #include "absl/status/statusor.h"
 #include "absl/types/span.h"
 #include "src/errors.h"
+#include "src/internal/generation_bootstrap.h"
 #include "src/internal/random_config.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/status_utils.h"
@@ -58,8 +59,7 @@ absl::StatusOr<absl::Nonnull<TestCase*>> Generator::TryAddTestCase() {
 
   TestCase& result = *test_cases_.back();
   for (const Scenario& scenario : scenarios_) result.WithScenario(scenario);
-  moriarty_internal::TestCaseManager(&result).SetVariables(
-      *general_constraints_);
+  result.SetVariables(*general_constraints_);
   return &result;
 }
 
@@ -75,8 +75,7 @@ absl::StatusOr<absl::Nonnull<TestCase*>> Generator::TryAddOptionalTestCase() {
 
   TestCase& result = *optional_test_cases_.back();
   for (const Scenario& scenario : scenarios_) result.WithScenario(scenario);
-  moriarty_internal::TestCaseManager(&result).SetVariables(
-      *general_constraints_);
+  result.SetVariables(*general_constraints_);
   return &result;
 }
 
@@ -121,18 +120,28 @@ Generator::AssignValuesInAllTestCases() {
   std::vector<moriarty_internal::ValueSet> assigned_test_cases;
   assigned_test_cases.reserve(test_cases_.size());
   for (auto& case_ptr : test_cases_) {
+    auto [variables, known_values, scenarios] =
+        UnsafeExtractTestCaseInternals(*case_ptr.get());
+    for (const Scenario& scenario : scenarios) {
+      MORIARTY_RETURN_IF_ERROR(variables.WithScenario(scenario));
+    }
     MORIARTY_ASSIGN_OR_RETURN(
         moriarty_internal::ValueSet values,
-        moriarty_internal::TestCaseManager(case_ptr.get())
-            .AssignAllValues(*rng_, approximate_generation_limit_));
+        moriarty_internal::GenerateAllValues(
+            variables, known_values, {*rng_, approximate_generation_limit_}));
     assigned_test_cases.push_back(values);
   }
 
   for (auto& case_ptr : optional_test_cases_) {
     try {
+      auto [variables, known_values, scenarios] =
+          UnsafeExtractTestCaseInternals(*case_ptr.get());
+      for (const Scenario& scenario : scenarios) {
+        MORIARTY_RETURN_IF_ERROR(variables.WithScenario(scenario));
+      }
       absl::StatusOr<moriarty_internal::ValueSet> values =
-          moriarty_internal::TestCaseManager(case_ptr.get())
-              .AssignAllValues(*rng_, approximate_generation_limit_);
+          moriarty_internal::GenerateAllValues(
+              variables, known_values, {*rng_, approximate_generation_limit_});
       if (values.ok()) assigned_test_cases.push_back(*values);
     } catch (...) {
       continue;  // Okay to fail on these.

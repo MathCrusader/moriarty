@@ -51,6 +51,18 @@ class ValueSet {
     requires std::derived_from<T, AbstractVariable>
   void Set(absl::string_view variable_name, T::value_type value);
 
+  // UnsafeSet()
+  //
+  // Sets `variable_name` to `value`. If this was set previously, it will be
+  // overwritten.
+  //
+  // NOTE: The type of `value` is expected to be `T::value_type` for the `T`
+  // corresponding to `variable_name`. If not, expect undefined behaviour.
+  //
+  // UnsafeSet does not behave properly with the approximate size. It is always
+  // considered to be of size 1.
+  void UnsafeSet(absl::string_view variable_name, std::any value);
+
   // Get()
   //
   // Returns the stored value for the variable `variable_name`.

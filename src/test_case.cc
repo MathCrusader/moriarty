@@ -17,17 +17,13 @@
 
 #include <stdint.h>
 
-#include <optional>
 #include <utility>
 #include <vector>
 
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "src/internal/abstract_variable.h"
-#include "src/internal/generation_bootstrap.h"
-#include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/scenario.h"
@@ -42,22 +38,15 @@ TestCase& TestCase::ConstrainAnonymousVariable(
   return *this;
 }
 
-TestCase& TestCase::WithScenario(Scenario scenario) {
-  scenarios_.push_back(std::move(scenario));
+TestCase& TestCase::UnsafeSetAnonymousValue(std::string_view variable_name,
+                                            std::any value) {
+  values_.UnsafeSet(variable_name, std::move(value));
   return *this;
 }
 
-void TestCase::SetVariables(moriarty_internal::VariableSet variables) {
-  variables_ = std::move(variables);
-}
-
-absl::StatusOr<moriarty_internal::ValueSet> TestCase::AssignAllValues(
-    moriarty_internal::RandomEngine& rng,
-    std::optional<int64_t> approximate_generation_limit) {
-  MORIARTY_RETURN_IF_ERROR(DistributeScenarios());
-
-  return moriarty_internal::GenerateAllValues(
-      variables_, /*known_values = */ {}, {rng, approximate_generation_limit});
+TestCase& TestCase::WithScenario(Scenario scenario) {
+  scenarios_.push_back(std::move(scenario));
+  return *this;
 }
 
 absl::Status TestCase::DistributeScenarios() {
@@ -67,33 +56,13 @@ absl::Status TestCase::DistributeScenarios() {
   return absl::OkStatus();
 }
 
-TestCase& TestCase::ConstrainVariable(
-    absl::string_view variable_name,
-    const moriarty_internal::AbstractVariable& var) {
-  ABSL_CHECK_OK(variables_.AddOrMergeVariable(variable_name, var));
-  return *this;
+TCInternals UnsafeExtractTestCaseInternals(const TestCase& test_case) {
+  return {test_case.variables_, test_case.values_, test_case.scenarios_};
 }
 
-namespace moriarty_internal {
-
-TestCaseManager::TestCaseManager(moriarty::TestCase* test_case_to_manage)
-    : managed_test_case_(*test_case_to_manage) {}
-
-void TestCaseManager::SetVariables(VariableSet variables) {
-  managed_test_case_.SetVariables(std::move(variables));
+moriarty_internal::ValueSet UnsafeExtractConcreteTestCaseInternals(
+    const ConcreteTestCase& test_case) {
+  return test_case.values_;
 }
-
-absl::StatusOr<ValueSet> TestCaseManager::AssignAllValues(
-    RandomEngine& rng, std::optional<int64_t> approximate_generation_limit) {
-  return managed_test_case_.AssignAllValues(rng, approximate_generation_limit);
-}
-
-TestCase& TestCaseManager::ConstrainVariable(
-    absl::string_view variable_name,
-    const moriarty_internal::AbstractVariable& var) {
-  return managed_test_case_.ConstrainVariable(variable_name, var);
-}
-
-}  // namespace moriarty_internal
 
 }  // namespace moriarty

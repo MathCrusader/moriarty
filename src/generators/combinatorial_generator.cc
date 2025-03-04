@@ -66,9 +66,8 @@ void CombinatorialCoverage::CreateTestCases(
   for (const CoveringArrayTestCase& x : covering_array) {
     TestCase& test_case = AddTestCase();
     for (int i = 0; i < x.test_case.size(); i++) {
-      moriarty_internal::TestCaseManager manager(&test_case);
-      manager.ConstrainVariable(variable_names[i],
-                                *(cases[i][x.test_case[i]].get()));
+      test_case.ConstrainAnonymousVariable(variable_names[i],
+                                           *(cases[i][x.test_case[i]].get()));
     }
   }
 }

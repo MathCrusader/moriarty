@@ -42,6 +42,12 @@ void ValueSet::Erase(absl::string_view variable_name) {
   values_.erase(it);
 }
 
+// FIXME: Add tests
+void ValueSet::UnsafeSet(absl::string_view variable_name, std::any value) {
+  auto [it, inserted] = values_.emplace(variable_name, std::move(value));
+  if (inserted) approximate_size_++;
+}
+
 absl::StatusOr<std::any> ValueSet::UnsafeGet(
     absl::string_view variable_name) const {
   auto it = values_.find(variable_name);
