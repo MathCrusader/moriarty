@@ -480,9 +480,9 @@ absl::Status MArray<MElementType>::OfSizeProperty(Property property) {
 
 template <typename MElementType>
 std::vector<std::string> MArray<MElementType>::GetDependenciesImpl() const {
-  std::vector<std::string> deps = this->GetDependencies(element_constraints_);
+  std::vector<std::string> deps = element_constraints_.GetDependencies();
   if (length_)
-    absl::c_move(this->GetDependencies(*length_), std::back_inserter(deps));
+    absl::c_move(length_->GetDependencies(), std::back_inserter(deps));
   return deps;
 }
 

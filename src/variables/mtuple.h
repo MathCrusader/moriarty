@@ -283,7 +283,7 @@ template <std::size_t... I>
 std::vector<std::string> MTuple<MElementTypes...>::GetDependenciesImpl(
     std::index_sequence<I...>) const {
   std::vector<std::string> dependencies;
-  (absl::c_move(this->GetDependencies(std::get<I>(elements_)),
+  (absl::c_move(std::get<I>(elements_).GetDependencies(),
                 std::back_inserter(dependencies)),
    ...);
   return dependencies;

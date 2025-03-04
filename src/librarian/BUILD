@@ -39,7 +39,6 @@ cc_library(
         "mvariable.h",
     ],
     deps = [
-        ":subvalues",
         "//src:errors",
         "//src:property",
         "//src/contexts/librarian:assignment_context",
@@ -61,21 +60,6 @@ cc_library(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
-    ],
-)
-
-cc_library(
-    name = "subvalues",
-    srcs = ["subvalues.cc"],
-    hdrs = ["subvalues.h"],
-    deps = [
-        "//src/internal:abstract_variable",
-        "@abseil-cpp//absl/base:nullability",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -164,20 +148,6 @@ cc_test(
         "//src/util/test_status_macro:status_testutil",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "subvalues_test",
-    srcs = ["subvalues_test.cc"],
-    deps = [
-        ":subvalues",
-        "//src/internal:abstract_variable",
-        "//src/util/test_status_macro:status_testutil",
-        "//src/variables:minteger",
-        "//src/variables:mstring",
-        "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
     ],
 )

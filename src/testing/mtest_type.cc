@@ -33,7 +33,6 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
-#include "src/librarian/subvalues.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/variables/minteger.h"
@@ -41,9 +40,6 @@
 // LINT.IfChange
 
 namespace moriarty_testing {
-
-using ::moriarty::MInteger;
-using ::moriarty::librarian::Subvalues;
 
 MTestType::MTestType() {
   RegisterKnownProperty("size", &MTestType::WithSizeProperty);
@@ -143,18 +139,7 @@ absl::Status MTestType::IsSatisfiedWithImpl(
 }
 
 std::vector<std::string> MTestType::GetDependenciesImpl() const {
-  return GetDependencies(multiplier_);
-}
-
-absl::StatusOr<moriarty::librarian::Subvalues> MTestType::GetSubvaluesImpl(
-    moriarty::librarian::AnalysisContext ctx, const TestType& value) const {
-  TestType addition = 0;
-  if (adder_variable_name_) {
-    MORIARTY_ASSIGN_OR_RETURN(addition,
-                              ctx.GetValue<MTestType>(*adder_variable_name_));
-  }
-  return Subvalues().AddSubvalue<MInteger>(
-      "multiplier", (value - addition.value) / kGeneratedValue);
+  return multiplier_.GetDependencies();
 }
 
 // Always returns pi. Does not directly depend on `rng`, but we generate a

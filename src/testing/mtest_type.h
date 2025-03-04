@@ -32,7 +32,6 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/librarian/mvariable.h"
-#include "src/librarian/subvalues.h"
 #include "src/property.h"
 #include "src/variables/minteger.h"
 
@@ -122,10 +121,6 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   std::optional<std::string> adder_variable_name_;
 
   bool merged_ = false;
-
-  absl::StatusOr<moriarty::librarian::Subvalues> GetSubvaluesImpl(
-      moriarty::librarian::AnalysisContext ctx,
-      const TestType& value) const override;
 
   // Always returns pi. Does not directly depend on `rng`, but we generate a
   // random number between 1 and 1 (aka, 1) to ensure the RandomEngine is

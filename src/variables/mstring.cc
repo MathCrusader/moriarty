@@ -298,7 +298,7 @@ absl::Status MString::OfSizeProperty(Property property) {
 }
 
 std::vector<std::string> MString::GetDependenciesImpl() const {
-  return length_ ? GetDependencies(*length_) : std::vector<std::string>();
+  return length_ ? length_->GetDependencies() : std::vector<std::string>();
 }
 
 std::string MString::ReadImpl(librarian::ReaderContext ctx) const {

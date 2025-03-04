@@ -19,7 +19,6 @@
 #define MORIARTY_SRC_LIBRARIAN_MVARIABLE_H_
 
 #include <algorithm>
-#include <any>
 #include <concepts>
 #include <exception>
 #include <format>
@@ -51,18 +50,10 @@
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
 #include "src/internal/status_utils.h"
-#include "src/internal/variable_name_utils.h"
-#include "src/librarian/subvalues.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
-
-namespace moriarty_internal {
-template <typename V, typename G>
-class MVariableManager;  // Forward declaring the internal API
-}  // namespace moriarty_internal
-
 namespace librarian {
 
 // MVariable<>
@@ -106,7 +97,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   MVariable& operator=(MVariable&&) = default;
 
  public:
-  // Typename() [pure virtual]
+  // Typename()
   //
   // Returns a string representing the name of this type (for example,
   // "MInteger"). This is mostly used for debugging/error messages.
@@ -249,7 +240,26 @@ class MVariable : public moriarty_internal::AbstractVariable {
   absl::Status IsSatisfiedWith(AnalysisContext ctx,
                                const ValueType& value) const;
 
-  ValueType Generate(ResolverContext ctx) const;
+  [[nodiscard]] ValueType Generate(ResolverContext ctx) const;
+
+  // GetDependencies()
+  //
+  // Returns the list of names of the variables that this variable depends on,
+  // this includes direct dependencies and the recursive child dependencies.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const override;
+
+  // MergeFromAnonymous()
+  //
+  // Same as `MergeFrom`, but you do not know the type of the variable you are.
+  // This should only be used in generic code.
+  absl::Status MergeFromAnonymous(
+      const moriarty_internal::AbstractVariable& other) {
+    MORIARTY_ASSIGN_OR_RETURN(
+        VariableType typed_other,
+        moriarty_internal::ConvertTo<VariableType>(&other, "MergeFrom"));
+    MergeFrom(typed_other);
+    return absl::OkStatus();
+  }
 
  protected:
   // ---------------------------------------------------------------------------
@@ -321,25 +331,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Default: No dependencies.
   virtual std::vector<std::string> GetDependenciesImpl() const;
 
-  // GetSubvaluesImpl() [virtual/optional]
-  //
-  // Users should not call this directly. Call `GetSubvalue()` instead.
-  //
-  // Returns all subvalues of `value`. Subvalues are non-Moriarty types (e.g.,
-  // int64_t, std::string) not MVariables (e.g., MInteger, MString).
-  //
-  // Example implementation:
-  //
-  //  absl::StatusOr<Subvalues> CustomType::GetSubvalues() {
-  //     return Subvalues()
-  //         .AddSubvalue("length", array.length())
-  //         .AddSubvariable("width", array[0].length());
-  //  }
-  //
-  // Default: No subvalues.
-  virtual absl::StatusOr<Subvalues> GetSubvaluesImpl(
-      AnalysisContext ctx, const ValueType& value) const;
-
   // GetDifficultInstancesImpl() [virtual/optional]
   //
   // Users should not call this directly. Call `GetDifficultInstances()`
@@ -405,15 +396,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   void RegisterKnownProperty(absl::string_view property_category,
                              PropertyCallbackFunction property_fn);
 
-  // GetDependencies() [Helper for Librarians]
-  //
-  // Returns the list of names of the variables that `variable` depends on,
-  // this includes direct dependencies and the recursive child dependencies.
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
-  std::vector<std::string> GetDependencies(T variable) const;
-
   // DeclareSelfAsInvalid() [Helper for Librarians]
   //
   // Sets the status of this variable to `status`. This must be a non-ok
@@ -449,39 +431,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // that return an absl::Status will be intercepted and return this instead.
   // (E.g., GenerateImpl(), PrintImpl(), etc.)
   absl::Status overall_status_ = absl::OkStatus();
-
-  // ---------------------------------------------------------------------------
-  //    Start of Internal Extended API
-  //
-  // These functions can be accessed via `moriarty_internal::ImporterManager`.
-  // Users and Librarians should not need to access these functions. See
-  // `ImporterManager` for more details.
-  friend class moriarty_internal::MVariableManager<VariableType, ValueType>;
-
-  // MergeFrom() [Internal Extended API]
-  //
-  // Merges my current constraints with the constraints of the `other`
-  // variable. The merge should act as an intersection of the two constraints.
-  // If one says 1 <= x <= 10 and the other says 5 <= x <= 20, then then
-  // merged version should have 5 <= x <= 10.
-  absl::Status MergeFrom(
-      const moriarty_internal::AbstractVariable& other) override;
-
-  // GetSubvalue() [Internal Extended API]
-  //
-  // `my_value` will be of the ValueType of this variable.
-  //
-  // Given the value of this variable and the name of a subvalue, this will
-  // return the std::any value of the subvalue if it is found.
-  //
-  // Returns an error if there are any issues retrieving the subvalue.
-  // TODO(darcybest): Consider renaming to ExtractSubvalue.
-  absl::StatusOr<std::any> GetSubvalue(
-      AnalysisContext ctx, const std::any& my_value,
-      absl::string_view subvalue_name) const override;
-
-  //    End of Internal Extended API
-  // ---------------------------------------------------------------------------
 
   // Helper function that casts *this to `VariableType`.
   [[nodiscard]] VariableType& UnderlyingVariableType();
@@ -527,6 +476,15 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // If a value does not have a variable, this will return ok.
   absl::Status ValueSatisfiesConstraints(AnalysisContext ctx) const override;
 
+  // MergeFrom()
+  //
+  // Merges my current constraints with the constraints of the `other`
+  // variable. The merge should act as an intersection of the two constraints.
+  // If one says 1 <= x <= 10 and the other says 5 <= x <= 20, then then
+  // merged version should have 5 <= x <= 10.
+  absl::Status MergeFrom(
+      const moriarty_internal::AbstractVariable& other) override;
+
   // ReadValue()
   //
   // Reads a value from `ctx` using the constraints of this variable to
@@ -539,12 +497,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // variable to determine formatting, etc.
   absl::Status PrintValue(librarian::PrinterContext ctx) override;
 
-  // GetDependencies()
-  //
-  // Returns the list of names of the variables that this variable depends on,
-  // this includes direct dependencies and the recursive child dependencies.
-  std::vector<std::string> GetDependencies() override;
-
   // GetDifficultAbstractVariables()
   //
   // Returns the list of difficult abstract variables defined by the
@@ -554,55 +506,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   GetDifficultAbstractVariables(AnalysisContext ctx) const override;
 };
 
-}  // namespace librarian
-
-namespace moriarty_internal {
-
-// MVariableManager [Internal Extended API]
-//
-// Contains functions that are public with respect to `MVariable`, but should be
-// considered `private` with respect to users of Moriarty. (Effectively Java's
-// package-private.)
-//
-// Users and Librarians of Moriarty should not need any of these functions, and
-// the base functionality of Moriarty assumes these functions are not called.
-//
-// One potential exception is if you are creating very generic Moriarty code and
-// need access to the underlying `moriarty_internal::AbstractVariable` pointer.
-// This should be extremely rare and is at your own risk.
-//
-// See corresponding functions in `MVariable` for documentation.
-//
-// Example usage:
-//   class MCustomType :
-//     public librarian::MVariable<MCustomType, CustomType> { ... };
-//
-//   MCustomType v;
-//   moriarty_internal::MVariableManager(&v).MergeFrom(x);
-template <typename VariableType, typename ValueType>
-class MVariableManager {
- public:
-  // This class does not take ownership of `mvariable_to_manage`
-  explicit MVariableManager(
-      librarian::MVariable<VariableType, ValueType>* mvariable_to_manage);
-
-  absl::Status MergeFrom(const AbstractVariable& other);
-  absl::StatusOr<std::any> GetSubvalue(librarian::AnalysisContext ctx,
-                                       const std::any& my_value,
-                                       absl::string_view subvalue_name);
-  std::vector<std::string> GetDependencies() const;
-
- private:
-  librarian::MVariable<VariableType, ValueType>& managed_mvariable_;
-};
-
-// Class template argument deduction (CTAD). Allows for `MVariableManager(&foo)`
-// instead of `MVariableManager<MFoo, Foo>(&foo)`.
-template <typename V, typename G>
-MVariableManager(librarian::MVariable<V, G>*) -> MVariableManager<V, G>;
-
-}  // namespace moriarty_internal
-
 // -----------------------------------------------------------------------------
 //  Template implementation below
 
@@ -611,8 +514,6 @@ MVariableManager(librarian::MVariable<V, G>*) -> MVariableManager<V, G>;
 //
 // V = VariableType
 // G = ValueType  (G since it was previously `GeneratedType`).
-
-namespace librarian {
 
 // -----------------------------------------------------------------------------
 //  Template implementation for public functions
@@ -780,13 +681,6 @@ std::vector<std::string> MVariable<V, G>::GetDependenciesImpl() const {
 }
 
 template <typename V, typename G>
-absl::StatusOr<Subvalues> MVariable<V, G>::GetSubvaluesImpl(
-    AnalysisContext ctx, const G& value) const {
-  return absl::UnimplementedError(
-      absl::StrCat("GetSubvalues() not implemented for ", Typename()));
-}
-
-template <typename V, typename G>
 absl::StatusOr<std::vector<V>> MVariable<V, G>::GetDifficultInstancesImpl(
     AnalysisContext ctx) const {
   return std::vector<V>();  // By default, return an empty list.
@@ -814,13 +708,6 @@ template <typename V, typename G>
 void MVariable<V, G>::RegisterKnownProperty(
     absl::string_view property_category, PropertyCallbackFunction property_fn) {
   known_property_categories_[property_category] = property_fn;
-}
-
-template <typename V, typename G>
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-std::vector<std::string> MVariable<V, G>::GetDependencies(T variable) const {
-  return moriarty_internal::MVariableManager(&variable).GetDependencies();
 }
 
 template <typename V, typename G>
@@ -916,26 +803,6 @@ absl::Status MVariable<V, G>::MergeFrom(
   return TryMergeFrom(*other_derived_class);
 }
 
-template <typename V, typename G>
-absl::StatusOr<std::any> MVariable<V, G>::GetSubvalue(
-    AnalysisContext ctx, const std::any& my_value,
-    absl::string_view subvalue_name) const {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-  const G val = std::any_cast<const G>(my_value);
-  MORIARTY_ASSIGN_OR_RETURN(Subvalues subvalues, GetSubvaluesImpl(ctx, val));
-
-  MORIARTY_ASSIGN_OR_RETURN(
-      const moriarty_internal::VariableValue* subvalue,
-      moriarty_internal::SubvaluesManager(&subvalues)
-          .GetSubvalue(moriarty_internal::BaseVariableName(subvalue_name)));
-
-  if (!moriarty_internal::HasSubvariable(subvalue_name)) return subvalue->value;
-
-  // Safe * on optional SubvariableName since HasSubVariable() is true.
-  return subvalue->variable->GetSubvalue(
-      ctx, subvalue->value, *moriarty_internal::SubvariableName(subvalue_name));
-}
-
 // -----------------------------------------------------------------------------
 //  Template implementation for private functions not part of Extended API.
 
@@ -1026,7 +893,7 @@ absl::Status MVariable<V, G>::PrintValue(PrinterContext ctx) {
 }
 
 template <typename V, typename G>
-std::vector<std::string> MVariable<V, G>::GetDependencies() {
+std::vector<std::string> MVariable<V, G>::GetDependencies() const {
   std::vector<std::string> this_deps = GetDependenciesImpl();
   absl::c_copy(custom_constraints_deps_, std::back_inserter(this_deps));
   return this_deps;
@@ -1048,36 +915,6 @@ MVariable<V, G>::GetDifficultAbstractVariables(AnalysisContext ctx) const {
 }
 
 }  // namespace librarian
-
-namespace moriarty_internal {
-
-template <typename VariableType, typename ValueType>
-MVariableManager<VariableType, ValueType>::MVariableManager(
-    moriarty::librarian::MVariable<VariableType, ValueType>*
-        mvariable_to_manage)
-    : managed_mvariable_(*mvariable_to_manage) {}
-
-template <typename VariableType, typename ValueType>
-absl::Status MVariableManager<VariableType, ValueType>::MergeFrom(
-    const moriarty_internal::AbstractVariable& other) {
-  return managed_mvariable_.MergeFrom(other);
-}
-
-template <typename VariableType, typename ValueType>
-absl::StatusOr<std::any> MVariableManager<VariableType, ValueType>::GetSubvalue(
-    librarian::AnalysisContext ctx, const std::any& my_value,
-    absl::string_view subvalue_name) {
-  return managed_mvariable_.GetSubvalue(ctx, my_value, subvalue_name);
-}
-
-template <typename VariableType, typename ValueType>
-std::vector<std::string>
-MVariableManager<VariableType, ValueType>::GetDependencies() const {
-  return managed_mvariable_.GetDependencies();
-}
-
-}  // namespace moriarty_internal
-
 }  // namespace moriarty
 
 #endif  // MORIARTY_SRC_LIBRARIAN_MVARIABLE_H_

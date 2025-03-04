@@ -15,7 +15,6 @@
 
 #include "src/librarian/mvariable.h"
 
-#include <any>
 #include <cstdint>
 #include <optional>
 #include <sstream>
@@ -47,7 +46,6 @@ namespace {
 
 using ::moriarty::IsOkAndHolds;
 using ::moriarty::StatusIs;
-using ::moriarty::moriarty_internal::MVariableManager;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
@@ -60,7 +58,6 @@ using ::moriarty_testing::Read;
 using ::moriarty_testing::TestType;
 using ::testing::AllOf;
 using ::testing::AnyOf;
-using ::testing::AnyWith;
 using ::testing::Contains;
 using ::testing::HasSubstr;
 using ::testing::Optional;
@@ -90,15 +87,13 @@ TEST(MVariableTest, MergeFromShouldWork) {
   MTestType var1;
   MTestType var2;
 
-  MVariableManager<MTestType, TestType> manager(&var1);
+  var1.MergeFrom(var2);
+  EXPECT_TRUE(var1.WasMerged());
+  EXPECT_FALSE(var2.WasMerged());
 
-  EXPECT_NO_FATAL_FAILURE({ var1.MergeFrom(var2); });
-  EXPECT_NO_FATAL_FAILURE({ var2.MergeFrom(var1); });
-  EXPECT_NO_FATAL_FAILURE({ var1.MergeFrom(var1); });
-  MORIARTY_EXPECT_OK(manager.MergeFrom(var1));
+  var2.MergeFrom(var1);
   EXPECT_TRUE(var1.WasMerged());
-  MORIARTY_EXPECT_OK(manager.MergeFrom(var2));
-  EXPECT_TRUE(var1.WasMerged());
+  EXPECT_TRUE(var2.WasMerged());
 }
 
 TEST(MVariableTest, MergeFromShouldRespectOneOf) {
@@ -118,11 +113,9 @@ TEST(MVariableTest, MergeFromWithWrongTypeShouldFail) {
   MTestType var1;
   moriarty::MInteger var2;
 
-  MVariableManager<MTestType, TestType> manager(&var1);
-
-  EXPECT_THAT(manager.MergeFrom(var2),
+  EXPECT_THAT(var1.MergeFromAnonymous(var2),
               StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("MergeFrom: Cannot convert")));
+                       HasSubstr("Unable to convert")));
   EXPECT_FALSE(var1.WasMerged());
 }
 
@@ -182,24 +175,6 @@ TEST(MVariableTest, SubvariablesShouldBeSetableAndUseable) {
   MTestType var = MTestType().SetMultiplier(MInteger().Between(2, 2));
 
   EXPECT_THAT(Generate(var), IsOkAndHolds(2 * MTestType::kGeneratedValue));
-}
-
-// TODO(darcybest): Add test cases that cover multiple layers of subvalues. I.e.
-// if A is an array of strings then we should be able to ask for A.2.length
-TEST(MVariableTest, SubvaluesAreRetrievable) {
-  MTestType M = MTestType();
-  AnalysisContext ctx("test", {}, {});
-  EXPECT_THAT(MVariableManager(&M).GetSubvalue(
-                  ctx, TestType(2 * MTestType::kGeneratedValue), "multiplier"),
-              IsOkAndHolds(AnyWith<int64_t>(2)));
-}
-
-TEST(MVariableTest, SubvaluesThatDontExistFail) {
-  MTestType M = MTestType();
-  AnalysisContext ctx("test", {}, {});
-  EXPECT_THAT(MVariableManager(&M).GetSubvalue(
-                  ctx, TestType(2 * MTestType::kGeneratedValue), "hat"),
-              StatusIs(absl::StatusCode::kNotFound));
 }
 
 TEST(MVariableTest, BasingMyVariableOnAnotherSetValueShouldWorkBasicCase) {
