@@ -104,6 +104,7 @@
 #include "absl/strings/substitute.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
@@ -439,8 +440,10 @@ absl::StatusOr<typename T::value_type> Read(T variable, std::istream& is,
   moriarty::librarian::ReaderContext reader_context(
       var_name, is, moriarty::WhitespaceStrictness::kPrecise,
       *manager.GetVariables(), *manager.GetValues());
+  moriarty::moriarty_internal::MutableValuesContext values_context(
+      *manager.GetValues());
 
-  MORIARTY_RETURN_IF_ERROR(var->ReadValue(reader_context));
+  MORIARTY_RETURN_IF_ERROR(var->ReadValue(reader_context, values_context));
   return manager.GetValues()->Get<T>(var_name);
 }
 

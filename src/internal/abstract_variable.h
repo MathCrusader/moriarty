@@ -36,6 +36,10 @@ class ReaderContext;      // Forward declaring ReaderContext
 class ResolverContext;    // Forward declaring ResolverContext
 }  // namespace moriarty::librarian
 
+namespace moriarty::moriarty_internal {
+class MutableValuesContext;  // Forward declaring MutableValuesContext
+}  // namespace moriarty::moriarty_internal
+
 namespace moriarty {
 namespace moriarty_internal {
 
@@ -100,14 +104,16 @@ class AbstractVariable {
   // ReadValue() [pure virtual]
   //
   // Reads a value from `ctx` using the constraints of this variable to
-  // determine formatting, etc.
-  virtual absl::Status ReadValue(librarian::ReaderContext ctx) = 0;
+  // determine formatting, etc. Stores the value in `values_ctx`.
+  virtual absl::Status ReadValue(
+      librarian::ReaderContext ctx,
+      moriarty_internal::MutableValuesContext values_ctx) const = 0;
 
   // PrintValue() [pure virtual]
   //
   // Prints the value of this variable to `ctx` using the constraints on this
   // variable to determine formatting, etc.
-  virtual absl::Status PrintValue(librarian::PrinterContext ctx) = 0;
+  virtual absl::Status PrintValue(librarian::PrinterContext ctx) const = 0;
 
   // MergeFrom() [pure virtual]
   //

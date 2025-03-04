@@ -31,6 +31,7 @@
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
 #include "src/contexts/internal/basic_istream_context.h"
+#include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/exporter.h"
@@ -215,7 +216,8 @@ absl::Status SimpleIOImporter::ReadVariable(absl::string_view variable_name) {
   librarian::ReaderContext ctx(variable_name, is_,
                                WhitespaceStrictness::kPrecise, variable_set,
                                value_set);
-  return var->ReadValue(ctx);
+  moriarty_internal::MutableValuesContext values_ctx(value_set);
+  return var->ReadValue(ctx, values_ctx);
 }
 
 absl::Status SimpleIOImporter::ReadToken(const SimpleIOToken& token) {

@@ -26,6 +26,25 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 
+namespace moriarty::librarian {
+template <typename V, typename G>
+class MVariable;  // Forward declaring MVariable
+}
+
+namespace moriarty::moriarty_internal {
+class ViewOnlyContext;  // Forward declaring MVariable
+// Forward declaring GetUniqueValue
+template <typename V, typename G>
+std::optional<G> GetUniqueValue(const librarian::MVariable<V, G>&,
+                                std::string_view variable_name,
+                                ViewOnlyContext ctx);
+// Forward declaring SatisfiesConstraints
+template <typename V, typename G>
+absl::Status SatisfiesConstraints(
+    const librarian::MVariable<V, G>& variable, std::string_view variable_name,
+    moriarty::moriarty_internal::ViewOnlyContext ctx, const G& value);
+}  // namespace moriarty::moriarty_internal
+
 namespace moriarty {
 namespace moriarty_internal {
 
@@ -70,7 +89,7 @@ class ViewOnlyContext {
 
     auto variable = GetVariable<T>(variable_name);
     if (!variable.ok()) return std::nullopt;
-    return variable->GetUniqueValueFromViewOnly(variable_name, *this);
+    return moriarty_internal::GetUniqueValue(*variable, variable_name, *this);
   }
 
   template <typename T>
@@ -86,6 +105,20 @@ class ViewOnlyContext {
   [[nodiscard]] bool ValueIsKnown(std::string_view variable_name) const {
     return values_.get().Contains(variable_name);
   }
+
+  // SatisfiesConstraints()
+  //
+  // Checks if `value` satisfies the constraints in `variable`. Returns a
+  // non-ok status with the reason if not. You may use other known variables in
+  // your constraints. Examples:
+  //
+  //   absl::Status s1 = SatisfiesConstraints(MInteger(AtMost("N")), 25);
+  //   absl::Status s2 = SatisfiesConstraints(MString(Length(5)), "hello");
+  template <typename T>
+    requires std::derived_from<T,
+                               librarian::MVariable<T, typename T::value_type>>
+  absl::Status SatisfiesConstraints(T variable,
+                                    const T::value_type& value) const;
 
  private:
   std::reference_wrapper<const VariableSet> variables_;

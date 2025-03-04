@@ -21,7 +21,6 @@
 #include <string_view>
 
 #include "src/contexts/internal/basic_istream_context.h"
-#include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/internal/name_context.h"
 #include "src/contexts/internal/view_only_context.h"
 #include "src/io_config.h"
@@ -34,12 +33,10 @@ namespace librarian {
 // All context that MVariable<>::Read() has access to.
 class ReaderContext : public moriarty_internal::NameContext,
                       public moriarty_internal::ViewOnlyContext,
-                      public moriarty_internal::BasicIStreamContext,
-                      public moriarty_internal::MutableValuesContext {
+                      public moriarty_internal::BasicIStreamContext {
   using NameContext = moriarty_internal::NameContext;
   using ViewOnlyContext = moriarty_internal::ViewOnlyContext;
   using BasicIStreamContext = moriarty_internal::BasicIStreamContext;
-  using MutableValuesContext = moriarty_internal::MutableValuesContext;
 
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
@@ -50,8 +47,12 @@ class ReaderContext : public moriarty_internal::NameContext,
                 moriarty_internal::ValueSet& values)
       : NameContext(variable_name),
         ViewOnlyContext(variables, values),
-        BasicIStreamContext(is, whitespace_strictness),
-        MutableValuesContext(values) {}
+        BasicIStreamContext(is, whitespace_strictness) {}
+  ReaderContext(NameContext name_context, ViewOnlyContext view_context,
+                BasicIStreamContext stream_context)
+      : NameContext(name_context),
+        ViewOnlyContext(view_context),
+        BasicIStreamContext(stream_context) {}
 
   // ********************************************
   // ** See parent classes for more functions. **

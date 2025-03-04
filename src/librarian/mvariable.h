@@ -41,6 +41,7 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/internal/view_only_context.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/assignment_context.h"
@@ -236,12 +237,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
     }
 
     return GetUniqueValueImpl(ctx);
-  }
-
-  [[nodiscard]] std::optional<ValueType> GetUniqueValueFromViewOnly(
-      std::string_view variable_name,
-      moriarty_internal::ViewOnlyContext ctx) const {
-    return GetUniqueValue(AnalysisContext(variable_name, ctx));
   }
 
   absl::Status IsSatisfiedWith(AnalysisContext ctx,
@@ -496,13 +491,15 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Reads a value from `ctx` using the constraints of this variable to
   // determine formatting, etc.
-  absl::Status ReadValue(ReaderContext ctx) override;
+  absl::Status ReadValue(
+      ReaderContext ctx,
+      moriarty_internal::MutableValuesContext values_ctx) const override;
 
   // PrintValue()
   //
   // Prints the value of this variable to `ctx` using the constraints on this
   // variable to determine formatting, etc.
-  absl::Status PrintValue(librarian::PrinterContext ctx) override;
+  absl::Status PrintValue(librarian::PrinterContext ctx) const override;
 
   // GetDifficultAbstractVariables()
   //
@@ -885,14 +882,16 @@ absl::Status MVariable<V, G>::ValueSatisfiesConstraints(
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::ReadValue(ReaderContext ctx) {
+absl::Status MVariable<V, G>::ReadValue(
+    ReaderContext ctx,
+    moriarty_internal::MutableValuesContext values_ctx) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
-  ctx.SetValue<V>(ctx.GetVariableName(), Read(ctx));
+  values_ctx.SetValue<V>(ctx.GetVariableName(), Read(ctx));
   return absl::OkStatus();
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::PrintValue(PrinterContext ctx) {
+absl::Status MVariable<V, G>::PrintValue(PrinterContext ctx) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
   MORIARTY_ASSIGN_OR_RETURN(G value, ctx.GetValue<V>(ctx.GetVariableName()));
   Print(ctx, value);
@@ -923,5 +922,26 @@ MVariable<V, G>::GetDifficultAbstractVariables(AnalysisContext ctx) const {
 
 }  // namespace librarian
 }  // namespace moriarty
+
+namespace moriarty::moriarty_internal {
+// Convenience functions for internal use only.
+
+template <typename V, typename G>
+[[nodiscard]] std::optional<G> GetUniqueValue(
+    const librarian::MVariable<V, G>& variable, std::string_view variable_name,
+    moriarty::moriarty_internal::ViewOnlyContext ctx) {
+  return variable.GetUniqueValue(
+      librarian::AnalysisContext(variable_name, ctx));
+}
+
+template <typename V, typename G>
+absl::Status SatisfiesConstraints(
+    const librarian::MVariable<V, G>& variable, std::string_view variable_name,
+    moriarty::moriarty_internal::ViewOnlyContext ctx, const G& value) {
+  return variable.IsSatisfiedWith(
+      librarian::AnalysisContext(variable_name, ctx), value);
+}
+
+}  // namespace moriarty::moriarty_internal
 
 #endif  // MORIARTY_SRC_LIBRARIAN_MVARIABLE_H_

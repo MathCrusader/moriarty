@@ -63,7 +63,6 @@ cc_library(
     deps = [
         "//src:io_config",
         "//src/contexts/internal:basic_istream_context",
-        "//src/contexts/internal:mutable_values_context",
         "//src/contexts/internal:name_context",
         "//src/contexts/internal:view_only_context",
     ],

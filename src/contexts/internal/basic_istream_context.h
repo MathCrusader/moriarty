@@ -37,14 +37,11 @@ class BasicIStreamContext {
 
   // ReadToken()
   //
-  // Reads the next token in the input stream.
+  // Reads the next token in the input stream. If there is whitespace before the
+  // next token:
   //
-  // If there is whitespace before the next token, depending on the whitespace
-  // strictness:
-  //
-  //  * If `WhitespaceStrictness::kFlexible`, then leading whitespace
-  //    will be ignored.
-  //  * If `WhitespaceStrictness::kPrecise`, then an exception will be thrown.
+  //  * `WhitespaceStrictness::kFlexible`: leading whitespace will be ignored
+  //  * `WhitespaceStrictness::kPrecise` : an exception will be thrown
   //
   // End of file will throw an exception.
   [[nodiscard]] std::string ReadToken();
