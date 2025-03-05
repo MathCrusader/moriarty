@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,17 +15,20 @@
 
 #include "src/moriarty.h"
 
+#include <cstdint>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/contexts/users/import_context.h"
+#include "src/io_config.h"
 #include "src/test_case.h"
 #include "src/testing/exporter_test_util.h"
 #include "src/testing/generator_test_util.h"
-#include "src/testing/importer_test_util.h"
 #include "src/testing/mtest_type.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -38,18 +42,17 @@ using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::moriarty_testing::IsValueNotFound;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::SingleIntegerExporter;
-using ::moriarty_testing::SingleIntegerFromVectorImporter;
 using ::moriarty_testing::SingleIntegerGenerator;
 using ::moriarty_testing::SingleStringGenerator;
 using ::moriarty_testing::TwoIntegerExporter;
 using ::moriarty_testing::TwoIntegerGenerator;
 using ::moriarty_testing::TwoIntegerGeneratorWithRandomness;
 using ::moriarty_testing::TwoTestTypeWrongTypeExporter;
-using ::moriarty_testing::TwoVariableFromVectorImporter;
 using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::HasSubstr;
 using ::testing::Le;
+using ::testing::Pair;
 using ::testing::SizeIs;
 
 TEST(MoriartyTest, SetNumCasesWorksForValidInput) {
@@ -293,54 +296,129 @@ TEST(MoriartyTest, GeneralConstraintsAreConsideredInGenerators) {
   }
 }
 
-TEST(MoriartyTest, ImporterShouldProperlyImportData) {
-  using Case = ExampleTestCase;
-  Moriarty M;
-  MORIARTY_EXPECT_OK(
-      M.ImportTestCases(SingleIntegerFromVectorImporter({1, 2, 3, 4})));
-  std::vector<ExampleTestCase> test_cases;
-  SingleIntegerExporter exporter(&test_cases);
-  M.ExportTestCases(exporter);
+// -----------------------------------------------------------------------------
+//  Import and Export Helpers
+// -----------------------------------------------------------------------------
 
-  EXPECT_THAT(test_cases, ElementsAre(Case({.n = 1}), Case({.n = 2}),
-                                      Case({.n = 3}), Case({.n = 4})));
+// [ {X = 1}, {X = 2}, ..., {X = n} ]
+std::vector<ConcreteTestCase> ImportX(ImportContext ctx, int n) {
+  std::vector<ConcreteTestCase> cases;
+  for (int i = 1; i <= n; i++) {
+    cases.push_back(ConcreteTestCase().SetValue<MInteger>("X", i));
+  }
+  return cases;
+}
+std::vector<int64_t> ExportX(ExportContext ctx,
+                             std::span<const ConcreteTestCase> cases) {
+  std::vector<int64_t> values;
+  for (const ConcreteTestCase& c : cases) {
+    values.push_back(c.GetValue<MInteger>("X"));
+  }
+  return values;
+}
+
+// [ {R=1, S=11}, {R=2, S=22}, {R=3, S=33}, ..., {R=n,S=11*n} ]
+std::vector<ConcreteTestCase> ImportRS(ImportContext ctx, int n) {
+  std::vector<ConcreteTestCase> cases;
+  for (int i = 1; i <= n; i++) {
+    cases.push_back(
+        ConcreteTestCase().SetValue<MInteger>("R", i).SetValue<MInteger>(
+            "S", i * 11));
+  }
+  return cases;
+}
+std::vector<std::pair<int64_t, int64_t>> ExportRS(
+    ExportContext ctx, std::span<const ConcreteTestCase> cases) {
+  std::vector<std::pair<int64_t, int64_t>> values;
+  for (const ConcreteTestCase& c : cases) {
+    values.emplace_back(c.GetValue<MInteger>("R"), c.GetValue<MInteger>("S"));
+  }
+  return values;
+}
+
+// [ {A = read()}, {A = read()}, ..., {A = read()} ]
+std::vector<ConcreteTestCase> ImportA(ImportContext ctx, int n) {
+  std::vector<ConcreteTestCase> cases;
+  for (int i = 0; i < n; i++) {
+    if (i) ctx.ReadWhitespace(Whitespace::kSpace);
+    int64_t A = std::stoll(ctx.ReadToken());
+    cases.push_back(ConcreteTestCase().SetValue<MInteger>("A", A));
+  }
+  ctx.ReadEof();
+  return cases;
+}
+void ExportA(ExportContext ctx, std::span<const ConcreteTestCase> cases) {
+  for (const ConcreteTestCase& c : cases) {
+    ctx.PrintVariableFrom("A", c);
+    ctx.PrintWhitespace(Whitespace::kNewline);
+  }
+}
+
+TEST(MoriartyTest, ImportAndExportShouldWorkTypicalCase) {
+  {  // Single variable
+    Moriarty M;
+    M.ImportTestCases([](ImportContext ctx) { return ImportX(ctx, 5); });
+
+    std::vector<int64_t> result;
+    M.ExportTestCases(
+        [&result](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
+          result = ExportX(ctx, cases);
+        });
+    EXPECT_THAT(result, ElementsAre(1, 2, 3, 4, 5));
+  }
+  {  // Multiple variables
+    Moriarty M;
+    M.ImportTestCases([](ImportContext ctx) { return ImportRS(ctx, 3); });
+
+    std::vector<std::pair<int64_t, int64_t>> result;
+    M.ExportTestCases(
+        [&result](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
+          result = ExportRS(ctx, cases);
+        });
+    EXPECT_THAT(result, ElementsAre(Pair(1, 11), Pair(2, 22), Pair(3, 33)));
+  }
+}
+
+TEST(MoriartyTest, ImportAndExportWithIOStreamsShouldWork) {
+  std::stringstream ss_in("1 2 3 4 5 6");
+  Moriarty M;
+  M.AddVariable("A", MInteger());
+  M.ImportTestCases([](ImportContext ctx) { return ImportA(ctx, 6); },
+                    ImportOptions{.is = ss_in});
+
+  std::stringstream ss_out;
+  M.ExportTestCases(ExportA, {.os = ss_out});
+  EXPECT_EQ(ss_out.str(), "1\n2\n3\n4\n5\n6\n");
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesWorksWhenAllVariablesAreValid) {
   Moriarty M;
-  M.AddVariable("N", MInteger().Between(1, 5));
-  MORIARTY_EXPECT_OK(
-      M.ImportTestCases(SingleIntegerFromVectorImporter({1, 2, 3, 4, 5})));
+  M.AddVariable("X", MInteger(Between(1, 5)));
+  M.ImportTestCases([](ImportContext ctx) { return ImportX(ctx, 5); });
   MORIARTY_EXPECT_OK(M.TryValidateTestCases());
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSingleVariableInvalid) {
   Moriarty M;
-  M.AddVariable("N", MInteger().Between(1, 3));
-  MORIARTY_EXPECT_OK(
-      M.ImportTestCases(SingleIntegerFromVectorImporter({1, 2, 3, 4, 5})));
-
+  M.AddVariable("X", MInteger(Between(1, 3)));
+  M.ImportTestCases([](ImportContext ctx) { return ImportX(ctx, 5); });
   EXPECT_THAT(M.TryValidateTestCases(), IsUnsatisfiedConstraint("Case 4"));
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSomeVariableInvalid) {
   Moriarty M;
-  M.AddVariable("R", MInteger().Between(1, 3))
-      .AddVariable("S", MInteger().Between(10, 30));
-  MORIARTY_EXPECT_OK(M.ImportTestCases(
-      TwoVariableFromVectorImporter({{1, 11}, {2, 22}, {3, 33}, {4, 44}})));
-
+  M.AddVariable("R", MInteger(Between(1, 3)))
+      .AddVariable("S", MInteger(Between(10, 30)));
+  M.ImportTestCases([](ImportContext ctx) { return ImportRS(ctx, 4); });
   EXPECT_THAT(M.TryValidateTestCases(), IsUnsatisfiedConstraint("Case 3"));
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
   Moriarty M;
   M.AddVariable("R", MInteger().Between(1, 3))
-      .AddVariable("X", MInteger().Between(10, 30));  // Importer imports "S"
-  MORIARTY_EXPECT_OK(M.ImportTestCases(
-      TwoVariableFromVectorImporter({{1, 11}, {2, 22}, {3, 33}, {4, 44}})));
-
-  EXPECT_THAT(M.TryValidateTestCases(), IsValueNotFound("X"));
+      .AddVariable("q", MInteger().Between(10, 30));  // Importer uses S, not q
+  M.ImportTestCases([](ImportContext ctx) { return ImportRS(ctx, 4); });
+  EXPECT_THAT(M.TryValidateTestCases(), IsValueNotFound("q"));
 }
 
 TEST(MoriartyTest, ApproximateGenerationLimitStopsGenerationEarly) {

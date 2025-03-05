@@ -46,6 +46,11 @@ class PrinterContext : public moriarty_internal::NameContext,
       : NameContext(variable_name),
         ViewOnlyContext(variables, values),
         OStreamBase(os) {}
+  PrinterContext(NameContext name_context, ViewOnlyContext view_context,
+                 OStreamBase stream_context)
+      : NameContext(name_context),
+        ViewOnlyContext(view_context),
+        OStreamBase(stream_context) {}
 
   // ********************************************
   // ** See parent classes for more functions. **

@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -26,8 +27,12 @@
 
 #include <concepts>
 #include <cstdint>
+#include <functional>
+#include <iostream>
+#include <istream>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -36,6 +41,8 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
+#include "src/contexts/users/export_context.h"
+#include "src/contexts/users/import_context.h"
 #include "src/exporter.h"
 #include "src/generator.h"
 #include "src/importer.h"
@@ -43,11 +50,25 @@
 #include "src/internal/status_utils.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/test_case.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
+
+struct ExportOptions {
+  // The output stream to write to.
+  std::ostream& os = std::cout;
+};
+
+// TODO: Auto-Validate?
+struct ImportOptions {
+  // The input stream to read from.
+  std::istream& is = std::cin;
+  // How strict the importer should be about whitespace.
+  WhitespaceStrictness whitespace_strictness = WhitespaceStrictness::kPrecise;
+};
 
 // Moriarty
 //
@@ -232,10 +253,17 @@ class Moriarty {
     requires std::derived_from<T, Importer>
   absl::Status ImportTestCases(T importer);
 
+  using ImportFn = std::function<std::vector<ConcreteTestCase>(ImportContext)>;
+  using ExportFn =
+      std::function<void(ExportContext, std::span<const ConcreteTestCase>)>;
+
+  void ImportTestCases(ImportFn fn, ImportOptions options = {});
+  void ExportTestCases(ExportFn fn, ExportOptions options = {}) const;
+
   // TryValidateTestCases()
   //
-  // Checks if all variables in all test cases are valid. If there are multiple
-  // failures, this will return one of them.
+  // Checks if all variables in all test cases are valid. If there are
+  // multiple failures, this will return one of them.
   absl::Status TryValidateTestCases();
 
   // SetApproximateGenerationLimit()
@@ -331,23 +359,6 @@ void Moriarty::ExportTestCases(T exporter) {
   manager.SetGeneralConstraints(variables_);
 
   exporter.ExportTestCases();
-}
-
-template <typename T>
-  requires std::derived_from<T, Importer>
-absl::Status Moriarty::ImportTestCases(T importer) {
-  moriarty_internal::ImporterManager(&importer).SetGeneralConstraints(
-      variables_);
-
-  MORIARTY_RETURN_IF_ERROR(importer.ImportTestCases()) << "Importer failed.";
-  for (moriarty_internal::ValueSet values :
-       moriarty_internal::ImporterManager(&importer).GetTestCases()) {
-    assigned_test_cases_.push_back(std::move(values));
-    test_case_metadata_.push_back(
-        TestCaseMetadata().SetTestCaseNumber(assigned_test_cases_.size()));
-  }
-
-  return absl::OkStatus();
 }
 
 }  // namespace moriarty

@@ -21,6 +21,7 @@
 #include <any>
 #include <concepts>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -53,18 +54,17 @@ class TestCase {
  public:
   // SetValue()
   //
-  // Sets the variable `variable_name` to a specific `value`. The MVariable of
-  // `variable_name` must match the MVariable at the global context.
+  // Sets the variable `variable_name` to be exactly `value`. Example:
   //
-  // Example:
-  //
-  //     TestCase()
-  //        .SetValue<MString>("X", "hello")
-  //        .SetValue<MInteger>("Y", 3);
+  // TestCase()
+  //    .SetValue<MString>("X", "hello")
+  //    .SetValue<MInteger>("Y", 3);
   //
   // The following are logically equivalent:
-  //  * SetValue<MCustomType>("X", value);
+  //  * SetValue<MType>("X", value);
   //  * ConstrainVariable("X", Exactly(value));
+  //
+  // See `ConstrainVariable()`.
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
@@ -75,34 +75,32 @@ class TestCase {
   // Adds extra constraints to `variable_name`. `constraints` will be
   // merged with the variable at global context.
   //
-  // Examples:
+  // Examples (2nd and 3rd are equivalent):
   //
-  //     // X is one of {10, 11, 12, ... , 20}.
-  //     TestCase().ConstrainVariable("X", MInteger().Between(10, 20));
+  // TC1.ConstrainVariable("X", MInteger(Between(10, 20)));
+  // TC2.ConstrainVariable("X", MInteger(Between(10, 15), Odd()));
+  // TC3.ConstrainVariable("X", MInteger(Between(10, 15)))
+  //    .ConstrainVariable("X", MInteger(Odd()));
   //
-  //     // X is one of {11, 13, 15}.
-  //     TestCase()
-  //         .ConstrainVariable("X", MInteger().Between(10, 15).IsOdd());
+  // If "X" was `Between(1, 12)` in the global context, then it is one
+  // of {10, 11, 12} now:
   //
-  //     // Equivalent to above. X is one of {11, 13, 15}.
-  //     TestCase()
-  //         .ConstrainVariable("X", MInteger().Between(10, 15))
-  //         .ConstrainVariable("X", MInteger().IsOdd());
+  // TC.ConstrainVariable("X", MInteger(Between(10, 20)));
   //
-  //     // If "X" was `Between(1, 12)` in the global context, then it is one
-  //     // of {10, 11, 12} now.
-  //     TestCase().ConstrainVariable("X", MInteger().Between(10, 20));
+  // See `SetValue()`.
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
   TestCase& ConstrainVariable(absl::string_view variable_name, T constraints);
 
-  // ConstrainAnonymousVariable()
+  // WithScenario()
   //
-  // May be deprecated in the future. Prefer to use `ConstrainVariable()`.
-  //
+  // This TestCase is covering this `scenario`.
+  TestCase& WithScenario(Scenario scenario);
+
   // Adds extra constraints to a variable. This version is for when you do not
-  // know the exact type of the variable.
+  // know the exact type of the variable. Prefer to use `ConstrainVariable()`.
+  // This function may be removed in the future.
   TestCase& ConstrainAnonymousVariable(
       absl::string_view variable_name,
       const moriarty_internal::AbstractVariable& constraints);
@@ -111,13 +109,9 @@ class TestCase {
   // you're doing. `value` must have a particular memory layout, and if you pass
   // the wrong type, this will invoke undefined behaviour. Your program may or
   // may not not crash, and will likely give weird or inconsistent results.
+  // Moreover, this function may be removed at any time.
   TestCase& UnsafeSetAnonymousValue(std::string_view variable_name,
                                     std::any value);
-
-  // WithScenario()
-  //
-  // This TestCase is covering this `scenario`.
-  TestCase& WithScenario(Scenario scenario);
 
   // FIXME: Remove after Context refactor
   void SetVariables(moriarty_internal::VariableSet variables) {
@@ -142,22 +136,34 @@ class ConcreteTestCase {
  public:
   // SetValue()
   //
-  // Sets the variable `variable_name` to a specific `value`.
+  // Sets the variable `variable_name` to be exactly `value`. Example:
   //
-  // Example:
-  //     ConcreteTestCase()
-  //        .SetValue<MString>("X", "hello")
-  //        .SetValue<MInteger>("Y", 3);
+  // ConcreteTestCase()
+  //    .SetValue<MString>("X", "hello")
+  //    .SetValue<MInteger>("Y", 3);
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
   ConcreteTestCase& SetValue(absl::string_view variable_name,
                              T::value_type value);
 
+  // GetValue()
+  //
+  // Returns the value of the variable `variable_name`.
+  template <typename T>
+    requires std::derived_from<T,
+                               librarian::MVariable<T, typename T::value_type>>
+  T::value_type GetValue(absl::string_view variable_name) const {
+    auto value = values_.Get<T>(variable_name);
+    if (!value.ok()) throw std::runtime_error(value.status().ToString());
+    return *value;
+  }
+
   // This is a dangerous function that should only be used if you know what
   // you're doing. `value` must have a particular memory layout, and if you pass
   // the wrong type, this will invoke undefined behaviour. Your program may or
   // may not not crash, and will likely give weird or inconsistent results.
+  // Moreover, this function may be removed at any time.
   ConcreteTestCase& UnsafeSetAnonymousValue(std::string_view variable_name,
                                             std::any value);
 
@@ -166,6 +172,8 @@ class ConcreteTestCase {
 
   friend moriarty_internal::ValueSet UnsafeExtractConcreteTestCaseInternals(
       const ConcreteTestCase& test_case);
+  friend void UnsafeSetConcreteTestCaseInternals(
+      ConcreteTestCase& test_case, moriarty_internal::ValueSet values);
 };
 
 // TestCaseMetadata
@@ -255,6 +263,8 @@ namespace moriarty {
 TCInternals UnsafeExtractTestCaseInternals(const TestCase& test_case);
 moriarty_internal::ValueSet UnsafeExtractConcreteTestCaseInternals(
     const ConcreteTestCase& test_case);
+void UnsafeSetConcreteTestCaseInternals(ConcreteTestCase& test_case,
+                                        moriarty_internal::ValueSet values);
 
 }  // namespace moriarty
 

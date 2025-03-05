@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +18,7 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -27,6 +29,8 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
+#include "src/contexts/users/export_context.h"
+#include "src/contexts/users/import_context.h"
 #include "src/generator.h"
 #include "src/internal/analysis_bootstrap.h"
 #include "src/internal/status_utils.h"
@@ -175,6 +179,29 @@ absl::Status Moriarty::ValidateVariableName(absl::string_view name) {
   //   return absl::InvalidArgumentError(
   //       "Variable name must start with an alphabetic character");
   return absl::OkStatus();
+}
+
+void Moriarty::ImportTestCases(Moriarty::ImportFn fn, ImportOptions options) {
+  ImportContext ctx(variables_, options.is, options.whitespace_strictness);
+
+  std::vector<ConcreteTestCase> test_cases = fn(ctx);
+  for (const ConcreteTestCase& test_case : test_cases) {
+    assigned_test_cases_.push_back(
+        UnsafeExtractConcreteTestCaseInternals(test_case));
+    test_case_metadata_.push_back(
+        TestCaseMetadata().SetTestCaseNumber(assigned_test_cases_.size()));
+  }
+}
+
+void Moriarty::ExportTestCases(ExportFn fn, ExportOptions options) const {
+  ExportContext ctx(variables_, options.os);
+  std::vector<ConcreteTestCase> test_cases;
+  for (const moriarty_internal::ValueSet& values : assigned_test_cases_) {
+    test_cases.push_back(ConcreteTestCase());
+    UnsafeSetConcreteTestCaseInternals(test_cases.back(), values);
+  }
+
+  fn(ctx, test_cases);
 }
 
 }  // namespace moriarty

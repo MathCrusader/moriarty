@@ -125,6 +125,8 @@ cc_library(
         ":generator",
         ":importer",
         ":test_case",
+        "//src/contexts/users:export_context",
+        "//src/contexts/users:import_context",
         "//src/internal:status_utils",
         "//src/internal:value_set",
         "//src/internal:variable_set",

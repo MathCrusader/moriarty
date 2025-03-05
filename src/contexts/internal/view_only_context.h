@@ -32,7 +32,7 @@ class MVariable;  // Forward declaring MVariable
 }
 
 namespace moriarty::moriarty_internal {
-class ViewOnlyContext;  // Forward declaring MVariable
+class ViewOnlyContext;  // Forward declaring
 // Forward declaring GetUniqueValue
 template <typename V, typename G>
 std::optional<G> GetUniqueValue(const librarian::MVariable<V, G>&,
