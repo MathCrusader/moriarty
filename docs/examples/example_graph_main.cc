@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,12 +17,14 @@
 
 #include <iostream>
 #include <ostream>
+#include <span>
 
 #include "docs/examples/example_graph.h"
 #include "docs/examples/mexample_graph.h"
-#include "src/exporter.h"
+#include "src/contexts/users/export_context.h"
 #include "src/generator.h"
 #include "src/moriarty.h"
+#include "src/test_case.h"
 #include "src/variables/minteger.h"
 
 using ::moriarty::MInteger;
@@ -36,18 +39,16 @@ class PurelyRandom : public moriarty::Generator {
 };
 
 // Exporter that prints the Graph to std::cout.
-class GraphPrinter : public moriarty::Exporter {
- public:
-  void ExportTestCase() override {
-    ExampleGraph G = GetValue<MExampleGraph>("G");
+void PrintGraph(moriarty::ExportContext ctx,
+                std::span<const moriarty::ConcreteTestCase>) {
+  ExampleGraph G = *ctx.GetValue<MExampleGraph>("G");
 
-    // Simply print to screen
-    std::cout << G.num_nodes << " " << G.edges.size() << '\n';
-    for (const auto& [u, v] : G.edges) {
-      std::cout << u << " " << v << '\n';
-    }
+  // Simply print to screen
+  std::cout << G.num_nodes << " " << G.edges.size() << '\n';
+  for (const auto& [u, v] : G.edges) {
+    std::cout << u << " " << v << '\n';
   }
-};
+}
 
 int main() {
   Moriarty M =
@@ -61,5 +62,5 @@ int main() {
           .AddGenerator("Random", PurelyRandom());
 
   M.GenerateTestCases();
-  M.ExportTestCases(GraphPrinter());
+  M.ExportTestCases(PrintGraph);
 }

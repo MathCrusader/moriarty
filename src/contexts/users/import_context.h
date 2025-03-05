@@ -18,6 +18,7 @@
 #define MORIARTY_SRC_CONTEXTS_USER_IMPORT_CONTEXT_H_
 
 #include <concepts>
+#include <iostream>
 #include <istream>
 #include <string_view>
 
@@ -85,8 +86,9 @@ class ImportContext : public moriarty_internal::ViewOnlyContext,
     auto status = variable.ReadValue(reader_ctx, mutable_values_ctx);
     if (!status.ok()) throw std::runtime_error(status.ToString());
 
+    // * hides a StatusOr<>
     test_case.UnsafeSetAnonymousValue(variable_name,
-                                      values.UnsafeGet(variable_name));
+                                      *values.UnsafeGet(variable_name));
   }
 
  private:

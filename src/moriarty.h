@@ -27,12 +27,8 @@
 
 #include <concepts>
 #include <cstdint>
-#include <functional>
-#include <iostream>
-#include <istream>
 #include <memory>
 #include <optional>
-#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -41,34 +37,17 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
-#include "src/contexts/users/export_context.h"
-#include "src/contexts/users/import_context.h"
-#include "src/exporter.h"
 #include "src/generator.h"
-#include "src/importer.h"
+#include "src/import_export.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/status_utils.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/test_case.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
-
-struct ExportOptions {
-  // The output stream to write to.
-  std::ostream& os = std::cout;
-};
-
-// TODO: Auto-Validate?
-struct ImportOptions {
-  // The input stream to read from.
-  std::istream& is = std::cin;
-  // How strict the importer should be about whitespace.
-  WhitespaceStrictness whitespace_strictness = WhitespaceStrictness::kPrecise;
-};
 
 // Moriarty
 //
@@ -235,28 +214,6 @@ class Moriarty {
   // version.
   absl::Status TryGenerateTestCases();
 
-  // ExportTestCases()
-  //
-  // Exports all cases in order using the provided exporter. This exporter must
-  // be derived from `Exporter`. `exporter.Export()` will be called exactly
-  // once.
-  template <typename T>
-    requires std::derived_from<T, Exporter>
-  void ExportTestCases(T exporter);
-
-  // ImportTestCases()
-  //
-  // Imports all cases in order using the provided importer. This importer must
-  // be derived from `Importer`. `importer.ImportTestCases()` will be called
-  // exactly once.
-  template <typename T>
-    requires std::derived_from<T, Importer>
-  absl::Status ImportTestCases(T importer);
-
-  using ImportFn = std::function<std::vector<ConcreteTestCase>(ImportContext)>;
-  using ExportFn =
-      std::function<void(ExportContext, std::span<const ConcreteTestCase>)>;
-
   void ImportTestCases(ImportFn fn, ImportOptions options = {});
   void ExportTestCases(ExportFn fn, ExportOptions options = {}) const;
 
@@ -348,17 +305,6 @@ Moriarty& Moriarty::AddGenerator(absl::string_view name, T generator,
   generators_.push_back(std::move(gen));
 
   return *this;
-}
-
-template <typename T>
-  requires std::derived_from<T, Exporter>
-void Moriarty::ExportTestCases(T exporter) {
-  moriarty_internal::ExporterManager manager(&exporter);
-  manager.SetAllValues(assigned_test_cases_);
-  manager.SetTestCaseMetadata(test_case_metadata_);
-  manager.SetGeneralConstraints(variables_);
-
-  exporter.ExportTestCases();
 }
 
 }  // namespace moriarty

@@ -56,6 +56,12 @@ absl::Status TestCase::DistributeScenarios() {
   return absl::OkStatus();
 }
 
+ConcreteTestCase& ConcreteTestCase::UnsafeSetAnonymousValue(
+    std::string_view variable_name, std::any value) {
+  values_.UnsafeSet(variable_name, std::move(value));
+  return *this;
+}
+
 TCInternals UnsafeExtractTestCaseInternals(const TestCase& test_case) {
   return {test_case.variables_, test_case.values_, test_case.scenarios_};
 }

@@ -1,3 +1,4 @@
+# Copyright 2025 Darcy Best
 # Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,9 +32,9 @@ cc_binary(
     deps = [
         ":example_graph",
         ":mexample_graph",
-        "//src:exporter",
         "//src:generator",
         "//src:moriarty",
+        "//src/contexts/users:export_context",
         "//src/variables:minteger",
     ],
 )

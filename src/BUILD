@@ -39,28 +39,6 @@ cc_library(
 )
 
 cc_library(
-    name = "exporter",
-    srcs = [
-        "exporter.cc",
-    ],
-    hdrs = [
-        "exporter.h",
-    ],
-    deps = [
-        ":errors",
-        ":test_case",
-        "//src/internal:abstract_variable",
-        "//src/internal:status_utils",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
-        "//src/librarian:mvariable",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-    ],
-)
-
-cc_library(
     name = "generator",
     srcs = [
         "generator.cc",
@@ -92,19 +70,9 @@ cc_library(
 )
 
 cc_library(
-    name = "importer",
-    srcs = ["importer.cc"],
-    hdrs = ["importer.h"],
-    deps = [
-        "//src/internal:abstract_variable",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
-        "//src/librarian:mvariable",
-        "//src/util/status_macro:status_macros",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-    ],
+    name = "import_export",
+    hdrs = ["import_export.h"],
+    deps = [":io_config"],
 )
 
 cc_library(
@@ -121,9 +89,8 @@ cc_library(
         "moriarty.h",
     ],
     deps = [
-        ":exporter",
         ":generator",
-        ":importer",
+        ":import_export",
         ":test_case",
         "//src/contexts/users:export_context",
         "//src/contexts/users:import_context",
@@ -168,17 +135,11 @@ cc_library(
     srcs = ["simple_io.cc"],
     hdrs = ["simple_io.h"],
     deps = [
-        ":exporter",
-        ":importer",
-        "//src/contexts/librarian:printer_context",
-        "//src/contexts/librarian:reader_context",
-        "//src/internal:abstract_variable",
-        "//src/util/status_macro:status_macros",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/types:span",
+        ":import_export",
+        "//src:test_case",
+        "//src/contexts/users:export_context",
+        "//src/contexts/users:import_context",
+        "//src/variables:minteger",
     ],
 )
 
@@ -220,30 +181,6 @@ cc_test(
 )
 
 cc_test(
-    name = "exporter_test",
-    size = "small",
-    srcs = [
-        "exporter_test.cc",
-    ],
-    deps = [
-        ":errors",
-        ":exporter",
-        ":test_case",
-        "//src/internal:abstract_variable",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
-        "//src/testing:status_test_util",
-        "//src/util/test_status_macro:status_testutil",
-        "//src/variables:minteger",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
     name = "generator_test",
     size = "small",
     srcs = [
@@ -273,22 +210,6 @@ cc_test(
 )
 
 cc_test(
-    name = "importer_test",
-    srcs = ["importer_test.cc"],
-    deps = [
-        ":importer",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
-        "//src/testing:status_test_util",
-        "//src/util/test_status_macro:status_testutil",
-        "//src/variables:minteger",
-        "//src/variables:mstring",
-        "@abseil-cpp//absl/status",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
     name = "moriarty_test",
     size = "small",
     srcs = [
@@ -297,9 +218,7 @@ cc_test(
     deps = [
         ":moriarty",
         ":test_case",
-        "//src/testing:exporter_test_util",
         "//src/testing:generator_test_util",
-        "//src/testing:importer_test_util",
         "//src/testing:mtest_type",
         "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
@@ -313,13 +232,13 @@ cc_test(
     name = "simple_io_test",
     srcs = ["simple_io_test.cc"],
     deps = [
-        ":exporter",
-        ":importer",
+        ":import_export",
         ":simple_io",
         ":test_case",
+        "//src/contexts/users:export_context",
+        "//src/contexts/users:import_context",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "//src/testing:exporter_test_util",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
         "@abseil-cpp//absl/log:absl_check",

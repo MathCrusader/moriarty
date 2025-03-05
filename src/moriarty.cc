@@ -181,7 +181,7 @@ absl::Status Moriarty::ValidateVariableName(absl::string_view name) {
   return absl::OkStatus();
 }
 
-void Moriarty::ImportTestCases(Moriarty::ImportFn fn, ImportOptions options) {
+void Moriarty::ImportTestCases(ImportFn fn, ImportOptions options) {
   ImportContext ctx(variables_, options.is, options.whitespace_strictness);
 
   std::vector<ConcreteTestCase> test_cases = fn(ctx);

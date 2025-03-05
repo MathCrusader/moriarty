@@ -21,27 +21,22 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/exporter.h"
-#include "src/importer.h"
-#include "src/internal/value_set.h"
+#include "src/contexts/users/export_context.h"
+#include "src/contexts/users/import_context.h"
+#include "src/import_export.h"
 #include "src/internal/variable_set.h"
+#include "src/io_config.h"
 #include "src/test_case.h"
-#include "src/testing/exporter_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
 namespace {
 
-using ::moriarty::StatusIs;
-using ::moriarty_testing::ExampleTestCase;
-using ::moriarty_testing::GetExportedCases;
-using ::moriarty_testing::TwoIntegerExporter;
+using ::testing::AllOf;
 using ::testing::ElementsAre;
-using ::testing::HasSubstr;
 using ::testing::StrEq;
 using ::testing::VariantWith;
 
@@ -118,139 +113,118 @@ TEST(SimpleIOTest, UsingAllAddLineVariationsDoNotInteractPoorly) {
 // -----------------------------------------------------------------------------
 //  SimpleIOExporter
 
-TEST(SimpleIOExporterTest, ExportLinesWorksAsExpected) {
-  moriarty_internal::VariableSet variable_set;
-  ABSL_CHECK_OK(variable_set.AddVariable("N", MInteger()));
+TEST(SimpleIOExporterTest, ExporterSimpleCaseShouldWork) {
+  moriarty_internal::VariableSet variables;
+  ABSL_CHECK_OK(variables.AddVariable("N", MInteger()));
 
-  std::vector<moriarty_internal::ValueSet> value_sets(3);
-  value_sets[0].Set<MInteger>("N", 10);
-  value_sets[1].Set<MInteger>("N", 20);
-  value_sets[2].Set<MInteger>("N", 30);
+  std::vector<ConcreteTestCase> test_cases = {
+      ConcreteTestCase().SetValue<MInteger>("N", 10),
+      ConcreteTestCase().SetValue<MInteger>("N", 20),
+      ConcreteTestCase().SetValue<MInteger>("N", 30),
+  };
 
   std::stringstream ss;
-  SimpleIOExporter exporter = SimpleIO().AddLine("N").Exporter(ss);
+  ExportContext ctx(variables, ss);
+  ExportFn exporter = SimpleIO().AddLine("N").Exporter();
 
-  moriarty_internal::ExporterManager(&exporter).SetGeneralConstraints(
-      variable_set);
-  moriarty_internal::ExporterManager(&exporter).SetAllValues(value_sets);
-  moriarty_internal::ExporterManager(&exporter).SetTestCaseMetadata(
-      std::vector<TestCaseMetadata>(3));
-
-  {
-    exporter.ExportTestCases();
-    EXPECT_THAT(ss.str(), StrEq("10\n20\n30\n"));
-  }
+  exporter(ctx, test_cases);
+  EXPECT_THAT(ss.str(), StrEq("10\n20\n30\n"));
 }
 
-TEST(SimpleIOExporterTest, ExportHeaderAndFooterLinesWorksAsExpected) {
-  moriarty_internal::VariableSet variable_set;
-  ABSL_CHECK_OK(variable_set.AddVariable("a", MInteger()));
-  ABSL_CHECK_OK(variable_set.AddVariable("b", MInteger()));
-  ABSL_CHECK_OK(variable_set.AddVariable("c", MInteger()));
+TEST(SimpleIOExporterTest, ExportHeaderAndFooterLinesShouldWork) {
+  moriarty_internal::VariableSet variables;
+  ABSL_CHECK_OK(variables.AddVariable("a", MInteger()));
+  ABSL_CHECK_OK(variables.AddVariable("b", MInteger()));
+  ABSL_CHECK_OK(variables.AddVariable("c", MInteger()));
 
-  std::vector<moriarty_internal::ValueSet> value_sets(3);
-  value_sets[0].Set<MInteger>("a", 10);
-  value_sets[0].Set<MInteger>("b", 20);
-  value_sets[0].Set<MInteger>("c", 30);
-
-  value_sets[1].Set<MInteger>("a", 11);
-  value_sets[1].Set<MInteger>("b", 21);
-  value_sets[1].Set<MInteger>("c", 31);
-
-  value_sets[2].Set<MInteger>("a", 12);
-  value_sets[2].Set<MInteger>("b", 22);
-  value_sets[2].Set<MInteger>("c", 32);
+  std::vector<ConcreteTestCase> test_cases = {ConcreteTestCase()
+                                                  .SetValue<MInteger>("a", 10)
+                                                  .SetValue<MInteger>("b", 20)
+                                                  .SetValue<MInteger>("c", 30),
+                                              ConcreteTestCase()
+                                                  .SetValue<MInteger>("a", 11)
+                                                  .SetValue<MInteger>("b", 21)
+                                                  .SetValue<MInteger>("c", 31),
+                                              ConcreteTestCase()
+                                                  .SetValue<MInteger>("a", 12)
+                                                  .SetValue<MInteger>("b", 22)
+                                                  .SetValue<MInteger>("c", 32)};
 
   std::stringstream ss;
-  SimpleIOExporter exporter = SimpleIO()
-                                  .AddHeaderLine(StringLiteral("start"))
-                                  .AddLine(StringLiteral("line"), "a", "b", "c")
-                                  .AddFooterLine(StringLiteral("end"))
-                                  .Exporter(ss);
+  ExportContext ctx(variables, ss);
+  ExportFn exporter = SimpleIO()
+                          .AddHeaderLine(StringLiteral("start"))
+                          .AddLine(StringLiteral("line"), "a", "b", "c")
+                          .AddFooterLine(StringLiteral("end"))
+                          .Exporter();
 
-  moriarty_internal::ExporterManager(&exporter).SetGeneralConstraints(
-      variable_set);
-  moriarty_internal::ExporterManager(&exporter).SetAllValues(value_sets);
-  moriarty_internal::ExporterManager(&exporter).SetTestCaseMetadata(
-      std::vector<TestCaseMetadata>(3));
-
-  {
-    exporter.ExportTestCases();
-    EXPECT_THAT(ss.str(), StrEq(R"(start
+  exporter(ctx, test_cases);
+  EXPECT_THAT(ss.str(), StrEq(R"(start
 line 10 20 30
 line 11 21 31
 line 12 22 32
 end
 )"));
-  }
 }
 
-TEST(SimpleIOExporterTest, ExportWithNumberOfTestCasesPrintsCases) {
-  moriarty_internal::VariableSet variable_set;
-  ABSL_CHECK_OK(variable_set.AddVariable("a", MInteger()));
-  ABSL_CHECK_OK(variable_set.AddVariable("b", MInteger()));
-  ABSL_CHECK_OK(variable_set.AddVariable("c", MInteger()));
+TEST(SimpleIOExporterTest, ExportWithNumberOfTestCasesShouldPrintProperly) {
+  moriarty_internal::VariableSet variables;
+  ABSL_CHECK_OK(variables.AddVariable("a", MInteger()));
+  ABSL_CHECK_OK(variables.AddVariable("b", MInteger()));
+  ABSL_CHECK_OK(variables.AddVariable("c", MInteger()));
 
-  std::vector<moriarty_internal::ValueSet> value_sets(2);
-  value_sets[0].Set<MInteger>("a", 10);
-  value_sets[0].Set<MInteger>("b", 20);
-  value_sets[0].Set<MInteger>("c", 30);
-
-  value_sets[1].Set<MInteger>("a", 11);
-  value_sets[1].Set<MInteger>("b", 21);
-  value_sets[1].Set<MInteger>("c", 31);
+  std::vector<ConcreteTestCase> test_cases = {ConcreteTestCase()
+                                                  .SetValue<MInteger>("a", 10)
+                                                  .SetValue<MInteger>("b", 20)
+                                                  .SetValue<MInteger>("c", 30),
+                                              ConcreteTestCase()
+                                                  .SetValue<MInteger>("a", 11)
+                                                  .SetValue<MInteger>("b", 21)
+                                                  .SetValue<MInteger>("c", 31)};
 
   std::stringstream ss;
-  SimpleIOExporter exporter = SimpleIO()
-                                  .WithNumberOfTestCasesInHeader()
-                                  .AddLine("a", "b", "c")
-                                  .Exporter(ss);
+  ExportContext ctx(variables, ss);
+  ExportFn exporter = SimpleIO()
+                          .WithNumberOfTestCasesInHeader()
+                          .AddLine("a", "b", "c")
+                          .Exporter();
 
-  moriarty_internal::ExporterManager(&exporter).SetGeneralConstraints(
-      variable_set);
-  moriarty_internal::ExporterManager(&exporter).SetAllValues(value_sets);
-  moriarty_internal::ExporterManager(&exporter).SetTestCaseMetadata(
-      std::vector<TestCaseMetadata>(2));  // 2 = number of test cases
-
-  {
-    exporter.ExportTestCases();
-    EXPECT_THAT(ss.str(), StrEq(R"(2
+  exporter(ctx, test_cases);
+  EXPECT_THAT(ss.str(), StrEq(R"(2
 10 20 30
 11 21 31
 )"));
-  }
 }
 
 // -----------------------------------------------------------------------------
 //  SimpleIOImporter
 
-TEST(SimpleIOImporterTest, ImportLinesWorksAsExpected) {
-  using Case = ExampleTestCase;
-
-  moriarty_internal::VariableSet variable_set;
-  ABSL_CHECK_OK(variable_set.AddVariable("R", MInteger()));
-  ABSL_CHECK_OK(variable_set.AddVariable("S", MInteger()));
-
-  std::stringstream ss("1 11\n2 22\n3 33\n4 44\n");
-  SimpleIOImporter importer = SimpleIO().AddLine("R", "S").Importer(ss);
-  importer.SetNumTestCases(4);
-
-  moriarty_internal::ImporterManager(&importer).SetGeneralConstraints(
-      variable_set);
-
-  MORIARTY_ASSERT_OK(importer.ImportTestCases());
-  EXPECT_THAT(GetExportedCases<TwoIntegerExporter>(
-                  moriarty_internal::ImporterManager(&importer).GetTestCases()),
-              ElementsAre(Case({.r = 1, .s = 11}), Case({.r = 2, .s = 22}),
-                          Case({.r = 3, .s = 33}), Case({.r = 4, .s = 44})));
+MATCHER_P2(VariableIs, variable_name, value, "") {
+  ConcreteTestCase tc = arg;
+  return tc.GetValue<MInteger>(variable_name) == value;
 }
 
-TEST(SimpleIOImporterTest, ExportHeaderAndFooterLinesWorksAsExpected) {
-  using Case = ExampleTestCase;
+TEST(SimpleIOImporterTest, ImportInBasicCaseShouldWork) {
+  moriarty_internal::VariableSet variables;
+  ABSL_CHECK_OK(variables.AddVariable("R", MInteger()));
+  ABSL_CHECK_OK(variables.AddVariable("S", MInteger()));
 
-  moriarty_internal::VariableSet variable_set;
-  ABSL_CHECK_OK(variable_set.AddVariable("R", MInteger()));
-  ABSL_CHECK_OK(variable_set.AddVariable("S", MInteger()));
+  std::stringstream ss("1 11\n2 22\n3 33\n4 44\n");
+  ImportFn importer = SimpleIO().AddLine("R", "S").Importer(4);
+
+  ImportContext ctx(variables, ss, WhitespaceStrictness::kPrecise);
+
+  EXPECT_THAT(importer(ctx),
+              ElementsAre(AllOf(VariableIs("R", 1), VariableIs("S", 11)),
+                          AllOf(VariableIs("R", 2), VariableIs("S", 22)),
+                          AllOf(VariableIs("R", 3), VariableIs("S", 33)),
+                          AllOf(VariableIs("R", 4), VariableIs("S", 44))));
+}
+
+TEST(SimpleIOImporterTest, ExportHeaderAndFooterLinesShouldWork) {
+  moriarty_internal::VariableSet variables;
+  ABSL_CHECK_OK(variables.AddVariable("R", MInteger()));
+  ABSL_CHECK_OK(variables.AddVariable("S", MInteger()));
 
   std::stringstream ss(R"(hello
 1 XX
@@ -263,124 +237,106 @@ TEST(SimpleIOImporterTest, ExportHeaderAndFooterLinesWorksAsExpected) {
 44
 end
 )");
-  SimpleIOImporter importer = SimpleIO()
-                                  .AddHeaderLine(StringLiteral("hello"))
-                                  .AddLine("R", StringLiteral("XX"))
-                                  .AddLine("S")
-                                  .AddFooterLine(StringLiteral("end"))
-                                  .Importer(ss);
-  importer.SetNumTestCases(4);
+  ImportFn importer = SimpleIO()
+                          .AddHeaderLine(StringLiteral("hello"))
+                          .AddLine("R", StringLiteral("XX"))
+                          .AddLine("S")
+                          .AddFooterLine(StringLiteral("end"))
+                          .Importer(4);
 
-  moriarty_internal::ImporterManager(&importer).SetGeneralConstraints(
-      variable_set);
+  ImportContext ctx(variables, ss, WhitespaceStrictness::kPrecise);
 
-  MORIARTY_ASSERT_OK(importer.ImportTestCases());
-  EXPECT_THAT(GetExportedCases<TwoIntegerExporter>(
-                  moriarty_internal::ImporterManager(&importer).GetTestCases()),
-              ElementsAre(Case({.r = 1, .s = 11}), Case({.r = 2, .s = 22}),
-                          Case({.r = 3, .s = 33}), Case({.r = 4, .s = 44})));
+  EXPECT_THAT(importer(ctx),
+              ElementsAre(AllOf(VariableIs("R", 1), VariableIs("S", 11)),
+                          AllOf(VariableIs("R", 2), VariableIs("S", 22)),
+                          AllOf(VariableIs("R", 3), VariableIs("S", 33)),
+                          AllOf(VariableIs("R", 4), VariableIs("S", 44))));
 }
 
 TEST(SimpleIOImporterTest, ImportWrongTokenFails) {
   std::stringstream ss("these are wrong words");
-  SimpleIOImporter importer =
+  ImportFn importer =
       SimpleIO()
           .AddLine(StringLiteral("these"), StringLiteral("are"),
                    StringLiteral("right"), StringLiteral("words"))
-          .Importer(ss);
+          .Importer();
 
-  EXPECT_THAT(importer.ImportTestCases(),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("Expected to read 'right'")));
+  ImportContext ctx(moriarty_internal::VariableSet(), ss,
+                    WhitespaceStrictness::kPrecise);
+  EXPECT_THROW({ importer(ctx); }, std::runtime_error);
 }
 
 TEST(SimpleIOImporterTest, ImportWrongWhitespaceFails) {
-  moriarty_internal::VariableSet variable_set;
-  MORIARTY_ASSERT_OK(variable_set.AddVariable("R", MInteger()));
-  MORIARTY_ASSERT_OK(variable_set.AddVariable("S", MInteger()));
+  moriarty_internal::VariableSet variables;
+  MORIARTY_ASSERT_OK(variables.AddVariable("R", MInteger()));
+  MORIARTY_ASSERT_OK(variables.AddVariable("S", MInteger()));
 
   std::stringstream ss("1\t11\n");
-  SimpleIOImporter importer = SimpleIO().AddLine("R", "S").Importer(ss);
-  importer.SetNumTestCases(1);
+  ImportFn importer = SimpleIO().AddLine("R", "S").Importer();
 
-  moriarty_internal::ImporterManager(&importer).SetGeneralConstraints(
-      variable_set);
-
-  EXPECT_THROW(
-      { importer.ImportTestCases().IgnoreError(); }, std::runtime_error);
+  ImportContext ctx(moriarty_internal::VariableSet(), ss,
+                    WhitespaceStrictness::kPrecise);
+  EXPECT_THROW({ importer(ctx); }, std::runtime_error);
 }
 
-TEST(SimpleIOImporterTest, ImportWithNumberOfTestCasesInHeaderWorksAsExpected) {
-  using Case = ExampleTestCase;
-
-  moriarty_internal::VariableSet variable_set;
-  ABSL_CHECK_OK(variable_set.AddVariable("R", MInteger()));
-  ABSL_CHECK_OK(variable_set.AddVariable("S", MInteger()));
+TEST(SimpleIOImporterTest, ImportWithNumberOfTestCasesInHeaderShouldWork) {
+  moriarty_internal::VariableSet variables;
+  ABSL_CHECK_OK(variables.AddVariable("R", MInteger()));
+  ABSL_CHECK_OK(variables.AddVariable("S", MInteger()));
 
   std::stringstream ss("4\n1 11\n2 22\n3 33\n4 44\n");
-  SimpleIOImporter importer =
-      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer(ss);
+  ImportFn importer =
+      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
 
-  moriarty_internal::ImporterManager(&importer).SetGeneralConstraints(
-      variable_set);
-  MORIARTY_EXPECT_OK(importer.ImportTestCases());
-  EXPECT_THAT(GetExportedCases<TwoIntegerExporter>(
-                  moriarty_internal::ImporterManager(&importer).GetTestCases()),
-              ElementsAre(Case({.r = 1, .s = 11}), Case({.r = 2, .s = 22}),
-                          Case({.r = 3, .s = 33}), Case({.r = 4, .s = 44})));
+  ImportContext ctx(variables, ss, WhitespaceStrictness::kPrecise);
+
+  EXPECT_THAT(importer(ctx),
+              ElementsAre(AllOf(VariableIs("R", 1), VariableIs("S", 11)),
+                          AllOf(VariableIs("R", 2), VariableIs("S", 22)),
+                          AllOf(VariableIs("R", 3), VariableIs("S", 33)),
+                          AllOf(VariableIs("R", 4), VariableIs("S", 44))));
 }
 
 TEST(SimpleIOImporterTest,
      ImportWithNumberOfTestCasesInHeaderFailsOnTooHighNumberOfCases) {
-  moriarty_internal::VariableSet variable_set;
-  ABSL_CHECK_OK(variable_set.AddVariable("R", MInteger()));
-  ABSL_CHECK_OK(variable_set.AddVariable("S", MInteger()));
+  moriarty_internal::VariableSet variables;
+  ABSL_CHECK_OK(variables.AddVariable("R", MInteger()));
+  ABSL_CHECK_OK(variables.AddVariable("S", MInteger()));
 
   std::stringstream ss("6\n1 11\n2 22\n3 33\n4 44\n");
-  SimpleIOImporter importer =
-      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer(ss);
+  ImportFn importer =
+      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
 
-  moriarty_internal::ImporterManager(&importer).SetGeneralConstraints(
-      variable_set);
-
-  EXPECT_THROW(
-      { importer.ImportTestCases().IgnoreError(); }, std::runtime_error);
+  ImportContext ctx(variables, ss, WhitespaceStrictness::kPrecise);
+  EXPECT_THROW({ importer(ctx); }, std::runtime_error);
 }
 
 TEST(SimpleIOImporterTest,
      ImportWithNumberOfTestCasesInHeaderFailsOnNegativeNumberOfCases) {
-  moriarty_internal::VariableSet variable_set;
-  ABSL_CHECK_OK(variable_set.AddVariable("R", MInteger()));
-  ABSL_CHECK_OK(variable_set.AddVariable("S", MInteger()));
+  moriarty_internal::VariableSet variables;
+  ABSL_CHECK_OK(variables.AddVariable("R", MInteger()));
+  ABSL_CHECK_OK(variables.AddVariable("S", MInteger()));
 
   std::stringstream ss("-44\n1 11\n2 22\n3 33\n4 44\n");
-  SimpleIOImporter importer =
-      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer(ss);
+  ImportFn importer =
+      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
 
-  moriarty_internal::ImporterManager(&importer).SetGeneralConstraints(
-      variable_set);
-
-  EXPECT_THAT(importer.ImportTestCases(),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("Number of test cases must be nonnegative")));
+  ImportContext ctx(variables, ss, WhitespaceStrictness::kPrecise);
+  EXPECT_THROW({ importer(ctx); }, std::runtime_error);
 }
 
 TEST(SimpleIOImporterTest,
      ImportWithNumberOfTestCasesInHeaderFailsOnNonInteger) {
-  moriarty_internal::VariableSet variable_set;
-  ABSL_CHECK_OK(variable_set.AddVariable("R", MInteger()));
-  ABSL_CHECK_OK(variable_set.AddVariable("S", MInteger()));
+  moriarty_internal::VariableSet variables;
+  ABSL_CHECK_OK(variables.AddVariable("R", MInteger()));
+  ABSL_CHECK_OK(variables.AddVariable("S", MInteger()));
 
   std::stringstream ss("hello\n1 11\n2 22\n3 33\n4 44\n");
-  SimpleIOImporter importer =
-      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer(ss);
+  ImportFn importer =
+      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
 
-  moriarty_internal::ImporterManager(&importer).SetGeneralConstraints(
-      variable_set);
-
-  EXPECT_THAT(importer.ImportTestCases(),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("Unable to parse number of test cases")));
+  ImportContext ctx(variables, ss, WhitespaceStrictness::kPrecise);
+  EXPECT_THROW({ importer(ctx); }, std::runtime_error);
 }
 
 }  // namespace

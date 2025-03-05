@@ -19,21 +19,13 @@
 #define MORIARTY_SRC_SIMPLE_IO_H_
 
 #include <concepts>
-#include <iostream>
-#include <istream>
-#include <ostream>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
 
-#include "absl/status/status.h"
-#include "absl/strings/string_view.h"
-#include "absl/types/span.h"
-#include "src/contexts/internal/basic_istream_context.h"
-#include "src/contexts/internal/basic_ostream_context.h"
-#include "src/exporter.h"
-#include "src/importer.h"
+#include "src/import_export.h"
 
 namespace moriarty {
 
@@ -42,7 +34,7 @@ namespace moriarty {
 // A string literal. Stores an std::string and can cast to an std::string.
 class StringLiteral {
  public:
-  explicit StringLiteral(absl::string_view literal) : literal_(literal) {}
+  explicit StringLiteral(std::string_view literal) : literal_(literal) {}
   explicit operator std::string() const { return literal_; }
 
   bool operator==(const StringLiteral& other) const {
@@ -59,9 +51,6 @@ class StringLiteral {
 //  - `std::string`  : The name of a variable
 //  - `StringLiteral`: An exact string to be printed/read.
 using SimpleIOToken = std::variant<std::string, StringLiteral>;
-
-class SimpleIOExporter;  // Forward declaration.
-class SimpleIOImporter;  // Forward declaration.
 
 // SimpleIO
 //
@@ -133,21 +122,21 @@ class SimpleIO {
   // Exporter()
   //
   // Creates a SimpleIOExporter from the configuration provided by this class.
-  // The output will be printed to `os`.
-  [[nodiscard]] SimpleIOExporter Exporter(std::ostream& os) const;
+  // This can be passed into `Moriarty::ExportTestCases()`.
+  [[nodiscard]] ExportFn Exporter() const;
 
   // Importer()
   //
   // Creates a SimpleIOImporter from the configuration provided by this class.
-  // The output will be read from `is`.
-  [[nodiscard]] SimpleIOImporter Importer(std::istream& is) const;
+  // This can be passed into `Moriarty::ImportTestCases()`.
+  [[nodiscard]] ImportFn Importer(int number_of_test_cases = 1) const;
 
   // Access the lines
   using Line = std::vector<SimpleIOToken>;
-  const std::vector<Line>& LinesInHeader() const;
-  const std::vector<Line>& LinesPerTestCase() const;
-  const std::vector<Line>& LinesInFooter() const;
-  bool HasNumberOfTestCasesInHeader() const;
+  [[nodiscard]] std::vector<Line> LinesInHeader() const;
+  [[nodiscard]] std::vector<Line> LinesPerTestCase() const;
+  [[nodiscard]] std::vector<Line> LinesInFooter() const;
+  [[nodiscard]] bool HasNumberOfTestCasesInHeader() const;
 
  private:
   std::vector<Line> lines_in_header_;
@@ -160,79 +149,8 @@ class SimpleIO {
   std::vector<SimpleIOToken> GetTokens(Tokens&&... token);
 };
 
-// SimpleIOImporter
-//
-// Imports test cases using `SimpleIO` to orchestrate how to read the data.
-// By default, this importer will only read one test case. To alter this, use
-// either `WithNumberOfTestCasesInHeader` or `SetNumTestCases`.
-class SimpleIOImporter : public Importer {
- public:
-  explicit SimpleIOImporter(SimpleIO simple_io, std::istream& is);
-
-  // StartImport()
-  //
-  // Reads the header lines.
-  absl::Status StartImport() override;
-
-  // ImportTestCase()
-  //
-  // Reads lines from `AddLine()`.
-  absl::Status ImportTestCase() override;
-
-  // EndImport()
-  //
-  // Reads the footer lines.
-  absl::Status EndImport() override;
-
-  // SetNumTestCases()
-  //
-  // Sets the number of test cases to import. Default = 1.
-  void SetNumTestCases(int num_test_cases);
-
- private:
-  SimpleIO simple_io_;
-  moriarty_internal::BasicIStreamContext ctx_;
-  std::istream& is_;
-  int num_test_cases_ = 1;
-
-  absl::Status ReadLines(absl::Span<const SimpleIO::Line> lines);
-  absl::Status ReadLine(const std::vector<SimpleIOToken>& line);
-  absl::Status ReadToken(const SimpleIOToken& token);
-  absl::Status ReadVariable(absl::string_view variable_name);
-};
-
-// SimpleIOExporter
-//
-// Exports test cases using `SimpleIO` to orchestrate how to print the data.
-class SimpleIOExporter : public Exporter {
- public:
-  explicit SimpleIOExporter(SimpleIO simple_io, std::ostream& os);
-
-  // StartExport()
-  //
-  // Prints the header lines.
-  void StartExport() override;
-
-  // ExportTestCase()
-  //
-  // Prints lines from `AddLine()`.
-  void ExportTestCase() override;
-
-  // EndExport()
-  //
-  // Prints the footer lines.
-  void EndExport() override;
-
- private:
-  SimpleIO simple_io_;
-  moriarty_internal::BasicOStreamContext ctx_;
-  std::ostream& os_;
-
-  void PrintLines(absl::Span<const SimpleIO::Line> lines);
-  void PrintLine(const std::vector<SimpleIOToken>& line);
-  void PrintToken(const SimpleIOToken& token);
-  void PrintVariable(absl::string_view variable_name);
-};
+// -----------------------------------------------------------------------------
+//  Template implementation below
 
 template <typename... Tokens>
 std::vector<SimpleIOToken> SimpleIO::GetTokens(Tokens&&... token) {

@@ -27,24 +27,6 @@ package(
 licenses(["notice"])
 
 cc_library(
-    name = "exporter_test_util",
-    testonly = True,
-    hdrs = [
-        "exporter_test_util.h",
-    ],
-    deps = [
-        ":mtest_type",
-        "//src:exporter",
-        "//src:test_case",
-        "//src/internal:value_set",
-        "//src/util/status_macro:status_macros",
-        "//src/variables:minteger",
-        "//src/variables:mstring",
-        "@abseil-cpp//absl/status:statusor",
-    ],
-)
-
-cc_library(
     name = "generator_test_util",
     testonly = True,
     hdrs = [
@@ -60,20 +42,6 @@ cc_library(
         "//src/variables:mstring",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/types:span",
-    ],
-)
-
-cc_library(
-    name = "importer_test_util",
-    testonly = True,
-    hdrs = [
-        "importer_test_util.h",
-    ],
-    deps = [
-        "//src:importer",
-        "//src/variables:minteger",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
     ],
 )
 
