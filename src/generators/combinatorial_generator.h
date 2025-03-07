@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,55 +23,22 @@
 //
 // Example Usage:
 //
-// Moriarty()
-//    .AddVariable("N", MInteger().Between(1, 10))
-//    .AddVariable("A", MArray<MInteger>().OfLength("N"))
-//    .AddGenerator(CombinatorialCoverage());  // Will generate tricky cases.
+// Moriarty M;
+// M
+//    .AddVariable("N", MInteger(Between(1, 10)))
+//    .AddVariable("A", MArray<MInteger>(Length("N")));
+// M.GenerateTestCases(CombinatorialCoverage);  // Will generate tricky cases.
 
-#include <memory>
-#include <string>
 #include <vector>
 
-#include "absl/types/span.h"
-#include "src/generator.h"
-#include "src/internal/abstract_variable.h"
-#include "src/internal/combinatorial_coverage.h"
-#include "src/internal/variable_set.h"
+#include "src/contexts/users/generate_context.h"
+#include "src/test_case.h"
 
 namespace moriarty {
 
-struct InitializeCasesInfo {
-  std::vector<std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>>
-      cases;
-  std::vector<std::string> variable_names;
-  std::vector<int> dimension_sizes;
-};
-
 // Generates test cases using covering arrays based on the difficult instances
 // of the defined variables.
-class CombinatorialCoverage : public moriarty::Generator {
- public:
-  void GenerateTestCases() override;
-
- private:
-  // InitializeCases()
-  //
-  // Uses the map of variables to extract the difficult instances from the
-  // abstract variables, the name of the variable and define the dimensions
-  // array for the generation of the covering array.
-  InitializeCasesInfo InitializeCases(
-      const moriarty_internal::VariableSet& variables);
-
-  // CreateTestCases()
-  //
-  // Creates all the test cases defined in the covering array.
-  void CreateTestCases(
-      absl::Span<const CoveringArrayTestCase> covering_array,
-      absl::Span<const std::vector<
-          std::unique_ptr<moriarty_internal::AbstractVariable>>>
-          cases,
-      absl::Span<const std::string> variable_names);
-};
+std::vector<TestCase> CombinatorialCoverage(GenerateContext ctx);
 
 }  // namespace moriarty
 

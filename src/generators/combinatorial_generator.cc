@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,74 +17,65 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "absl/base/nullability.h"
-#include "absl/log/absl_check.h"
-#include "absl/status/statusor.h"
-#include "absl/types/span.h"
-#include "src/generator.h"
+#include "src/contexts/users/generate_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/combinatorial_coverage.h"
-#include "src/internal/random_engine.h"
-#include "src/internal/variable_set.h"
 #include "src/test_case.h"
 
 namespace moriarty {
 
-void CombinatorialCoverage::GenerateTestCases() {
-  moriarty_internal::GeneratorManager generator_manager(this);
-  // TODO(hivini): Handle the (two) crashes better to inform the user about the
-  // error.
-  moriarty_internal::VariableSet var_set =
-      generator_manager.GetGeneralConstraints().value();
+namespace {
 
-  absl::Nullable<moriarty_internal::RandomEngine*> random_engine =
-      generator_manager.GetRandomEngine();
-  ABSL_CHECK_NE(random_engine, nullptr);
+using VarPtr = std::unique_ptr<moriarty_internal::AbstractVariable>;
 
-  InitializeCasesInfo cases_info = InitializeCases(var_set);
+struct InitializeCasesInfo {
+  std::vector<std::vector<VarPtr>> cases;
+  std::vector<std::string> variable_names;
+  std::vector<int> dimension_sizes;
+};
 
-  std::function<int(int)> rand_f = [random_engine](int n) -> int {
-    int result = random_engine->RandInt(n).value() % n;
-    return result;
-  };
-
-  std::vector<CoveringArrayTestCase> covering_array = GenerateCoveringArray(
-      cases_info.dimension_sizes, cases_info.dimension_sizes.size(), rand_f);
-  CreateTestCases(covering_array, cases_info.cases, cases_info.variable_names);
-}
-
-void CombinatorialCoverage::CreateTestCases(
-    absl::Span<const CoveringArrayTestCase> covering_array,
-    absl::Span<
-        const std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>>
-        cases,
-    absl::Span<const std::string> variable_names) {
-  for (const CoveringArrayTestCase& x : covering_array) {
-    TestCase& test_case = AddTestCase();
-    for (int i = 0; i < x.test_case.size(); i++) {
-      test_case.ConstrainAnonymousVariable(variable_names[i],
-                                           *(cases[i][x.test_case[i]].get()));
-    }
-  }
-}
-
-InitializeCasesInfo CombinatorialCoverage::InitializeCases(
-    const moriarty_internal::VariableSet& variables) {
+InitializeCasesInfo InitializeCases(GenerateContext ctx) {
   InitializeCasesInfo info;
-  for (const auto& [name, var_ptr] : variables.GetAllVariables()) {
-    moriarty::librarian::AnalysisContext ctx(name, variables, {});
-    std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
-        difficult_vars = var_ptr->GetDifficultAbstractVariables(ctx).value();
+  for (const auto& [name, var_ptr] : ctx.GetAllVariables()) {
+    moriarty::librarian::AnalysisContext analysis_ctx(name, ctx);
+    std::vector<VarPtr> difficult_vars =
+        *var_ptr->GetDifficultAbstractVariables(analysis_ctx);
     info.dimension_sizes.push_back(difficult_vars.size());
     info.cases.push_back(std::move(difficult_vars));
     info.variable_names.push_back(name);
   }
   return info;
+}
+
+std::vector<TestCase> CreateTestCases(
+    std::span<const CoveringArrayTestCase> covering_array,
+    std::span<const std::vector<VarPtr>> cases,
+    std::span<const std::string> variable_names) {
+  std::vector<TestCase> test_cases;
+  for (const CoveringArrayTestCase& x : covering_array) {
+    test_cases.push_back(TestCase());
+    for (int i = 0; i < x.test_case.size(); i++) {
+      test_cases.back().ConstrainAnonymousVariable(
+          variable_names[i], *(cases[i][x.test_case[i]].get()));
+    }
+  }
+  return test_cases;
+}
+
+}  // namespace
+
+std::vector<TestCase> CombinatorialCoverage(GenerateContext ctx) {
+  InitializeCasesInfo cases_info = InitializeCases(ctx);
+  auto rand_f = [&ctx](int n) { return ctx.RandomInteger(n); };
+
+  std::vector<CoveringArrayTestCase> covering_array = GenerateCoveringArray(
+      cases_info.dimension_sizes, cases_info.dimension_sizes.size(), rand_f);
+  return CreateTestCases(covering_array, cases_info.cases,
+                         cases_info.variable_names);
 }
 
 }  // namespace moriarty

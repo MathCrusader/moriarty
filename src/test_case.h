@@ -20,9 +20,7 @@
 
 #include <any>
 #include <concepts>
-#include <optional>
 #include <stdexcept>
-#include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
@@ -174,57 +172,6 @@ class ConcreteTestCase {
       const ConcreteTestCase& test_case);
   friend void UnsafeSetConcreteTestCaseInternals(
       ConcreteTestCase& test_case, moriarty_internal::ValueSet values);
-};
-
-// TestCaseMetadata
-//
-// Metadata about this test case. All 1-based.
-//
-// For example: 3 generators.
-//  - A creates 4 test cases, run once (4 test cases total)
-//  - B creates 3 test cases, run twice (6 test cases total)
-//  - C creates 5 test cases, run three times (15 test cases total)
-//
-// Consider the 3rd test case that was added on the second run of C.
-//
-//  * GetTestCaseNumber() == 18 (4 + 2*3 + 5 + 3)
-//  * GetGeneratedTestCaseMetadata().generator_name == "C"
-//  * GetGeneratedTestCaseMetadata().generator_iteration == 2
-//  * GetGeneratedTestCaseMetadata().case_number_in_generator = 3
-class TestCaseMetadata {
- public:
-  // Set the test case number for this TestCase. (1-based).
-  TestCaseMetadata& SetTestCaseNumber(int test_case_number) {
-    test_case_number_ = test_case_number;
-    return *this;
-  }
-
-  // Which test case number is this? (1-based).
-  [[nodiscard]] int GetTestCaseNumber() const { return test_case_number_; }
-
-  // If the test case was generated, this is the important metadata that should
-  // be considered. Fields may be added over time.
-  struct GeneratedTestCaseMetadata {
-    std::string generator_name;
-    int generator_iteration;  // If this generator was called several times,
-                              // which iteration?
-    int case_number_in_generator;  // Which call of `AddTestCase()` was this?
-                                   // (1-based)
-  };
-  TestCaseMetadata& SetGeneratorMetadata(
-      GeneratedTestCaseMetadata generator_metadata) {
-    generator_metadata_ = std::move(generator_metadata);
-    return *this;
-  }
-
-  // If this TestCase was generated, return the metadata associated with it.
-  const std::optional<GeneratedTestCaseMetadata>& GetGeneratorMetadata() const {
-    return generator_metadata_;
-  }
-
- private:
-  int test_case_number_;
-  std::optional<GeneratedTestCaseMetadata> generator_metadata_;
 };
 
 // -----------------------------------------------------------------------------

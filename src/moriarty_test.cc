@@ -266,62 +266,6 @@ TEST(MoriartyDeathTest, ExportAskingForVariableOfTheWrongTypeShouldCrash) {
       std::runtime_error);
 }
 
-// TODO: Determine what we want for TestCaseMetadata. Currently disabled.
-// TEST(MoriartyTest, ExportCasesShouldExportProperMetadata) {
-//   using Case = ExampleTestCase;
-
-//   moriarty::Moriarty M;
-//   M.SetSeed("abcde0123456789");
-//   M.AddGenerator("Gen 1", TwoIntegerGenerator(1, 11), 2);
-//   M.AddGenerator("Gen 2", TwoIntegerGenerator(2, 22), 3);
-//   M.GenerateTestCases();
-
-//   std::vector<Case> test_cases;
-//   TwoIntegerExporter exporter(&test_cases);
-//   M.ExportTestCases(exporter);
-
-//   {  // int overall_test_case_number;
-//     std::vector<int> test_case_number;
-//     for (const Case& c : test_cases) {
-//       test_case_number.push_back(c.metadata.GetTestCaseNumber());
-//     }
-//     EXPECT_THAT(test_case_number, ElementsAre(1, 2, 3, 4, 5, 6, 7, 8, 9,
-//     10));
-//   }
-
-//   {  // std::string generator_name;
-//     std::vector<std::string> generator_name;
-//     for (const Case& c : test_cases) {
-//       generator_name.push_back(
-//           c.metadata.GetGeneratorMetadata()->generator_name);
-//     }
-//     EXPECT_THAT(generator_name,
-//                 ElementsAre("Gen 1", "Gen 1", "Gen 1", "Gen 1", "Gen 2",
-//                             "Gen 2", "Gen 2", "Gen 2", "Gen 2", "Gen 2"));
-//   }
-
-//   {
-//     //  int generator_iteration;
-//     std::vector<int> generator_iteration;
-//     for (const Case& c : test_cases) {
-//       generator_iteration.push_back(
-//           c.metadata.GetGeneratorMetadata()->generator_iteration);
-//     }
-//     EXPECT_THAT(generator_iteration, ElementsAre(1, 1, 2, 2, 1, 1, 2, 2, 3,
-//     3));
-//   }
-
-//   {  //  int case_number_in_generator;
-//     std::vector<int> case_number_in_generator;
-//     for (const Case& c : test_cases) {
-//       case_number_in_generator.push_back(
-//           c.metadata.GetGeneratorMetadata()->case_number_in_generator);
-//     }
-//     EXPECT_THAT(case_number_in_generator,
-//                 ElementsAre(1, 2, 1, 2, 1, 2, 1, 2, 1, 2));
-//   }
-// }
-
 TEST(MoriartyTest, GeneralConstraintsSetValueAreConsideredInGenerators) {
   moriarty::Moriarty M;
   M.SetSeed("abcde0123456789");

@@ -39,37 +39,6 @@ cc_library(
 )
 
 cc_library(
-    name = "generator",
-    srcs = [
-        "generator.cc",
-    ],
-    hdrs = [
-        "generator.h",
-    ],
-    deps = [
-        ":errors",
-        ":property",
-        ":scenario",
-        ":test_case",
-        "//src/internal:analysis_bootstrap",
-        "//src/internal:generation_config",
-        "//src/internal:random_config",
-        "//src/internal:random_engine",
-        "//src/internal:status_utils",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
-        "//src/librarian:mvariable",
-        "//src/util/status_macro:status_macros",
-        "@abseil-cpp//absl/base:nullability",
-        "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/types:span",
-    ],
-)
-
-cc_library(
     name = "import_export",
     hdrs = ["import_export.h"],
     deps = [
@@ -94,11 +63,13 @@ cc_library(
         "moriarty.h",
     ],
     deps = [
-        ":generator",
         ":import_export",
         ":test_case",
         "//src/contexts/users:export_context",
+        "//src/contexts/users:generate_context",
         "//src/contexts/users:import_context",
+        "//src/internal:analysis_bootstrap",
+        "//src/internal:generation_bootstrap",
         "//src/internal:status_utils",
         "//src/internal:value_set",
         "//src/internal:variable_set",
@@ -159,15 +130,11 @@ cc_library(
     deps = [
         ":scenario",
         "//src/internal:abstract_variable",
-        "//src/internal:generation_bootstrap",
-        "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:mvariable",
-        "//src/util/status_macro:status_macros",
         "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -242,6 +209,7 @@ cc_test(
     deps = [
         ":scenario",
         ":test_case",
+        "//src/internal:generation_bootstrap",
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",

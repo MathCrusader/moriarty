@@ -18,7 +18,9 @@
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_VIEW_ONLY_CONTEXT_H_
 
 #include <functional>
+#include <memory>
 #include <optional>
+#include <string>
 #include <string_view>
 
 #include "absl/status/statusor.h"
@@ -71,6 +73,13 @@ class ViewOnlyContext {
     if (!var.ok())
       throw std::runtime_error(std::string(var.status().message()));
     return *(var.value());
+  }
+
+  // FIXME: Should we actually return the hashmap...?
+  [[nodiscard]] const absl::flat_hash_map<std::string,
+                                          std::unique_ptr<AbstractVariable>>&
+  GetAllVariables() const {
+    return variables_.get().GetAllVariables();
   }
 
   template <typename T>

@@ -27,8 +27,6 @@
 
 #include <concepts>
 #include <cstdint>
-#include <memory>
-#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -37,14 +35,12 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
-#include "src/generator.h"
 #include "src/import_export.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/status_utils.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/mvariable.h"
-#include "src/test_case.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
@@ -62,8 +58,9 @@ namespace moriarty {
 //     .AddVariable("N", MInteger().Between(1, 100))
 //     .AddVariable("A", MArray(MInteger().Between(3, 5)).OfLength("3 * N + 1"))
 //     .AddVariable("S", MString().WithAlphabet("abc").OfLength("N"))
-//     .AddGenerator("CornerCaseGenerator", CustomCornerCaseGenerator())
-//     .AddGenerator("SmallExamples", SmallCaseGenerator());
+//   M.GenerateTestCases(CustomCornerCaseGenerator());
+//   M.GenerateTestCases(SmallCaseGenerator(), {.call_n_times = 5});
+//   M.ExportTestCase(Print());
 class Moriarty {
  public:
   // SetName() [required]
@@ -177,43 +174,6 @@ class Moriarty {
                                librarian::MVariable<T, typename T::value_type>>
   absl::Status TryAddVariable(absl::string_view name, T variable);
 
-  // AddGenerator()
-  //
-  // Adds a generator to Moriarty. `generator.Generate()` will be called to
-  // create one or more `Case`s. This generator will be called `call_n_times`
-  // times. Each call will use a different random seed.
-  //
-  // TODO(b/233664034): The following behavior may change in the future.
-  // *Please do not depend on it.*
-  //
-  // If you copy this Moriarty class, the same Generator will be used in both
-  // instances. For example,
-  //   Moriarty M1 = Moriarty().AddGenerator("test", TestGenerator());
-  //   Moriarty M2 = M1;
-  //   M1.GenerateTestCases();  // Both of these calls will use the exact same
-  //   M2.GenerateTestCases();  // TestGenerator under the hood.
-  template <typename T>
-    requires std::derived_from<T, Generator>
-  Moriarty& AddGenerator(absl::string_view name, T generator,
-                         int call_n_times = 1);
-
-  // GenerateTestCases()
-  //
-  // Goes through all generators and generates all cases. All cases will be
-  // stored internally and are ready to be exported or printed.
-  //
-  // Crashes on failure. See `TryGenerateTestCases()` for non-crashing version.
-  void GenerateTestCases();
-
-  // TryGenerateTestCases()
-  //
-  // Goes through all generators and generates all cases. All cases will be
-  // stored internally and are ready to be exported or printed.
-  //
-  // Returns status on failure. See `GenerateTestCases()` for simpler API
-  // version.
-  absl::Status TryGenerateTestCases();
-
   void GenerateTestCases(GenerateFn fn, GenerateOptions options = {});
   void ImportTestCases(ImportFn fn, ImportOptions options = {});
   void ExportTestCases(ExportFn fn, ExportOptions options = {}) const;
@@ -223,19 +183,6 @@ class Moriarty {
   // Checks if all variables in all test cases are valid. If there are
   // multiple failures, this will return one of them.
   absl::Status TryValidateTestCases();
-
-  // SetApproximateGenerationLimit()
-  //
-  // Sets a threshold for approximately how much data to generate. If set,
-  // Moriarty will call generators until is has generated `limit` "units", where
-  // a "unit" is computed as: 1 for integers, size for string, and sum of number
-  // of units of its elements for arrays. All other MVariables will have a size
-  // of 1.
-  //
-  // None of these values are guaranteed to remain the same in the future and
-  // this function is a suggestion to Moriarty, not a guarantee that it will
-  // stop generation at any point.
-  void SetApproximateGenerationLimit(int64_t limit);
 
  private:
   // Seed info
@@ -249,20 +196,8 @@ class Moriarty {
   // Variables
   moriarty_internal::VariableSet variables_;
 
-  // Generators
-  struct GeneratorInfo {
-    std::string name;
-    // TODO(b/233664034): Consider changing to std::unique_ptr and changing
-    // the copy constructor's behavior. pybind11 needs the copy constructor.
-    std::shared_ptr<Generator> generator;
-    int call_n_times;
-  };
-  std::vector<GeneratorInfo> generators_;
-  std::optional<int64_t> approximate_generation_limit_;
-
   // TestCases
   std::vector<moriarty_internal::ValueSet> assigned_test_cases_;
-  std::vector<TestCaseMetadata> test_case_metadata_;
 
   // Generates the seed for generator_[index]. Negative numbers are reserved
   // for specialized generators (e.g., min_, max_, random_ generators).
@@ -293,19 +228,6 @@ absl::Status Moriarty::TryAddVariable(absl::string_view name, T variable) {
   MORIARTY_RETURN_IF_ERROR(variables_.AddVariable(name, std::move(variable)))
       << "Adding the same variable multiple times";
   return absl::OkStatus();
-}
-
-template <typename T>
-  requires std::derived_from<T, Generator>
-Moriarty& Moriarty::AddGenerator(absl::string_view name, T generator,
-                                 int call_n_times) {
-  GeneratorInfo gen;
-  gen.name = name;
-  gen.generator = std::make_unique<T>(std::move(generator));
-  gen.call_n_times = call_n_times;
-  generators_.push_back(std::move(gen));
-
-  return *this;
 }
 
 }  // namespace moriarty

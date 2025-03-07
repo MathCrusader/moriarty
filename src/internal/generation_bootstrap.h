@@ -27,6 +27,7 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/test_case.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -35,6 +36,14 @@ struct GenerationOptions {
   RandomEngine& random_engine;
   std::optional<int64_t> soft_generation_limit;
 };
+
+// GenerateTestCase()
+//
+// Generates and returns a value for each variable in `variables`, using
+// test_case to provide extra constraints.
+// TODO: Add tests
+ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
+                          const GenerationOptions& options);
 
 // GenerateAllValues()
 //

@@ -22,7 +22,7 @@
 #include "docs/examples/example_graph.h"
 #include "docs/examples/mexample_graph.h"
 #include "src/contexts/users/export_context.h"
-#include "src/generator.h"
+#include "src/contexts/users/generate_context.h"
 #include "src/moriarty.h"
 #include "src/test_case.h"
 #include "src/variables/minteger.h"
@@ -31,12 +31,6 @@ using ::moriarty::MInteger;
 using ::moriarty::Moriarty;
 using ::moriarty_examples::ExampleGraph;
 using ::moriarty_examples::MExampleGraph;
-
-// Generator that randomly assigns all variables.
-class PurelyRandom : public moriarty::Generator {
- public:
-  void GenerateTestCases() override { AddTestCase(); }
-};
 
 // Exporter that prints the Graph to std::cout.
 void PrintGraph(moriarty::ExportContext ctx,
@@ -56,11 +50,15 @@ int main() {
           .SetName("Example Graph Codelab")
           .SetSeed("b34ibhfberogh4tjbsfg843jf1s")
           .AddVariable("N", MInteger().Between(5, 10))
-          .AddVariable("G", MExampleGraph()
-                                .WithNumNodes(MInteger().Is("N"))
-                                .WithNumEdges(MInteger().Between("N", "2 * N")))
-          .AddGenerator("Random", PurelyRandom());
+          .AddVariable("G",
+                       MExampleGraph()
+                           .WithNumNodes(MInteger().Is("N"))
+                           .WithNumEdges(MInteger().Between("N", "2 * N")));
 
-  M.GenerateTestCases();
+  // Random generation of test cases
+  M.GenerateTestCases(
+      [](moriarty::GenerateContext ctx) -> std::vector<moriarty::TestCase> {
+        return {moriarty::TestCase()};
+      });
   M.ExportTestCases(PrintGraph);
 }

@@ -16,11 +16,9 @@
 #include "src/moriarty.h"
 
 #include <cstdint>
-#include <memory>
 #include <optional>
 #include <span>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "absl/status/status.h"
@@ -32,7 +30,6 @@
 #include "src/contexts/users/export_context.h"
 #include "src/contexts/users/generate_context.h"
 #include "src/contexts/users/import_context.h"
-#include "src/generator.h"
 #include "src/import_export.h"
 #include "src/internal/analysis_bootstrap.h"
 #include "src/internal/generation_bootstrap.h"
@@ -95,63 +92,6 @@ absl::StatusOr<absl::Span<const int64_t>> Moriarty::GetSeedForGenerator(
   return seed_;
 }
 
-void Moriarty::GenerateTestCases() {
-  moriarty_internal::TryFunctionOrCrash(
-      [this]() { return this->TryGenerateTestCases(); }, "GenerateTestCases");
-}
-
-absl::Status Moriarty::TryGenerateTestCases() {
-  if (generators_.empty()) {
-    return absl::FailedPreconditionError(
-        "no generators were found, maybe you need to add them?");
-  }
-
-  // The approximate size of all data generated
-  int total_approximate_size = 0;
-
-  int generator_idx = 0;
-  for (auto& [generator_name, generator_ptr, call_n_times] : generators_) {
-    moriarty_internal::GeneratorManager generator_manager(generator_ptr.get());
-    MORIARTY_ASSIGN_OR_RETURN(auto seed, GetSeedForGenerator(generator_idx),
-                              _ << "error retrieving seed");
-    generator_manager.SetSeed(seed);
-    for (int call = 1; call <= call_n_times; call++) {
-      generator_manager.ClearCases();
-      generator_manager.SetGeneralConstraints(variables_);
-      if (approximate_generation_limit_) {
-        generator_manager.SetApproximateGenerationLimit(
-            *approximate_generation_limit_);
-      }
-      generator_ptr->GenerateTestCases();
-
-      MORIARTY_ASSIGN_OR_RETURN(
-          std::vector<moriarty_internal::ValueSet> test_cases,
-          generator_manager.AssignValuesInAllTestCases(),
-          _ << "Assigning variables in GenerateTestCases() failed.");
-
-      int case_number = 1;
-      for (moriarty_internal::ValueSet values : test_cases) {
-        total_approximate_size += values.GetApproximateSize();
-        assigned_test_cases_.push_back(std::move(values));
-        test_case_metadata_.push_back(
-            TestCaseMetadata()
-                .SetTestCaseNumber(assigned_test_cases_.size())
-                .SetGeneratorMetadata(
-                    {.generator_name = generator_name,
-                     .generator_iteration = call,
-                     .case_number_in_generator = case_number++}));
-      }
-
-      if (approximate_generation_limit_ &&
-          total_approximate_size >= *approximate_generation_limit_) {
-        return absl::OkStatus();
-      }
-    }
-    generator_idx++;
-  }
-  return absl::OkStatus();
-}
-
 absl::Status Moriarty::TryValidateTestCases() {
   if (assigned_test_cases_.empty()) {
     return absl::FailedPreconditionError("No TestCases to validate.");
@@ -165,10 +105,6 @@ absl::Status Moriarty::TryValidateTestCases() {
     case_num++;
   }
   return absl::OkStatus();
-}
-
-void Moriarty::SetApproximateGenerationLimit(int64_t limit) {
-  approximate_generation_limit_ = limit;
 }
 
 absl::Status Moriarty::ValidateVariableName(absl::string_view name) {
@@ -192,8 +128,6 @@ void Moriarty::ImportTestCases(ImportFn fn, ImportOptions options) {
   for (const ConcreteTestCase& test_case : test_cases) {
     assigned_test_cases_.push_back(
         UnsafeExtractConcreteTestCaseInternals(test_case));
-    test_case_metadata_.push_back(
-        TestCaseMetadata().SetTestCaseNumber(assigned_test_cases_.size()));
   }
 }
 
@@ -211,31 +145,14 @@ void Moriarty::ExportTestCases(ExportFn fn, ExportOptions options) const {
 void Moriarty::GenerateTestCases(GenerateFn fn, GenerateOptions options) {
   // FIXME: Seed is wrong. (add test)
   // FIXME: name isn't used. (add test)
-  // TODO: Determine if we want to keep TestCaseMetadata.
   moriarty_internal::RandomEngine rng(seed_, "v0.1");
   for (int call = 1; call <= options.num_calls; call++) {
     GenerateContext ctx(variables_, {}, rng);
     std::vector<TestCase> test_cases = fn(ctx);
 
     for (const TestCase& test_case : test_cases) {
-      moriarty_internal::VariableSet variables = variables_;
-      auto [extra_constraints, values, scenarios] =
-          UnsafeExtractTestCaseInternals(test_case);
-      for (auto& [name, constraints] : extra_constraints.GetAllVariables()) {
-        auto status = variables.AddOrMergeVariable(name, *constraints);
-        if (!status.ok()) throw std::runtime_error(status.ToString());
-      }
-      for (const Scenario& scenario : scenarios) {
-        auto status = variables.WithScenario(scenario);
-        if (!status.ok()) throw std::runtime_error(status.ToString());
-      }
-
-      auto generated_values = moriarty_internal::GenerateAllValues(
-          variables, values, {rng, approximate_generation_limit_});
-      if (!generated_values.ok())
-        throw std::runtime_error(generated_values.status().ToString());
-
-      assigned_test_cases_.push_back(*std::move(generated_values));
+      assigned_test_cases_.push_back(moriarty_internal::GenerateTestCase(
+          test_case, variables_, {rng, std::nullopt}));
     }
   }
 }

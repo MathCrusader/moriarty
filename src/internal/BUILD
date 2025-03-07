@@ -399,6 +399,7 @@ cc_library(
         ":random_engine",
         ":value_set",
         ":variable_set",
+        "//src:test_case",
         "//src/contexts/librarian:analysis_context",
         "//src/contexts/librarian:assignment_context",
         "//src/contexts/librarian:resolver_context",

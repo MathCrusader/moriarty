@@ -28,16 +28,10 @@ cc_library(
     srcs = ["combinatorial_generator.cc"],
     hdrs = ["combinatorial_generator.h"],
     deps = [
-        "//src:generator",
         "//src:test_case",
+        "//src/contexts/users:generate_context",
         "//src/internal:abstract_variable",
         "//src/internal:combinatorial_coverage",
-        "//src/internal:random_engine",
-        "//src/internal:variable_set",
-        "@abseil-cpp//absl/base:nullability",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
     ],
 )
 
@@ -46,7 +40,6 @@ cc_test(
     srcs = ["combinatorial_generator_test.cc"],
     deps = [
         ":combinatorial_generator",
-        "//src:generator",
         "//src/internal:combinatorial_coverage",
         "//src/internal:combinatorial_coverage_test_util",
         "//src/internal:value_set",

@@ -35,6 +35,7 @@
 #include "src/internal/generation_config.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/test_case.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
@@ -121,6 +122,27 @@ absl::StatusOr<std::vector<std::string>> GetGenerationOrder(
     return absl::InvalidArgumentError("Cycle in the dependency order graph.");
   }
   return ordered_variables;
+}
+
+ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
+                          const GenerationOptions& options) {
+  auto [extra_constraints, values, scenarios] =
+      UnsafeExtractTestCaseInternals(test_case);
+
+  for (auto& [name, constraints] : extra_constraints.GetAllVariables()) {
+    auto status = variables.AddOrMergeVariable(name, *constraints);
+    if (!status.ok()) throw std::runtime_error(status.ToString());
+  }
+  for (const Scenario& scenario : scenarios) {
+    auto status = variables.WithScenario(scenario);
+    if (!status.ok()) throw std::runtime_error(status.ToString());
+  }
+
+  auto generated_values =
+      moriarty_internal::GenerateAllValues(variables, values, options);
+  if (!generated_values.ok())
+    throw std::runtime_error(generated_values.status().ToString());
+  return *generated_values;
 }
 
 absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,

@@ -16,13 +16,15 @@
 
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/status/statusor.h"
 #include "absl/types/span.h"
-#include "src/generator.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include "src/contexts/users/generate_context.h"
 #include "src/internal/combinatorial_coverage.h"
 #include "src/internal/combinatorial_coverage_test_util.h"
+#include "src/internal/generation_bootstrap.h"
+#include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/testing/mtest_type.h"
@@ -31,6 +33,8 @@
 namespace moriarty {
 
 using ::moriarty::CombinatorialCoverage;
+using ::moriarty::moriarty_internal::GenerateTestCase;
+using ::moriarty::moriarty_internal::ValueSet;
 
 namespace {
 
@@ -65,21 +69,22 @@ std::vector<CoveringArrayTestCase> CasesToCoveringArray(
 }
 
 TEST(CombinatorialCoverage, GenerateShouldCreateCasesFromCoveringArray) {
-  CombinatorialCoverage generator;
-  moriarty_internal::GeneratorManager generator_manager(&generator);
-  generator_manager.SetSeed({1, 2, 3, 4});
-  moriarty_internal::VariableSet varset;
-  MORIARTY_ASSERT_OK(varset.AddVariable("X", moriarty_testing::MTestType()));
-  MORIARTY_ASSERT_OK(varset.AddVariable("Y", moriarty_testing::MTestType()));
+  moriarty_internal::VariableSet variables;
+  MORIARTY_ASSERT_OK(variables.AddVariable("X", moriarty_testing::MTestType()));
+  MORIARTY_ASSERT_OK(variables.AddVariable("Y", moriarty_testing::MTestType()));
 
-  generator_manager.SetGeneralConstraints(varset);
-  generator.GenerateTestCases();
+  moriarty_internal::RandomEngine rng({1, 2, 3, 4}, "v0.1");
+  GenerateContext ctx(variables, {}, rng);
 
-  std::vector<moriarty_internal::ValueSet> mycases =
-      generator_manager.AssignValuesInAllTestCases().value();
-  std::vector<CoveringArrayTestCase> catc = CasesToCoveringArray(mycases);
+  std::vector<TestCase> test_cases = CombinatorialCoverage(ctx);
+  std::vector<ValueSet> generated_cases;
+  for (const TestCase& test_case : test_cases) {
+    generated_cases.push_back(
+        GenerateTestCase(test_case, variables, {rng, std::nullopt}));
+  }
 
-  EXPECT_THAT(catc, IsStrength2CoveringArray(std::vector<int>({2, 2})));
+  EXPECT_THAT(CasesToCoveringArray(generated_cases),
+              IsStrength2CoveringArray(std::vector<int>({2, 2})));
 }
 
 }  // namespace

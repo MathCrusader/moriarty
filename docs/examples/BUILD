@@ -32,7 +32,6 @@ cc_binary(
     deps = [
         ":example_graph",
         ":mexample_graph",
-        "//src:generator",
         "//src:moriarty",
         "//src/contexts/users:export_context",
         "//src/variables:minteger",
