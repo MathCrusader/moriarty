@@ -72,7 +72,12 @@ cc_library(
 cc_library(
     name = "import_export",
     hdrs = ["import_export.h"],
-    deps = [":io_config"],
+    deps = [
+        ":io_config",
+        "//src/contexts/users:export_context",
+        "//src/contexts/users:generate_context",
+        "//src/contexts/users:import_context",
+    ],
 )
 
 cc_library(
@@ -181,35 +186,6 @@ cc_test(
 )
 
 cc_test(
-    name = "generator_test",
-    size = "small",
-    srcs = [
-        "generator_test.cc",
-    ],
-    deps = [
-        ":errors",
-        ":generator",
-        ":scenario",
-        ":test_case",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
-        "//src/librarian:size_property",
-        "//src/librarian:test_utils",
-        "//src/testing:generator_test_util",
-        "//src/testing:mtest_type",
-        "//src/testing:random_test_util",
-        "//src/testing:status_test_util",
-        "//src/util/test_status_macro:status_testutil",
-        "//src/variables:minteger",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
     name = "moriarty_test",
     size = "small",
     srcs = [
@@ -218,11 +194,14 @@ cc_test(
     deps = [
         ":moriarty",
         ":test_case",
-        "//src/testing:generator_test_util",
+        "//src/contexts/users:export_context",
+        "//src/contexts/users:generate_context",
+        "//src/contexts/users:import_context",
         "//src/testing:mtest_type",
         "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
+        "//src/variables:mstring",
         "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
     ],

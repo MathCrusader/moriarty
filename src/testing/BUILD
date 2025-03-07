@@ -27,25 +27,6 @@ package(
 licenses(["notice"])
 
 cc_library(
-    name = "generator_test_util",
-    testonly = True,
-    hdrs = [
-        "generator_test_util.h",
-    ],
-    deps = [
-        ":mtest_type",
-        "//src:generator",
-        "//src:test_case",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
-        "//src/variables:minteger",
-        "//src/variables:mstring",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
-    ],
-)
-
-cc_library(
     name = "mtest_type",
     testonly = True,
     srcs = [

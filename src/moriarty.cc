@@ -30,9 +30,13 @@
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
 #include "src/contexts/users/export_context.h"
+#include "src/contexts/users/generate_context.h"
 #include "src/contexts/users/import_context.h"
 #include "src/generator.h"
+#include "src/import_export.h"
 #include "src/internal/analysis_bootstrap.h"
+#include "src/internal/generation_bootstrap.h"
+#include "src/internal/random_engine.h"
 #include "src/internal/status_utils.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -202,6 +206,38 @@ void Moriarty::ExportTestCases(ExportFn fn, ExportOptions options) const {
   }
 
   fn(ctx, test_cases);
+}
+
+void Moriarty::GenerateTestCases(GenerateFn fn, GenerateOptions options) {
+  // FIXME: Seed is wrong. (add test)
+  // FIXME: name isn't used. (add test)
+  // TODO: Determine if we want to keep TestCaseMetadata.
+  moriarty_internal::RandomEngine rng(seed_, "v0.1");
+  for (int call = 1; call <= options.num_calls; call++) {
+    GenerateContext ctx(variables_, {}, rng);
+    std::vector<TestCase> test_cases = fn(ctx);
+
+    for (const TestCase& test_case : test_cases) {
+      moriarty_internal::VariableSet variables = variables_;
+      auto [extra_constraints, values, scenarios] =
+          UnsafeExtractTestCaseInternals(test_case);
+      for (auto& [name, constraints] : extra_constraints.GetAllVariables()) {
+        auto status = variables.AddOrMergeVariable(name, *constraints);
+        if (!status.ok()) throw std::runtime_error(status.ToString());
+      }
+      for (const Scenario& scenario : scenarios) {
+        auto status = variables.WithScenario(scenario);
+        if (!status.ok()) throw std::runtime_error(status.ToString());
+      }
+
+      auto generated_values = moriarty_internal::GenerateAllValues(
+          variables, values, {rng, approximate_generation_limit_});
+      if (!generated_values.ok())
+        throw std::runtime_error(generated_values.status().ToString());
+
+      assigned_test_cases_.push_back(*std::move(generated_values));
+    }
+  }
 }
 
 }  // namespace moriarty

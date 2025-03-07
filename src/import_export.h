@@ -19,16 +19,42 @@
 
 #include <functional>
 #include <iostream>
+#include <optional>
 #include <ostream>
 #include <span>
 #include <vector>
 
 #include "src/contexts/users/export_context.h"
+#include "src/contexts/users/generate_context.h"
 #include "src/contexts/users/import_context.h"
 #include "src/io_config.h"
 #include "test_case.h"
 
 namespace moriarty {
+
+// -----------------------------------------------------------------------------
+//  Generate
+
+using GenerateFn = std::function<std::vector<TestCase>(GenerateContext)>;
+
+// Possible future additions:
+//  - Make some generations non-fatal (aka, if they fail, it's okay)
+//  - Soft generation limit
+//  - GenerateUntil (aka, we'll keep generating until g(x) is true)
+struct GenerateOptions {
+  // The descriptive name of this generator.
+  std::string name;
+
+  // How many times to call the generator.
+  int num_calls = 1;
+
+  // The seed to be passed to this generator. This will be combined with
+  // Moriarty's general seed. If empty, a seed will be auto-generated.
+  std::optional<std::string> seed;
+};
+
+// -----------------------------------------------------------------------------
+//  Import
 
 using ImportFn = std::function<std::vector<ConcreteTestCase>(ImportContext)>;
 
@@ -40,6 +66,9 @@ struct ImportOptions {
   // How strict the importer should be about whitespace.
   WhitespaceStrictness whitespace_strictness = WhitespaceStrictness::kPrecise;
 };
+
+// -----------------------------------------------------------------------------
+//  Export
 
 using ExportFn =
     std::function<void(ExportContext, std::span<const ConcreteTestCase>)>;

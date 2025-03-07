@@ -39,6 +39,20 @@ cc_library(
 )
 
 cc_library(
+    name = "generate_context",
+    srcs = ["generate_context.cc"],
+    hdrs = ["generate_context.h"],
+    deps = [
+        "//src/contexts/internal:basic_random_context",
+        "//src/contexts/internal:variable_random_context",
+        "//src/contexts/internal:view_only_context",
+        "//src/internal:random_engine",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
+    ],
+)
+
+cc_library(
     name = "import_context",
     hdrs = ["import_context.h"],
     deps = [

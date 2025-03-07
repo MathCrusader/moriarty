@@ -214,6 +214,7 @@ class Moriarty {
   // version.
   absl::Status TryGenerateTestCases();
 
+  void GenerateTestCases(GenerateFn fn, GenerateOptions options = {});
   void ImportTestCases(ImportFn fn, ImportOptions options = {});
   void ExportTestCases(ExportFn fn, ExportOptions options = {}) const;
 

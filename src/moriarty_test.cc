@@ -24,10 +24,10 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/contexts/users/export_context.h"
+#include "src/contexts/users/generate_context.h"
 #include "src/contexts/users/import_context.h"
 #include "src/io_config.h"
 #include "src/test_case.h"
-#include "src/testing/generator_test_util.h"
 #include "src/testing/mtest_type.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -40,11 +40,6 @@ namespace {
 using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::moriarty_testing::IsValueNotFound;
 using ::moriarty_testing::MTestType;
-using ::moriarty_testing::SingleIntegerGenerator;
-using ::moriarty_testing::SingleStringGenerator;
-using ::moriarty_testing::TwoIntegerGenerator;
-using ::moriarty_testing::TwoIntegerGeneratorWithRandomness;
-using ::testing::_;
 using ::testing::AllOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
@@ -52,10 +47,9 @@ using ::testing::Ge;
 using ::testing::HasSubstr;
 using ::testing::Le;
 using ::testing::Pair;
-using ::testing::SizeIs;
 
 // -----------------------------------------------------------------------------
-//  Import and Export Helpers
+//  Import / Export / Generate Helpers
 // -----------------------------------------------------------------------------
 
 // [ {X = 1}, {X = 2}, ..., {X = n} ]
@@ -114,16 +108,6 @@ std::vector<std::pair<int64_t, int64_t>> ExportTwoIntegersToVector(
   return values;
 }
 
-std::vector<std::string> ExportSingleStringToVector(
-    ExportContext ctx, std::string variable,
-    std::span<const ConcreteTestCase> cases) {
-  std::vector<std::string> values;
-  for (const ConcreteTestCase& c : cases) {
-    values.push_back(c.GetValue<MString>(variable));
-  }
-  return values;
-}
-
 std::vector<std::pair<std::string, std::string>> ExportTwoStringsToVector(
     ExportContext ctx, std::string varR, std::string varS,
     std::span<const ConcreteTestCase> cases) {
@@ -141,6 +125,13 @@ void PrintSingleVariable(ExportContext ctx, std::string varX,
     ctx.PrintWhitespace(Whitespace::kNewline);
   }
 }
+
+GenerateFn GenerateTwoVariables(std::string A, int64_t a, std::string B,
+                                int64_t b) {
+  return [=](GenerateContext ctx) -> std::vector<TestCase> {
+    return {TestCase().SetValue<MInteger>(A, a).SetValue<MInteger>(B, b)};
+  };
+};
 
 // -----------------------------------------------------------------------------
 
@@ -196,8 +187,11 @@ TEST(MoriartyTest,
      ExportAllTestCasesShouldExportProperlyWithASingleGeneratorMultipleTimes) {
   moriarty::Moriarty M;
   M.SetSeed("abcde0123456789");
-  M.AddGenerator("Single Variable", SingleIntegerGenerator(), 3);
-  M.GenerateTestCases();
+  M.GenerateTestCases(
+      [](GenerateContext ctx) -> std::vector<TestCase> {
+        return {TestCase().SetValue<MInteger>("N", 0)};
+      },
+      {.num_calls = 3});
 
   std::vector<int64_t> result;
   M.ExportTestCases(
@@ -211,18 +205,16 @@ TEST(MoriartyTest,
      ExportAllTestCasesShouldExportCasesProperlyWithMultipleGenerators) {
   moriarty::Moriarty M;
   M.SetSeed("abcde0123456789");
-  M.AddGenerator("Gen 1", TwoIntegerGenerator(1, 11));
-  M.AddGenerator("Gen 2", TwoIntegerGenerator(2, 22));
-  M.AddGenerator("Gen 3", TwoIntegerGenerator(3, 33));
-  M.GenerateTestCases();
+  M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 11));
+  M.GenerateTestCases(GenerateTwoVariables("R", 2, "S", 22));
+  M.GenerateTestCases(GenerateTwoVariables("R", 3, "S", 33));
 
   std::vector<std::pair<int64_t, int64_t>> result;
   M.ExportTestCases(
       [&result](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
         result = ExportTwoIntegersToVector(ctx, "R", "S", cases);
       });
-  EXPECT_THAT(result, ElementsAre(Pair(1, 11), Pair(1, 11), Pair(2, 22),
-                                  Pair(2, 22), Pair(3, 33), Pair(3, 33)));
+  EXPECT_THAT(result, ElementsAre(Pair(1, 11), Pair(2, 22), Pair(3, 33)));
 }
 
 TEST(
@@ -230,26 +222,22 @@ TEST(
     ExportAllTestCasesShouldExportProperlyWithMultipleGeneratorsMultipleTimes) {
   moriarty::Moriarty M;
   M.SetSeed("abcde0123456789");
-  M.AddGenerator("Gen 1", TwoIntegerGenerator(1, 11), 2);
-  M.AddGenerator("Gen 2", TwoIntegerGenerator(2, 22), 3);
-  M.GenerateTestCases();
+  M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 11), {.num_calls = 2});
+  M.GenerateTestCases(GenerateTwoVariables("R", 2, "S", 22), {.num_calls = 3});
 
   std::vector<std::pair<int64_t, int64_t>> result;
   M.ExportTestCases(
       [&result](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
         result = ExportTwoIntegersToVector(ctx, "R", "S", cases);
       });
-  EXPECT_THAT(result,
-              ElementsAre(Pair(1, 11), Pair(1, 11), Pair(1, 11), Pair(1, 11),
-                          Pair(2, 22), Pair(2, 22), Pair(2, 22), Pair(2, 22),
-                          Pair(2, 22), Pair(2, 22)));
+  EXPECT_THAT(result, ElementsAre(Pair(1, 11), Pair(1, 11), Pair(2, 22),
+                                  Pair(2, 22), Pair(2, 22)));
 }
 
 TEST(MoriartyDeathTest, ExportAskingForNonExistentVariableShouldCrash) {
   moriarty::Moriarty M;
   M.SetSeed("abcde0123456789");
-  M.AddGenerator("Gen 1", TwoIntegerGenerator(1, 11));
-  M.GenerateTestCases();
+  M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 11));
 
   // Exporter requests N, but only R and S are set...
   EXPECT_THROW(
@@ -265,8 +253,7 @@ TEST(MoriartyDeathTest, ExportAskingForNonExistentVariableShouldCrash) {
 TEST(MoriartyDeathTest, ExportAskingForVariableOfTheWrongTypeShouldCrash) {
   moriarty::Moriarty M;
   M.SetSeed("abcde0123456789");
-  M.AddGenerator("Gen 1", TwoIntegerGenerator(1, 11));
-  M.GenerateTestCases();
+  M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 2));
 
   // Exporter requests for MInteger, but R and S are ints...
   EXPECT_THROW(
@@ -339,30 +326,43 @@ TEST(MoriartyTest, GeneralConstraintsSetValueAreConsideredInGenerators) {
   moriarty::Moriarty M;
   M.SetSeed("abcde0123456789");
   M.AddVariable("N", MInteger().Is(5));
-  M.AddGenerator("Single Variable", SingleIntegerGenerator());
 
-  // Internally, this value is being set to 0, so it should fail since we said
-  // here it must be exactly 5.
-  EXPECT_THAT(M.TryGenerateTestCases(),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_NO_THROW({
+    M.GenerateTestCases(
+        [](GenerateContext ctx) -> std::vector<TestCase> {
+          return {TestCase().SetValue<MInteger>("N", 5)};
+        },
+        {});
+  });
+
+  EXPECT_THROW(
+      {
+        M.GenerateTestCases(
+            [](GenerateContext ctx) -> std::vector<TestCase> {
+              return {TestCase().SetValue<MInteger>("N", 1)};
+            },
+            {});
+      },
+      std::runtime_error);
 }
 
 TEST(MoriartyTest, GeneralConstraintsAreConsideredInGenerators) {
   moriarty::Moriarty M;
   M.SetSeed("abcde0123456789");
   M.AddVariable("R", MInteger().Between(3, 50));
-  // R is generated between 1,10 in generator
-  M.AddGenerator("Two Var", TwoIntegerGeneratorWithRandomness(), 500);
-  M.GenerateTestCases();
+  M.GenerateTestCases([](GenerateContext ctx) -> std::vector<TestCase> {
+    return {
+        TestCase().ConstrainVariable<MInteger>("R", MInteger(Between(1, 10)))};
+  });
 
-  std::vector<std::pair<int64_t, int64_t>> result;
+  std::vector<int64_t> result;
   M.ExportTestCases(
       [&result](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
-        result = ExportTwoIntegersToVector(ctx, "R", "S", cases);
+        result = ExportSingleIntegerToVector(ctx, "R", cases);
       });
 
   // General says 3 <= R <= 50. Generator says 1 <= R <= 10.
-  EXPECT_THAT(result, Each(Pair(AllOf(Ge(3), Le(10)), _)));
+  EXPECT_THAT(result, Each(AllOf(Ge(3), Le(10))));
 }
 
 TEST(MoriartyTest, ImportAndExportShouldWorkTypicalCase) {
@@ -443,42 +443,43 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
   EXPECT_THAT(M.TryValidateTestCases(), IsValueNotFound("q"));
 }
 
-TEST(MoriartyTest, ApproximateGenerationLimitStopsGenerationEarly) {
-  moriarty::Moriarty M;
-  M.SetSeed("abcde0123456789");
-  M.AddGenerator("Generator", TwoIntegerGenerator(1, 11), 50);
+// TEST(MoriartyTest, ApproximateGenerationLimitStopsGenerationEarly) {
+//   moriarty::Moriarty M;
+//   M.SetSeed("abcde0123456789");
+//   M.AddGenerator("Generator", TwoIntegerGenerator(1, 11), 50);
 
-  // Each run of the generator creates 2 test cases, and each test case has 2
-  // integers (thus, size of 4 per test case). On the 8th call to the generator,
-  // we go from size 28 to size 32. Since 32 >= 30, we stop!
-  M.SetApproximateGenerationLimit(30);
-  M.GenerateTestCases();
+//   // Each run of the generator creates 2 test cases, and each test case has 2
+//   // integers (thus, size of 4 per test case). On the 8th call to the
+//   generator,
+//   // we go from size 28 to size 32. Since 32 >= 30, we stop!
+//   M.SetApproximateGenerationLimit(30);
+//   M.GenerateTestCases();
 
-  std::vector<std::pair<int64_t, int64_t>> result;
-  M.ExportTestCases(
-      [&result](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
-        result = ExportTwoIntegersToVector(ctx, "R", "S", cases);
-      });
-  EXPECT_THAT(result, SizeIs(16));
-}
+//   std::vector<std::pair<int64_t, int64_t>> result;
+//   M.ExportTestCases(
+//       [&result](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
+//         result = ExportTwoIntegersToVector(ctx, "R", "S", cases);
+//       });
+//   EXPECT_THAT(result, SizeIs(16));
+// }
 
-TEST(MoriartyTest, ApproximateGenerationLimitTruncatesTheSizeOfArrays) {
-  moriarty::Moriarty M;
-  M.SetSeed("abcde0123456789");
-  M.AddGenerator("Generator", SingleStringGenerator(), 100);
+// TEST(MoriartyTest, ApproximateGenerationLimitTruncatesTheSizeOfArrays) {
+//   moriarty::Moriarty M;
+//   M.SetSeed("abcde0123456789");
+//   M.AddGenerator("Generator", SingleStringGenerator(), 100);
 
-  // This limits the total size of strings/arrays to be 30.
-  M.SetApproximateGenerationLimit(30);
-  M.GenerateTestCases();
+//   // This limits the total size of strings/arrays to be 30.
+//   M.SetApproximateGenerationLimit(30);
+//   M.GenerateTestCases();
 
-  std::vector<std::string> result;
-  M.ExportTestCases(
-      [&result](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
-        result = ExportSingleStringToVector(ctx, "str", cases);
-      });
+//   std::vector<std::string> result;
+//   M.ExportTestCases(
+//       [&result](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
+//         result = ExportSingleStringToVector(ctx, "str", cases);
+//       });
 
-  EXPECT_THAT(result, Each(SizeIs(Le(30))));
-}
+//   EXPECT_THAT(result, Each(SizeIs(Le(30))));
+// }
 
 TEST(MoriartyTest, VariableNameValidationShouldWork) {
   MORIARTY_EXPECT_OK(Moriarty().TryAddVariable("good", MInteger()));

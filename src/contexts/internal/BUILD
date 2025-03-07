@@ -74,6 +74,19 @@ cc_library(
 )
 
 cc_library(
+    name = "variable_random_context",
+    hdrs = ["variable_random_context.h"],
+    deps = [
+        "//src/internal:abstract_variable",
+        "//src/internal:generation_bootstrap",
+        "//src/internal:random_engine",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
+        "//src/variables/constraints:size_constraints",
+    ],
+)
+
+cc_library(
     name = "view_only_context",
     hdrs = ["view_only_context.h"],
     deps = [
