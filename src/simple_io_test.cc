@@ -23,9 +23,7 @@
 #include "absl/log/absl_check.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/contexts/users/export_context.h"
-#include "src/contexts/users/import_context.h"
-#include "src/import_export.h"
+#include "src/context.h"
 #include "src/internal/variable_set.h"
 #include "src/io_config.h"
 #include "src/test_case.h"
@@ -124,7 +122,7 @@ TEST(SimpleIOExporterTest, ExporterSimpleCaseShouldWork) {
   };
 
   std::stringstream ss;
-  ExportContext ctx(variables, ss);
+  ExportContext ctx(ss, variables, {});
   ExportFn exporter = SimpleIO().AddLine("N").Exporter();
 
   exporter(ctx, test_cases);
@@ -151,7 +149,7 @@ TEST(SimpleIOExporterTest, ExportHeaderAndFooterLinesShouldWork) {
                                                   .SetValue<MInteger>("c", 32)};
 
   std::stringstream ss;
-  ExportContext ctx(variables, ss);
+  ExportContext ctx(ss, variables, {});
   ExportFn exporter = SimpleIO()
                           .AddHeaderLine(StringLiteral("start"))
                           .AddLine(StringLiteral("line"), "a", "b", "c")
@@ -183,7 +181,7 @@ TEST(SimpleIOExporterTest, ExportWithNumberOfTestCasesShouldPrintProperly) {
                                                   .SetValue<MInteger>("c", 31)};
 
   std::stringstream ss;
-  ExportContext ctx(variables, ss);
+  ExportContext ctx(ss, variables, {});
   ExportFn exporter = SimpleIO()
                           .WithNumberOfTestCasesInHeader()
                           .AddLine("a", "b", "c")

@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-#include "src/contexts/users/generate_context.h"
+#include "src/context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/combinatorial_coverage.h"
 #include "src/test_case.h"

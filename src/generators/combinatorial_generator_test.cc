@@ -20,7 +20,7 @@
 #include "absl/types/span.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/contexts/users/generate_context.h"
+#include "src/context.h"
 #include "src/internal/combinatorial_coverage.h"
 #include "src/internal/combinatorial_coverage_test_util.h"
 #include "src/internal/generation_bootstrap.h"

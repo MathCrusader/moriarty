@@ -21,8 +21,7 @@
 
 #include "docs/examples/example_graph.h"
 #include "docs/examples/mexample_graph.h"
-#include "src/contexts/users/export_context.h"
-#include "src/contexts/users/generate_context.h"
+#include "src/context.h"
 #include "src/moriarty.h"
 #include "src/test_case.h"
 #include "src/variables/minteger.h"

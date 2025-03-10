@@ -1,0 +1,45 @@
+#include "src/contexts/internal/variable_ostream_context.h"
+
+#include <ostream>
+#include <stdexcept>
+#include <string_view>
+
+#include "absl/status/statusor.h"
+#include "src/contexts/librarian/printer_context.h"
+#include "src/internal/abstract_variable.h"
+#include "src/internal/value_set.h"
+#include "src/internal/variable_set.h"
+#include "src/test_case.h"
+
+namespace moriarty {
+namespace moriarty_internal {
+
+VariableOStreamContext::VariableOStreamContext(std::ostream& os,
+                                               const VariableSet& variables,
+                                               const ValueSet& values)
+    : variables_(variables), values_(values), os_(os) {}
+
+void VariableOStreamContext::PrintVariable(std::string_view variable_name) {
+  absl::StatusOr<const AbstractVariable*> variable =
+      variables_.get().GetAbstractVariable(variable_name);
+  if (!variable.ok()) throw std::runtime_error(variable.status().ToString());
+
+  librarian::PrinterContext ctx(variable_name, os_, variables_, values_);
+  auto status = (*variable)->PrintValue(ctx);
+  if (!status.ok()) throw std::runtime_error(status.ToString());
+}
+
+void VariableOStreamContext::PrintVariableFrom(
+    std::string_view variable_name, const ConcreteTestCase& test_case) {
+  absl::StatusOr<const AbstractVariable*> variable =
+      variables_.get().GetAbstractVariable(variable_name);
+  if (!variable.ok()) throw std::runtime_error(variable.status().ToString());
+
+  ValueSet values = UnsafeExtractConcreteTestCaseInternals(test_case);
+  librarian::PrinterContext ctx(variable_name, os_, variables_, values);
+  auto status = (*variable)->PrintValue(ctx);
+  if (!status.ok()) throw std::runtime_error(status.ToString());
+}
+
+}  // namespace moriarty_internal
+}  // namespace moriarty

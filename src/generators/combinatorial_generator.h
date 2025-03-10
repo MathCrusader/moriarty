@@ -31,7 +31,7 @@
 
 #include <vector>
 
-#include "src/contexts/users/generate_context.h"
+#include "src/context.h"
 #include "src/test_case.h"
 
 namespace moriarty {

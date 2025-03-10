@@ -12,23 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "src/contexts/users/generate_context.h"
+#include "src/contexts/internal/mutable_values_context.h"
 
-#include "src/contexts/internal/basic_random_context.h"
-#include "src/contexts/internal/variable_random_context.h"
-#include "src/contexts/internal/view_only_context.h"
-#include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
-#include "src/internal/variable_set.h"
 
 namespace moriarty {
+namespace moriarty_internal {
 
-GenerateContext::GenerateContext(
-    const moriarty_internal::VariableSet& variables,
-    const moriarty_internal::ValueSet& values,
-    moriarty_internal::RandomEngine& rng)
-    : ViewOnlyContext(variables, values),
-      BasicRandomContext(rng),
-      VariableRandomContext(variables, values, rng) {}
+MutableValuesContext::MutableValuesContext(ValueSet& values)
+    : values_(values) {}
 
+void MutableValuesContext::EraseValue(std::string_view variable_name) {
+  values_.get().Erase(variable_name);
+}
+
+}  // namespace moriarty_internal
 }  // namespace moriarty

@@ -52,6 +52,7 @@ cc_library(
 
 cc_library(
     name = "mutable_values_context",
+    srcs = ["mutable_values_context.cc"],
     hdrs = ["mutable_values_context.h"],
     deps = [
         "//src/internal:value_set",
@@ -60,6 +61,7 @@ cc_library(
 
 cc_library(
     name = "generation_orchestration_context",
+    srcs = ["generation_orchestration_context.cc"],
     hdrs = ["generation_orchestration_context.h"],
     deps = [
         "//src/internal:generation_config",
@@ -68,6 +70,7 @@ cc_library(
 
 cc_library(
     name = "name_context",
+    srcs = ["name_context.cc"],
     hdrs = ["name_context.h"],
     deps = [
     ],
@@ -75,6 +78,7 @@ cc_library(
 
 cc_library(
     name = "variable_random_context",
+    srcs = ["variable_random_context.cc"],
     hdrs = ["variable_random_context.h"],
     deps = [
         "//src/internal:abstract_variable",
@@ -87,7 +91,37 @@ cc_library(
 )
 
 cc_library(
+    name = "variable_istream_context",
+    srcs = ["variable_istream_context.cc"],
+    hdrs = ["variable_istream_context.h"],
+    deps = [
+        "//src:test_case",
+        "//src/contexts/internal:mutable_values_context",
+        "//src/contexts/librarian:reader_context",
+        "//src/internal:abstract_variable",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
+        "@abseil-cpp//absl/status:statusor",
+    ],
+)
+
+cc_library(
+    name = "variable_ostream_context",
+    srcs = ["variable_ostream_context.cc"],
+    hdrs = ["variable_ostream_context.h"],
+    deps = [
+        "//src:test_case",
+        "//src/contexts/librarian:printer_context",
+        "//src/internal:abstract_variable",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
+        "@abseil-cpp//absl/status:statusor",
+    ],
+)
+
+cc_library(
     name = "view_only_context",
+    srcs = ["view_only_context.cc"],
     hdrs = ["view_only_context.h"],
     deps = [
         "//src/internal:value_set",

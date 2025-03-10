@@ -35,7 +35,7 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/types/span.h"
-#include "src/import_export.h"
+#include "src/context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/status_utils.h"
 #include "src/internal/value_set.h"

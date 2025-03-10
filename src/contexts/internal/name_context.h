@@ -28,15 +28,12 @@ namespace moriarty_internal {
 // Holds the name of the current variable in question.
 class NameContext {
  public:
-  explicit NameContext(std::string_view variable_name) : name_(variable_name) {}
+  explicit NameContext(std::string_view variable_name);
 
   // GetVariableName()
   //
   // Returns the name of the variable currently being operated on.
-  [[nodiscard]] std::string GetVariableName() const { return name_; }
-
- protected:
-  void SetName(std::string_view variable_name) { name_ = variable_name; }
+  [[nodiscard]] std::string GetVariableName() const;
 
  private:
   std::string name_;

@@ -38,8 +38,7 @@ namespace moriarty_internal {
 class VariableRandomContext {
  public:
   explicit VariableRandomContext(const VariableSet& variables,
-                                 const ValueSet& values, RandomEngine& engine)
-      : variables_(variables), values_(values), engine_(engine) {};
+                                 const ValueSet& values, RandomEngine& engine);
 
   // Random()
   //

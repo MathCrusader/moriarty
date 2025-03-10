@@ -39,13 +39,21 @@ cc_library(
 )
 
 cc_library(
-    name = "import_export",
-    hdrs = ["import_export.h"],
+    name = "context",
+    srcs = ["context.cc"],
+    hdrs = ["context.h"],
     deps = [
         ":io_config",
-        "//src/contexts/users:export_context",
-        "//src/contexts/users:generate_context",
-        "//src/contexts/users:import_context",
+        "//src/contexts/internal:basic_istream_context",
+        "//src/contexts/internal:basic_ostream_context",
+        "//src/contexts/internal:basic_random_context",
+        "//src/contexts/internal:variable_istream_context",
+        "//src/contexts/internal:variable_ostream_context",
+        "//src/contexts/internal:variable_random_context",
+        "//src/contexts/internal:view_only_context",
+        "//src/internal:random_engine",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
     ],
 )
 
@@ -63,11 +71,8 @@ cc_library(
         "moriarty.h",
     ],
     deps = [
-        ":import_export",
+        ":context",
         ":test_case",
-        "//src/contexts/users:export_context",
-        "//src/contexts/users:generate_context",
-        "//src/contexts/users:import_context",
         "//src/internal:analysis_bootstrap",
         "//src/internal:generation_bootstrap",
         "//src/internal:status_utils",
@@ -111,10 +116,8 @@ cc_library(
     srcs = ["simple_io.cc"],
     hdrs = ["simple_io.h"],
     deps = [
-        ":import_export",
+        ":context",
         "//src:test_case",
-        "//src/contexts/users:export_context",
-        "//src/contexts/users:import_context",
         "//src/variables:minteger",
     ],
 )
@@ -159,11 +162,9 @@ cc_test(
         "moriarty_test.cc",
     ],
     deps = [
+        ":context",
         ":moriarty",
         ":test_case",
-        "//src/contexts/users:export_context",
-        "//src/contexts/users:generate_context",
-        "//src/contexts/users:import_context",
         "//src/testing:mtest_type",
         "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
@@ -178,11 +179,9 @@ cc_test(
     name = "simple_io_test",
     srcs = ["simple_io_test.cc"],
     deps = [
-        ":import_export",
+        ":context",
         ":simple_io",
         ":test_case",
-        "//src/contexts/users:export_context",
-        "//src/contexts/users:import_context",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/util/test_status_macro:status_testutil",

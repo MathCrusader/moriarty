@@ -28,25 +28,6 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 
-namespace moriarty::librarian {
-template <typename V, typename G>
-class MVariable;  // Forward declaring MVariable
-}
-
-namespace moriarty::moriarty_internal {
-class ViewOnlyContext;  // Forward declaring
-// Forward declaring GetUniqueValue
-template <typename V, typename G>
-std::optional<G> GetUniqueValue(const librarian::MVariable<V, G>&,
-                                std::string_view variable_name,
-                                ViewOnlyContext ctx);
-// Forward declaring SatisfiesConstraints
-template <typename V, typename G>
-absl::Status SatisfiesConstraints(
-    const librarian::MVariable<V, G>& variable, std::string_view variable_name,
-    moriarty::moriarty_internal::ViewOnlyContext ctx, const G& value);
-}  // namespace moriarty::moriarty_internal
-
 namespace moriarty {
 namespace moriarty_internal {
 
@@ -57,63 +38,59 @@ namespace moriarty_internal {
 // or values.
 class ViewOnlyContext {
  public:
-  explicit ViewOnlyContext(const VariableSet& variables, const ValueSet& values)
-      : variables_(variables), values_(values) {}
+  explicit ViewOnlyContext(const VariableSet& variables,
+                           const ValueSet& values);
 
+  // GetVariable()
+  //
+  // Returns the stored variable with the name `variable_name`.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
   [[nodiscard]] absl::StatusOr<T> GetVariable(
-      std::string_view variable_name) const {
-    return variables_.get().GetVariable<T>(variable_name);
-  }
+      std::string_view variable_name) const;
 
-  [[nodiscard]] const moriarty_internal::AbstractVariable& GetAnonymousVariable(
-      std::string_view variable_name) const {
-    auto var = variables_.get().GetAbstractVariable(variable_name);
-    if (!var.ok())
-      throw std::runtime_error(std::string(var.status().message()));
-    return *(var.value());
-  }
+  // GetAnonymousVariable()
+  //
+  // Returns the stored variable with the name `variable_name`. Only use this
+  // function if you do not know the type of the variable at the call-site.
+  // Prefer `GetVariable()`.
+  [[nodiscard]] const AbstractVariable& GetAnonymousVariable(
+      std::string_view variable_name) const;
 
-  // FIXME: Should we actually return the hashmap...?
-  [[nodiscard]] const absl::flat_hash_map<std::string,
-                                          std::unique_ptr<AbstractVariable>>&
-  GetAllVariables() const {
-    return variables_.get().GetAllVariables();
-  }
-
+  // GetValue()
+  //
+  // Returns the stored value for the variable with the name `variable_name`.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
   [[nodiscard]] absl::StatusOr<typename T::value_type> GetValue(
-      std::string_view variable_name) const {
-    return values_.get().Get<T>(variable_name);
-  }
+      std::string_view variable_name) const;
 
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
-  [[nodiscard]] std::optional<typename T::value_type> GetUniqueValue(
-      std::string_view variable_name) const {
-    auto stored_value = GetValueIfKnown<T>(variable_name);
-    if (stored_value) return *stored_value;
-
-    auto variable = GetVariable<T>(variable_name);
-    if (!variable.ok()) return std::nullopt;
-    return moriarty_internal::GetUniqueValue(*variable, variable_name, *this);
-  }
-
+  // GetValueIfKnown()
+  //
+  // Returns the stored value for the variable with the name `variable_name` if
+  // it has been set previously.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
   [[nodiscard]] std::optional<typename T::value_type> GetValueIfKnown(
-      std::string_view variable_name) const {
-    absl::StatusOr<typename T::value_type> value =
-        values_.get().Get<T>(variable_name);
-    if (value.ok()) return *value;
-    return std::nullopt;
-  }
+      std::string_view variable_name) const;
 
-  [[nodiscard]] bool ValueIsKnown(std::string_view variable_name) const {
-    return values_.get().Contains(variable_name);
-  }
+  // GetUniqueValue()
+  //
+  // Determines if there is exactly one value that this variable can be assigned
+  // to. If so, returns that value. If there is not a unique value (or it is too
+  // hard to determine that there is a unique value), returns `std::nullopt`.
+  // Returning `std::nullopt` does not guarantee there is not a unique value,
+  // it may just be too hard to determine it.
+  template <typename T>
+    requires std::derived_from<T, AbstractVariable>
+  [[nodiscard]] std::optional<typename T::value_type> GetUniqueValue(
+      std::string_view variable_name) const;
+
+  // ValueIsKnown()
+  //
+  // Returns true if the value for the variable with the name `variable_name` is
+  // set to some value.
+  [[nodiscard]] bool ValueIsKnown(std::string_view variable_name) const;
 
   // SatisfiesConstraints()
   //
@@ -124,15 +101,92 @@ class ViewOnlyContext {
   //   absl::Status s1 = SatisfiesConstraints(MInteger(AtMost("N")), 25);
   //   absl::Status s2 = SatisfiesConstraints(MString(Length(5)), "hello");
   template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
+    requires std::derived_from<T, AbstractVariable>
   absl::Status SatisfiesConstraints(T variable,
                                     const T::value_type& value) const;
+
+  // GetAllVariables()
+  //
+  // Returns all variables in the context. Prefer to not use this function. It
+  // may be deprecated in the future.
+  [[nodiscard]] const absl::flat_hash_map<std::string,
+                                          std::unique_ptr<AbstractVariable>>&
+  GetAllVariables() const;
 
  private:
   std::reference_wrapper<const VariableSet> variables_;
   std::reference_wrapper<const ValueSet> values_;
 };
+
+}  // namespace moriarty_internal
+}  // namespace moriarty
+
+// ----------------------------------------------------------------------------
+// Forward declarations
+
+namespace moriarty::librarian {
+template <typename V, typename G>
+class MVariable;  // Forward declaring MVariable
+}
+
+namespace moriarty::moriarty_internal {
+class ViewOnlyContext;  // Forward declaring
+// Forward declaring GetUniqueValue
+template <typename V, typename G>
+std::optional<G> GetUniqueValue(const librarian::MVariable<V, G>&,
+                                std::string_view, ViewOnlyContext);
+// Forward declaring SatisfiesConstraints
+template <typename V, typename G>
+absl::Status SatisfiesConstraints(const librarian::MVariable<V, G>&,
+                                  std::string_view, ViewOnlyContext, const G&);
+}  // namespace moriarty::moriarty_internal
+
+namespace moriarty {
+namespace moriarty_internal {
+
+template <typename T>
+  requires std::derived_from<T, AbstractVariable>
+absl::StatusOr<T> ViewOnlyContext::GetVariable(
+    std::string_view variable_name) const {
+  return variables_.get().GetVariable<T>(variable_name);
+}
+
+template <typename T>
+  requires std::derived_from<T, AbstractVariable>
+absl::StatusOr<typename T::value_type> ViewOnlyContext::GetValue(
+    std::string_view variable_name) const {
+  return values_.get().Get<T>(variable_name);
+}
+
+template <typename T>
+  requires std::derived_from<T, AbstractVariable>
+std::optional<typename T::value_type> ViewOnlyContext::GetValueIfKnown(
+    std::string_view variable_name) const {
+  absl::StatusOr<typename T::value_type> value =
+      values_.get().Get<T>(variable_name);
+  if (value.ok()) return *value;
+  return std::nullopt;
+}
+
+template <typename T>
+  requires std::derived_from<T, AbstractVariable>
+std::optional<typename T::value_type> ViewOnlyContext::GetUniqueValue(
+    std::string_view variable_name) const {
+  auto stored_value = GetValueIfKnown<T>(variable_name);
+  if (stored_value) return *stored_value;
+
+  auto variable = GetVariable<T>(variable_name);
+  if (!variable.ok()) return std::nullopt;
+  return moriarty_internal::GetUniqueValue(*variable, variable_name, *this);
+}
+
+template <typename T>
+  requires std::derived_from<T, AbstractVariable>
+absl::Status ViewOnlyContext::SatisfiesConstraints(
+    T variable, const T::value_type& value) const {
+  return SatisfiesConstraints(std::move(variable), "SatisfiesConstraints",
+                              *this, value);
+}
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

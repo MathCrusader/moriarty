@@ -31,23 +31,33 @@ namespace moriarty_internal {
 // Allows you to update the values currently stored.
 class MutableValuesContext {
  public:
-  explicit MutableValuesContext(ValueSet& values) : values_(values) {}
+  explicit MutableValuesContext(ValueSet& values);
 
-  // FIXME: This is a placeholder for testing.
-
+  // SetValue()
+  //
+  // Sets the value of `variable_name` to be `value`.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
-  void SetValue(std::string_view variable_name, T::value_type value) {
-    values_.get().Set<T>(variable_name, std::move(value));
-  }
+  void SetValue(std::string_view variable_name, T::value_type value);
 
-  void EraseValue(std::string_view variable_name) {
-    values_.get().Erase(variable_name);
-  }
+  // EraseValue()
+  //
+  // Removes `variable_name` from the set of known values.
+  void EraseValue(std::string_view variable_name);
 
  private:
   std::reference_wrapper<ValueSet> values_;
 };
+
+// -----------------------------------------------------------------------------
+//  Template implementation below
+
+template <typename T>
+  requires std::derived_from<T, AbstractVariable>
+void MutableValuesContext::SetValue(std::string_view variable_name,
+                                    T::value_type value) {
+  values_.get().Set<T>(variable_name, std::move(value));
+}
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

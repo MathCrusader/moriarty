@@ -942,6 +942,12 @@ absl::Status SatisfiesConstraints(
       librarian::AnalysisContext(variable_name, ctx), value);
 }
 
+template <typename... T>
+  requires std::constructible_from<librarian::PrinterContext, T...>
+absl::Status PrintValue(const AbstractVariable& variable, T... args) {
+  return variable.PrintValue(librarian::PrinterContext(args...));
+}
+
 }  // namespace moriarty::moriarty_internal
 
 #endif  // MORIARTY_SRC_LIBRARIAN_MVARIABLE_H_

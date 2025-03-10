@@ -28,8 +28,8 @@ cc_library(
     srcs = ["combinatorial_generator.cc"],
     hdrs = ["combinatorial_generator.h"],
     deps = [
+        "//src:context",
         "//src:test_case",
-        "//src/contexts/users:generate_context",
         "//src/internal:abstract_variable",
         "//src/internal:combinatorial_coverage",
     ],

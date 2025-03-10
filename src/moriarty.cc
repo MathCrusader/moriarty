@@ -27,10 +27,7 @@
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "absl/types/span.h"
-#include "src/contexts/users/export_context.h"
-#include "src/contexts/users/generate_context.h"
-#include "src/contexts/users/import_context.h"
-#include "src/import_export.h"
+#include "src/context.h"
 #include "src/internal/analysis_bootstrap.h"
 #include "src/internal/generation_bootstrap.h"
 #include "src/internal/random_engine.h"
@@ -132,7 +129,7 @@ void Moriarty::ImportTestCases(ImportFn fn, ImportOptions options) {
 }
 
 void Moriarty::ExportTestCases(ExportFn fn, ExportOptions options) const {
-  ExportContext ctx(variables_, options.os);
+  ExportContext ctx(options.os, variables_, {});
   std::vector<ConcreteTestCase> test_cases;
   for (const moriarty_internal::ValueSet& values : assigned_test_cases_) {
     test_cases.push_back(ConcreteTestCase());

@@ -19,7 +19,6 @@
 
 #include <functional>
 #include <optional>
-#include <stdexcept>
 #include <string_view>
 
 #include "src/internal/generation_config.h"
@@ -32,37 +31,18 @@ namespace moriarty_internal {
 // Orchestrates the entire generation process.
 class GenerationOrchestrationContext {
  public:
-  explicit GenerationOrchestrationContext(GenerationConfig& config)
-      : config_(config) {}
+  explicit GenerationOrchestrationContext(GenerationConfig& config);
 
-  void MarkStartGeneration(std::string_view variable_name) {
-    auto status = config_.get().MarkStartGeneration(variable_name);
-    if (!status.ok()) throw std::runtime_error(std::string(status.message()));
-  }
+  void MarkStartGeneration(std::string_view variable_name);
 
-  void MarkSuccessfulGeneration(std::string_view variable_name) {
-    auto status = config_.get().MarkSuccessfulGeneration(variable_name);
-    if (!status.ok()) throw std::runtime_error(std::string(status.message()));
-  }
+  void MarkSuccessfulGeneration(std::string_view variable_name);
 
-  void MarkAbandonedGeneration(std::string_view variable_name) {
-    auto status = config_.get().MarkAbandonedGeneration(variable_name);
-    if (!status.ok()) throw std::runtime_error(std::string(status.message()));
-  }
+  void MarkAbandonedGeneration(std::string_view variable_name);
 
   [[nodiscard]] GenerationConfig::RetryRecommendation AddGenerationFailure(
-      std::string_view variable_name) {
-    absl::Status status = absl::FailedPreconditionError("Fake error");
-    auto recommendation =
-        config_.get().AddGenerationFailure(variable_name, status);
-    if (!recommendation.ok())
-      throw std::runtime_error(std::string(recommendation.status().message()));
-    return *recommendation;
-  }
+      std::string_view variable_name);
 
-  std::optional<int64_t> GetSoftGenerationLimit() const {
-    return config_.get().GetSoftGenerationLimit();
-  }
+  std::optional<int64_t> GetSoftGenerationLimit() const;
 
  private:
   std::reference_wrapper<GenerationConfig> config_;

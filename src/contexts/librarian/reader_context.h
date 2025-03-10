@@ -44,7 +44,7 @@ class ReaderContext : public moriarty_internal::NameContext,
   ReaderContext(std::string_view variable_name, std::istream& is,
                 WhitespaceStrictness whitespace_strictness,
                 const moriarty_internal::VariableSet& variables,
-                moriarty_internal::ValueSet& values)
+                const moriarty_internal::ValueSet& values)
       : NameContext(variable_name),
         ViewOnlyContext(variables, values),
         BasicIStreamContext(is, whitespace_strictness) {}

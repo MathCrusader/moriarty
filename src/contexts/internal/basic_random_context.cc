@@ -21,6 +21,9 @@
 namespace moriarty {
 namespace moriarty_internal {
 
+BasicRandomContext::BasicRandomContext(RandomEngine& engine)
+    : engine_(engine) {}
+
 int64_t BasicRandomContext::RandomInteger(int64_t min, int64_t max) {
   if (min > max) {
     throw std::runtime_error(std::format(
@@ -48,6 +51,8 @@ std::vector<int> BasicRandomContext::RandomPermutation(int n) {
   }
   return RandomPermutation<int>(n, 0);
 }
+
+RandomEngine& BasicRandomContext::UnsafeGetRandomEngine() { return engine_; }
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

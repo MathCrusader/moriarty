@@ -39,18 +39,18 @@ using ElementType = std::iter_value_t<decltype(std::begin(T{}))>;
 // DistinctIntegers, RandomPermutation, etc).
 class BasicRandomContext {
  public:
-  explicit BasicRandomContext(RandomEngine& engine) : engine_(engine) {};
+  explicit BasicRandomContext(RandomEngine& engine);
 
   // RandomInteger()
   //
   // Returns a random integer in the closed interval [min, max].
-  int64_t RandomInteger(int64_t min, int64_t max);
+  [[nodiscard]] int64_t RandomInteger(int64_t min, int64_t max);
 
   // RandomInteger()
   //
   // Returns a random integer in the semi-closed interval [0, n). Useful for
   // random indices.
-  int64_t RandomInteger(int64_t n);
+  [[nodiscard]] int64_t RandomInteger(int64_t n);
 
   // Shuffle()
   //
@@ -62,15 +62,16 @@ class BasicRandomContext {
   //
   // Returns a random element of `container`.
   template <typename Container>
-  ElementType<Container> RandomElement(const Container& container);
+  [[nodiscard]] ElementType<Container> RandomElement(
+      const Container& container);
 
   // RandomElementsWithReplacement()
   //
   // Returns k (randomly ordered) elements of `container`, possibly with
   // duplicates.
   template <typename Container>
-  std::vector<ElementType<Container>> RandomElementsWithReplacement(
-      const Container& container, int k);
+  [[nodiscard]] std::vector<ElementType<Container>>
+  RandomElementsWithReplacement(const Container& container, int k);
 
   // RandomElementsWithoutReplacement()
   //
@@ -81,13 +82,13 @@ class BasicRandomContext {
   //
   // So RandomElementsWithoutReplacement({0, 1, 1, 1}, 2) could return {1, 1}.
   template <typename Container>
-  std::vector<ElementType<Container>> RandomElementsWithoutReplacement(
-      const Container& container, int k);
+  [[nodiscard]] std::vector<ElementType<Container>>
+  RandomElementsWithoutReplacement(const Container& container, int k);
 
   // RandomPermutation()
   //
   // Returns a random permutation of {0, 1, ... , n-1}.
-  std::vector<int> RandomPermutation(int n);
+  [[nodiscard]] std::vector<int> RandomPermutation(int n);
 
   // RandomPermutation()
   //
@@ -96,7 +97,7 @@ class BasicRandomContext {
   // Requires min + (n-1) to not overflow T.
   template <typename T>
     requires std::integral<T>
-  std::vector<T> RandomPermutation(int n, T min);
+  [[nodiscard]] std::vector<T> RandomPermutation(int n, T min);
 
   // DistinctIntegers()
   //
@@ -106,7 +107,7 @@ class BasicRandomContext {
   // Requires min + (n-1) to not overflow T.
   template <typename T>
     requires std::integral<T>
-  std::vector<T> DistinctIntegers(T n, int k, T min = 0);
+  [[nodiscard]] std::vector<T> DistinctIntegers(T n, int k, T min = 0);
 
   // RandomComposition()
   //
@@ -123,11 +124,12 @@ class BasicRandomContext {
   // Requires n + (k - 1) to not overflow T.
   template <typename T>
     requires std::integral<T>
-  std::vector<T> RandomComposition(T n, int k, T min_bucket_size = 1);
+  [[nodiscard]] std::vector<T> RandomComposition(T n, int k,
+                                                 T min_bucket_size = 1);
 
   // FIXME: Remove
   // Do not use this function unless you know what you are doing.
-  RandomEngine& UnsafeGetRandomEngine() { return engine_; }
+  [[nodiscard]] RandomEngine& UnsafeGetRandomEngine();
 
  private:
   std::reference_wrapper<RandomEngine> engine_;
