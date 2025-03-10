@@ -1,5 +1,6 @@
 #include "src/contexts/internal/variable_ostream_context.h"
 
+#include <functional>
 #include <ostream>
 #include <stdexcept>
 #include <string_view>
@@ -14,9 +15,10 @@
 namespace moriarty {
 namespace moriarty_internal {
 
-VariableOStreamContext::VariableOStreamContext(std::ostream& os,
-                                               const VariableSet& variables,
-                                               const ValueSet& values)
+VariableOStreamContext::VariableOStreamContext(
+    std::reference_wrapper<std::ostream> os,
+    std::reference_wrapper<const VariableSet> variables,
+    std::reference_wrapper<const ValueSet> values)
     : variables_(variables), values_(values), os_(os) {}
 
 void VariableOStreamContext::PrintVariable(std::string_view variable_name) {

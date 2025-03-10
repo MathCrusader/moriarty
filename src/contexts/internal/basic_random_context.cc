@@ -21,7 +21,8 @@
 namespace moriarty {
 namespace moriarty_internal {
 
-BasicRandomContext::BasicRandomContext(RandomEngine& engine)
+BasicRandomContext::BasicRandomContext(
+    std::reference_wrapper<RandomEngine> engine)
     : engine_(engine) {}
 
 int64_t BasicRandomContext::RandomInteger(int64_t min, int64_t max) {

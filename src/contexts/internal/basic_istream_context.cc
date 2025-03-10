@@ -17,6 +17,7 @@
 #include <cassert>
 #include <cctype>
 #include <format>
+#include <functional>
 #include <istream>
 #include <string>
 
@@ -26,7 +27,8 @@ namespace moriarty {
 namespace moriarty_internal {
 
 BasicIStreamContext::BasicIStreamContext(
-    std::istream& is, moriarty::WhitespaceStrictness strictness)
+    std::reference_wrapper<std::istream> is,
+    moriarty::WhitespaceStrictness strictness)
     : is_(is), strictness_(strictness) {
   is_.get().exceptions(std::istream::failbit | std::istream::badbit);
 }

@@ -104,9 +104,9 @@ TEST(BasicRandomContextTest, RandomIntegerForInvalidRangesShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ ctx.RandomInteger(5, 3); }, std::runtime_error);
-  EXPECT_THROW({ ctx.RandomInteger(0); }, std::runtime_error);
-  EXPECT_THROW({ ctx.RandomInteger(-5); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomInteger(5, 3); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomInteger(0); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomInteger(-5); }, std::runtime_error);
 }
 
 TEST(BasicRandomContextTest,
@@ -196,7 +196,7 @@ TEST(BasicRandomContextTest, RandomElementFromAnEmptyContainerShouldFail) {
   BasicRandomContext ctx(engine);
 
   std::vector<int> empty;
-  EXPECT_THROW({ ctx.RandomElement(empty); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomElement(empty); }, std::runtime_error);
 }
 
 // -----------------------------------------------------------------------------
@@ -271,9 +271,10 @@ TEST(BasicRandomContextTest, RandomElementsWithNegativeInputShouldFail) {
   std::vector<int> v = {11, 22, 33, 44};
 
   EXPECT_THROW(
-      { ctx.RandomElementsWithReplacement(v, -1); }, std::runtime_error);
+      { (void)ctx.RandomElementsWithReplacement(v, -1); }, std::runtime_error);
   EXPECT_THROW(
-      { ctx.RandomElementsWithoutReplacement(v, -1); }, std::runtime_error);
+      { (void)ctx.RandomElementsWithoutReplacement(v, -1); },
+      std::runtime_error);
 }
 
 TEST(BasicRandomContextTest, RandomElementsFromAnEmptyContainerShouldFail) {
@@ -282,9 +283,11 @@ TEST(BasicRandomContextTest, RandomElementsFromAnEmptyContainerShouldFail) {
 
   std::vector<std::string> empty;
   EXPECT_THROW(
-      { ctx.RandomElementsWithReplacement(empty, 1); }, std::runtime_error);
+      { (void)ctx.RandomElementsWithReplacement(empty, 1); },
+      std::runtime_error);
   EXPECT_THROW(
-      { ctx.RandomElementsWithoutReplacement(empty, 1); }, std::runtime_error);
+      { (void)ctx.RandomElementsWithoutReplacement(empty, 1); },
+      std::runtime_error);
 }
 
 TEST(BasicRandomContextTest,
@@ -303,7 +306,8 @@ TEST(BasicRandomContextTest, RandomElementsAskingForTooManyDistinctShouldFail) {
 
   std::vector<std::string> v = {"123456", "456789", "789123"};
   EXPECT_THROW(
-      { ctx.RandomElementsWithoutReplacement(v, 4); }, std::runtime_error);
+      { (void)ctx.RandomElementsWithoutReplacement(v, 4); },
+      std::runtime_error);
 }
 
 // -----------------------------------------------------------------------------
@@ -313,7 +317,7 @@ TEST(BasicRandomContextTest, RandomPermutationOfNegativeSizeShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ ctx.RandomPermutation(-1); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomPermutation(-1); }, std::runtime_error);
 }
 
 TEST(BasicRandomContextTest, RandomPermutationOfSizeZeroIsOk) {
@@ -371,15 +375,15 @@ TEST(BasicRandomContextTest, DistinctIntegersWithNegativeNOrKShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ ctx.DistinctIntegers(-1, 5); }, std::runtime_error);
-  EXPECT_THROW({ ctx.DistinctIntegers(10, -5); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.DistinctIntegers(-1, 5); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.DistinctIntegers(10, -5); }, std::runtime_error);
 }
 
 TEST(BasicRandomContextTest, DistinctIntegersWithKGreaterThanNShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ ctx.DistinctIntegers(5, 10); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.DistinctIntegers(5, 10); }, std::runtime_error);
 }
 
 TEST(BasicRandomContextTest, DistinctIntegersWithZeroIsFine) {
@@ -428,9 +432,9 @@ TEST(BasicRandomContextTest, RandomCompositionWithNegativeArgumentShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ ctx.RandomComposition(-1, 5); }, std::runtime_error);
-  EXPECT_THROW({ ctx.RandomComposition(10, -5); }, std::runtime_error);
-  EXPECT_THROW({ ctx.RandomComposition(10, 5, -1); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomComposition(-1, 5); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomComposition(10, -5); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomComposition(10, 5, -1); }, std::runtime_error);
 }
 
 TEST(BasicRandomContextTest, RandomCompositionWithZeroBucketsAndZeroSumIsFine) {
@@ -445,14 +449,14 @@ TEST(BasicRandomContextTest,
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ ctx.RandomComposition(5, 0); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomComposition(5, 0); }, std::runtime_error);
 }
 
 TEST(BasicRandomContextTest, RandomCompositionWithTooLargeMinBucketShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ ctx.RandomComposition(4, 2, 3); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomComposition(4, 2, 3); }, std::runtime_error);
 }
 
 TEST(BasicRandomContextTest, RandomCompositionWithExactMinBucketIsFine) {

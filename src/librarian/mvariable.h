@@ -224,19 +224,23 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // just that it is too hard to determine it.
   [[nodiscard]] std::optional<ValueType> GetUniqueValue(
       AnalysisContext ctx) const {
-    // FIXME: Placeholder until Context refactor is done.
-    std::optional<ValueType> known =
-        ctx.GetValueIfKnown<VariableType>(ctx.GetVariableName());
-    if (known) return *known;
+    try {
+      // FIXME: Placeholder until Context refactor is done.
+      std::optional<ValueType> known =
+          ctx.GetValueIfKnown<VariableType>(ctx.GetVariableName());
+      if (known) return *known;
 
-    if (!overall_status_.ok()) return std::nullopt;
-    if (is_one_of_) {
-      // TODO: Check if all constraints are satisfied?
-      if (is_one_of_->size() == 1) return is_one_of_->at(0);
-      return std::nullopt;  // Not sure which one is correct.
+      if (!overall_status_.ok()) return std::nullopt;
+      if (is_one_of_) {
+        // TODO: Check if all constraints are satisfied?
+        if (is_one_of_->size() == 1) return is_one_of_->at(0);
+        return std::nullopt;  // Not sure which one is correct.
+      }
+
+      return GetUniqueValueImpl(ctx);
+    } catch (const std::runtime_error&) {  // FIXME: Only catch Moriarty errors.
+      return std::nullopt;
     }
-
-    return GetUniqueValueImpl(ctx);
   }
 
   absl::Status IsSatisfiedWith(AnalysisContext ctx,
@@ -877,8 +881,23 @@ absl::Status MVariable<V, G>::ValueSatisfiesConstraints(
     AnalysisContext ctx) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
 
-  MORIARTY_ASSIGN_OR_RETURN(G value, ctx.GetValue<V>(ctx.GetVariableName()));
-  return IsSatisfiedWith(ctx, value);
+  try {
+    return IsSatisfiedWith(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
+  } catch (const std::runtime_error& e) {
+    std::string_view error = e.what();
+    if (error.starts_with("NOT_FOUND: Value for `")) {
+      int start = error.find('`') + 1;
+      int end = error.find('`', start);
+      return moriarty::ValueNotFoundError(error.substr(start, end - start));
+    }
+    if (error.starts_with("NOT_FOUND: Unknown variable: `")) {
+      int start = error.find('`') + 1;
+      int end = error.find('`', start);
+      return moriarty::VariableNotFoundError(error.substr(start, end - start));
+    }
+
+    throw;
+  }
 }
 
 template <typename V, typename G>
@@ -893,8 +912,7 @@ absl::Status MVariable<V, G>::ReadValue(
 template <typename V, typename G>
 absl::Status MVariable<V, G>::PrintValue(PrinterContext ctx) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
-  MORIARTY_ASSIGN_OR_RETURN(G value, ctx.GetValue<V>(ctx.GetVariableName()));
-  Print(ctx, value);
+  Print(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
   return absl::OkStatus();
 }
 

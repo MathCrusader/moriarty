@@ -129,7 +129,8 @@ void Moriarty::ImportTestCases(ImportFn fn, ImportOptions options) {
 }
 
 void Moriarty::ExportTestCases(ExportFn fn, ExportOptions options) const {
-  ExportContext ctx(options.os, variables_, {});
+  moriarty_internal::ValueSet values;
+  ExportContext ctx(options.os, variables_, values);
   std::vector<ConcreteTestCase> test_cases;
   for (const moriarty_internal::ValueSet& values : assigned_test_cases_) {
     test_cases.push_back(ConcreteTestCase());
@@ -142,9 +143,10 @@ void Moriarty::ExportTestCases(ExportFn fn, ExportOptions options) const {
 void Moriarty::GenerateTestCases(GenerateFn fn, GenerateOptions options) {
   // FIXME: Seed is wrong. (add test)
   // FIXME: name isn't used. (add test)
+  moriarty_internal::ValueSet values;
   moriarty_internal::RandomEngine rng(seed_, "v0.1");
   for (int call = 1; call <= options.num_calls; call++) {
-    GenerateContext ctx(variables_, {}, rng);
+    GenerateContext ctx(variables_, values, rng);
     std::vector<TestCase> test_cases = fn(ctx);
 
     for (const TestCase& test_case : test_cases) {

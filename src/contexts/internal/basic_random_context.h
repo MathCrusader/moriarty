@@ -39,7 +39,7 @@ using ElementType = std::iter_value_t<decltype(std::begin(T{}))>;
 // DistinctIntegers, RandomPermutation, etc).
 class BasicRandomContext {
  public:
-  explicit BasicRandomContext(RandomEngine& engine);
+  explicit BasicRandomContext(std::reference_wrapper<RandomEngine> engine);
 
   // RandomInteger()
   //
@@ -147,12 +147,6 @@ class BasicRandomContext {
 template <typename Container>
 void BasicRandomContext::PartialShuffle(Container& container, int64_t k) {
   std::span c(container);
-  if (!(0 <= k && k <= c.size())) {
-    throw std::runtime_error(
-        std::format("PartialShuffle(<container>, {}) is invalid, with "
-                    "<container>.size()={} (need 0 <= k <= size)",
-                    k, container.size()));
-  }
   for (int i = 0; i < k; i++) {
     int64_t s = RandomInteger(i, c.size() - 1);  // size()-1 is safe
     if (i != s) std::swap(c[i], c[s]);

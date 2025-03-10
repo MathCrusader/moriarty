@@ -31,6 +31,7 @@
 #include "src/contexts/internal/variable_ostream_context.h"
 #include "src/contexts/internal/variable_random_context.h"
 #include "src/contexts/internal/view_only_context.h"
+#include "src/internal/value_set.h"
 #include "src/io_config.h"
 #include "test_case.h"
 
@@ -48,9 +49,10 @@ class GenerateContext : public moriarty_internal::ViewOnlyContext,
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
   // See `src/Moriarty.h` for entry points.
-  GenerateContext(const moriarty_internal::VariableSet& variables,
-                  const moriarty_internal::ValueSet& values,
-                  moriarty_internal::RandomEngine& rng);
+  GenerateContext(
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<const moriarty_internal::ValueSet> values,
+      std::reference_wrapper<moriarty_internal::RandomEngine> rng);
 
   // *****************************************************
   // ** See parent classes for all available functions. **
@@ -88,12 +90,18 @@ class ImportContext : public moriarty_internal::ViewOnlyContext,
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
   // See `src/Moriarty.h` for entry points.
-  ImportContext(const moriarty_internal::VariableSet& variables,
-                std::istream& is, WhitespaceStrictness whitespace_strictness);
+  ImportContext(
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<std::istream> is,
+      WhitespaceStrictness whitespace_strictness);
 
   // *****************************************************
   // ** See parent classes for all available functions. **
   // *****************************************************
+
+ private:
+  // TODO: In the future, these values will be the testset-wide values.
+  moriarty_internal::ValueSet values_;
 };
 
 // The function signature for an importer.
@@ -120,9 +128,10 @@ class ExportContext : public moriarty_internal::ViewOnlyContext,
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
   // See `src/Moriarty.h` for entry points.
-  ExportContext(std::ostream& os,
-                const moriarty_internal::VariableSet& variables,
-                const moriarty_internal::ValueSet& values);
+  ExportContext(
+      std::reference_wrapper<std::ostream> os,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<const moriarty_internal::ValueSet> values);
 
   // *****************************************************
   // ** See parent classes for all available functions. **

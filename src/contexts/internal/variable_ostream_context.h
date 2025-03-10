@@ -17,9 +17,11 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_OSTREAM_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_OSTREAM_CONTEXT_H_
 
+#include <concepts>
 #include <functional>
 #include <ostream>
 
+#include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/test_case.h"
@@ -32,11 +34,26 @@ namespace moriarty_internal {
 // Print variables to an output stream.
 class VariableOStreamContext {
  public:
-  VariableOStreamContext(std::ostream& os, const VariableSet& variables,
-                         const ValueSet& values);
+  VariableOStreamContext(std::reference_wrapper<std::ostream> os,
+                         std::reference_wrapper<const VariableSet> variables,
+                         std::reference_wrapper<const ValueSet> values);
 
+  // PrintVariable()
+  //
+  // Prints the value of `variable_name` to the output stream.
   void PrintVariable(std::string_view variable_name);
 
+  // PrintVariable()
+  //
+  // Prints `value` to the output stream using `variable` to determine how to do
+  // so.
+  template <typename T>
+    requires std::derived_from<T, AbstractVariable>
+  void PrintVariable(T variable, T::value_type value);
+
+  // PrintVariableFrom()
+  //
+  // Prints the value of `variable_name` from `test_case` to the output stream.
   void PrintVariableFrom(std::string_view variable_name,
                          const ConcreteTestCase& test_case);
 
@@ -45,6 +62,16 @@ class VariableOStreamContext {
   std::reference_wrapper<const ValueSet> values_;
   std::reference_wrapper<std::ostream> os_;
 };
+
+// -----------------------------------------------------------------------------
+//  Template implementation below
+
+template <typename T>
+  requires std::derived_from<T, AbstractVariable>
+void VariableOStreamContext::PrintVariable(T variable, T::value_type value) {
+  librarian::PrinterContext ctx("PrintVariable()", os_, variables_, values_);
+  variable.Print(ctx, value);
+}
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

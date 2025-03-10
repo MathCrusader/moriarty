@@ -82,6 +82,7 @@ TEST(AnalysisBootstrapTest,
 
   values.Set<MTestType>("A", options[4]);
 
+  // FIXME:
   EXPECT_THAT(AllVariablesSatisfyConstraints(variables, values),
               IsValueNotFound("B"));
 }

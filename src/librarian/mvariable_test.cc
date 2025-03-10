@@ -383,9 +383,8 @@ TEST(MVariableTest, CustomConstraintWithDependentVariables) {
                    .AddCustomConstraint(
                        "Custom1", {"A"},
                        [](const TestType value, AnalysisContext ctx) -> bool {
-                         auto A = ctx.GetValue<MTestType>("A");
-                         if (!A.ok()) return false;
-                         return A->value == value;
+                         TestType A = ctx.GetValue<MTestType>("A");
+                         return A.value == value;
                        }),
                Context().WithVariable(
                    "A", MTestType().SetMultiplier(MInteger().Is(2)))),
@@ -400,9 +399,8 @@ TEST(MVariableTest, CustomConstraintInvalidFailsToGenerate) {
                      .AddCustomConstraint(
                          "Custom1", {"A"},
                          [](const TestType value, AnalysisContext ctx) -> bool {
-                           auto A = ctx.GetValue<MTestType>("A");
-                           if (!A.ok()) return false;
-                           return A->value == value;
+                           TestType A = ctx.GetValue<MTestType>("A");
+                           return A.value == value;
                          }),
                  Context().WithVariable(
                      "A", MTestType().SetMultiplier(MInteger().Is(2))))
@@ -419,9 +417,8 @@ TEST(MVariableTest, CustomConstraintsWithInvalidDependentVariableCrashes) {
                      .AddCustomConstraint(
                          "Custom1", {},
                          [](const TestType value, AnalysisContext ctx) -> bool {
-                           auto A = ctx.GetValue<MTestType>("A");
-                           if (!A.ok()) return false;
-                           return A->value == value;
+                           TestType A = ctx.GetValue<MTestType>("A");
+                           return A.value == value;
                          }))
             .IgnoreError();
       },
@@ -441,9 +438,8 @@ TEST(MVariableTest,
                      .AddCustomConstraint(
                          "Custom1", {},
                          [](const TestType value, AnalysisContext ctx) -> bool {
-                           auto A = ctx.GetValue<MTestType>("A");
-                           if (!A.ok()) return false;
-                           return A->value == value;
+                           TestType A = ctx.GetValue<MTestType>("A");
+                           return A.value == value;
                          }),
                  Context().WithVariable(
                      "L", MTestType().SetMultiplier(MInteger().Is(2))))

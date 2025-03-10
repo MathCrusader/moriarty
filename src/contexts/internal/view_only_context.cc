@@ -1,10 +1,18 @@
 #include "src/contexts/internal/view_only_context.h"
 
+#include <functional>
+#include <stdexcept>
+#include <string>
+
+#include "src/internal/value_set.h"
+#include "src/internal/variable_set.h"
+
 namespace moriarty {
 namespace moriarty_internal {
 
-ViewOnlyContext::ViewOnlyContext(const VariableSet& variables,
-                                 const ValueSet& values)
+ViewOnlyContext::ViewOnlyContext(
+    std::reference_wrapper<const VariableSet> variables,
+    std::reference_wrapper<const ValueSet> values)
     : variables_(variables), values_(values) {}
 
 const AbstractVariable& ViewOnlyContext::GetAnonymousVariable(

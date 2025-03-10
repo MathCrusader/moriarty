@@ -34,7 +34,6 @@
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
 #include "src/property.h"
-#include "src/util/status_macro/status_macros.h"
 #include "src/variables/minteger.h"
 
 // LINT.IfChange
@@ -102,9 +101,7 @@ absl::Status MTestType::IsSatisfiedWithImpl(
     moriarty::librarian::AnalysisContext ctx, const TestType& value) const {
   TestType val = value;
   if (adder_variable_name_) {
-    MORIARTY_ASSIGN_OR_RETURN(
-        TestType subtract_me, ctx.GetValue<MTestType>(*adder_variable_name_),
-        _ << "Unknown adder variable: " << *adder_variable_name_);
+    TestType subtract_me = ctx.GetValue<MTestType>(*adder_variable_name_);
     val = val - subtract_me;
   }
 

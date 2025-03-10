@@ -24,6 +24,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/context.h"
+#include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/io_config.h"
 #include "src/test_case.h"
@@ -122,7 +123,8 @@ TEST(SimpleIOExporterTest, ExporterSimpleCaseShouldWork) {
   };
 
   std::stringstream ss;
-  ExportContext ctx(ss, variables, {});
+  moriarty_internal::ValueSet values;
+  ExportContext ctx(ss, variables, values);
   ExportFn exporter = SimpleIO().AddLine("N").Exporter();
 
   exporter(ctx, test_cases);
@@ -149,7 +151,8 @@ TEST(SimpleIOExporterTest, ExportHeaderAndFooterLinesShouldWork) {
                                                   .SetValue<MInteger>("c", 32)};
 
   std::stringstream ss;
-  ExportContext ctx(ss, variables, {});
+  moriarty_internal::ValueSet values;
+  ExportContext ctx(ss, variables, values);
   ExportFn exporter = SimpleIO()
                           .AddHeaderLine(StringLiteral("start"))
                           .AddLine(StringLiteral("line"), "a", "b", "c")
@@ -181,7 +184,8 @@ TEST(SimpleIOExporterTest, ExportWithNumberOfTestCasesShouldPrintProperly) {
                                                   .SetValue<MInteger>("c", 31)};
 
   std::stringstream ss;
-  ExportContext ctx(ss, variables, {});
+  moriarty_internal::ValueSet values;
+  ExportContext ctx(ss, variables, values);
   ExportFn exporter = SimpleIO()
                           .WithNumberOfTestCasesInHeader()
                           .AddLine("a", "b", "c")
@@ -259,8 +263,8 @@ TEST(SimpleIOImporterTest, ImportWrongTokenFails) {
                    StringLiteral("right"), StringLiteral("words"))
           .Importer();
 
-  ImportContext ctx(moriarty_internal::VariableSet(), ss,
-                    WhitespaceStrictness::kPrecise);
+  moriarty_internal::VariableSet variables;
+  ImportContext ctx(variables, ss, WhitespaceStrictness::kPrecise);
   EXPECT_THROW({ importer(ctx); }, std::runtime_error);
 }
 
@@ -272,8 +276,7 @@ TEST(SimpleIOImporterTest, ImportWrongWhitespaceFails) {
   std::stringstream ss("1\t11\n");
   ImportFn importer = SimpleIO().AddLine("R", "S").Importer();
 
-  ImportContext ctx(moriarty_internal::VariableSet(), ss,
-                    WhitespaceStrictness::kPrecise);
+  ImportContext ctx(variables, ss, WhitespaceStrictness::kPrecise);
   EXPECT_THROW({ importer(ctx); }, std::runtime_error);
 }
 

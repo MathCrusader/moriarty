@@ -1,5 +1,6 @@
 #include "src/contexts/internal/generation_orchestration_context.h"
 
+#include <functional>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -12,7 +13,7 @@ namespace moriarty {
 namespace moriarty_internal {
 
 GenerationOrchestrationContext::GenerationOrchestrationContext(
-    GenerationConfig& config)
+    std::reference_wrapper<GenerationConfig> config)
     : config_(config) {}
 
 void GenerationOrchestrationContext::MarkStartGeneration(

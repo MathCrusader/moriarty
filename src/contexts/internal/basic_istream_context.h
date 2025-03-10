@@ -32,7 +32,7 @@ namespace moriarty_internal {
 // The held istream will have its exceptions enabled.
 class BasicIStreamContext {
  public:
-  explicit BasicIStreamContext(std::istream& is,
+  explicit BasicIStreamContext(std::reference_wrapper<std::istream> is,
                                moriarty::WhitespaceStrictness strictness);
 
   // ReadToken()

@@ -35,16 +35,17 @@ namespace moriarty_internal {
 // Read variables from an input stream.
 class VariableIStreamContext {
  public:
-  VariableIStreamContext(std::istream& is,
+  VariableIStreamContext(std::reference_wrapper<std::istream> is,
                          WhitespaceStrictness whitespace_strictness,
-                         const VariableSet& variables, const ValueSet& values);
+                         std::reference_wrapper<const VariableSet> variables,
+                         std::reference_wrapper<const ValueSet> values);
 
   // ReadVariable()
   //
   // Reads a known variable from the input stream and returns what was read.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
-  T::value_type ReadVariable(std::string_view variable_name);
+  [[nodiscard]] T::value_type ReadVariable(std::string_view variable_name);
 
   // ReadVariable()
   //
@@ -52,7 +53,7 @@ class VariableIStreamContext {
   // read it, and returns what was read.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
-  T::value_type ReadVariable(const T& variable);
+  [[nodiscard]] T::value_type ReadVariable(const T& variable);
 
   // ReadVariableTo()
   //
@@ -75,12 +76,12 @@ template <typename T>
   requires std::derived_from<T, AbstractVariable>
 T::value_type VariableIStreamContext::ReadVariable(
     std::string_view variable_name) {
-  auto variable = GetVariable<T>(variable_name);
+  auto variable = variables_.get().GetVariable<T>(variable_name);
   if (!variable.ok()) throw std::runtime_error(variable.status().ToString());
 
   librarian::ReaderContext ctx(variable_name, is_, whitespace_strictness_,
                                variables_, values_);
-  return variable.Read(ctx);
+  return variable->Read(ctx);
 }
 
 template <typename T>

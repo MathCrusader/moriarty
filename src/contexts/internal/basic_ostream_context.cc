@@ -21,7 +21,9 @@
 namespace moriarty {
 namespace moriarty_internal {
 
-BasicOStreamContext::BasicOStreamContext(std::ostream& os) : os_(os) {
+BasicOStreamContext::BasicOStreamContext(
+    std::reference_wrapper<std::ostream> os)
+    : os_(os) {
   os_.get().exceptions(std::ostream::failbit | std::ostream::badbit);
 }
 

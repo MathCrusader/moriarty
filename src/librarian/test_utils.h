@@ -622,7 +622,26 @@ MATCHER_P3(IsNotSatisfiedWith, value, reason, context, "") {
   moriarty::librarian::AnalysisContext ctx(var_name, *manager.GetVariables(),
                                            *manager.GetValues());
 
-  absl::Status satisfies = arg.IsSatisfiedWith(ctx, ValueType(value));
+  absl::Status satisfies;
+  try {
+    satisfies = arg.IsSatisfiedWith(ctx, ValueType(value));
+  } catch (const std::runtime_error& e) {
+    satisfies = moriarty::UnsatisfiedConstraintError(e.what());
+    // std::string_view error = e.what();
+    // if (error.starts_with("NOT_FOUND: Value for `")) {
+    //   int start = error.find('`') + 1;
+    //   int end = error.find('`', start);
+    //   satisfies =
+    //       moriarty::ValueNotFoundError(error.substr(start, end - start));
+    // } else if (error.starts_with("NOT_FOUND: Unknown variable: `")) {
+    //   int start = error.find('`') + 1;
+    //   int end = error.find('`', start);
+    //   satisfies =
+    //       moriarty::VariableNotFoundError(error.substr(start, end - start));
+    // } else {
+    //   satisfies = moriarty::UnsatisfiedConstraintError(e.what());
+    // }
+  }
 
   if (moriarty::IsUnsatisfiedConstraintError(satisfies)) {
     if (!testing::Value(satisfies.message(), testing::HasSubstr(reason))) {

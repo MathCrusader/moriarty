@@ -157,3 +157,74 @@ cc_test(
         "@googletest//:gtest_main",
     ],
 )
+
+cc_test(
+    name = "mutable_values_context_test",
+    srcs = ["mutable_values_context_test.cc"],
+    deps = [
+        "//src/internal:value_set",
+        "//src/util/test_status_macro:status_testutil",
+        "//src/variables:minteger",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "name_context_test",
+    srcs = ["name_context_test.cc"],
+    deps = [
+        ":name_context",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "variable_istream_context_test",
+    srcs = ["variable_istream_context_test.cc"],
+    deps = [
+        ":variable_istream_context",
+        "//src/util/test_status_macro:status_testutil",
+        "//src/variables:marray",
+        "//src/variables:minteger",
+        "//src/variables/constraints:container_constraints",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "variable_ostream_context_test",
+    srcs = ["variable_ostream_context_test.cc"],
+    deps = [
+        ":variable_ostream_context",
+        "//src/util/test_status_macro:status_testutil",
+        "//src/variables:minteger",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "variable_random_context_test",
+    srcs = ["variable_random_context_test.cc"],
+    deps = [
+        ":variable_random_context",
+        "//src/internal:random_engine",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
+        "//src/util/test_status_macro:status_testutil",
+        "//src/variables:minteger",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "view_only_context_test",
+    srcs = ["view_only_context_test.cc"],
+    deps = [
+        ":view_only_context",
+        "//src/util/test_status_macro:status_testutil",
+        "//src/variables:marray",
+        "//src/variables:minteger",
+        "//src/variables:mstring",
+        "@googletest//:gtest_main",
+    ],
+)

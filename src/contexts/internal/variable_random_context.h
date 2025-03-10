@@ -37,8 +37,10 @@ namespace moriarty_internal {
 // A class to handle Moriarty type-specific randomness.
 class VariableRandomContext {
  public:
-  explicit VariableRandomContext(const VariableSet& variables,
-                                 const ValueSet& values, RandomEngine& engine);
+  explicit VariableRandomContext(
+      std::reference_wrapper<const VariableSet> variables,
+      std::reference_wrapper<const ValueSet> values,
+      std::reference_wrapper<RandomEngine> engine);
 
   // Random()
   //
@@ -66,7 +68,8 @@ class VariableRandomContext {
   // Returns a random value for the variable named `variable_name`. Also imposes
   // `extra_constraints` on the variable.
   //
-  // Throws if the variable is not known.
+  // Throws if the variable is not known. If a value for the variable is already
+  // known, then `extra_constraints` is ignored.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
   [[nodiscard]] T::value_type RandomValue(std::string_view variable_name,
@@ -112,20 +115,29 @@ template <typename T>
 T::value_type VariableRandomContext::Random(T m) {
   std::string name = std::format("Random({})", m.Typename());
   VariableSet variables_copy = variables_.get();
-  variables_copy.AddVariable(name, m);
+  auto status = variables_copy.AddVariable(name, m);
+  if (!status.ok()) throw std::runtime_error(status.ToString());
 
   auto set_values = GenerateAllValues(std::move(variables_copy), values_.get(),
                                       {.random_engine = engine_.get()});
   if (!set_values.ok())
     throw std::runtime_error(set_values.status().ToString());
 
-  return set_values->Get<T>(name);
+  auto result = set_values->Get<T>(name);
+  if (!result.ok()) throw std::runtime_error(result.status().ToString());
+  return *result;
 }
 
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
 T::value_type VariableRandomContext::RandomValue(
     std::string_view variable_name) {
+  if (values_.get().Contains(variable_name)) {
+    auto value = values_.get().Get<T>(variable_name);
+    if (!value.ok()) throw std::runtime_error(value.status().ToString());
+    return *value;
+  }
+
   auto variable = variables_.get().GetVariable<T>(variable_name);
   if (!variable.ok()) throw std::runtime_error(variable.status().ToString());
   return Random<T>(*variable);
@@ -135,9 +147,15 @@ template <typename T>
   requires std::derived_from<T, AbstractVariable>
 T::value_type VariableRandomContext::RandomValue(std::string_view variable_name,
                                                  T extra_constraints) {
+  if (values_.get().Contains(variable_name)) {
+    auto value = values_.get().Get<T>(variable_name);
+    if (!value.ok()) throw std::runtime_error(value.status().ToString());
+    return *value;
+  }
+
   auto variable = variables_.get().GetVariable<T>(variable_name);
   if (!variable.ok()) throw std::runtime_error(variable.status().ToString());
-  variable.MergeFrom(extra_constraints);
+  variable->MergeFrom(extra_constraints);
   return Random<T>(*variable);
 }
 

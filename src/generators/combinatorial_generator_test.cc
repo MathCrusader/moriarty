@@ -69,12 +69,13 @@ std::vector<CoveringArrayTestCase> CasesToCoveringArray(
 }
 
 TEST(CombinatorialCoverage, GenerateShouldCreateCasesFromCoveringArray) {
+  moriarty_internal::ValueSet values;
   moriarty_internal::VariableSet variables;
   MORIARTY_ASSERT_OK(variables.AddVariable("X", moriarty_testing::MTestType()));
   MORIARTY_ASSERT_OK(variables.AddVariable("Y", moriarty_testing::MTestType()));
 
   moriarty_internal::RandomEngine rng({1, 2, 3, 4}, "v0.1");
-  GenerateContext ctx(variables, {}, rng);
+  GenerateContext ctx(variables, values, rng);
 
   std::vector<TestCase> test_cases = CombinatorialCoverage(ctx);
   std::vector<ValueSet> generated_cases;

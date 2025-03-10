@@ -31,7 +31,7 @@ namespace moriarty_internal {
 // Allows you to update the values currently stored.
 class MutableValuesContext {
  public:
-  explicit MutableValuesContext(ValueSet& values);
+  explicit MutableValuesContext(std::reference_wrapper<ValueSet> values);
 
   // SetValue()
   //

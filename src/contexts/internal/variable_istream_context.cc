@@ -10,8 +10,10 @@ namespace moriarty {
 namespace moriarty_internal {
 
 VariableIStreamContext::VariableIStreamContext(
-    std::istream& is, WhitespaceStrictness whitespace_strictness,
-    const VariableSet& variables, const ValueSet& values)
+    std::reference_wrapper<std::istream> is,
+    WhitespaceStrictness whitespace_strictness,
+    std::reference_wrapper<const VariableSet> variables,
+    std::reference_wrapper<const ValueSet> values)
     : variables_(variables),
       values_(values),
       is_(is),
@@ -19,7 +21,7 @@ VariableIStreamContext::VariableIStreamContext(
 
 void VariableIStreamContext::ReadVariableTo(std::string_view variable_name,
                                             ConcreteTestCase& test_case) {
-  ValueSet values;
+  ValueSet values = values_;
   MutableValuesContext mutable_values_ctx(values);
   librarian::ReaderContext reader_ctx(
       variable_name, is_, whitespace_strictness_, variables_, values);

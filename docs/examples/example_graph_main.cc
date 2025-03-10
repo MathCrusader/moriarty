@@ -34,7 +34,7 @@ using ::moriarty_examples::MExampleGraph;
 // Exporter that prints the Graph to std::cout.
 void PrintGraph(moriarty::ExportContext ctx,
                 std::span<const moriarty::ConcreteTestCase>) {
-  ExampleGraph G = *ctx.GetValue<MExampleGraph>("G");
+  ExampleGraph G = ctx.GetValue<MExampleGraph>("G");
 
   // Simply print to screen
   std::cout << G.num_nodes << " " << G.edges.size() << '\n';

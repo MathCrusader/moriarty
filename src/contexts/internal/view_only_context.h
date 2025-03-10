@@ -20,6 +20,7 @@
 #include <functional>
 #include <memory>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -38,16 +39,15 @@ namespace moriarty_internal {
 // or values.
 class ViewOnlyContext {
  public:
-  explicit ViewOnlyContext(const VariableSet& variables,
-                           const ValueSet& values);
+  explicit ViewOnlyContext(std::reference_wrapper<const VariableSet> variables,
+                           std::reference_wrapper<const ValueSet> values);
 
   // GetVariable()
   //
   // Returns the stored variable with the name `variable_name`.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
-  [[nodiscard]] absl::StatusOr<T> GetVariable(
-      std::string_view variable_name) const;
+  [[nodiscard]] T GetVariable(std::string_view variable_name) const;
 
   // GetAnonymousVariable()
   //
@@ -62,8 +62,7 @@ class ViewOnlyContext {
   // Returns the stored value for the variable with the name `variable_name`.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
-  [[nodiscard]] absl::StatusOr<typename T::value_type> GetValue(
-      std::string_view variable_name) const;
+  [[nodiscard]] T::value_type GetValue(std::string_view variable_name) const;
 
   // GetValueIfKnown()
   //
@@ -146,16 +145,18 @@ namespace moriarty_internal {
 
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
-absl::StatusOr<T> ViewOnlyContext::GetVariable(
-    std::string_view variable_name) const {
-  return variables_.get().GetVariable<T>(variable_name);
+T ViewOnlyContext::GetVariable(std::string_view variable_name) const {
+  auto variable = variables_.get().GetVariable<T>(variable_name);
+  if (!variable.ok()) throw std::runtime_error(variable.status().ToString());
+  return *variable;
 }
 
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
-absl::StatusOr<typename T::value_type> ViewOnlyContext::GetValue(
-    std::string_view variable_name) const {
-  return values_.get().Get<T>(variable_name);
+T::value_type ViewOnlyContext::GetValue(std::string_view variable_name) const {
+  auto value = values_.get().Get<T>(variable_name);
+  if (!value.ok()) throw std::runtime_error(value.status().ToString());
+  return *value;
 }
 
 template <typename T>
@@ -175,17 +176,16 @@ std::optional<typename T::value_type> ViewOnlyContext::GetUniqueValue(
   auto stored_value = GetValueIfKnown<T>(variable_name);
   if (stored_value) return *stored_value;
 
-  auto variable = GetVariable<T>(variable_name);
-  if (!variable.ok()) return std::nullopt;
-  return moriarty_internal::GetUniqueValue(*variable, variable_name, *this);
+  return moriarty_internal::GetUniqueValue(GetVariable<T>(variable_name),
+                                           variable_name, *this);
 }
 
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
 absl::Status ViewOnlyContext::SatisfiesConstraints(
     T variable, const T::value_type& value) const {
-  return SatisfiesConstraints(std::move(variable), "SatisfiesConstraints",
-                              *this, value);
+  return moriarty_internal::SatisfiesConstraints(
+      std::move(variable), "Context::SatisfiesConstraints()", *this, value);
 }
 
 }  // namespace moriarty_internal

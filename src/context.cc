@@ -14,6 +14,8 @@
 
 #include "src/context.h"
 
+#include <functional>
+
 #include "src/contexts/internal/basic_istream_context.h"
 #include "src/contexts/internal/basic_random_context.h"
 #include "src/contexts/internal/variable_random_context.h"
@@ -26,23 +28,25 @@
 namespace moriarty {
 
 GenerateContext::GenerateContext(
-    const moriarty_internal::VariableSet& variables,
-    const moriarty_internal::ValueSet& values,
-    moriarty_internal::RandomEngine& rng)
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<const moriarty_internal::ValueSet> values,
+    std::reference_wrapper<moriarty_internal::RandomEngine> rng)
     : ViewOnlyContext(variables, values),
       BasicRandomContext(rng),
       VariableRandomContext(variables, values, rng) {}
 
-ImportContext::ImportContext(const moriarty_internal::VariableSet& variables,
-                             std::istream& is,
-                             WhitespaceStrictness whitespace_strictness)
-    : ViewOnlyContext(variables, {}),
+ImportContext::ImportContext(
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<std::istream> is,
+    WhitespaceStrictness whitespace_strictness)
+    : ViewOnlyContext(variables, values_),
       BasicIStreamContext(is, whitespace_strictness),
-      VariableIStreamContext(is, whitespace_strictness, variables, {}) {}
+      VariableIStreamContext(is, whitespace_strictness, variables, values_) {}
 
-ExportContext::ExportContext(std::ostream& os,
-                             const moriarty_internal::VariableSet& variables,
-                             const moriarty_internal::ValueSet& values)
+ExportContext::ExportContext(
+    std::reference_wrapper<std::ostream> os,
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<const moriarty_internal::ValueSet> values)
     : ViewOnlyContext(variables, values),
       BasicOStreamContext(os),
       VariableOStreamContext(os, variables, values) {}

@@ -32,7 +32,7 @@ namespace moriarty_internal {
 // The held ostream will have its exceptions enabled.
 class BasicOStreamContext {
  public:
-  explicit BasicOStreamContext(std::ostream& os);
+  explicit BasicOStreamContext(std::reference_wrapper<std::ostream> os);
 
   // PrintToken()
   //
