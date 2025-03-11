@@ -34,7 +34,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
-#include "absl/types/variant.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {

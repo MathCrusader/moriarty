@@ -20,7 +20,6 @@
 #include <functional>
 #include <string_view>
 
-#include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/status/status.h"
@@ -64,32 +63,6 @@ T TryFunctionOrCrash(std::function<absl::StatusOr<T>()> fn,
 
   // This line will not be invoked, but including to avoid lint errors.
   return *status_or;
-}
-
-// TryFunctionOrCrash() [absl::StatusOr<T*> version]
-//
-// Evaluates `fn`, which returns `absl::StatusOr`. If the status
-// is `ok`, then this returns the underlying value. Otherwise, crashes the
-// program with a slightly nicer error message than just ABSL_CHECK_OK provides
-// (and then calls ABSL_CHECK_OK).
-//
-// This assumes that you are in a function named `Foo()` which returns a `T&`,
-// and there is a `TryFoo()` that returns `absl::StatusOr<absl::Nonnull<T*>>`
-// available for the user to call.
-template <typename T>
-T& TryFunctionOrCrash(std::function<absl::StatusOr<absl::Nonnull<T*>>()> fn,
-                      std::string_view function_name_without_try) {
-  absl::StatusOr<absl::Nonnull<T*>> status_or = fn();
-  if (status_or.ok()) return *(*status_or);
-
-  ABSL_LOG(INFO)
-      << "Encountered an error in " << function_name_without_try
-      << ". If you would like to catch this error and not crash, use Try"
-      << function_name_without_try << " instead.";
-  ABSL_CHECK_OK(status_or);
-
-  // This line will not be invoked, but including to avoid lint errors.
-  return *(*status_or);
 }
 
 }  // namespace moriarty_internal

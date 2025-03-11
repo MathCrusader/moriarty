@@ -146,7 +146,6 @@ cc_library(
     srcs = ["status_utils.cc"],
     hdrs = ["status_utils.h"],
     deps = [
-        "@abseil-cpp//absl/base:nullability",
         "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/log:absl_log",
         "@abseil-cpp//absl/status",
