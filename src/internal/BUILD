@@ -138,7 +138,6 @@ cc_library(
     srcs = ["simple_pattern.cc"],
     hdrs = ["simple_pattern.h"],
     deps = [
-        ":random_config",
         ":random_engine",
         "//src/util/status_macro:status_macros",
         "@abseil-cpp//absl/status",
@@ -356,35 +355,6 @@ cc_test(
         "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
         "@abseil-cpp//absl/status",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_library(
-    name = "random_config",
-    srcs = ["random_config.cc"],
-    hdrs = ["random_config.h"],
-    deps = [
-        ":random_engine",
-        "//src/util/status_macro:status_macros",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-    ],
-)
-
-cc_test(
-    name = "random_config_test",
-    srcs = ["random_config_test.cc"],
-    deps = [
-        ":random_config",
-        ":random_engine",
-        "//src/testing:random_test_util",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
         "@googletest//:gtest_main",
     ],
 )

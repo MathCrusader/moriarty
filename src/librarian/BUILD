@@ -48,7 +48,6 @@ cc_library(
         "//src/contexts/librarian:resolver_context",
         "//src/internal:abstract_variable",
         "//src/internal:generation_config",
-        "//src/internal:random_config",
         "//src/internal:random_engine",
         "//src/internal:status_utils",
         "//src/internal:variable_name_utils",

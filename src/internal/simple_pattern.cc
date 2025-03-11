@@ -31,7 +31,6 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
-#include "src/internal/random_config.h"
 #include "src/internal/random_engine.h"
 #include "src/util/status_macro/status_macros.h"
 
@@ -464,9 +463,12 @@ absl::StatusOr<std::string> GenerateRepeatedCharSet(
         "allowed.");
   }
 
-  MORIARTY_ASSIGN_OR_RETURN(
-      std::vector<char> result,
-      RandomElementsWithReplacement(random_engine, valid_chars, len));
+  std::string result;
+  while (result.size() < len) {
+    MORIARTY_ASSIGN_OR_RETURN(int idx,
+                              random_engine.RandInt(valid_chars.size()));
+    result.push_back(valid_chars[idx]);
+  }
   return std::string(result.begin(), result.end());
 }
 
