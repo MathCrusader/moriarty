@@ -18,6 +18,7 @@
 #include <iomanip>
 #include <limits>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -36,7 +37,6 @@
 namespace moriarty {
 namespace {
 
-using ::moriarty::IsOk;
 using ::moriarty::IsOkAndHolds;
 using ::moriarty::StatusIs;
 using ::moriarty::moriarty_internal::BinaryOperation;
@@ -72,105 +72,80 @@ MATCHER(IsOverflow, "Overflow should occur and throw FailedPreconditionError") {
 /* -------------------------------------------------------------------------- */
 
 TEST(ExpressionsTest, SingletonLiteralShouldReturnThatValue) {
-  EXPECT_THAT(EvaluateIntegerExpression(Literal(10)), IsOkAndHolds(10));
-  EXPECT_THAT(EvaluateIntegerExpression(Literal(0)), IsOkAndHolds(0));
-  EXPECT_THAT(EvaluateIntegerExpression(Literal(-117)), IsOkAndHolds(-117));
+  EXPECT_EQ(EvaluateIntegerExpression(Literal(10)), 10);
+  EXPECT_EQ(EvaluateIntegerExpression(Literal(0)), 0);
+  EXPECT_EQ(EvaluateIntegerExpression(Literal(-117)), -117);
 }
 
 TEST(ExpressionsTest, SimpleUnaryOpsShouldReturnExpectedValue) {
-  EXPECT_THAT(EvaluateIntegerExpression(SimpleUnaryOp(UnaryOperator::kPlus, 3)),
-              IsOkAndHolds(3));
-  EXPECT_THAT(EvaluateIntegerExpression(SimpleUnaryOp(UnaryOperator::kPlus, 0)),
-              IsOkAndHolds(0));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleUnaryOp(UnaryOperator::kNegate, 0)),
-      IsOkAndHolds(0));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleUnaryOp(UnaryOperator::kNegate, 3)),
-      IsOkAndHolds(-3));
+  using UnaryOperator::kNegate;
+  using UnaryOperator::kPlus;
+
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleUnaryOp(kPlus, 3)), 3);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleUnaryOp(kPlus, 0)), 0);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleUnaryOp(kNegate, 0)), 0);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleUnaryOp(kNegate, 3)), -3);
 }
 
 TEST(ExpressionsTest, SimpleBinaryOpsShouldReturnExpectedValue) {
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(10, BinaryOperator::kAdd, 3)),
-      IsOkAndHolds(10 + 3));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(-5, BinaryOperator::kAdd, 0)),
-      IsOkAndHolds(-5 + 0));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(10, BinaryOperator::kSubtract, 3)),
-              IsOkAndHolds(10 - 3));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-5, BinaryOperator::kSubtract, 0)),
-              IsOkAndHolds(-5 - 0));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-5, BinaryOperator::kMultiply, 3)),
-              IsOkAndHolds(-5 * 3));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-5, BinaryOperator::kMultiply, 0)),
-              IsOkAndHolds(-5 * 0));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(5, BinaryOperator::kDivide, -3)),
-      IsOkAndHolds(5 / -3));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(20, BinaryOperator::kDivide, 4)),
-      IsOkAndHolds(20 / 4));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(5, BinaryOperator::kModulo, -3)),
-      IsOkAndHolds(5 % -3));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(20, BinaryOperator::kModulo, 4)),
-      IsOkAndHolds(20 % 4));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(3, BinaryOperator::kExponentiate, 4)),
-              IsOkAndHolds(81));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(2, BinaryOperator::kExponentiate, 10)),
-              IsOkAndHolds(1024));
+  using BinaryOperator::kAdd;
+  using BinaryOperator::kDivide;
+  using BinaryOperator::kExponentiate;
+  using BinaryOperator::kModulo;
+  using BinaryOperator::kMultiply;
+  using BinaryOperator::kSubtract;
+
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(10, kAdd, 3)), 10 + 3);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(-5, kAdd, 0)), -5 + 0);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(10, kSubtract, 3)),
+            10 - 3);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(-5, kSubtract, 0)),
+            -5 - 0);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(-5, kMultiply, 3)),
+            -5 * 3);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(-5, kMultiply, 0)),
+            -5 * 0);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(5, kDivide, -3)), 5 / -3);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(20, kDivide, 4)), 20 / 4);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(5, kModulo, -3)), 5 % -3);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(20, kModulo, 4)), 20 % 4);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(3, kExponentiate, 4)), 81);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(2, kExponentiate, 10)),
+            1024);
 }
 
 TEST(ExpressionsTest, ExponentiationOfZeroOrOneShouldReturnZeroOrOne) {
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(0, BinaryOperator::kExponentiate, 1)),
-              IsOkAndHolds(0));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(0, BinaryOperator::kExponentiate, 1000000000)),
-              IsOkAndHolds(0));
+  using BinaryOperator::kExponentiate;
 
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(1, BinaryOperator::kExponentiate, 0)),
-              IsOkAndHolds(1));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(1, BinaryOperator::kExponentiate, 1)),
-              IsOkAndHolds(1));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(1, BinaryOperator::kExponentiate, 1000000000)),
-              IsOkAndHolds(1));
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(0, kExponentiate, 1)), 0);
+  EXPECT_EQ(
+      EvaluateIntegerExpression(SimpleBinaryOp(0, kExponentiate, 1000000000)),
+      0);
 
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-1, BinaryOperator::kExponentiate, 0)),
-              IsOkAndHolds(1));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-1, BinaryOperator::kExponentiate, 1)),
-              IsOkAndHolds(-1));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-1, BinaryOperator::kExponentiate, 999999999)),
-              IsOkAndHolds(-1));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-1, BinaryOperator::kExponentiate, 100000000)),
-              IsOkAndHolds(1));
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(1, kExponentiate, 0)), 1);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(1, kExponentiate, 1)), 1);
+  EXPECT_EQ(
+      EvaluateIntegerExpression(SimpleBinaryOp(1, kExponentiate, 1000000000)),
+      1);
+
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(-1, kExponentiate, 0)), 1);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(-1, kExponentiate, 1)),
+            -1);
+  EXPECT_EQ(
+      EvaluateIntegerExpression(SimpleBinaryOp(-1, kExponentiate, 999999999)),
+      -1);
+  EXPECT_EQ(
+      EvaluateIntegerExpression(SimpleBinaryOp(-1, kExponentiate, 100000000)),
+      1);
 }
 
 TEST(ExpressionsTest, AnythingNonzeroRaisedToZeroShouldReturnOne) {
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(3, BinaryOperator::kExponentiate, 0)),
-              IsOkAndHolds(1));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-2, BinaryOperator::kExponentiate, 0)),
-              IsOkAndHolds(1));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(12356869, BinaryOperator::kExponentiate, 0)),
-              IsOkAndHolds(1));
+  using BinaryOperator::kExponentiate;
+
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(3, kExponentiate, 0)), 1);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(-2, kExponentiate, 0)), 1);
+  EXPECT_EQ(
+      EvaluateIntegerExpression(SimpleBinaryOp(12356869, kExponentiate, 0)), 1);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -178,27 +153,31 @@ TEST(ExpressionsTest, AnythingNonzeroRaisedToZeroShouldReturnOne) {
 /* -------------------------------------------------------------------------- */
 
 TEST(ExpressionsTest, NestingExpressionsShouldWork) {
-  EXPECT_THAT(EvaluateIntegerExpression(BinaryOperation(
-                  Literal(3), BinaryOperator::kSubtract,
-                  BinaryOperation(Literal(5), BinaryOperator::kAdd,
-                                  SimpleUnaryOp(UnaryOperator::kNegate, 7)))),
-              IsOkAndHolds(3 - (5 + (-7))));
+  using BinaryOperator::kAdd;
+  using BinaryOperator::kSubtract;
+  using UnaryOperator::kNegate;
+  using UnaryOperator::kPlus;
 
-  EXPECT_THAT(
+  EXPECT_EQ(EvaluateIntegerExpression(BinaryOperation(
+                Literal(3), kSubtract,
+                BinaryOperation(Literal(5), kAdd, SimpleUnaryOp(kNegate, 7)))),
+            3 - (5 + (-7)));
+
+  EXPECT_EQ(
       EvaluateIntegerExpression(BinaryOperation(
-          BinaryOperation(Literal(5), BinaryOperator::kAdd,
-                          UnaryOperation(UnaryOperator::kPlus, Literal(7))),
-          BinaryOperator::kSubtract, Literal(3))),
-      IsOkAndHolds((5 + (+7)) - 3));
+          BinaryOperation(Literal(5), kAdd, UnaryOperation(kPlus, Literal(7))),
+          kSubtract, Literal(3))),
+      (5 + (+7)) - 3);
 }
 
 TEST(ExpressionsTest,
      ErrorsInNestedExpressionShouldTriggerEvenThoughEntireAnswerFitsIn64Bits) {
-  absl::StatusOr<Expression> expr = ParseExpression(
-      absl::Substitute("($0 + $0) - $0", std::numeric_limits<int64_t>::max()));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(
+      Expression expr,
+      ParseExpression(absl::Substitute("($0 + $0) - $0",
+                                       std::numeric_limits<int64_t>::max())));
 
-  MORIARTY_ASSERT_OK(expr);
-  EXPECT_THAT(EvaluateIntegerExpression(*expr), IsOverflow());
+  EXPECT_THROW({ EvaluateIntegerExpression(expr); }, std::overflow_error);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -206,55 +185,57 @@ TEST(ExpressionsTest,
 /* -------------------------------------------------------------------------- */
 
 TEST(ExpressionsTest, NegatingSmallestIntegerShouldFail) {
-  EXPECT_THAT(EvaluateIntegerExpression(SimpleUnaryOp(
-                  UnaryOperator::kNegate, std::numeric_limits<int64_t>::min())),
-              IsOverflow());
+  EXPECT_THROW(
+      {
+        EvaluateIntegerExpression(SimpleUnaryOp(
+            UnaryOperator::kNegate, std::numeric_limits<int64_t>::min()));
+      },
+      std::overflow_error);
 }
 
 TEST(ExpressionsTest, AdditionOverflowShouldFail) {
   int64_t maxi = std::numeric_limits<int64_t>::max();
   int64_t mini = std::numeric_limits<int64_t>::min();
+  using BinaryOperator::kAdd;
 
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(maxi, BinaryOperator::kAdd, 1)),
-      IsOverflow());
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(1, BinaryOperator::kAdd, maxi)),
-      IsOverflow());
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(mini, BinaryOperator::kAdd, -1)),
-      IsOverflow());
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(-1, BinaryOperator::kAdd, mini)),
-      IsOverflow());
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(maxi, BinaryOperator::kAdd, mini)),
-              IsOkAndHolds(-1));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(mini, BinaryOperator::kAdd, maxi)),
-              IsOkAndHolds(-1));
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(maxi, kAdd, 1)); },
+      std::overflow_error);
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(1, kAdd, maxi)); },
+      std::overflow_error);
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(mini, kAdd, -1)); },
+      std::overflow_error);
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(-1, kAdd, mini)); },
+      std::overflow_error);
+
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(maxi, kAdd, mini)), -1);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(mini, kAdd, maxi)), -1);
 }
 
 TEST(ExpressionsTest, SubtractionOverflowShouldFail) {
   int64_t maxi = std::numeric_limits<int64_t>::max();
   int64_t mini = std::numeric_limits<int64_t>::min();
   int64_t large = maxi / 2 + 100;
+  using BinaryOperator::kSubtract;
 
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-large, BinaryOperator::kSubtract, large)),
-              IsOverflow());
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(mini, BinaryOperator::kSubtract, 1)),
-              IsOverflow());
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(maxi, BinaryOperator::kSubtract, -1)),
-              IsOverflow());
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(maxi, BinaryOperator::kSubtract, mini)),
-              IsOverflow());
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(mini, BinaryOperator::kSubtract, maxi)),
-              IsOverflow());
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(-large, kSubtract, large)); },
+      std::overflow_error);
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(mini, kSubtract, 1)); },
+      std::overflow_error);
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(maxi, kSubtract, -1)); },
+      std::overflow_error);
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(maxi, kSubtract, mini)); },
+      std::overflow_error);
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(mini, kSubtract, maxi)); },
+      std::overflow_error);
 }
 
 TEST(ExpressionsTest, MultiplicationOverflowShouldFail) {
@@ -262,58 +243,61 @@ TEST(ExpressionsTest, MultiplicationOverflowShouldFail) {
   int64_t mini = std::numeric_limits<int64_t>::min();
   int64_t two31 = (1ll << 31);
   int64_t two32 = (1ll << 32);
+  using BinaryOperator::kMultiply;
 
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(mini, BinaryOperator::kMultiply, -1)),
-              IsOverflow());
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-1, BinaryOperator::kMultiply, mini)),
-              IsOverflow());
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(mini, kMultiply, -1)); },
+      std::overflow_error);
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(-1, kMultiply, mini)); },
+      std::overflow_error);
 
   // Ensure that -2^63 isn't flagged as overflow
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(mini, BinaryOperator::kMultiply, 1)),
-              IsOkAndHolds(mini));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(1, BinaryOperator::kMultiply, mini)),
-              IsOkAndHolds(mini));
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(mini, kMultiply, 1)),
+            mini);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(1, kMultiply, mini)),
+            mini);
 
   // Boundary cases.
   // Note that maxi is divisible by 49. mini-1 is divisible by 19.
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(two31, BinaryOperator::kMultiply, two32)),
-              IsOverflow());
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(49, BinaryOperator::kMultiply, maxi / 49)),
-              IsOkAndHolds(maxi));
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-two32, BinaryOperator::kMultiply, two31)),
-              IsOkAndHolds(mini));
-  EXPECT_THAT(EvaluateIntegerExpression(SimpleBinaryOp(
-                  513, BinaryOperator::kMultiply, 17979282722913793LL)),
-              IsOverflow());  // -2^63 - 1
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(two31, kMultiply, two32)); },
+      std::overflow_error);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(49, kMultiply, maxi / 49)),
+            maxi);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(-two32, kMultiply, two31)),
+            mini);
+  EXPECT_THROW(
+      {
+        EvaluateIntegerExpression(
+            SimpleBinaryOp(513, kMultiply, 17979282722913793LL));
+      },
+      std::overflow_error);  // -2^63 - 1
 
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(mini, BinaryOperator::kMultiply, 5)),
-              IsOverflow());
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(7, BinaryOperator::kMultiply, maxi - two32)),
-              IsOverflow());
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(mini, kMultiply, 5)); },
+      std::overflow_error);
+  EXPECT_THROW(
+      {
+        EvaluateIntegerExpression(SimpleBinaryOp(7, kMultiply, maxi - two32));
+      },
+      std::overflow_error);
 }
 
 TEST(ExpressionsTest, ExponentiationOverflowShouldFail) {
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(2, BinaryOperator::kExponentiate, 63)),
-              IsOverflow());
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-2, BinaryOperator::kExponentiate, 64)),
-              IsOverflow());
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(-2, BinaryOperator::kExponentiate, 63)),
-              IsOk());
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(123, BinaryOperator::kExponentiate, 45678)),
-              IsOverflow());
+  using BinaryOperator::kExponentiate;
+
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(2, kExponentiate, 63)); },
+      std::overflow_error);
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(-2, kExponentiate, 64)); },
+      std::overflow_error);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(-2, kExponentiate, 63)),
+            std::numeric_limits<int64_t>::min());
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(123, kExponentiate, 45678)); },
+      std::overflow_error);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -321,33 +305,34 @@ TEST(ExpressionsTest, ExponentiationOverflowShouldFail) {
 /* -------------------------------------------------------------------------- */
 
 TEST(ExpressionsTest, DivisionByZeroShouldThrowErrorStatus) {
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(10, BinaryOperator::kDivide, 0)),
-      StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(0, BinaryOperator::kDivide, 0)),
-      StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(0, BinaryOperator::kDivide, 10)),
-      IsOk());
+  using BinaryOperator::kDivide;
+
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(10, kDivide, 0)); },
+      std::invalid_argument);
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(0, kDivide, 0)); },
+      std::invalid_argument);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(0, kDivide, 10)), 0);
 }
 
 TEST(ExpressionsTest, ModuloByZeroShouldThrowErrorStatus) {
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(10, BinaryOperator::kModulo, 0)),
-      StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(0, BinaryOperator::kModulo, 0)),
-      StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(SimpleBinaryOp(0, BinaryOperator::kModulo, 10)),
-      IsOk());
+  using BinaryOperator::kModulo;
+
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(10, kModulo, 0)); },
+      std::invalid_argument);
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(0, kModulo, 0)); },
+      std::invalid_argument);
+  EXPECT_EQ(EvaluateIntegerExpression(SimpleBinaryOp(0, kModulo, 10)), 0);
 }
 
 TEST(ExpressionsTest, ZeroRaisedToZeroShouldReturnError) {
-  EXPECT_THAT(EvaluateIntegerExpression(
-                  SimpleBinaryOp(0, BinaryOperator::kExponentiate, 0)),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  using BinaryOperator::kExponentiate;
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(SimpleBinaryOp(0, kExponentiate, 0)); },
+      std::invalid_argument);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -355,16 +340,20 @@ TEST(ExpressionsTest, ZeroRaisedToZeroShouldReturnError) {
 /* -------------------------------------------------------------------------- */
 
 TEST(ExpressionsTest, UnknownVariablesShouldFail) {
-  EXPECT_THAT(EvaluateIntegerExpression(Literal("N")),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(
-          BinaryOperation(Literal(3), BinaryOperator::kAdd, Literal("N"))),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("unknown value")));
-  EXPECT_THAT(
-      EvaluateIntegerExpression(
-          UnaryOperation(UnaryOperator::kPlus, Literal("N"))),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("unknown value")));
+  EXPECT_THROW(
+      { EvaluateIntegerExpression(Literal("N")); }, std::invalid_argument);
+  EXPECT_THROW(
+      {
+        EvaluateIntegerExpression(
+            BinaryOperation(Literal(3), BinaryOperator::kAdd, Literal("N")));
+      },
+      std::invalid_argument);
+  EXPECT_THROW(
+      {
+        EvaluateIntegerExpression(
+            UnaryOperation(UnaryOperator::kPlus, Literal("N")));
+      },
+      std::invalid_argument);
 }
 
 /* -------------------------------------------------------------------------- */
@@ -398,7 +387,8 @@ TEST(ExpressionsTest, SingleNonnegativeIntegersWork) {
   EXPECT_TRUE(
       EvaluateAndCheck(std::to_string(std::numeric_limits<int64_t>::max()),
                        std::numeric_limits<int64_t>::max()));
-  EXPECT_THAT(ParseExpression("12345678901234567890"), IsOverflow());
+  EXPECT_THROW(
+      { (void)ParseExpression("12345678901234567890"); }, std::overflow_error);
 }
 
 TEST(ExpressionsTest, SingleNegativeIntegersWork) {
@@ -408,7 +398,8 @@ TEST(ExpressionsTest, SingleNegativeIntegersWork) {
   EXPECT_TRUE(
       EvaluateAndCheck(std::to_string(-std::numeric_limits<int64_t>::max()),
                        -std::numeric_limits<int64_t>::max()));
-  EXPECT_THAT(ParseExpression("-12345678901234567890"), IsOverflow());
+  EXPECT_THROW(
+      { (void)ParseExpression("-12345678901234567890"); }, std::overflow_error);
 
   // TODO(b/208295758): INT_MIN does not work
 }
@@ -777,17 +768,12 @@ TEST(ExpressionsTest, MultipleVariableParsesProperly) {
 }
 
 TEST(ExpressionsTest, MissingVariablesFails) {
-  EXPECT_THAT(Evaluate("X", {}), StatusIs(absl::StatusCode::kInvalidArgument,
-                                          HasSubstr("unknown value: X")));
-  EXPECT_THAT(Evaluate("X + -Y", {}),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("unknown value: X")));
-  EXPECT_THAT(Evaluate("X + Y", {{"Y", 33}}),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("unknown value: X")));
-  EXPECT_THAT(Evaluate("-X + X + Y", {{"Y", 33}}),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("unknown value: X")));
+  EXPECT_THROW({ (void)Evaluate("X", {}); }, std::invalid_argument);
+  EXPECT_THROW({ (void)Evaluate("X + -Y", {}); }, std::invalid_argument);
+  EXPECT_THROW(
+      { (void)Evaluate("X + Y", {{"Y", 33}}); }, std::invalid_argument);
+  EXPECT_THROW(
+      { (void)Evaluate("-X + X + Y", {{"Y", 33}}); }, std::invalid_argument);
 }
 
 TEST(ExpressionsTest, NeededVariables) {
@@ -834,9 +820,7 @@ TEST(ExpressionsTest, InvalidFunctionArgumentsShouldFail) {
 
   EXPECT_THAT(Evaluate("abs()"),
               StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("()")));
-  EXPECT_THAT(
-      Evaluate("abs(3, 4)"),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("one parameter")));
+  EXPECT_THROW({ (void)Evaluate("abs(3, 4)"); }, std::invalid_argument);
 }
 
 // TODO(darcybest): With the current implementation, these pass, but shouldn't:

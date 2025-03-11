@@ -41,8 +41,8 @@ class Expression;  // Forward declaring Expression.
 // 64-bit signed integer, a FailedPreconditionError is thrown.
 // If there are variables present in `expression`, then `variables` will be
 // used as their values. All variables must be present in `variables`.
-absl::StatusOr<int64_t> EvaluateIntegerExpression(const Expression& expression);
-absl::StatusOr<int64_t> EvaluateIntegerExpression(
+int64_t EvaluateIntegerExpression(const Expression& expression);
+int64_t EvaluateIntegerExpression(
     const Expression& expression,
     const absl::flat_hash_map<std::string, int64_t>& variables);
 

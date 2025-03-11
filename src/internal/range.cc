@@ -85,12 +85,11 @@ namespace {
 // Evaluate all expressions, then find the minimum/maximum, depending on the
 // value of `compare`.
 template <typename F>
-absl::StatusOr<int64_t> FindExtreme(
-    int64_t initial_value, std::span<const Expression> exprs,
-    const absl::flat_hash_map<std::string, int64_t>& variables, F compare) {
+int64_t FindExtreme(int64_t initial_value, std::span<const Expression> exprs,
+                    const absl::flat_hash_map<std::string, int64_t>& variables,
+                    F compare) {
   for (const Expression& expr : exprs) {
-    MORIARTY_ASSIGN_OR_RETURN(int64_t val,
-                              EvaluateIntegerExpression(expr, variables));
+    int64_t val = EvaluateIntegerExpression(expr, variables);
     if (compare(val, initial_value)) initial_value = val;
   }
   return initial_value;
@@ -102,13 +101,9 @@ absl::StatusOr<std::optional<Range::ExtremeValues>> Range::Extremes(
     const absl::flat_hash_map<std::string, int64_t>& variables) const {
   MORIARTY_RETURN_IF_ERROR(parameter_status_);
 
-  ExtremeValues extremes;
-  MORIARTY_ASSIGN_OR_RETURN(
-      extremes.min,
-      FindExtreme(min_, min_exprs_, variables, std::greater<int64_t>()));
-  MORIARTY_ASSIGN_OR_RETURN(
-      extremes.max,
-      FindExtreme(max_, max_exprs_, variables, std::less<int64_t>()));
+  ExtremeValues extremes = {
+      .min = FindExtreme(min_, min_exprs_, variables, std::greater<int64_t>()),
+      .max = FindExtreme(max_, max_exprs_, variables, std::less<int64_t>())};
 
   if (extremes.min > extremes.max) return std::nullopt;
 

@@ -21,6 +21,7 @@
 #include <limits>
 #include <memory>
 #include <stack>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -38,6 +39,7 @@
 
 namespace moriarty {
 
+namespace moriarty_internal {
 namespace {
 
 using VariableMap = absl::flat_hash_map<std::string, int64_t>;
@@ -46,181 +48,123 @@ using VariableMap = absl::flat_hash_map<std::string, int64_t>;
 /*  OPERATORS                                                                 */
 /* -------------------------------------------------------------------------- */
 
-absl::StatusOr<int64_t> AddWithSafetyChecks(int64_t x, int64_t y) {
-  // Overflow checks:
-  // (x + y <= max iff x <= max - y) and (x + y >= min iff x >= min - y)
-  if ((y > 0 && x > std::numeric_limits<int64_t>::max() - y) ||
-      (y < 0 && x < std::numeric_limits<int64_t>::min() - y)) {
-    return absl::FailedPreconditionError(
-        absl::Substitute("Overflow in addition ($0 + $1)", x, y));
+absl::int128 Validate(absl::int128 value) {
+  if (value < std::numeric_limits<int64_t>::min() ||
+      value > std::numeric_limits<int64_t>::max()) {
+    throw std::overflow_error("Expression overflows int64_t");
   }
-  return x + y;
+  return value;
 }
 
-absl::StatusOr<int64_t> SubtractWithSafetyChecks(int64_t x, int64_t y) {
-  // Overflow checks:
-  // (x - y <= max iff x <= max + y) and (x - y >= min iff x >= min + y)
-  if ((y < 0 && x > std::numeric_limits<int64_t>::max() + y) ||
-      (y > 0 && x < std::numeric_limits<int64_t>::min() + y)) {
-    return absl::FailedPreconditionError(
-        absl::Substitute("Overflow in subtraction ($0 - $1)", x, y));
-  }
-  return x - y;
+absl::int128 Divide(absl::int128 lhs, absl::int128 rhs) {
+  if (rhs == 0) throw std::invalid_argument("Division by zero in expression");
+  return Validate(absl::int128(lhs) / rhs);
 }
 
-absl::StatusOr<int64_t> MultiplyWithSafetyChecks(int64_t x, int64_t y) {
-  absl::int128 res = absl::int128(x) * y;
-
-  if (res < std::numeric_limits<int64_t>::min() ||
-      res > std::numeric_limits<int64_t>::max()) {
-    return absl::FailedPreconditionError(
-        absl::Substitute("Overflow in multiplication ($0 * $1)", x, y));
-  }
-  return static_cast<int64_t>(res);
+absl::int128 Mod(absl::int128 lhs, absl::int128 rhs) {
+  if (rhs == 0) throw std::invalid_argument("Mod by zero in expression");
+  return Validate(absl::int128(lhs) % rhs);
 }
 
-absl::StatusOr<int64_t> DivideWithSafetyChecks(int64_t dividend,
-                                               int64_t divisor) {
-  if (divisor == 0) {
-    return absl::InvalidArgumentError(
-        absl::Substitute("Division by zero ($0 / 0)", dividend));
-  }
-  return dividend / divisor;
-}
+absl::int128 Pow(absl::int128 base, absl::int128 exponent) {
+  if (exponent < 0)
+    throw std::invalid_argument("exponent must be non-negative in pow()");
+  if (base == 0 && exponent == 0)
+    throw std::invalid_argument("0 to the power of 0 is undefined.");
 
-absl::StatusOr<int64_t> ModuloWithSafetyChecks(int64_t dividend,
-                                               int64_t divisor) {
-  if (divisor == 0) {
-    return absl::InvalidArgumentError(
-        absl::Substitute("Modulo by zero ($0 % 0)", dividend));
-  }
-  return dividend % divisor;
-}
-
-absl::StatusOr<int64_t> ExponentiateWithSafetyChecks(int64_t base,
-                                                     int64_t exponent) {
-  if (exponent < 0) {
-    return absl::InvalidArgumentError(absl::Substitute(
-        "Exponentiation needs non-negative exponent (pow($0, $1))", base,
-        exponent));
-  }
-  if (base == 0 && exponent == 0) {
-    return absl::InvalidArgumentError("0 to the power of 0 is undefined.");
-  }
-
-  int64_t result = 1;
+  absl::int128 b = base;
+  absl::int128 result = 1;
   while (exponent > 0) {
-    if (exponent % 2 == 1) {
-      MORIARTY_ASSIGN_OR_RETURN(result, MultiplyWithSafetyChecks(result, base));
-    }
-    if (exponent > 1) {
-      MORIARTY_ASSIGN_OR_RETURN(base, MultiplyWithSafetyChecks(base, base));
-    }
+    if (exponent % 2 == 1) result = Validate(result * b);
+    if (exponent > 1) b = Validate(b * b);
     exponent /= 2;
   }
   return result;
 }
 
-absl::StatusOr<int64_t> NegateWithSafetyChecks(int64_t x) {
-  // Overflow checks:
-  // Only if x == min
-  if (x == std::numeric_limits<int64_t>::min()) {
-    return absl::FailedPreconditionError(
-        absl::Substitute("Overflow in negation (-$0)", x));
-  }
-  return -x;
-}
-
-absl::StatusOr<int64_t> GetIntegerLiteral(
-    const moriarty_internal::Literal& literal, const VariableMap& variables) {
+absl::int128 GetIntegerLiteral(const Literal& literal,
+                               const VariableMap& variables) {
   if (!literal.IsVariable()) return literal.Value();
 
   auto it = variables.find(literal.VariableName());
   if (it != variables.end()) return it->second;
-  return absl::InvalidArgumentError(absl::Substitute(
-      "Variable in expression with unknown value: $0", literal.VariableName()));
+
+  throw std::invalid_argument(std::format(
+      "Variable in expression with unknown value: {}", literal.VariableName()));
 }
 
 /* -------------------------------------------------------------------------- */
 /*  EVALUATION                                                                */
 /* -------------------------------------------------------------------------- */
 
-using LiteralVariant = std::variant<int64_t, bool>;
+using LiteralVariant = std::variant<absl::int128, bool>;
 
 // We need this forward declaration since these functions have circular
 // dependencies.
-absl::StatusOr<LiteralVariant> EvaluateExpressionWithSafetyChecks(
-    const Expression& expression, const VariableMap& variables);
+LiteralVariant EvaluateExpression(const Expression& expression,
+                                  const VariableMap& variables);
 
-absl::StatusOr<LiteralVariant> EvaluateBinaryOperationWithSafetyChecks(
-    const moriarty_internal::BinaryOperation& expr,
-    const VariableMap& variables) {
-  MORIARTY_ASSIGN_OR_RETURN(
-      LiteralVariant lhs,
-      EvaluateExpressionWithSafetyChecks(expr.Lhs(), variables));
-  MORIARTY_ASSIGN_OR_RETURN(
-      LiteralVariant rhs,
-      EvaluateExpressionWithSafetyChecks(expr.Rhs(), variables));
+LiteralVariant EvaluateBinaryOperation(const BinaryOperation& expr,
+                                       const VariableMap& variables) {
+  LiteralVariant lhs = EvaluateExpression(expr.Lhs(), variables);
+  LiteralVariant rhs = EvaluateExpression(expr.Rhs(), variables);
 
   // int/int operations
-  if (std::get_if<int64_t>(&lhs) != nullptr &&
-      std::get_if<int64_t>(&rhs) != nullptr) {
-    int64_t lhs_int = std::get<int64_t>(lhs);
-    int64_t rhs_int = std::get<int64_t>(rhs);
+  if (std::get_if<absl::int128>(&lhs) == nullptr ||
+      std::get_if<absl::int128>(&rhs) == nullptr) {
+    throw std::invalid_argument(
+        "Only (int, int) binary operations are defined.");
+  }
+  absl::int128 lhs_int = std::get<absl::int128>(lhs);
+  absl::int128 rhs_int = std::get<absl::int128>(rhs);
 
-    switch (expr.Op()) {
-      case moriarty_internal::BinaryOperator::kAdd:
-        return AddWithSafetyChecks(lhs_int, rhs_int);
-      case moriarty_internal::BinaryOperator::kSubtract:
-        return SubtractWithSafetyChecks(lhs_int, rhs_int);
-      case moriarty_internal::BinaryOperator::kMultiply:
-        return MultiplyWithSafetyChecks(lhs_int, rhs_int);
-      case moriarty_internal::BinaryOperator::kDivide:
-        return DivideWithSafetyChecks(lhs_int, rhs_int);
-      case moriarty_internal::BinaryOperator::kModulo:
-        return ModuloWithSafetyChecks(lhs_int, rhs_int);
-      case moriarty_internal::BinaryOperator::kExponentiate:
-        return ExponentiateWithSafetyChecks(lhs_int, rhs_int);
-    }
+  switch (expr.Op()) {
+    case BinaryOperator::kAdd:
+      return Validate(lhs_int + rhs_int);
+    case BinaryOperator::kSubtract:
+      return Validate(lhs_int - rhs_int);
+    case BinaryOperator::kMultiply:
+      return Validate(lhs_int * rhs_int);
+    case BinaryOperator::kDivide:
+      return Divide(lhs_int, rhs_int);
+    case BinaryOperator::kModulo:
+      return Mod(lhs_int, rhs_int);
+    case BinaryOperator::kExponentiate:
+      return Pow(lhs_int, rhs_int);
   }
 
-  return absl::UnimplementedError("Only int/int operations are defined now.");
+  throw std::runtime_error("Unknown binary operator in expression");
 }
 
-absl::StatusOr<LiteralVariant> EvaluateUnaryOperationWithSafetyChecks(
-    const moriarty_internal::UnaryOperation& expr,
-    const VariableMap& variables) {
-  MORIARTY_ASSIGN_OR_RETURN(
-      LiteralVariant rhs,
-      EvaluateExpressionWithSafetyChecks(expr.Rhs(), variables));
+LiteralVariant EvaluateUnaryOperation(const UnaryOperation& expr,
+                                      const VariableMap& variables) {
+  LiteralVariant rhs = EvaluateExpression(expr.Rhs(), variables);
 
   // int operations
-  if (std::get_if<int64_t>(&rhs) != nullptr) {
-    int64_t rhs_int = std::get<int64_t>(rhs);
+  if (std::get_if<absl::int128>(&rhs) != nullptr) {
+    absl::int128 rhs_int = std::get<absl::int128>(rhs);
     switch (expr.Op()) {
-      case moriarty_internal::UnaryOperator::kPlus:
+      case UnaryOperator::kPlus:
         return rhs;
-      case moriarty_internal::UnaryOperator::kNegate:
-        return NegateWithSafetyChecks(rhs_int);
+      case UnaryOperator::kNegate:
+        return Validate(-rhs_int);
     }
   }
-  return absl::UnimplementedError("Only int unary operations are defined now.");
+  throw std::runtime_error("Unknown unary operator in expression");
 }
 
-absl::StatusOr<LiteralVariant> EvaluateFunctionWithSafetyChecks(
-    const moriarty_internal::Function& fn, const VariableMap& variables) {
-  std::vector<int64_t> arguments;
+LiteralVariant EvaluateFunction(const Function& fn,
+                                const VariableMap& variables) {
+  std::vector<absl::int128> arguments;
   arguments.reserve(fn.Arguments().size());
   for (const std::unique_ptr<Expression>& expr : fn.Arguments()) {
     if (expr == nullptr)
-      return absl::InvalidArgumentError("function argument must not be null");
-    MORIARTY_ASSIGN_OR_RETURN(
-        LiteralVariant res,
-        EvaluateExpressionWithSafetyChecks(*expr, variables));
-    if (!std::holds_alternative<int64_t>(res))
-      return absl::FailedPreconditionError(
-          "Functions only work with integer arguments.");
-    arguments.push_back(std::get<int64_t>(res));
+      throw std::runtime_error("Function argument must not be null");
+    LiteralVariant res = EvaluateExpression(*expr, variables);
+    if (!std::holds_alternative<absl::int128>(res)) {
+      throw std::invalid_argument("Function arguments must be integers");
+    }
+    arguments.push_back(std::get<absl::int128>(res));
   }
 
   // TODO(b/208295758): Make this extendable.
@@ -229,36 +173,33 @@ absl::StatusOr<LiteralVariant> EvaluateFunctionWithSafetyChecks(
   if (fn.Name() == "max")
     return *std::max_element(arguments.begin(), arguments.end());
   if (fn.Name() == "abs") {
-    if (arguments.size() != 1)
-      return absl::InvalidArgumentError("abs(x) can only take one parameter");
-    return abs(arguments[0]);
+    if (arguments.size() != 1) {
+      throw std::invalid_argument("abs(x) can only take one parameter");
+    }
+    return abs(int64_t(arguments[0]));
   }
 
-  return absl::InvalidArgumentError(
-      absl::Substitute("Unknown function name: \"$0\"", fn.Name()));
+  throw std::invalid_argument(
+      std::format("Unknown function name ({}) in expression", fn.Name()));
 }
 
-absl::StatusOr<LiteralVariant> EvaluateExpressionWithSafetyChecks(
-    const Expression& expression, const VariableMap& variables) {
+LiteralVariant EvaluateExpression(const Expression& expression,
+                                  const VariableMap& variables) {
   struct Visitor {
     explicit Visitor(const VariableMap& variables) : variables(variables) {}
     const VariableMap& variables;
 
-    absl::StatusOr<LiteralVariant> operator()(
-        const moriarty_internal::Literal& lit) {
+    LiteralVariant operator()(const Literal& lit) {
       return GetIntegerLiteral(lit, variables);
     }
-    absl::StatusOr<LiteralVariant> operator()(
-        const moriarty_internal::BinaryOperation& binary) {
-      return EvaluateBinaryOperationWithSafetyChecks(binary, variables);
+    LiteralVariant operator()(const BinaryOperation& binary) {
+      return EvaluateBinaryOperation(binary, variables);
     }
-    absl::StatusOr<LiteralVariant> operator()(
-        const moriarty_internal::UnaryOperation& unary) {
-      return EvaluateUnaryOperationWithSafetyChecks(unary, variables);
+    LiteralVariant operator()(const UnaryOperation& unary) {
+      return EvaluateUnaryOperation(unary, variables);
     }
-    absl::StatusOr<LiteralVariant> operator()(
-        const moriarty_internal::Function& fn) {
-      return EvaluateFunctionWithSafetyChecks(fn, variables);
+    LiteralVariant operator()(const Function& fn) {
+      return EvaluateFunction(fn, variables);
     }
   };
   return std::visit(Visitor(variables), expression.Get());
@@ -269,7 +210,7 @@ absl::StatusOr<LiteralVariant> EvaluateExpressionWithSafetyChecks(
 /* -------------------------------------------------------------------------- */
 
 absl::Status GetUnknownVariables(
-    const moriarty_internal::Literal& literal,
+    const Literal& literal,
     absl::flat_hash_set<std::string>& unknown_variables) {
   if (literal.IsVariable()) unknown_variables.insert(literal.VariableName());
   return absl::OkStatus();
@@ -283,18 +224,18 @@ absl::Status GetUnknownVariables(
         : unknown_variables(unknown_variables) {}
     absl::flat_hash_set<std::string>& unknown_variables;
 
-    absl::Status operator()(const moriarty_internal::Literal& lit) {
+    absl::Status operator()(const Literal& lit) {
       return GetUnknownVariables(lit, unknown_variables);
     }
-    absl::Status operator()(const moriarty_internal::BinaryOperation& binary) {
+    absl::Status operator()(const BinaryOperation& binary) {
       MORIARTY_RETURN_IF_ERROR(
           GetUnknownVariables(binary.Lhs(), unknown_variables));
       return GetUnknownVariables(binary.Rhs(), unknown_variables);
     }
-    absl::Status operator()(const moriarty_internal::UnaryOperation& unary) {
+    absl::Status operator()(const UnaryOperation& unary) {
       return GetUnknownVariables(unary.Rhs(), unknown_variables);
     }
-    absl::Status operator()(const moriarty_internal::Function& fn) {
+    absl::Status operator()(const Function& fn) {
       for (const std::unique_ptr<Expression>& arg : fn.Arguments()) {
         if (arg != nullptr) {
           MORIARTY_RETURN_IF_ERROR(
@@ -308,30 +249,30 @@ absl::Status GetUnknownVariables(
 }
 
 }  // namespace
+}  // namespace moriarty_internal
 
-absl::StatusOr<int64_t> EvaluateIntegerExpression(
-    const Expression& expression) {
+int64_t EvaluateIntegerExpression(const Expression& expression) {
   return EvaluateIntegerExpression(expression, {});
 }
 
-absl::StatusOr<int64_t> EvaluateIntegerExpression(
+int64_t EvaluateIntegerExpression(
     const Expression& expression,
     const absl::flat_hash_map<std::string, int64_t>& variables) {
-  MORIARTY_ASSIGN_OR_RETURN(
-      LiteralVariant value,
-      EvaluateExpressionWithSafetyChecks(expression, variables));
+  moriarty_internal::LiteralVariant value =
+      moriarty_internal::EvaluateExpression(expression, variables);
 
-  if (std::get_if<int64_t>(&value) == nullptr) {
-    return absl::InvalidArgumentError(
-        "Expression does not parse to an integer value.");
+  if (std::get_if<absl::int128>(&value) == nullptr) {
+    throw std::invalid_argument(
+        "Expression does not evaluate to an integer value.");
   }
-  return std::get<int64_t>(value);
+  return int64_t(std::get<absl::int128>(value));
 }
 
 absl::StatusOr<absl::flat_hash_set<std::string>> NeededVariables(
     const Expression& expression) {
   absl::flat_hash_set<std::string> unknown_variables;
-  MORIARTY_RETURN_IF_ERROR(GetUnknownVariables(expression, unknown_variables));
+  MORIARTY_RETURN_IF_ERROR(
+      moriarty_internal::GetUnknownVariables(expression, unknown_variables));
   return unknown_variables;
 }
 
@@ -454,10 +395,11 @@ struct ApplyOperation {
       }
 
       case ScopeOperator::kStartOfFunction: {
-        if (st.empty())
+        if (st.empty()) {
           return absl::InvalidArgumentError(
               "Attempting to parse a function that should have at least one "
               "parameter, but no parameters available.");
+        }
 
         // My argument is the next value. Comma operator has already converted
         // several arguments into a partial function (with no-name). So if this
@@ -483,6 +425,7 @@ struct ApplyOperation {
         return absl::OkStatus();
       }
     }
+    throw std::runtime_error("Unknown scope operator");
   }
 
   absl::Status operator()(const BinaryOperator& op) {
@@ -538,6 +481,7 @@ absl::StatusOr<int> Precedence(OperatorType type) {
         case BinaryOperator::kExponentiate:
           return 30;
       }
+      throw std::runtime_error("Unknown binary operator");
     }
     absl::StatusOr<int> operator()(const UnaryOperator& op) {
       switch (op) {
@@ -547,6 +491,7 @@ absl::StatusOr<int> Precedence(OperatorType type) {
           // Python
           return 40;
       }
+      throw std::runtime_error("Unknown unary operator");
     }
     // Scope operators should have the highest priority so that everything
     // inside the scope is evaluated first. Within them, commas < brackets < EOS
@@ -560,6 +505,7 @@ absl::StatusOr<int> Precedence(OperatorType type) {
         case ScopeOperator::kStartOfString:
           return 10030;
       }
+      throw std::runtime_error("Unknown scope operator");
     }
   };
 
@@ -611,9 +557,9 @@ class ShuntingYard {
   // These operator() receive the next token in the stream.
   absl::Status operator()(const BinaryOperator& op) {
     bool left_assoc = IsLeftAssociative(op);
-    MORIARTY_ASSIGN_OR_RETURN(int64_t precedence_op, Precedence(op));
+    MORIARTY_ASSIGN_OR_RETURN(absl::int128 precedence_op, Precedence(op));
     while (!operators_.empty()) {
-      MORIARTY_ASSIGN_OR_RETURN(int64_t precedence_top, TopOpPrecedence());
+      MORIARTY_ASSIGN_OR_RETURN(absl::int128 precedence_top, TopOpPrecedence());
       if (!(precedence_top < precedence_op ||
             (left_assoc && precedence_top == precedence_op)))
         break;
@@ -633,9 +579,10 @@ class ShuntingYard {
   }
 
   absl::Status operator()(SpecialCharacter ch) {
-    if (ch == SpecialCharacter::kStartOfString)
+    if (ch == SpecialCharacter::kStartOfString) {
       return absl::InvalidArgumentError(
           "kStartOfString added implicitly, do not add it yourself.");
+    }
 
     if (ch == SpecialCharacter::kOpenParen) {
       operators_.push(ScopeOperator::kOpenParen);
@@ -662,24 +609,25 @@ class ShuntingYard {
       }
     };
 
-    MORIARTY_ASSIGN_OR_RETURN(int64_t precedence_op,
+    MORIARTY_ASSIGN_OR_RETURN(absl::int128 precedence_op,
                               Precedence(corresponding_open_scope(ch)));
     while (!operators_.empty()) {
-      MORIARTY_ASSIGN_OR_RETURN(int64_t precedence_top, TopOpPrecedence());
+      MORIARTY_ASSIGN_OR_RETURN(absl::int128 precedence_top, TopOpPrecedence());
       if (precedence_top >= precedence_op) break;
       MORIARTY_RETURN_IF_ERROR(
           std::visit(ApplyOperation(&postfix_), operators_.top()));
       operators_.pop();
     }
 
-    MORIARTY_ASSIGN_OR_RETURN(int64_t precedence_top, TopOpPrecedence());
+    MORIARTY_ASSIGN_OR_RETURN(absl::int128 precedence_top, TopOpPrecedence());
     if (operators_.empty() || precedence_top != precedence_op)
       if (ch == SpecialCharacter::kCloseParen)
         return absl::InvalidArgumentError("Unmatched closed parenthesis.");
 
-    if (ch == SpecialCharacter::kCloseParen && IsFunction(operators_.top()))
+    if (ch == SpecialCharacter::kCloseParen && IsFunction(operators_.top())) {
       MORIARTY_RETURN_IF_ERROR(
           std::visit(ApplyOperation(&postfix_), operators_.top()));
+    }
 
     // Pop the corresponding closing if it matches us.
     if (ch != SpecialCharacter::kComma)
@@ -780,15 +728,12 @@ absl::StatusOr<TokenType> ConsumeFirstToken(std::string_view& expression,
 
   // Check for integer
   if (std::isdigit(current)) {
-    int64_t value = current - '0';
+    absl::int128 value = current - '0';
     while (!expression.empty() && std::isdigit(expression.front())) {
-      MORIARTY_ASSIGN_OR_RETURN(int64_t times10,
-                                MultiplyWithSafetyChecks(value, 10));
-      MORIARTY_ASSIGN_OR_RETURN(
-          value, AddWithSafetyChecks(times10, expression.front() - '0'));
+      value = Validate(10 * value + (expression.front() - '0'));
       expression.remove_prefix(1);
     }
-    return Literal(value);
+    return Literal(int64_t(value));
   }
 
   // Check for variable ([A-Za-z][A-Za-z0-9_]*)
