@@ -31,7 +31,6 @@
 
 #include "absl/algorithm/container.h"
 #include "absl/container/flat_hash_set.h"
-#include "absl/log/check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
@@ -127,12 +126,6 @@ class MArray : public librarian::MVariable<
   // this restriction is off, and does not guarantee duplicate entries will
   // occur.
   MArray& WithDistinctElements();
-
-  // WithDistinctElementsWithArg()
-  //
-  // DEPRECATED. Do not use. Use WithDistinctElements() instead.
-  [[deprecated("Use WithDistinctElements() instead.")]] MArray&
-  WithDistinctElementsWithArg(bool distinct_elements = true);
 
   // WithSeparator()
   //
@@ -346,13 +339,6 @@ MArray<MElementType>& MArray<MElementType>::OfLength(
 template <typename MElementType>
 MArray<MElementType>& MArray<MElementType>::WithDistinctElements() {
   distinct_elements_ = true;
-  return *this;
-}
-
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::WithDistinctElementsWithArg(
-    bool distinct_elements) {
-  distinct_elements_ = distinct_elements;
   return *this;
 }
 

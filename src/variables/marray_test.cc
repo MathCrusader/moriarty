@@ -326,18 +326,6 @@ TEST(MArrayTest, SatisfiesConstraintsShouldCheckForDistinctElements) {
       IsNotSatisfiedWith(std::vector<int64_t>({1, 2, 2}), "distinct"));
 }
 
-TEST(MArrayTest, SatisfiesConstraintsShouldCheckForDistinctElementsWithArg) {
-  EXPECT_THAT(MArray(MInteger().Between(1, 5))
-                  .WithDistinctElementsWithArg()
-                  .OfLength(3),
-              IsSatisfiedWith(std::vector<int64_t>({1, 2, 5})));
-
-  EXPECT_THAT(MArray(MInteger().Between(1, 5))
-                  .WithDistinctElementsWithArg()
-                  .OfLength(3),
-              IsNotSatisfiedWith(std::vector<int64_t>({1, 2, 2}), "distinct"));
-}
-
 TEST(MArrayTest, AllOverloadsForOfLengthProduceTheSameSequenceOfData) {
   EXPECT_TRUE(AllGenerateSameValues<MArray<MInteger>>(
       {MArray(MInteger()).OfLength(5),         //
@@ -784,17 +772,6 @@ TEST(MArrayNonBuilderTest, SatisfiesConstraintsShouldCheckForDistinctElements) {
 
   EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 5)),
                                DistinctElements(), Length(3)),
-              IsNotSatisfiedWith(std::vector<int64_t>({1, 2, 2}), "distinct"));
-}
-
-TEST(MArrayNonBuilderTest,
-     SatisfiesConstraintsShouldCheckForDistinctElementsWithArg) {
-  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 5)), Length(3))
-                  .WithDistinctElementsWithArg(),
-              IsSatisfiedWith(std::vector<int64_t>({1, 2, 5})));
-
-  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 5)), Length(3))
-                  .WithDistinctElementsWithArg(),
               IsNotSatisfiedWith(std::vector<int64_t>({1, 2, 2}), "distinct"));
 }
 
