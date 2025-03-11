@@ -62,6 +62,15 @@ cc_library(
 )
 
 cc_library(
+    name = "one_of_handler",
+    hdrs = [
+        "one_of_handler.h",
+    ],
+    deps = [
+    ],
+)
+
+cc_library(
     name = "size_property",
     srcs = ["size_property.cc"],
     hdrs = ["size_property.h"],
@@ -130,6 +139,15 @@ cc_test(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "one_of_handler_test",
+    srcs = ["one_of_handler_test.cc"],
+    deps = [
+        ":one_of_handler",
         "@googletest//:gtest_main",
     ],
 )
