@@ -467,9 +467,9 @@ bool IsLeftAssociative(BinaryOperator op) {
 // precedence, the earlier it will happen. For example, * should have lower
 // precedence than +. All values here are multiples of 10 so we can add
 // intermediate values in the future.
-absl::StatusOr<int> Precedence(OperatorType type) {
+int Precedence(OperatorType type) {
   struct PrecedenceValues {
-    absl::StatusOr<int> operator()(const BinaryOperator& op) {
+    int operator()(const BinaryOperator& op) {
       switch (op) {
         case BinaryOperator::kAdd:
         case BinaryOperator::kSubtract:
@@ -483,7 +483,7 @@ absl::StatusOr<int> Precedence(OperatorType type) {
       }
       throw std::runtime_error("Unknown binary operator");
     }
-    absl::StatusOr<int> operator()(const UnaryOperator& op) {
+    int operator()(const UnaryOperator& op) {
       switch (op) {
         case UnaryOperator::kPlus:
         case UnaryOperator::kNegate:
@@ -495,7 +495,7 @@ absl::StatusOr<int> Precedence(OperatorType type) {
     }
     // Scope operators should have the highest priority so that everything
     // inside the scope is evaluated first. Within them, commas < brackets < EOS
-    absl::StatusOr<int> operator()(const ScopeOperator& op) {
+    int operator()(const ScopeOperator& op) {
       switch (op) {
         case ScopeOperator::kComma:
           return 10010;
@@ -557,9 +557,9 @@ class ShuntingYard {
   // These operator() receive the next token in the stream.
   absl::Status operator()(const BinaryOperator& op) {
     bool left_assoc = IsLeftAssociative(op);
-    MORIARTY_ASSIGN_OR_RETURN(absl::int128 precedence_op, Precedence(op));
+    int precedence_op = Precedence(op);
     while (!operators_.empty()) {
-      MORIARTY_ASSIGN_OR_RETURN(absl::int128 precedence_top, TopOpPrecedence());
+      int precedence_top = TopOpPrecedence();
       if (!(precedence_top < precedence_op ||
             (left_assoc && precedence_top == precedence_op)))
         break;
@@ -579,10 +579,7 @@ class ShuntingYard {
   }
 
   absl::Status operator()(SpecialCharacter ch) {
-    if (ch == SpecialCharacter::kStartOfString) {
-      return absl::InvalidArgumentError(
-          "kStartOfString added implicitly, do not add it yourself.");
-    }
+    ABSL_CHECK(ch != SpecialCharacter::kStartOfString);
 
     if (ch == SpecialCharacter::kOpenParen) {
       operators_.push(ScopeOperator::kOpenParen);
@@ -590,8 +587,7 @@ class ShuntingYard {
     }
 
     if (ch == SpecialCharacter::kEndOfString) {
-      if (seen_end_of_string_)
-        return absl::InvalidArgumentError("EndOfString passed multiple times.");
+      ABSL_CHECK(!seen_end_of_string_);
       seen_end_of_string_ = true;
     }
 
@@ -609,17 +605,16 @@ class ShuntingYard {
       }
     };
 
-    MORIARTY_ASSIGN_OR_RETURN(absl::int128 precedence_op,
-                              Precedence(corresponding_open_scope(ch)));
+    int precedence_op = Precedence(corresponding_open_scope(ch));
     while (!operators_.empty()) {
-      MORIARTY_ASSIGN_OR_RETURN(absl::int128 precedence_top, TopOpPrecedence());
+      int precedence_top = TopOpPrecedence();
       if (precedence_top >= precedence_op) break;
       MORIARTY_RETURN_IF_ERROR(
           std::visit(ApplyOperation(&postfix_), operators_.top()));
       operators_.pop();
     }
 
-    MORIARTY_ASSIGN_OR_RETURN(absl::int128 precedence_top, TopOpPrecedence());
+    int precedence_top = TopOpPrecedence();
     if (operators_.empty() || precedence_top != precedence_op)
       if (ch == SpecialCharacter::kCloseParen)
         return absl::InvalidArgumentError("Unmatched closed parenthesis.");
@@ -653,18 +648,14 @@ class ShuntingYard {
   // After all tokens have been added (including kEndOfString), GetResult()
   // returns the Expression
   absl::StatusOr<Expression> GetResult() {
-    if (!seen_end_of_string_)
-      return absl::FailedPreconditionError(
-          "GetResult() can only be called after kEndOfString has been "
-          "processed.");
-
-    ABSL_CHECK(operators_.empty())
-        << "operators_ must be empty if kEndOfString was called.";
+    ABSL_CHECK(seen_end_of_string_);
+    ABSL_CHECK(operators_.empty());
 
     if (postfix_.size() != 1) {
-      return absl::InvalidArgumentError(absl::Substitute(
-          "Expression does not parse properly. $0 tokens in stack.",
-          postfix_.size()));
+      return absl::InvalidArgumentError(
+          absl::Substitute("Expression does not parse properly. $0 tokens in "
+                           "stack. Inbalanced brackets?",
+                           postfix_.size()));
     }
     return ValidateAndPopCompletedExpression(postfix_);
   }
@@ -675,7 +666,7 @@ class ShuntingYard {
   std::stack<Expression> postfix_;
 
   // Returns the precedence of the top token, or 0 for empty stack.
-  absl::StatusOr<int> TopOpPrecedence() const {
+  int TopOpPrecedence() const {
     if (operators_.empty()) return 0;
     return Precedence(operators_.top());
   }
@@ -689,6 +680,22 @@ class ShuntingYard {
 void TrimLeadingWhitespace(std::string_view& expression) {
   while (!expression.empty() && std::isspace(expression.front()))
     expression.remove_prefix(1);
+}
+
+absl::StatusOr<Literal> ConsumeLeadingInteger(char c,
+                                              std::string_view& expression) {
+  std::string expr = std::string(1, c) + std::string(expression);
+  int idx = 0;
+  while (idx < expr.size() && std::isdigit(expr[idx])) idx++;
+  std::string_view potential_int = std::string_view{expr}.substr(0, idx);
+
+  int64_t value;
+  if (!absl::SimpleAtoi(potential_int, &value)) {
+    return absl::InvalidArgumentError(
+        absl::Substitute("Failed to parse integer: $0", potential_int));
+  }
+  expression.remove_prefix(idx - 1);  // c was already removed
+  return Literal(value);
 }
 
 // Reads the first token in expression. That token is returned and `expression`
@@ -727,14 +734,7 @@ absl::StatusOr<TokenType> ConsumeFirstToken(std::string_view& expression,
   }
 
   // Check for integer
-  if (std::isdigit(current)) {
-    absl::int128 value = current - '0';
-    while (!expression.empty() && std::isdigit(expression.front())) {
-      value = Validate(10 * value + (expression.front() - '0'));
-      expression.remove_prefix(1);
-    }
-    return Literal(int64_t(value));
-  }
+  if (std::isdigit(current)) return ConsumeLeadingInteger(current, expression);
 
   // Check for variable ([A-Za-z][A-Za-z0-9_]*)
   if (std::isalpha(current)) {

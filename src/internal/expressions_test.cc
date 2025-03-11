@@ -48,6 +48,7 @@ using ::moriarty::moriarty_internal::UnaryOperator;
 using ::testing::ElementsAre;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
+using ::testing::Not;
 using ::testing::Pointee;
 using ::testing::UnorderedElementsAre;
 using ::testing::VariantWith;
@@ -387,8 +388,7 @@ TEST(ExpressionsTest, SingleNonnegativeIntegersWork) {
   EXPECT_TRUE(
       EvaluateAndCheck(std::to_string(std::numeric_limits<int64_t>::max()),
                        std::numeric_limits<int64_t>::max()));
-  EXPECT_THROW(
-      { (void)ParseExpression("12345678901234567890"); }, std::overflow_error);
+  EXPECT_THAT(ParseExpression("12345678901234567890"), Not(IsOk()));
 }
 
 TEST(ExpressionsTest, SingleNegativeIntegersWork) {
@@ -398,10 +398,14 @@ TEST(ExpressionsTest, SingleNegativeIntegersWork) {
   EXPECT_TRUE(
       EvaluateAndCheck(std::to_string(-std::numeric_limits<int64_t>::max()),
                        -std::numeric_limits<int64_t>::max()));
-  EXPECT_THROW(
-      { (void)ParseExpression("-12345678901234567890"); }, std::overflow_error);
+  EXPECT_THAT(ParseExpression("-12345678901234567890"), Not(IsOk()));
 
-  // TODO(b/208295758): INT_MIN does not work
+  // For now, we cannot support -2^63 as an exact value. This is due to -x being
+  // parsed as -(x), which is definitely needed if we want items like -10^9 to
+  // mean -(10^9) and not (-10)^9. Users can easily type -2^63 if they want this
+  // value anyways, so we'll leave it for now. This may or may not change in the
+  // future.
+  EXPECT_THAT(ParseExpression("-9223372036854775808"), Not(IsOk()));
 }
 
 TEST(ExpressionsTest, AdditionWorks) {

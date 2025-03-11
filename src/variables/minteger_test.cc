@@ -233,14 +233,12 @@ TEST(MIntegerTest, AtMostLargerThanAtLeastShouldFail) {
 TEST(MIntegerTest, AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {
   // The following should not crash. Do not depend on this behaviour.
   MInteger x = MInteger().AtLeast("3 + ");
+  MInteger y = MInteger().AtMost("+ X +");
   MInteger z = MInteger().Between("N + 2", "* M + M");
 
   EXPECT_THROW({ Generate(x).IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ Generate(y).IgnoreError(); }, std::runtime_error);
   EXPECT_THROW({ Generate(z).IgnoreError(); }, std::runtime_error);
-
-  EXPECT_THROW(
-      { (void)MInteger().AtMost("12345678901234567890"); },
-      std::overflow_error);
 }
 
 TEST(MIntegerTest, AtMostAndAtLeastWithExpressionsShouldLimitTheOutputRange) {
@@ -559,12 +557,12 @@ TEST(MIntegerNonBuilderTest,
      AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {
   // The following should not crash. Do not depend on this behaviour.
   MInteger x = MInteger(AtLeast("3 + "));
+  MInteger y = MInteger(AtMost("+ X +"));
   MInteger z = MInteger(Between("N + 2", "* M + M"));
 
   EXPECT_THROW({ Generate(x).IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ Generate(y).IgnoreError(); }, std::runtime_error);
   EXPECT_THROW({ Generate(z).IgnoreError(); }, std::runtime_error);
-  EXPECT_THROW(
-      { (void)MInteger(AtMost("12345678901234567890")); }, std::overflow_error);
 }
 
 TEST(MIntegerNonBuilderTest,
