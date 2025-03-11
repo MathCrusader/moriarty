@@ -32,7 +32,6 @@
 #include "absl/strings/str_cat.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
-#include "absl/types/span.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
@@ -315,7 +314,7 @@ absl::StatusOr<std::vector<MInteger>> MInteger::GetDifficultInstancesImpl(
   // Takes all elements in `insert_list` and inserts the ones between `min` and
   // `max` into `values`.
 
-  auto insert_into_values = [&](absl::Span<const int64_t> insert_list) {
+  auto insert_into_values = [&](const std::vector<int64_t>& insert_list) {
     for (int64_t v : insert_list) {
       // min and max are already in, only include values strictly in (min, max).
       if (min < v && v < max && absl::c_find(values, v) == values.end())

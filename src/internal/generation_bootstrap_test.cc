@@ -20,12 +20,11 @@
 #include <tuple>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/algorithm/container.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
-#include "absl/types/span.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -38,6 +37,8 @@ namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::testing::AllOf;
 using ::testing::AnyOf;
@@ -49,8 +50,6 @@ using ::testing::HasSubstr;
 using ::testing::Le;
 using ::testing::Property;
 using ::testing::SizeIs;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 TEST(GenerationBootstrapTest,
      GenerateAllValuesWithNoVariablesOrKnownValuesGeneratesNoValues) {
@@ -232,12 +231,9 @@ TEST(GenerationBootstrapTest,
     MORIARTY_ASSERT_OK_AND_ASSIGN(
         ValueSet values,
         GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t A,
-                                           values.Get<MInteger>("A"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t B,
-                                           values.Get<MInteger>("B"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t C,
-                                           values.Get<MInteger>("C"));
+    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t A, values.Get<MInteger>("A"));
+    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t B, values.Get<MInteger>("B"));
+    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t C, values.Get<MInteger>("C"));
     results.push_back({A, B, C});
   } while (absl::c_next_permutation(names));
 
@@ -267,20 +263,13 @@ TEST(GenerationBootstrapTest,
     MORIARTY_ASSERT_OK_AND_ASSIGN(
         ValueSet values,
         GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t A,
-                                           values.Get<MInteger>("A"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t B,
-                                           values.Get<MInteger>("B"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t C,
-                                           values.Get<MInteger>("C"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t D,
-                                           values.Get<MInteger>("D"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t E,
-                                           values.Get<MInteger>("E"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t F,
-                                           values.Get<MInteger>("F"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t G,
-                                           values.Get<MInteger>("G"));
+    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t A, values.Get<MInteger>("A"));
+    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t B, values.Get<MInteger>("B"));
+    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t C, values.Get<MInteger>("C"));
+    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t D, values.Get<MInteger>("D"));
+    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t E, values.Get<MInteger>("E"));
+    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t F, values.Get<MInteger>("F"));
+    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t G, values.Get<MInteger>("G"));
     results.push_back({A, B, C, D, E, F, G});
   } while (absl::c_next_permutation(names));
 
@@ -339,9 +328,8 @@ TEST(GenerationConfigTest, GetGenerationOrderRemainsStable) {
   do {
     absl::flat_hash_map<std::string, std::vector<std::string>> deps_map = {
         {"A", {}}, {"B", {}}, {"C", {}}, {"X", x_dependencies}};
-    MORIARTY_ASSERT_OK_AND_ASSIGN(
-        std::vector<std::string> ordered_vars,
-        GetGenerationOrder(deps_map, ValueSet()));
+    MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<std::string> ordered_vars,
+                                  GetGenerationOrder(deps_map, ValueSet()));
     results.push_back(ordered_vars);
   } while (absl::c_next_permutation(x_dependencies));
 

@@ -27,6 +27,7 @@
 
 #include <concepts>
 #include <cstdint>
+#include <span>
 #include <string>
 #include <utility>
 #include <vector>
@@ -34,7 +35,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/span.h"
 #include "src/context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/status_utils.h"
@@ -149,7 +149,7 @@ class Moriarty {
   // FIXME: Temporary hack to get things working.
   Moriarty& AddVariable(absl::string_view name,
                         const moriarty_internal::AbstractVariable& variable) {
-    CHECK_OK(variables_.AddVariable(name, variable))
+    ABSL_CHECK_OK(variables_.AddVariable(name, variable))
         << "Adding the same variable multiple times";
     return *this;
   }
@@ -201,7 +201,7 @@ class Moriarty {
 
   // Generates the seed for generator_[index]. Negative numbers are reserved
   // for specialized generators (e.g., min_, max_, random_ generators).
-  absl::StatusOr<absl::Span<const int64_t>> GetSeedForGenerator(int index);
+  absl::StatusOr<std::span<const int64_t>> GetSeedForGenerator(int index);
 
   // Determines if a variable name is valid.
   static absl::Status ValidateVariableName(absl::string_view name);

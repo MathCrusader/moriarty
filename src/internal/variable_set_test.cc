@@ -18,7 +18,6 @@
 #include <vector>
 
 #include "absl/status/status.h"
-#include "absl/types/span.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/generation_bootstrap.h"

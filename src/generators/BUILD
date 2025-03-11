@@ -47,7 +47,6 @@ cc_test(
         "//src/testing:mtest_type",
         "//src/util/test_status_macro:status_testutil",
         "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
         "@googletest//:gtest_main",
     ],
 )

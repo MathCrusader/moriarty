@@ -58,7 +58,6 @@ cc_library(
     deps = [
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/types:span",
     ],
 )
 
@@ -80,7 +79,6 @@ cc_library(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/types:variant",
     ],
 )
 
@@ -90,7 +88,6 @@ cc_library(
     hdrs = ["generation_config.h"],
     deps = [
         "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/meta:type_traits",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
@@ -109,7 +106,6 @@ cc_library(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/types:span",
     ],
 )
 
@@ -129,7 +125,6 @@ cc_library(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/types:span",
     ],
 )
 
@@ -190,7 +185,6 @@ cc_library(
         "//src:scenario",
         "//src/util/status_macro:status_macros",
         "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/meta:type_traits",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
@@ -277,7 +271,6 @@ cc_test(
         "//src/util/test_status_macro:status_testutil",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
         "@googletest//:gtest_main",
     ],
 )
@@ -396,7 +389,6 @@ cc_test(
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/types:span",
         "@googletest//:gtest_main",
     ],
 )

@@ -83,7 +83,6 @@ cc_library(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/types:span",
     ],
 )
 
@@ -220,7 +219,6 @@ cc_test(
         "//src/variables:minteger",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/types:span",
         "@googletest//:gtest_main",
     ],
 )

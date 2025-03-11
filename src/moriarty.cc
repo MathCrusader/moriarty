@@ -26,7 +26,6 @@
 #include "absl/strings/ascii.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
-#include "absl/types/span.h"
 #include "src/context.h"
 #include "src/internal/analysis_bootstrap.h"
 #include "src/internal/generation_bootstrap.h"
@@ -79,7 +78,7 @@ absl::Status Moriarty::TrySetSeed(absl::string_view seed) {
   return absl::OkStatus();
 }
 
-absl::StatusOr<absl::Span<const int64_t>> Moriarty::GetSeedForGenerator(
+absl::StatusOr<std::span<const int64_t>> Moriarty::GetSeedForGenerator(
     int index) {
   if (seed_.empty())
     return absl::FailedPreconditionError(

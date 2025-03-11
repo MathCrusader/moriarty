@@ -20,6 +20,7 @@
 #include <concepts>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "absl/strings/string_view.h"
 
@@ -33,7 +34,7 @@ template <typename T>
 class Exactly : public MConstraint {
  public:
   // The variable must be exactly this value.
-  // E.g., Exactly(10); Exactly(std::vector<int64_t>{1, 2, 3});
+  // E.g., `Exactly(10)` or `Exactly(std::vector<int64_t>{1, 2, 3})`
   explicit Exactly(T value);
 
   // Returns the value that the variable must be.
@@ -57,6 +58,27 @@ class Exactly<std::string> : public MConstraint {
 
  private:
   std::string value_;
+};
+
+// The variable must be one of these values.
+// Examples:
+//  * OneOf({1, 2, 4})
+//  * OneOf({"a", "b", "c"})
+//  * OneOf(1, 2, 4)
+//  * OneOf("Possible", "Impossible")
+template <typename T>
+class OneOf : public MConstraint {
+ public:
+  template <typename Container>
+  explicit OneOf(Container&& options);
+  explicit OneOf(std::initializer_list<T> options);
+  explicit OneOf(T options...);
+
+  // Returns the values that the variable must be one of.
+  [[nodiscard]] std::vector<T> GetOptions() const;
+
+ private:
+  std::vector<T> options_;
 };
 
 // Remap all integer types (via CTAD) to MInteger-compatible type.

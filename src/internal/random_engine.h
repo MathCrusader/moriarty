@@ -42,12 +42,14 @@
 // times, so it is not necessarily fast.
 
 #include <cstdint>
+#include <initializer_list>
 #include <random>
+#include <span>
 #include <string>
+#include <vector>
 
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
-#include "absl/types/span.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -62,8 +64,12 @@ class RandomEngine {
   //
   // TODO(b/182810006): Our random seeds may be fixed length eventually.
   // Consider changing to std::array if that's the case.
-  RandomEngine(absl::Span<const int64_t> seed,
+  RandomEngine(std::span<const int64_t> seed,
                absl::string_view moriarty_version_num);
+
+  RandomEngine(std::initializer_list<int64_t> seed,
+               absl::string_view moriarty_version_num)
+      : RandomEngine(std::vector<int64_t>(seed), moriarty_version_num) {}
 
   // RandInt()
   //
@@ -86,7 +92,7 @@ class RandomEngine {
   // Sets the internal state of the random engine appropriately. Separate from
   // the constructor so that we can later add SaveState and LoadState.
   void InitRandomEngine(
-      absl::Span<const int64_t> seed,
+      std::span<const int64_t> seed,
       int64_t initial_discards = kInitialDiscardsFromRandomEngine);
 
   // RandomIntInclusive()

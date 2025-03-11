@@ -19,6 +19,7 @@
 #include <functional>
 #include <limits>
 #include <optional>
+#include <span>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -32,7 +33,6 @@
 #include "absl/strings/str_join.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
-#include "absl/types/span.h"
 #include "src/internal/expressions.h"
 #include "src/util/status_macro/status_macros.h"
 
@@ -86,7 +86,7 @@ namespace {
 // value of `compare`.
 template <typename F>
 absl::StatusOr<int64_t> FindExtreme(
-    int64_t initial_value, absl::Span<const Expression> exprs,
+    int64_t initial_value, std::span<const Expression> exprs,
     const absl::flat_hash_map<std::string, int64_t>& variables, F compare) {
   for (const Expression& expr : exprs) {
     MORIARTY_ASSIGN_OR_RETURN(int64_t val,
@@ -144,7 +144,7 @@ namespace {
 // just return that. Otherwise, will return a comma separated list of bounds.
 std::optional<std::string> BoundsToString(
     bool is_minimum, int64_t numeric_limit,
-    absl::Span<const Expression> expression_limits) {
+    std::span<const Expression> expression_limits) {
   bool unchanged_numeric_limit =
       (is_minimum && numeric_limit == std::numeric_limits<int64_t>::min()) ||
       (!is_minimum && numeric_limit == std::numeric_limits<int64_t>::max());

@@ -17,11 +17,11 @@
 #include <cstdint>
 #include <functional>
 #include <optional>
+#include <span>
 #include <vector>
 
 #include "absl/algorithm/container.h"
 #include "absl/log/absl_check.h"
-#include "absl/types/span.h"
 
 namespace moriarty {
 
@@ -64,7 +64,7 @@ struct ColumnSet {
 // Assumes 0 <= test_cases[i] < dimension_sizes[i].
 SerializedTestCase SerializePartialTestCase(
     BitMask mask, const CoveringArrayTestCase& test_case,
-    absl::Span<const int> dimension_sizes) {
+    std::span<const int> dimension_sizes) {
   SerializedTestCase result = 0;
   for (int i = 0; i < dimension_sizes.size(); i++) {
     if ((mask >> i) & ONE)
@@ -80,7 +80,7 @@ SerializedTestCase SerializePartialTestCase(
 // fields are ignored.
 void DeserializePartialTestCaseInto(BitMask mask,
                                     SerializedTestCase serialized_value,
-                                    absl::Span<const int> dimension_sizes,
+                                    std::span<const int> dimension_sizes,
                                     CoveringArrayTestCase& partial_test_case) {
   for (int i = (int)dimension_sizes.size() - 1; i >= 0; i--) {
     if (!((mask >> i) & ONE)) continue;
@@ -116,8 +116,8 @@ std::vector<BitMask> GetAllNChooseK(int n, int k) {
 //     cases.
 // (3) Repeat (2) until all columns have been covered.
 std::optional<CoveringArrayTestCase> FindTestCaseToAdd(
-    absl::Span<const ColumnSet> column_sets,
-    absl::Span<const int> dimension_sizes, std::function<int(int)> rand) {
+    std::span<const ColumnSet> column_sets,
+    std::span<const int> dimension_sizes, std::function<int(int)> rand) {
   // Sort column_sets by number of remaining uncovered partial test cases. We
   // sort the indices rather than the columns themselves.
   std::vector<int64_t> column_set_index(column_sets.size());
@@ -166,7 +166,7 @@ std::optional<CoveringArrayTestCase> FindTestCaseToAdd(
 // Updates `column_set` to signify that `test_case` has been added to the set of
 // test cases.
 void UpdateColumnSet(const CoveringArrayTestCase& test_case,
-                     absl::Span<const int> dimension_sizes,
+                     std::span<const int> dimension_sizes,
                      ColumnSet& column_set) {
   SerializedTestCase serial_test_case = SerializePartialTestCase(
       column_set.column_mask, test_case, dimension_sizes);
@@ -179,7 +179,7 @@ void UpdateColumnSet(const CoveringArrayTestCase& test_case,
 // Create all (n choose strength) column sets. Each set of columns will have its
 // `covered` array set to the appropriate number of values.
 std::vector<ColumnSet> InitializeColumnSets(
-    int n, int strength, absl::Span<const int> dimension_sizes) {
+    int n, int strength, std::span<const int> dimension_sizes) {
   std::vector<BitMask> masks = GetAllNChooseK(n, strength);
   std::vector<ColumnSet> column_sets;
   column_sets.reserve(masks.size());

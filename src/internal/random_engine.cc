@@ -17,18 +17,18 @@
 #include <cstdint>
 #include <limits>
 #include <random>
+#include <span>
 #include <string>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
-#include "absl/types/span.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-RandomEngine::RandomEngine(absl::Span<const int64_t> seed,
+RandomEngine::RandomEngine(std::span<const int64_t> seed,
                            absl::string_view moriarty_version_num)
     : moriarty_version_num_(moriarty_version_num) {
   InitRandomEngine(seed);
@@ -56,7 +56,7 @@ absl::StatusOr<int64_t> RandomEngine::RandInt(int64_t inclusive_lower_bound,
                           static_cast<uint64_t>(inclusive_lower_bound));
 }
 
-void RandomEngine::InitRandomEngine(absl::Span<const int64_t> seed,
+void RandomEngine::InitRandomEngine(std::span<const int64_t> seed,
                                     int64_t initial_discards) {
   std::seed_seq sseq(std::begin(seed), std::end(seed));
   re_.seed(sseq);

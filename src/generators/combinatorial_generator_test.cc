@@ -17,7 +17,6 @@
 #include <vector>
 
 #include "absl/status/statusor.h"
-#include "absl/types/span.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/context.h"
