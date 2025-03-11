@@ -27,11 +27,11 @@
 #include <optional>
 #include <string>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/errors.h"
 
 namespace moriarty_testing {
@@ -48,22 +48,6 @@ inline absl::Status GetStatus(const absl::StatusOr<T>& status_or) {
 }
 
 }  // namespace moriarty_testing_internal
-
-// googletest matcher checking for a Moriarty MisconfiguredError
-MATCHER_P(
-    IsMisconfigured, expected_missing_item,
-    absl::Substitute(
-        "$0 a Moriarty error saying that a Moriarty item is misconfigured.",
-        (negation ? "is not" : "is"))) {
-  absl::Status status = moriarty_testing_internal::GetStatus(arg);
-  if (!moriarty::IsMisconfiguredError(status, expected_missing_item)) {
-    *result_listener << "received status that is not an MisconfiguredError: "
-                     << status;
-    return false;
-  }
-
-  return true;
-}
 
 // googletest matcher checking for a Moriarty UnsatisfiedConstraintError
 MATCHER_P(

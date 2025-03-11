@@ -18,7 +18,6 @@
 #include <string>
 #include <string_view>
 
-#include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/strings/cord.h"
 #include "absl/strings/substitute.h"
@@ -36,7 +35,6 @@ namespace {
 // payload string for the corresponding failure.
 constexpr std::string_view kMoriartyErrorSpace = "moriarty";
 
-constexpr std::string_view kMisconfiguredErrorPayload = "Misconfigured";
 // constexpr std::string_view kNonRetryableGenerationErrorPayload =
 //     "NonRetryableGeneration";
 // constexpr std::string_view kRetryableGenerationErrorPayload =
@@ -72,58 +70,6 @@ std::optional<std::string> GetUnknownVariableName(const absl::Status& status) {
   }
 
   return std::string(*payload);
-}
-
-namespace {
-
-constexpr std::string_view ToString(InternalConfigurationType type) {
-  switch (type) {
-    case InternalConfigurationType::kRandomEngine:
-      return "RandomEngine";
-    case InternalConfigurationType::kVariableName:
-      return "VariableName";
-    case InternalConfigurationType::kVariableSet:
-      return "VariableSet";
-    case InternalConfigurationType::kValueSet:
-      return "ValueSet";
-    case InternalConfigurationType::kTestCaseMetadata:
-      return "TestCaseMetadata";
-    case InternalConfigurationType::kGenerationConfig:
-      return "GenerationConfig";
-    default:
-      ABSL_CHECK(false) << "Unknown InternalConfigurationType";
-      return "?";
-  }
-}
-
-}  // namespace
-
-bool IsMisconfiguredError(const absl::Status& status,
-                          InternalConfigurationType missing_item) {
-  std::optional<absl::Cord> payload = status.GetPayload(kMoriartyErrorSpace);
-  if (!payload.has_value()) return false;
-
-  if (!payload->StartsWith(kMisconfiguredErrorPayload)) return false;
-  payload->RemovePrefix(kMisconfiguredErrorPayload.size() + 1);
-
-  return payload->StartsWith(ToString(missing_item));
-}
-
-absl::Status MisconfiguredError(std::string_view class_name,
-                                std::string_view function_name,
-                                InternalConfigurationType missing_item) {
-  return MakeMoriartyError(
-      absl::StatusCode::kFailedPrecondition,
-      absl::Substitute(
-          "Called $0::$1() without `$2` injected. This typically means you are "
-          "trying to call some function without using the Moriarty ecosystem "
-          "properly.\n\nFor example, if you have a `Generator`, you need to "
-          "tell `Moriarty` about it: `M.AddGenerator( ... );`, then Moriarty "
-          "is responsible for injecting information into your Generator, then "
-          "calling `Generate()`.",
-          class_name, function_name, ToString(missing_item)),
-      absl::Substitute("$0 $1 $2 $3", kMisconfiguredErrorPayload,
-                       ToString(missing_item), class_name, function_name));
 }
 
 bool IsUnsatisfiedConstraintError(const absl::Status& status) {

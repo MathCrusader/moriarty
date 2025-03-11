@@ -26,7 +26,6 @@
 namespace moriarty {
 namespace {
 
-using ::moriarty_testing::IsMisconfigured;
 using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::moriarty_testing::IsValueNotFound;
 using ::moriarty_testing::IsVariableNotFound;
@@ -36,8 +35,6 @@ using ::testing::Not;
 //  General Moriarty Error space checks
 
 TEST(StatusTest, IsMoriartyErrorAcceptsAllErrorFunctions) {
-  EXPECT_TRUE(IsMoriartyError(
-      MisconfiguredError("", "", InternalConfigurationType::kValueSet)));
   // EXPECT_TRUE(IsMoriartyError(NonRetryableGenerationError("")));
   // EXPECT_TRUE(IsMoriartyError(RetryableGenerationError("")));
   EXPECT_TRUE(IsMoriartyError(UnsatisfiedConstraintError("")));
@@ -58,9 +55,6 @@ TEST(StatusTest, IsMoriartyErrorDoesNotAcceptGenericStatuses) {
 }
 
 TEST(StatusTest, MoriartyErrorsRecognizeAppropriateError) {
-  EXPECT_TRUE(IsMisconfiguredError(
-      MisconfiguredError("a", "b", InternalConfigurationType::kValueSet),
-      InternalConfigurationType::kValueSet));
   // EXPECT_TRUE(IsNonRetryableGenerationError(NonRetryableGenerationError("")));
   // EXPECT_TRUE(IsRetryableGenerationError(RetryableGenerationError("")));
   EXPECT_TRUE(IsUnsatisfiedConstraintError(UnsatisfiedConstraintError("")));
@@ -70,12 +64,6 @@ TEST(StatusTest, MoriartyErrorsRecognizeAppropriateError) {
 
 TEST(StatusTest, MoriartyErrorsDoNotAcceptUnderlyingTypesAlone) {
   // All "" are irrelevant, just creating empty statuses with a specific code.
-  EXPECT_FALSE(IsMisconfiguredError(
-      absl::Status(
-          MisconfiguredError("", "", InternalConfigurationType::kValueSet)
-              .code(),
-          ""),
-      InternalConfigurationType::kValueSet));
   // EXPECT_FALSE(IsNonRetryableGenerationError(
   //     absl::Status(NonRetryableGenerationError("").code(), "")));
   // EXPECT_FALSE(IsRetryableGenerationError(
@@ -89,8 +77,6 @@ TEST(StatusTest, MoriartyErrorsDoNotAcceptUnderlyingTypesAlone) {
 }
 
 TEST(StatusTest, MoriartyErrorsDoNotAcceptOkStatus) {
-  EXPECT_FALSE(IsMisconfiguredError(absl::OkStatus(),
-                                    InternalConfigurationType::kValueSet));
   // EXPECT_FALSE(IsNonRetryableGenerationError(absl::OkStatus()));
   // EXPECT_FALSE(IsRetryableGenerationError(absl::OkStatus()));
   EXPECT_FALSE(IsUnsatisfiedConstraintError(absl::OkStatus()));
@@ -120,25 +106,6 @@ TEST(StatusTest, GetUnknownVariableNameReturnsNulloptForDifferentErrors) {
             std::nullopt);
   EXPECT_EQ(GetUnknownVariableName(UnsatisfiedConstraintError("hello?")),
             std::nullopt);
-}
-
-// -----------------------------------------------------------------------------
-//  MisconfiguredError
-
-TEST(StatusTest, IsMisconfiguredErrorsGoogleTestMatcherWorks) {
-  EXPECT_THAT(
-      MisconfiguredError("a", "b", InternalConfigurationType::kValueSet),
-      IsMisconfigured(InternalConfigurationType::kValueSet));
-  EXPECT_THAT(absl::StatusOr<int>(MisconfiguredError(
-                  "a", "b", InternalConfigurationType::kGenerationConfig)),
-              IsMisconfigured(InternalConfigurationType::kGenerationConfig));
-
-  EXPECT_THAT(UnsatisfiedConstraintError("some reason"),
-              Not(IsMisconfigured(InternalConfigurationType::kValueSet)));
-  EXPECT_THAT(
-      absl::StatusOr<int>(MisconfiguredError(
-          "a", "b", InternalConfigurationType::kRandomEngine)),
-      Not(IsMisconfigured(InternalConfigurationType::kGenerationConfig)));
 }
 
 // -----------------------------------------------------------------------------

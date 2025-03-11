@@ -34,7 +34,6 @@
 //
 // Types of Errors (this list may grow in the future):
 //
-//  * MisconfiguredError
 //  * NonRetryableGenerationError
 //  * RetryableGenerationError
 //  * UnsatisfiedConstraintError
@@ -60,45 +59,6 @@ bool IsMoriartyError(const absl::Status& status);
 // name of the variable that wasn't found (if known). If the status is not an
 // error listed above or the name is unknown, returns `std::nullopt`.
 std::optional<std::string> GetUnknownVariableName(const absl::Status& status);
-
-// -----------------------------------------------------------------------------
-//   Misconfigured -- Some part of Moriarty was misconfigured
-
-// Items that may be misconfigured by the user. In general, if you're seeing
-// this, it means that you have not set up your ecosystem properly.
-enum class InternalConfigurationType {
-  kRandomEngine,
-  kVariableName,
-  kVariableSet,
-  kValueSet,
-  kTestCaseMetadata,
-  kGenerationConfig,
-  kThisIsNotAnExhaustiveListItMayGrowOverTime
-};
-
-// IsMisconfiguredError()
-//
-// Returns true if `status` signals that some part of Moriarty was
-// misconfigured and missing `missing_item`.
-bool IsMisconfiguredError(const absl::Status& status,
-                          InternalConfigurationType missing_item);
-
-// MisconfiguredError()
-//
-// Returns an error signaling that some `missing_item` is not in `class_name`.
-//
-// If you receive this error, it typically means you are trying to call some
-// function without using the Moriarty ecosystem. For example, if you have a
-// `Generator`, you need to tell `Moriarty` about it: `M.AddGenerator( ... );`,
-// then Moriarty is responsible for injecting information into your Generator,
-// then calling `Generate()`.
-//
-// In the example above, `AddGenerator` will seed your generator with
-// appropriate information (random seed, variables, etc). Without these, your
-// Generator does not behave as expected.
-absl::Status MisconfiguredError(std::string_view class_name,
-                                std::string_view function_name,
-                                InternalConfigurationType missing_item);
 
 // -----------------------------------------------------------------------------
 //   UnsatisfiedConstraint -- Some constraint on a variable was not satisfied.
