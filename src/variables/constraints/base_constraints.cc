@@ -17,12 +17,11 @@
 #include "src/variables/constraints/base_constraints.h"
 
 #include <string>
-
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 namespace moriarty {
 
-Exactly<std::string>::Exactly(absl::string_view value)
+Exactly<std::string>::Exactly(std::string_view value)
     : value_(std::string(value)) {}
 
 std::string Exactly<std::string>::GetValue() const { return value_; }

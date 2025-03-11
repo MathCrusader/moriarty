@@ -46,10 +46,10 @@
 #include <random>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -65,10 +65,10 @@ class RandomEngine {
   // TODO(b/182810006): Our random seeds may be fixed length eventually.
   // Consider changing to std::array if that's the case.
   RandomEngine(std::span<const int64_t> seed,
-               absl::string_view moriarty_version_num);
+               std::string_view moriarty_version_num);
 
   RandomEngine(std::initializer_list<int64_t> seed,
-               absl::string_view moriarty_version_num)
+               std::string_view moriarty_version_num)
       : RandomEngine(std::vector<int64_t>(seed), moriarty_version_num) {}
 
   // RandInt()

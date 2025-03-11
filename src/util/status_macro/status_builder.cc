@@ -26,7 +26,6 @@
 #include "absl/status/status.h"
 #include "absl/strings/cord.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/string_view.h"
 #include "absl/synchronization/mutex.h"
 #include "src/util/status_macro/examine_stack.h"
 
@@ -56,7 +55,7 @@ StatusBuilder::Rep::Rep(const Rep& r)
 namespace {
 
 static void CopyPayloads(absl::Status* dst, const absl::Status& src) {
-  src.ForEachPayload([&](absl::string_view type_url, absl::Cord payload) {
+  src.ForEachPayload([&](std::string_view type_url, absl::Cord payload) {
     dst->SetPayload(type_url, payload);
   });
 }

@@ -25,6 +25,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -34,7 +35,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -113,12 +113,12 @@ class MArray : public librarian::MVariable<
   // `OfLength("3 * N")` is equivalent to `OfLength(MInteger().Is("3 * N"))`.
   MArray& OfLength(const MInteger& length);
   MArray& OfLength(int64_t length);
-  MArray& OfLength(absl::string_view length_expression);
+  MArray& OfLength(std::string_view length_expression);
   MArray& OfLength(int64_t min_length, int64_t max_length);
-  MArray& OfLength(int64_t min_length, absl::string_view max_length_expression);
-  MArray& OfLength(absl::string_view min_length_expression, int64_t max_length);
-  MArray& OfLength(absl::string_view min_length_expression,
-                   absl::string_view max_length_expression);
+  MArray& OfLength(int64_t min_length, std::string_view max_length_expression);
+  MArray& OfLength(std::string_view min_length_expression, int64_t max_length);
+  MArray& OfLength(std::string_view min_length_expression,
+                   std::string_view max_length_expression);
 
   // WithDistinctElements()
   //
@@ -306,7 +306,7 @@ MArray<MElementType>& MArray<MElementType>::OfLength(int64_t length) {
 
 template <typename MElementType>
 MArray<MElementType>& MArray<MElementType>::OfLength(
-    absl::string_view length_expression) {
+    std::string_view length_expression) {
   return OfLength(length_expression, length_expression);
 }
 
@@ -318,20 +318,20 @@ MArray<MElementType>& MArray<MElementType>::OfLength(int64_t min_length,
 
 template <typename MElementType>
 MArray<MElementType>& MArray<MElementType>::OfLength(
-    int64_t min_length, absl::string_view max_length_expression) {
+    int64_t min_length, std::string_view max_length_expression) {
   return OfLength(MInteger().Between(min_length, max_length_expression));
 }
 
 template <typename MElementType>
 MArray<MElementType>& MArray<MElementType>::OfLength(
-    absl::string_view min_length_expression, int64_t max_length) {
+    std::string_view min_length_expression, int64_t max_length) {
   return OfLength(MInteger().Between(min_length_expression, max_length));
 }
 
 template <typename MElementType>
 MArray<MElementType>& MArray<MElementType>::OfLength(
-    absl::string_view min_length_expression,
-    absl::string_view max_length_expression) {
+    std::string_view min_length_expression,
+    std::string_view max_length_expression) {
   return OfLength(
       MInteger().Between(min_length_expression, max_length_expression));
 }

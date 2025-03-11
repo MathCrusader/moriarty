@@ -21,12 +21,12 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -83,7 +83,7 @@ absl::Status MTestType::WithSizeProperty(moriarty::Property property) {
   return absl::OkStatus();
 }
 
-MTestType& MTestType::SetAdder(absl::string_view variable_name) {
+MTestType& MTestType::SetAdder(std::string_view variable_name) {
   adder_variable_name_ = variable_name;
   return *this;
 }

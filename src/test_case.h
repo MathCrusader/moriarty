@@ -27,7 +27,6 @@
 
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
-#include "absl/strings/string_view.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -66,7 +65,7 @@ class TestCase {
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
-  TestCase& SetValue(absl::string_view variable_name, T::value_type value);
+  TestCase& SetValue(std::string_view variable_name, T::value_type value);
 
   // ConstrainVariable()
   //
@@ -89,7 +88,7 @@ class TestCase {
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
-  TestCase& ConstrainVariable(absl::string_view variable_name, T constraints);
+  TestCase& ConstrainVariable(std::string_view variable_name, T constraints);
 
   // WithScenario()
   //
@@ -100,7 +99,7 @@ class TestCase {
   // know the exact type of the variable. Prefer to use `ConstrainVariable()`.
   // This function may be removed in the future.
   TestCase& ConstrainAnonymousVariable(
-      absl::string_view variable_name,
+      std::string_view variable_name,
       const moriarty_internal::AbstractVariable& constraints);
 
   // This is a dangerous function that should only be used if you know what
@@ -142,7 +141,7 @@ class ConcreteTestCase {
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
-  ConcreteTestCase& SetValue(absl::string_view variable_name,
+  ConcreteTestCase& SetValue(std::string_view variable_name,
                              T::value_type value);
 
   // GetValue()
@@ -151,7 +150,7 @@ class ConcreteTestCase {
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
-  T::value_type GetValue(absl::string_view variable_name) const {
+  T::value_type GetValue(std::string_view variable_name) const {
     auto value = values_.Get<T>(variable_name);
     if (!value.ok()) throw std::runtime_error(value.status().ToString());
     return *value;
@@ -179,7 +178,7 @@ class ConcreteTestCase {
 
 template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-TestCase& TestCase::SetValue(absl::string_view variable_name,
+TestCase& TestCase::SetValue(std::string_view variable_name,
                              T::value_type value) {
   values_.Set<T>(variable_name, std::move(value));
   return *this;
@@ -187,7 +186,7 @@ TestCase& TestCase::SetValue(absl::string_view variable_name,
 
 template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-TestCase& TestCase::ConstrainVariable(absl::string_view variable_name,
+TestCase& TestCase::ConstrainVariable(std::string_view variable_name,
                                       T constraints) {
   ABSL_CHECK_OK(
       variables_.AddOrMergeVariable(variable_name, std::move(constraints)));
@@ -196,7 +195,7 @@ TestCase& TestCase::ConstrainVariable(absl::string_view variable_name,
 
 template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-ConcreteTestCase& ConcreteTestCase::SetValue(absl::string_view variable_name,
+ConcreteTestCase& ConcreteTestCase::SetValue(std::string_view variable_name,
                                              T::value_type value) {
   values_.Set<T>(variable_name, std::move(value));
   return *this;

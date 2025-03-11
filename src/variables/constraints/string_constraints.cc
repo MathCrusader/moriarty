@@ -17,28 +17,28 @@
 #include "src/variables/constraints/string_constraints.h"
 
 #include <string>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 
 namespace moriarty {
 
-Alphabet::Alphabet(absl::string_view alphabet) : alphabet_(alphabet) {}
+Alphabet::Alphabet(std::string_view alphabet) : alphabet_(alphabet) {}
 
 std::string Alphabet::GetAlphabet() const { return alphabet_; }
 
 namespace {
 
-constexpr static absl::string_view kAlphabet =
+constexpr static std::string_view kAlphabet =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-constexpr static absl::string_view kUpperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-constexpr static absl::string_view kLowerCase = "abcdefghijklmnopqrstuvwxyz";
-constexpr static absl::string_view kNumbers = "0123456789";
-constexpr static absl::string_view kAlphaNumeric =
+constexpr static std::string_view kUpperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+constexpr static std::string_view kLowerCase = "abcdefghijklmnopqrstuvwxyz";
+constexpr static std::string_view kNumbers = "0123456789";
+constexpr static std::string_view kAlphaNumeric =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-constexpr static absl::string_view kUpperAlphaNumeric =
+constexpr static std::string_view kUpperAlphaNumeric =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-constexpr static absl::string_view kLowerAlphaNumeric =
+constexpr static std::string_view kLowerAlphaNumeric =
     "abcdefghijklmnopqrstuvwxyz0123456789";
 
 }  // namespace
@@ -55,7 +55,7 @@ std::string Alphabet::ToString() const {
   return absl::Substitute("Alphabet($0)", alphabet_);
 }
 
-SimplePattern::SimplePattern(absl::string_view pattern) : pattern_(pattern) {}
+SimplePattern::SimplePattern(std::string_view pattern) : pattern_(pattern) {}
 
 std::string SimplePattern::GetPattern() const { return pattern_; }
 

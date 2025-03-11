@@ -20,9 +20,8 @@
 #include <concepts>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
-
-#include "absl/strings/string_view.h"
 
 namespace moriarty {
 
@@ -51,7 +50,7 @@ class Exactly<std::string> : public MConstraint {
  public:
   // The string variable must be exactly this value.
   // E.g., Exactly("abc");
-  explicit Exactly(absl::string_view value);
+  explicit Exactly(std::string_view value);
 
   // Returns the value that the variable must be.
   [[nodiscard]] std::string GetValue() const;
@@ -90,7 +89,7 @@ Exactly(T) -> Exactly<int64_t>;
 // Remap all string types (via CTAD) to MString-compatible type.
 // E.g., Exactly("abc") is remapped to Exactly<std::string>("abc")
 template <typename T>
-  requires std::convertible_to<T, absl::string_view>
+  requires std::convertible_to<T, std::string_view>
 Exactly(T) -> Exactly<std::string>;
 
 // -----------------------------------------------------------------------------

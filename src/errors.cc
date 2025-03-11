@@ -16,11 +16,11 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/strings/cord.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 
 namespace moriarty {
@@ -34,20 +34,20 @@ namespace {
 //
 // It is assumed that these contain no whitespace and are the first token in the
 // payload string for the corresponding failure.
-constexpr absl::string_view kMoriartyErrorSpace = "moriarty";
+constexpr std::string_view kMoriartyErrorSpace = "moriarty";
 
-constexpr absl::string_view kMisconfiguredErrorPayload = "Misconfigured";
-// constexpr absl::string_view kNonRetryableGenerationErrorPayload =
+constexpr std::string_view kMisconfiguredErrorPayload = "Misconfigured";
+// constexpr std::string_view kNonRetryableGenerationErrorPayload =
 //     "NonRetryableGeneration";
-// constexpr absl::string_view kRetryableGenerationErrorPayload =
+// constexpr std::string_view kRetryableGenerationErrorPayload =
 //     "RetryableGeneration";
-constexpr absl::string_view kUnsatisfiedConstraintErrorPayload =
+constexpr std::string_view kUnsatisfiedConstraintErrorPayload =
     "UnsatisfiedConstraint";
-constexpr absl::string_view kValueNotFoundErrorPayload = "ValueNotFound";
-constexpr absl::string_view kVariableNotFoundErrorPayload = "VariableNotFound";
+constexpr std::string_view kValueNotFoundErrorPayload = "ValueNotFound";
+constexpr std::string_view kVariableNotFoundErrorPayload = "VariableNotFound";
 
-absl::Status MakeMoriartyError(absl::StatusCode code, absl::string_view message,
-                               absl::string_view payload) {
+absl::Status MakeMoriartyError(absl::StatusCode code, std::string_view message,
+                               std::string_view payload) {
   absl::Status status = absl::Status(code, message);
   status.SetPayload(kMoriartyErrorSpace, absl::Cord(payload));
   return status;
@@ -76,7 +76,7 @@ std::optional<std::string> GetUnknownVariableName(const absl::Status& status) {
 
 namespace {
 
-constexpr absl::string_view ToString(InternalConfigurationType type) {
+constexpr std::string_view ToString(InternalConfigurationType type) {
   switch (type) {
     case InternalConfigurationType::kRandomEngine:
       return "RandomEngine";
@@ -109,8 +109,8 @@ bool IsMisconfiguredError(const absl::Status& status,
   return payload->StartsWith(ToString(missing_item));
 }
 
-absl::Status MisconfiguredError(absl::string_view class_name,
-                                absl::string_view function_name,
+absl::Status MisconfiguredError(std::string_view class_name,
+                                std::string_view function_name,
                                 InternalConfigurationType missing_item) {
   return MakeMoriartyError(
       absl::StatusCode::kFailedPrecondition,
@@ -134,21 +134,21 @@ bool IsUnsatisfiedConstraintError(const absl::Status& status) {
 }
 
 absl::Status UnsatisfiedConstraintError(
-    absl::string_view constraint_explanation) {
+    std::string_view constraint_explanation) {
   return MakeMoriartyError(absl::StatusCode::kFailedPrecondition,
                            constraint_explanation,
                            kUnsatisfiedConstraintErrorPayload);
 }
 
 absl::Status CheckConstraint(const absl::Status& constraint,
-                             absl::string_view constraint_explanation) {
+                             std::string_view constraint_explanation) {
   if (constraint.ok()) return absl::OkStatus();
   return UnsatisfiedConstraintError(
       absl::Substitute("$0; $1", constraint_explanation, constraint.message()));
 }
 
 absl::Status CheckConstraint(bool constraint,
-                             absl::string_view constraint_explanation) {
+                             std::string_view constraint_explanation) {
   if (constraint) return absl::OkStatus();
   return UnsatisfiedConstraintError(constraint_explanation);
 }
@@ -160,7 +160,7 @@ bool IsValueNotFoundError(const absl::Status& status) {
   return payload->StartsWith(kValueNotFoundErrorPayload);
 }
 
-absl::Status ValueNotFoundError(absl::string_view variable_name) {
+absl::Status ValueNotFoundError(std::string_view variable_name) {
   return MakeMoriartyError(
       absl::StatusCode::kNotFound,
       absl::Substitute("Value for `$0` not found", variable_name),
@@ -174,7 +174,7 @@ bool IsVariableNotFoundError(const absl::Status& status) {
   return payload->StartsWith(kVariableNotFoundErrorPayload);
 }
 
-absl::Status VariableNotFoundError(absl::string_view variable_name) {
+absl::Status VariableNotFoundError(std::string_view variable_name) {
   return MakeMoriartyError(
       absl::StatusCode::kNotFound,
       absl::Substitute("Unknown variable: `$0`", variable_name),

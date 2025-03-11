@@ -17,10 +17,10 @@
 
 #include <algorithm>
 #include <string>
+#include <string_view>
 
 #include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/string_view.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/mvariable.h"
@@ -180,7 +180,7 @@ TEST(MStringTest, MergeFromCorrectlyMergesOnLength) {
 }
 
 TEST(MStringTest, MergeFromCorrectlyMergesOnAlphabet) {
-  auto string_with_alphabet = [](absl::string_view alphabet) {
+  auto string_with_alphabet = [](std::string_view alphabet) {
     return MString().OfLength(20).WithAlphabet(alphabet);
   };
 
@@ -592,7 +592,7 @@ TEST(MStringNonBuilderTest, MergeFromCorrectlyMergesOnLength) {
 }
 
 TEST(MStringNonBuilderTest, MergeFromCorrectlyMergesOnAlphabet) {
-  auto string_with_alphabet = [](absl::string_view alphabet) {
+  auto string_with_alphabet = [](std::string_view alphabet) {
     return MString(Length(20), Alphabet(alphabet));
   };
 

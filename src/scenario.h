@@ -18,10 +18,10 @@
 #define MORIARTY_SRC_SCENARIO_H_
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/strings/string_view.h"
 #include "src/property.h"
 
 namespace moriarty {
@@ -44,7 +44,7 @@ class Scenario {
   // Specifies that all variables of type `mvariable_type` have `property`.
   // `mvariable_type` will be checked against a variable's `Typename()`. Some
   // examples are `MInteger`, `MString`, `MArray<MString>`.
-  Scenario& WithTypeSpecificProperty(absl::string_view mvariable_type,
+  Scenario& WithTypeSpecificProperty(std::string_view mvariable_type,
                                      Property property);
 
   // GetGeneralProperties()
@@ -57,7 +57,7 @@ class Scenario {
   // Returns a list of all properties that are for `mvariable_type` (not
   // including the general ones).
   std::vector<Property> GetTypeSpecificProperties(
-      absl::string_view mvariable_type) const;
+      std::string_view mvariable_type) const;
 
  private:
   std::vector<Property> properties_;

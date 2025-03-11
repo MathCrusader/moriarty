@@ -22,6 +22,7 @@
 #include <memory>
 #include <stack>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -32,7 +33,6 @@
 #include "absl/numeric/int128.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "absl/types/variant.h"
 #include "src/util/status_macro/status_macros.h"
@@ -739,7 +739,7 @@ class ShuntingYard {
   }
 };
 
-void TrimLeadingWhitespace(absl::string_view& expression) {
+void TrimLeadingWhitespace(std::string_view& expression) {
   while (!expression.empty() && std::isspace(expression.front()))
     expression.remove_prefix(1);
 }
@@ -747,7 +747,7 @@ void TrimLeadingWhitespace(absl::string_view& expression) {
 // Reads the first token in expression. That token is returned and `expression`
 // is updated to remove that token. Returns `std::nullopt` on an empty
 // expression or unknown token.
-absl::StatusOr<TokenType> ConsumeFirstToken(absl::string_view& expression,
+absl::StatusOr<TokenType> ConsumeFirstToken(std::string_view& expression,
                                             const TokenType& previous_token) {
   TrimLeadingWhitespace(expression);
   if (expression.empty()) return SpecialCharacter::kEndOfString;
@@ -826,10 +826,10 @@ absl::StatusOr<TokenType> ConsumeFirstToken(absl::string_view& expression,
 //  * equality operators (==, !=)
 //  * boolean operators (and, or, xor, not)
 //  * postfix unary operators (such as n!)
-absl::StatusOr<Expression> ParseExpression(absl::string_view expression) {
+absl::StatusOr<Expression> ParseExpression(std::string_view expression) {
   moriarty_internal::ShuntingYard shunting_yard;
 
-  absl::string_view original_expression = expression;
+  std::string_view original_expression = expression;
 
   moriarty_internal::TokenType previous_token =
       moriarty_internal::SpecialCharacter::kStartOfString;

@@ -22,12 +22,12 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
@@ -81,7 +81,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // Is()
   //
   // Restrict this integer to be exactly `integer_expression`.
-  MInteger& Is(absl::string_view integer_expression);
+  MInteger& Is(std::string_view integer_expression);
 
   // Between()
   //
@@ -103,8 +103,8 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // If any `.Between()` restriction is called multiple times, the ranges are
   // intersected together. For example `x.Between(1, 10).Between(5, "3 * N");`
   // is equivalent to `x.Between(5, "min(10, 3 * N)");`.
-  MInteger& Between(absl::string_view minimum_integer_expression,
-                    absl::string_view maximum_integer_expression);
+  MInteger& Between(std::string_view minimum_integer_expression,
+                    std::string_view maximum_integer_expression);
 
   // Between()
   //
@@ -113,7 +113,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   //
   // See above for further clarifications.
   MInteger& Between(int64_t minimum,
-                    absl::string_view maximum_integer_expression);
+                    std::string_view maximum_integer_expression);
 
   // Between()
   //
@@ -121,7 +121,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // [`minimum_integer_expression`, `maximum`].
   //
   // See above for further clarifications.
-  MInteger& Between(absl::string_view minimum_integer_expression,
+  MInteger& Between(std::string_view minimum_integer_expression,
                     int64_t maximum);
 
   // AtLeast()
@@ -137,7 +137,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // This integer expression may contain variable names, which should be in
   // the same global context as this variable (e.g., same Moriarty instance,
   // same Generator, etc)
-  MInteger& AtLeast(absl::string_view minimum_integer_expression);
+  MInteger& AtLeast(std::string_view minimum_integer_expression);
 
   // AtMost()
   //
@@ -152,7 +152,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // This integer expression may contain variable names, which should be in
   // the same global context as this variable (e.g., same Moriarty instance,
   // same Generator, etc)
-  MInteger& AtMost(absl::string_view maximum_integer_expression);
+  MInteger& AtMost(std::string_view maximum_integer_expression);
 
   // WithSize()
   //

@@ -14,9 +14,12 @@
 
 # Status Macros for Moriarty
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 package(
     default_visibility = [
-        "//visibility:public"
+        "//visibility:public",
     ],
 )
 
@@ -79,7 +82,6 @@ cc_library(
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/strings",
         "@abseil-cpp//absl/strings:cord",
-        "@abseil-cpp//absl/strings:string_view",
         "@abseil-cpp//absl/synchronization",
         "@abseil-cpp//absl/time",
     ],
@@ -92,10 +94,10 @@ cc_test(
     deps = [
         ":source_location",
         ":status_builder",
-        "@googletest//:gtest_main",
         "@abseil-cpp//absl/base:log_severity",
         "@abseil-cpp//absl/log:scoped_mock_log",
         "@abseil-cpp//absl/status",
+        "@googletest//:gtest_main",
     ],
 )
 
@@ -106,9 +108,8 @@ cc_test(
     deps = [
         ":status_builder",
         ":status_macros",
-        "@googletest//:gtest_main",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings:string_view",
+        "@googletest//:gtest_main",
     ],
 )

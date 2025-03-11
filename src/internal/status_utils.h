@@ -18,13 +18,13 @@
 #define MORIARTY_SRC_INTERNAL_STATUS_UTILS_H_
 
 #include <functional>
+#include <string_view>
 
 #include "absl/base/nullability.h"
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -39,7 +39,7 @@ namespace moriarty_internal {
 // This assumes that you are in a function named `Foo()` and there is a
 // `TryFoo()` available for the user to call.
 void TryFunctionOrCrash(std::function<absl::Status()> fn,
-                        absl::string_view function_name_without_try);
+                        std::string_view function_name_without_try);
 
 // TryFunctionOrCrash() [absl::StatusOr<> version]
 //
@@ -52,7 +52,7 @@ void TryFunctionOrCrash(std::function<absl::Status()> fn,
 // `TryFoo()` available for the user to call.
 template <typename T>
 T TryFunctionOrCrash(std::function<absl::StatusOr<T>()> fn,
-                     absl::string_view function_name_without_try) {
+                     std::string_view function_name_without_try) {
   absl::StatusOr<T> status_or = fn();
   if (status_or.ok()) return *status_or;
 
@@ -78,7 +78,7 @@ T TryFunctionOrCrash(std::function<absl::StatusOr<T>()> fn,
 // available for the user to call.
 template <typename T>
 T& TryFunctionOrCrash(std::function<absl::StatusOr<absl::Nonnull<T*>>()> fn,
-                      absl::string_view function_name_without_try) {
+                      std::string_view function_name_without_try) {
   absl::StatusOr<absl::Nonnull<T*>> status_or = fn();
   if (status_or.ok()) return *(*status_or);
 

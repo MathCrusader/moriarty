@@ -92,6 +92,7 @@
 #include <optional>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -100,7 +101,6 @@
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -132,7 +132,7 @@ class Context {
   template <typename T>
     requires std::derived_from<
         T, moriarty::librarian::MVariable<T, typename T::value_type>>
-  Context& WithValue(absl::string_view variable_name, T::value_type value) {
+  Context& WithValue(std::string_view variable_name, T::value_type value) {
     values_.Set<T>(variable_name, value);
     return *this;
   }
@@ -143,7 +143,7 @@ class Context {
   template <typename T>
     requires std::derived_from<
         T, moriarty::librarian::MVariable<T, typename T::value_type>>
-  Context& WithVariable(absl::string_view variable_name, T variable) {
+  Context& WithVariable(std::string_view variable_name, T variable) {
     ABSL_CHECK_OK(variables_.AddVariable(variable_name, variable));
     return *this;
   }
@@ -247,7 +247,7 @@ template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
 absl::StatusOr<typename T::value_type> Read(T variable,
-                                            absl::string_view read_from,
+                                            std::string_view read_from,
                                             Context context = {});
 
 // Print() [For tests only]
@@ -451,7 +451,7 @@ template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
 absl::StatusOr<typename T::value_type> Read(T variable,
-                                            absl::string_view read_from,
+                                            std::string_view read_from,
                                             Context context) {
   std::istringstream ss((std::string(read_from)));
   return Read(variable, ss, std::move(context));

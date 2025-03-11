@@ -21,13 +21,13 @@
 #include <concepts>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
@@ -49,7 +49,7 @@ class ValueSet {
   // overwritten.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
-  void Set(absl::string_view variable_name, T::value_type value);
+  void Set(std::string_view variable_name, T::value_type value);
 
   // UnsafeSet()
   //
@@ -61,7 +61,7 @@ class ValueSet {
   //
   // UnsafeSet does not behave properly with the approximate size. It is always
   // considered to be of size 1.
-  void UnsafeSet(absl::string_view variable_name, std::any value);
+  void UnsafeSet(std::string_view variable_name, std::any value);
 
   // Get()
   //
@@ -72,7 +72,7 @@ class ValueSet {
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
   absl::StatusOr<typename T::value_type> Get(
-      absl::string_view variable_name) const;
+      std::string_view variable_name) const;
 
   // UnsafeGet()
   //
@@ -80,18 +80,18 @@ class ValueSet {
   // used when the value type is unknown.
   //
   //  Returns ValueNotFoundError if the variable has not been set.
-  absl::StatusOr<std::any> UnsafeGet(absl::string_view variable_name) const;
+  absl::StatusOr<std::any> UnsafeGet(std::string_view variable_name) const;
 
   // Contains()
   //
   // Determines if `variable_name` is in this ValueSet.
-  bool Contains(absl::string_view variable_name) const;
+  bool Contains(std::string_view variable_name) const;
 
   // Erase()
   //
   // Deletes the stored value for the variable `variable_name`. If
   // `variable_name` is non-existent, this is a no-op.
-  void Erase(absl::string_view variable_name);
+  void Erase(std::string_view variable_name);
 
   // GetApproximateSize()
   //
@@ -127,7 +127,7 @@ class ValueSet {
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
 absl::StatusOr<typename T::value_type> ValueSet::Get(
-    absl::string_view variable_name) const {
+    std::string_view variable_name) const {
   auto it = values_.find(variable_name);
   if (it == values_.end()) return ValueNotFoundError(variable_name);
 
@@ -142,7 +142,7 @@ absl::StatusOr<typename T::value_type> ValueSet::Get(
 
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
-void ValueSet::Set(absl::string_view variable_name, T::value_type value) {
+void ValueSet::Set(std::string_view variable_name, T::value_type value) {
   approximate_size_ += ApproximateSize(value);
   values_[variable_name] = std::move(value);
 }

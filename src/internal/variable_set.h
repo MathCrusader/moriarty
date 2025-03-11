@@ -24,11 +24,11 @@
 #include <concepts>
 #include <memory>
 #include <string>
+#include <string_view>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/scenario.h"
@@ -51,12 +51,12 @@ class VariableSet {
   void Swap(VariableSet& other);
 
   // Adds a variable to the collection. Fails if the variable already exists.
-  absl::Status AddVariable(absl::string_view name,
+  absl::Status AddVariable(std::string_view name,
                            const AbstractVariable& variable);
 
   // Adds an AbstractVariable to the collection, if it doesn't exist, or merges
   // it into the existing variable if it does.
-  absl::Status AddOrMergeVariable(absl::string_view name,
+  absl::Status AddOrMergeVariable(std::string_view name,
                                   const AbstractVariable& variable);
 
   // GetAbstractVariable()
@@ -67,8 +67,8 @@ class VariableSet {
   // Errors:
   //  * VariableNotFoundError() if the variable does not exist.
   absl::StatusOr<const AbstractVariable*> GetAbstractVariable(
-      absl::string_view name) const;
-  absl::StatusOr<AbstractVariable*> GetAbstractVariable(absl::string_view name);
+      std::string_view name) const;
+  absl::StatusOr<AbstractVariable*> GetAbstractVariable(std::string_view name);
 
   // GetVariable<>()
   //
@@ -79,7 +79,7 @@ class VariableSet {
   //  * kInvalidArgument if it is not convertible to `T`
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
-  absl::StatusOr<T> GetVariable(absl::string_view name) const;
+  absl::StatusOr<T> GetVariable(std::string_view name) const;
 
   // GetAllVariables()
   //
@@ -100,8 +100,8 @@ class VariableSet {
   // Returns either a pointer to the AbstractVariable or `nullptr` if it doesn't
   // exist.
   const AbstractVariable* GetAbstractVariableOrNull(
-      absl::string_view name) const;
-  AbstractVariable* GetAbstractVariableOrNull(absl::string_view name);
+      std::string_view name) const;
+  AbstractVariable* GetAbstractVariableOrNull(std::string_view name);
 };
 
 // -----------------------------------------------------------------------------
@@ -109,7 +109,7 @@ class VariableSet {
 
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
-absl::StatusOr<T> VariableSet::GetVariable(absl::string_view name) const {
+absl::StatusOr<T> VariableSet::GetVariable(std::string_view name) const {
   const AbstractVariable* var = GetAbstractVariableOrNull(name);
   if (var == nullptr) return VariableNotFoundError(name);
 

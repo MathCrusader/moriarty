@@ -19,17 +19,17 @@
 #include <random>
 #include <span>
 #include <string>
+#include <string_view>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
 RandomEngine::RandomEngine(std::span<const int64_t> seed,
-                           absl::string_view moriarty_version_num)
+                           std::string_view moriarty_version_num)
     : moriarty_version_num_(moriarty_version_num) {
   InitRandomEngine(seed);
 }

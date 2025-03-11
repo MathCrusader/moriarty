@@ -23,7 +23,6 @@
 #include <type_traits>
 
 #include "gtest/gtest.h"
-#include "absl/strings/string_view.h"
 
 namespace moriarty {
 namespace {
@@ -50,14 +49,14 @@ TEST(BaseConstraintsTest, ExactlyForVariousStringLikeTypesWorks) {
   static_assert(std::is_same_v<decltype(Exactly("abc")), Exactly<std::string>>);
   static_assert(std::is_same_v<decltype(Exactly(std::string("abc"))),
                                Exactly<std::string>>);
-  static_assert(std::is_same_v<decltype(Exactly(absl::string_view("abc"))),
+  static_assert(std::is_same_v<decltype(Exactly(std::string_view("abc"))),
                                Exactly<std::string>>);
   static_assert(std::is_same_v<decltype(Exactly(std::string_view("abc"))),
                                Exactly<std::string>>);
 
   EXPECT_EQ(Exactly("abc").GetValue(), std::string("abc"));
   EXPECT_EQ(Exactly(std::string("abc")).GetValue(), std::string("abc"));
-  EXPECT_EQ(Exactly(absl::string_view("abc")).GetValue(), std::string("abc"));
+  EXPECT_EQ(Exactly(std::string_view("abc")).GetValue(), std::string("abc"));
   EXPECT_EQ(Exactly(std::string_view("abc")).GetValue(), std::string("abc"));
 }
 

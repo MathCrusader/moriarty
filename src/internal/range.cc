@@ -21,6 +21,7 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -31,7 +32,6 @@
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/internal/expressions.h"
 #include "src/util/status_macro/status_macros.h"
@@ -42,7 +42,7 @@ Range::Range(int64_t minimum, int64_t maximum) : min_(minimum), max_(maximum) {}
 
 void Range::AtLeast(int64_t minimum) { min_ = std::max(min_, minimum); }
 
-absl::Status Range::AtLeast(absl::string_view integer_expression) {
+absl::Status Range::AtLeast(std::string_view integer_expression) {
   absl::StatusOr<Expression> expr = ParseExpression(integer_expression);
   if (!expr.ok()) {
     absl::Status status = absl::InvalidArgumentError(absl::Substitute(
@@ -61,7 +61,7 @@ absl::Status Range::AtLeast(absl::string_view integer_expression) {
 
 void Range::AtMost(int64_t maximum) { max_ = std::min(max_, maximum); }
 
-absl::Status Range::AtMost(absl::string_view integer_expression) {
+absl::Status Range::AtMost(std::string_view integer_expression) {
   absl::StatusOr<Expression> expr = ParseExpression(integer_expression);
   if (!expr.ok()) {
     absl::Status status = absl::InvalidArgumentError(absl::Substitute(

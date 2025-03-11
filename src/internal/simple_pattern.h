@@ -21,11 +21,11 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "src/internal/random_engine.h"
 
 namespace moriarty {
@@ -48,14 +48,14 @@ class RepeatedCharSet {
   absl::Status SetRange(int64_t min, int64_t max);
 
   // Returns if `str` is valid.
-  absl::Status IsValid(absl::string_view str) const;
+  absl::Status IsValid(std::string_view str) const;
 
   // Returns if `character` is a valid character.
   bool IsValidCharacter(char character) const;
 
   // Returns the longest prefix of `str` that is valid. If no prefix is valid,
   // returns `absl::kInvalidArgument`.
-  absl::StatusOr<int64_t> LongestValidPrefix(absl::string_view str) const;
+  absl::StatusOr<int64_t> LongestValidPrefix(std::string_view str) const;
 
   // Minimum length of repetition.
   int64_t MinLength() const;
@@ -86,7 +86,7 @@ struct PatternNode {
   std::vector<PatternNode> subpatterns;
 
   // The pattern corresponding to this node.
-  absl::string_view pattern;
+  std::string_view pattern;
 };
 
 // SimplePattern [class]
@@ -158,7 +158,7 @@ struct PatternNode {
 //  * "\\", "\ " (quotes for clarity)
 class SimplePattern {
  public:
-  static absl::StatusOr<SimplePattern> Create(absl::string_view pattern);
+  static absl::StatusOr<SimplePattern> Create(std::string_view pattern);
 
   // Returns the underlying pattern.
   std::string Pattern() const;
@@ -180,7 +180,7 @@ class SimplePattern {
   //
   //  patternC = "(hello|helloworld)"
   //  strC     = "helloworld"      <-- "hello" matches the left or-expression.
-  bool Matches(absl::string_view str) const;
+  bool Matches(std::string_view str) const;
 
   // Generate()
   //
@@ -202,7 +202,7 @@ class SimplePattern {
   // If `restricted_alphabet` is set, the generated string will only contain
   // characters from that string.
   absl::StatusOr<std::string> GenerateWithRestrictions(
-      std::optional<absl::string_view> restricted_alphabet,
+      std::optional<std::string_view> restricted_alphabet,
       RandomEngine& random_engine) const;
 
  private:
@@ -216,20 +216,20 @@ class SimplePattern {
 // does not check the validity of the characters inside the [].
 //
 // Assumes `pattern` has no escape-characters.
-absl::StatusOr<int> CharacterSetPrefixLength(absl::string_view pattern);
+absl::StatusOr<int> CharacterSetPrefixLength(std::string_view pattern);
 
 // Parses the character set body. `chars` should not contain the surrounding
 // square braces []. E.g., "[abc]" should just pass "abc". `SetRange(1, 1)` will
 // be called on the returned `RepeatedCharSet`.
 //
 // Assumes `chars` has no escape-characters.
-absl::StatusOr<RepeatedCharSet> ParseCharacterSetBody(absl::string_view chars);
+absl::StatusOr<RepeatedCharSet> ParseCharacterSetBody(std::string_view chars);
 
 // Returns the length of the prefix that corresponds to a repetition. This does
 // not check the validity of the characters inside the {}.
 //
 // Assumes `pattern` has no escape-characters.
-absl::StatusOr<int> RepetitionPrefixLength(absl::string_view pattern);
+absl::StatusOr<int> RepetitionPrefixLength(std::string_view pattern);
 
 // The return type for `ParseRepetitionBody`.
 struct RepetitionRange {
@@ -242,7 +242,7 @@ struct RepetitionRange {
 //
 // Assumes `repetition` has no escape-characters.
 absl::StatusOr<RepetitionRange> ParseRepetitionBody(
-    absl::string_view repetition);
+    std::string_view repetition);
 
 // Parses the prefix that corresponds to a repeated character set, ignoring any
 // suffix beyond the first repeated character set. E.g.,
@@ -252,7 +252,7 @@ absl::StatusOr<RepetitionRange> ParseRepetitionBody(
 //
 // Assumes `pattern` has no escape-characters.
 absl::StatusOr<PatternNode> ParseRepeatedCharSetPrefix(
-    absl::string_view pattern);
+    std::string_view pattern);
 
 // Parses the prefix that corresponds to a scope. A scope ends at either
 // end-of-string or at the first unmatched ')'. E.g.,
@@ -262,7 +262,7 @@ absl::StatusOr<PatternNode> ParseRepeatedCharSetPrefix(
 // returned PatternNode. (i.e., `returned_pattern_node.pattern` == `pattern`).
 //
 // Assumes `pattern` has no escape-characters.
-absl::StatusOr<PatternNode> ParseScopePrefix(absl::string_view pattern);
+absl::StatusOr<PatternNode> ParseScopePrefix(std::string_view pattern);
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

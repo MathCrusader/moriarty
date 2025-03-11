@@ -21,13 +21,13 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "src/internal/expressions.h"
 
 namespace moriarty {
@@ -68,7 +68,7 @@ class Range {
   // means that this is at least max({5, Evaluate("X + Y"), Evaluate("W")}).
   //
   // Returns a non-OK status if parsing fails.
-  absl::Status AtLeast(absl::string_view integer_expression);
+  absl::Status AtLeast(std::string_view integer_expression);
 
   // AtMost()
   //
@@ -90,7 +90,7 @@ class Range {
   // means that this is at most min({5, Evaluate("X + Y"), Evaluate("W")}).
   //
   // Returns a non-OK status if parsing fails.
-  absl::Status AtMost(absl::string_view integer_expression);
+  absl::Status AtMost(std::string_view integer_expression);
 
   // IsEmpty()
   //

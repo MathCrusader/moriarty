@@ -21,12 +21,12 @@
 #include <optional>
 #include <stack>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -54,7 +54,7 @@ class GenerationConfig {
   //
   // Returns a FailedPrecondition status if this variable is already in the
   // process of being generated (cyclic dependency).
-  absl::Status MarkStartGeneration(absl::string_view variable_name);
+  absl::Status MarkStartGeneration(std::string_view variable_name);
 
   // MarkSuccessfulGeneration()
   //
@@ -62,7 +62,7 @@ class GenerationConfig {
   //
   // MarkStartGeneration(variable_name) must have been called and all generation
   // attempts for all other variables since must be complete.
-  absl::Status MarkSuccessfulGeneration(absl::string_view variable_name);
+  absl::Status MarkSuccessfulGeneration(std::string_view variable_name);
 
   // MarkAbandonedGeneration()
   //
@@ -71,7 +71,7 @@ class GenerationConfig {
   //
   // MarkStartGeneration(variable_name) must have been called and all generation
   // attempts for all other variables since must be complete.
-  absl::Status MarkAbandonedGeneration(absl::string_view variable_name);
+  absl::Status MarkAbandonedGeneration(std::string_view variable_name);
 
   // RetryRecommendation (class)
   //
@@ -100,7 +100,7 @@ class GenerationConfig {
   // MarkStartGeneration(variable_name) must have been called and all generation
   // attempts for all other variables since must be complete.
   absl::StatusOr<RetryRecommendation> AddGenerationFailure(
-      absl::string_view variable_name, absl::Status failure_status);
+      std::string_view variable_name, absl::Status failure_status);
 
   // GetGenerationStatus()
   //
@@ -108,7 +108,7 @@ class GenerationConfig {
   // attempts to generate were made, returns absl::InvalidArgumentError.
   //
   // `MarkStartGeneration(variable_name)` must have been called previously.
-  absl::Status GetGenerationStatus(absl::string_view variable_name);
+  absl::Status GetGenerationStatus(std::string_view variable_name);
 
   // SetSoftGenerationLimit()
   //

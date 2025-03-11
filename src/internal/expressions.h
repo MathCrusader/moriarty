@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -28,7 +29,6 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 
 namespace moriarty {
 
@@ -50,7 +50,7 @@ absl::StatusOr<int64_t> EvaluateIntegerExpression(
 //
 // Given a string representation in infix notation, returns the corresponding
 // `Expression`.
-absl::StatusOr<Expression> ParseExpression(absl::string_view expression);
+absl::StatusOr<Expression> ParseExpression(std::string_view expression);
 
 // NeededVariables()
 //
@@ -160,7 +160,7 @@ class Expression {
 
   const Types& Get() const { return expression_; }
 
-  void SetString(absl::string_view str) { str_expression_ = std::string(str); }
+  void SetString(std::string_view str) { str_expression_ = std::string(str); }
   [[nodiscard]] std::string ToString() const { return str_expression_; }
 
  private:

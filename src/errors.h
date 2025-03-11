@@ -43,9 +43,9 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include "absl/status/status.h"
-#include "absl/strings/string_view.h"
 
 namespace moriarty {
 
@@ -96,8 +96,8 @@ bool IsMisconfiguredError(const absl::Status& status,
 // In the example above, `AddGenerator` will seed your generator with
 // appropriate information (random seed, variables, etc). Without these, your
 // Generator does not behave as expected.
-absl::Status MisconfiguredError(absl::string_view class_name,
-                                absl::string_view function_name,
+absl::Status MisconfiguredError(std::string_view class_name,
+                                std::string_view function_name,
                                 InternalConfigurationType missing_item);
 
 // -----------------------------------------------------------------------------
@@ -114,7 +114,7 @@ bool IsUnsatisfiedConstraintError(const absl::Status& status);
 // Returns a status that states that this constraint is not satisfied. The
 // `constraint_explanation` will be shown to the user if requested.
 absl::Status UnsatisfiedConstraintError(
-    absl::string_view constraint_explanation);
+    std::string_view constraint_explanation);
 
 // CheckConstraint()
 //
@@ -125,7 +125,7 @@ absl::Status UnsatisfiedConstraintError(
 //
 // Useful when mixed with MORIARTY_RETURN_IF_ERROR.
 absl::Status CheckConstraint(const absl::Status& constraint,
-                             absl::string_view constraint_explanation);
+                             std::string_view constraint_explanation);
 
 // CheckConstraint()
 //
@@ -135,7 +135,7 @@ absl::Status CheckConstraint(const absl::Status& constraint,
 //
 // Useful when mixed with MORIARTY_RETURN_IF_ERROR.
 absl::Status CheckConstraint(bool constraint,
-                             absl::string_view constraint_explanation);
+                             std::string_view constraint_explanation);
 
 // -----------------------------------------------------------------------------
 //   ValueNotFound -- when a variable is known, but no value is known for it.
@@ -155,7 +155,7 @@ bool IsValueNotFoundError(const absl::Status& status);
 // name "N", but we don't know an integer value for "N".
 //
 // It is not typical for users to need to use this function.
-absl::Status ValueNotFoundError(absl::string_view variable_name);
+absl::Status ValueNotFoundError(std::string_view variable_name);
 
 // -----------------------------------------------------------------------------
 //   VariableNotFound -- when a variable is unknown
@@ -172,7 +172,7 @@ bool IsVariableNotFoundError(const absl::Status& status);
 // variable or value is known for this name.
 //
 // It is not typical for users to need to use this function.
-absl::Status VariableNotFoundError(absl::string_view variable_name);
+absl::Status VariableNotFoundError(std::string_view variable_name);
 
 }  // namespace moriarty
 

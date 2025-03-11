@@ -29,12 +29,12 @@
 #include <cstdint>
 #include <span>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "src/context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/status_utils.h"
@@ -69,7 +69,7 @@ class Moriarty {
   // questions (for interviews/competitions), CUJs, etc. The name is required
   // and is encoded into the random seed to ensure a different seed is provided
   // for each question.
-  Moriarty& SetName(absl::string_view name);
+  Moriarty& SetName(std::string_view name);
 
   // SetNumCases() [optional]
   //
@@ -105,7 +105,7 @@ class Moriarty {
   //    ensures a distinct seed is used for every question).
   //
   // Crashes on failure. See `TrySetSeed()` for non-crashing version.
-  Moriarty& SetSeed(absl::string_view seed);
+  Moriarty& SetSeed(std::string_view seed);
 
   // TrySetSeed()
   //
@@ -117,7 +117,7 @@ class Moriarty {
   //    ensures a distinct seed is used for every question).
   //
   // Returns status on failure. See `SetSeed()` for simpler API version.
-  absl::Status TrySetSeed(absl::string_view seed);
+  absl::Status TrySetSeed(std::string_view seed);
 
   // AddVariable()
   //
@@ -144,10 +144,10 @@ class Moriarty {
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
-  Moriarty& AddVariable(absl::string_view name, T variable);
+  Moriarty& AddVariable(std::string_view name, T variable);
 
   // FIXME: Temporary hack to get things working.
-  Moriarty& AddVariable(absl::string_view name,
+  Moriarty& AddVariable(std::string_view name,
                         const moriarty_internal::AbstractVariable& variable) {
     ABSL_CHECK_OK(variables_.AddVariable(name, variable))
         << "Adding the same variable multiple times";
@@ -172,7 +172,7 @@ class Moriarty {
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
-  absl::Status TryAddVariable(absl::string_view name, T variable);
+  absl::Status TryAddVariable(std::string_view name, T variable);
 
   void GenerateTestCases(GenerateFn fn, GenerateOptions options = {});
   void ImportTestCases(ImportFn fn, ImportOptions options = {});
@@ -204,7 +204,7 @@ class Moriarty {
   absl::StatusOr<std::span<const int64_t>> GetSeedForGenerator(int index);
 
   // Determines if a variable name is valid.
-  static absl::Status ValidateVariableName(absl::string_view name);
+  static absl::Status ValidateVariableName(std::string_view name);
 };
 
 // -----------------------------------------------------------------------------
@@ -212,7 +212,7 @@ class Moriarty {
 
 template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-Moriarty& Moriarty::AddVariable(absl::string_view name, T variable) {
+Moriarty& Moriarty::AddVariable(std::string_view name, T variable) {
   moriarty_internal::TryFunctionOrCrash(
       [&, this]() {
         return this->TryAddVariable<T>(name, std::move(variable));
@@ -223,7 +223,7 @@ Moriarty& Moriarty::AddVariable(absl::string_view name, T variable) {
 
 template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::Status Moriarty::TryAddVariable(absl::string_view name, T variable) {
+absl::Status Moriarty::TryAddVariable(std::string_view name, T variable) {
   MORIARTY_RETURN_IF_ERROR(ValidateVariableName(name));
   MORIARTY_RETURN_IF_ERROR(variables_.AddVariable(name, std::move(variable)))
       << "Adding the same variable multiple times";

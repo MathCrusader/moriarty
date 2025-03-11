@@ -19,11 +19,11 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/strings/string_view.h"
 #include "src/internal/range.h"
 
 namespace moriarty {
@@ -176,7 +176,7 @@ std::string ToString(CommonSize size) {
   }
 }
 
-CommonSize CommonSizeFromString(absl::string_view size) {
+CommonSize CommonSizeFromString(std::string_view size) {
   if (size == "any") return CommonSize::kAny;
   if (size == "min") return CommonSize::kMin;
   if (size == "max") return CommonSize::kMax;

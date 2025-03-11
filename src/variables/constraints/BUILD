@@ -30,7 +30,6 @@ cc_library(
     srcs = ["base_constraints.cc"],
     hdrs = ["base_constraints.h"],
     deps = [
-        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -41,7 +40,6 @@ cc_library(
     deps = [
         ":base_constraints",
         "//src/internal:range",
-        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -53,7 +51,6 @@ cc_library(
         ":base_constraints",
         "//src/variables:minteger",
         "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -75,7 +72,6 @@ cc_library(
         ":base_constraints",
         "//src/librarian:size_property",
         "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -86,7 +82,6 @@ cc_library(
     deps = [
         ":base_constraints",
         "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 
@@ -95,7 +90,6 @@ cc_test(
     srcs = ["base_constraints_test.cc"],
     deps = [
         ":base_constraints",
-        "@abseil-cpp//absl/strings:string_view",
         "@googletest//:gtest_main",
     ],
 )

@@ -17,12 +17,12 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
@@ -50,7 +50,7 @@ void VariableSet::Swap(VariableSet& other) {
 }
 
 absl::StatusOr<const AbstractVariable*> VariableSet::GetAbstractVariable(
-    absl::string_view name) const {
+    std::string_view name) const {
   const AbstractVariable* var = GetAbstractVariableOrNull(name);
   if (var == nullptr) return VariableNotFoundError(name);
 
@@ -58,7 +58,7 @@ absl::StatusOr<const AbstractVariable*> VariableSet::GetAbstractVariable(
 }
 
 absl::StatusOr<AbstractVariable*> VariableSet::GetAbstractVariable(
-    absl::string_view name) {
+    std::string_view name) {
   AbstractVariable* var = GetAbstractVariableOrNull(name);
   if (var == nullptr) return VariableNotFoundError(name);
 
@@ -66,14 +66,14 @@ absl::StatusOr<AbstractVariable*> VariableSet::GetAbstractVariable(
 }
 
 AbstractVariable* VariableSet::GetAbstractVariableOrNull(
-    absl::string_view name) {
+    std::string_view name) {
   auto it = variables_.find(name);
   if (it == variables_.end()) return nullptr;
   return it->second.get();
 }
 
 const AbstractVariable* VariableSet::GetAbstractVariableOrNull(
-    absl::string_view name) const {
+    std::string_view name) const {
   auto it = variables_.find(name);
   if (it == variables_.end()) return nullptr;
   return it->second.get();
@@ -97,7 +97,7 @@ VariableSet::GetAllVariables() const {
   return variables_;
 }
 
-absl::Status VariableSet::AddVariable(absl::string_view name,
+absl::Status VariableSet::AddVariable(std::string_view name,
                                       const AbstractVariable& variable) {
   auto [it, inserted] = variables_.emplace(name, variable.Clone());
 
@@ -108,7 +108,7 @@ absl::Status VariableSet::AddVariable(absl::string_view name,
   return absl::OkStatus();
 }
 
-absl::Status VariableSet::AddOrMergeVariable(absl::string_view name,
+absl::Status VariableSet::AddOrMergeVariable(std::string_view name,
                                              const AbstractVariable& variable) {
   auto [it, inserted] = variables_.try_emplace(name, nullptr);
   if (inserted) {

@@ -20,11 +20,11 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/property.h"
 
@@ -161,7 +161,7 @@ namespace moriarty_internal {
 //  Converts an AbstractVariable to some derived variable type. Returns
 //  kInvalidArgument if it is not convertible.
 template <typename Type>
-absl::StatusOr<Type> ConvertTo(AbstractVariable* var, absl::string_view name) {
+absl::StatusOr<Type> ConvertTo(AbstractVariable* var, std::string_view name) {
   Type* typed_var = dynamic_cast<Type*>(var);
   if (typed_var == nullptr)
     return absl::InvalidArgumentError(
@@ -176,7 +176,7 @@ absl::StatusOr<Type> ConvertTo(AbstractVariable* var, absl::string_view name) {
 //  kInvalidArgument if it is not convertible.
 template <typename Type>
 absl::StatusOr<Type> ConvertTo(const AbstractVariable* var,
-                               absl::string_view name) {
+                               std::string_view name) {
   const Type* typed_var = dynamic_cast<const Type*>(var);
   if (typed_var == nullptr)
     return absl::InvalidArgumentError(

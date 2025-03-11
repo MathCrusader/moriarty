@@ -19,12 +19,12 @@
 #include <optional>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/ascii.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/context.h"
 #include "src/internal/analysis_bootstrap.h"
@@ -38,7 +38,7 @@
 
 namespace moriarty {
 
-Moriarty& Moriarty::SetName(absl::string_view name) {
+Moriarty& Moriarty::SetName(std::string_view name) {
   name_ = name;
   return *this;
 }
@@ -57,13 +57,13 @@ absl::Status Moriarty::TrySetNumCases(int num_cases) {
   return absl::OkStatus();
 }
 
-Moriarty& Moriarty::SetSeed(absl::string_view seed) {
+Moriarty& Moriarty::SetSeed(std::string_view seed) {
   moriarty_internal::TryFunctionOrCrash([&]() { return TrySetSeed(seed); },
                                         "SetSeed");
   return *this;
 }
 
-absl::Status Moriarty::TrySetSeed(absl::string_view seed) {
+absl::Status Moriarty::TrySetSeed(std::string_view seed) {
   if (seed.size() < kMinimumSeedLength) {
     return absl::InvalidArgumentError(absl::Substitute(
         "The seed's length must be at least $0", kMinimumSeedLength));
@@ -103,7 +103,7 @@ absl::Status Moriarty::TryValidateTestCases() {
   return absl::OkStatus();
 }
 
-absl::Status Moriarty::ValidateVariableName(absl::string_view name) {
+absl::Status Moriarty::ValidateVariableName(std::string_view name) {
   if (name.empty())
     return absl::InvalidArgumentError("Variable name cannot be empty");
   for (char c : name)

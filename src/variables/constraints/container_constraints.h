@@ -19,8 +19,8 @@
 
 #include <concepts>
 #include <string>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/minteger.h"
 
@@ -37,7 +37,7 @@ class Length : public MConstraint {
 
   // The length must be exactly this integer expression.
   // E.g., Length("3 * N + 1").
-  explicit Length(absl::string_view expression);
+  explicit Length(std::string_view expression);
 
   // The length must satisfy all of these constraints.
   // E.g., Length(Between(1, 10), Prime())

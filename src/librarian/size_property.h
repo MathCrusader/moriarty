@@ -32,8 +32,8 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "src/internal/range.h"
 
 namespace moriarty {
@@ -126,7 +126,7 @@ namespace librarian {
 // size is lowercase version without the k. "CommonSize::kFoo" -> "foo".
 //
 // Returns kUnknown if the string is not a valid CommonSize.
-[[nodiscard]] CommonSize CommonSizeFromString(absl::string_view size);
+[[nodiscard]] CommonSize CommonSizeFromString(std::string_view size);
 
 }  // namespace librarian
 }  // namespace moriarty

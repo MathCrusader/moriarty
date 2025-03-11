@@ -18,8 +18,8 @@
 #define MORIARTY_SRC_VARIABLES_CONSTRAINTS_SIZE_CONSTRAINTS_H_
 
 #include <string>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "src/librarian/size_property.h"
 #include "src/variables/constraints/base_constraints.h"
 
@@ -45,7 +45,7 @@ class SizeCategory : public MConstraint {
   // The value must be approximately this size.
   // Valid values are:
   //   "any", "min", "tiny", "small", "medium", "large", "huge", "max"
-  explicit SizeCategory(absl::string_view size);
+  explicit SizeCategory(std::string_view size);
 
   // The value has no constraints on size.
   static SizeCategory Any();

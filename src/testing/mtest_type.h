@@ -22,11 +22,11 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
@@ -102,7 +102,7 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   absl::Status WithSizeProperty(moriarty::Property property);
 
   // My value is increased by this other variable's value
-  MTestType& SetAdder(absl::string_view variable_name);
+  MTestType& SetAdder(std::string_view variable_name);
 
   // My value is multiplied by this value
   MTestType& SetMultiplier(moriarty::MInteger multiplier);

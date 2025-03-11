@@ -68,7 +68,6 @@ cc_library(
     deps = [
         "//src/internal:range",
         "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/strings:string_view",
     ],
 )
 

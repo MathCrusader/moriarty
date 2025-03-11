@@ -20,12 +20,12 @@
 #include <cstdint>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -80,7 +80,7 @@ absl::Status MTestType2::WithSizeProperty(moriarty::Property property) {
   return absl::OkStatus();
 }
 
-MTestType2& MTestType2::SetAdder(absl::string_view variable_name) {
+MTestType2& MTestType2::SetAdder(std::string_view variable_name) {
   adder_variable_name_ = variable_name;
   return *this;
 }

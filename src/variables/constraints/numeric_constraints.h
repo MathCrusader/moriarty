@@ -19,14 +19,14 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "src/internal/range.h"
 #include "src/variables/constraints/base_constraints.h"
 
 namespace moriarty {
 
-using IntegerExpression = absl::string_view;
+using IntegerExpression = std::string_view;
 
 // Constraint stating that the numeric value must be in the inclusive range
 // [minimum, maximum].

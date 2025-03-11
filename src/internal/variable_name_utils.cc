@@ -16,20 +16,20 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/string_view.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-absl::string_view BaseVariableName(absl::string_view variable_name) {
+std::string_view BaseVariableName(std::string_view variable_name) {
   return variable_name.substr(0, variable_name.find('.'));
 }
 
-std::string ConstructVariableName(absl::string_view base_variable_name,
-                                  absl::string_view subvariable_name) {
+std::string ConstructVariableName(std::string_view base_variable_name,
+                                  std::string_view subvariable_name) {
   return absl::StrCat(base_variable_name, ".", subvariable_name);
 }
 
@@ -43,10 +43,10 @@ std::string ConstructVariableName(
 }
 
 VariableNameBreakdown CreateVariableNameBreakdown(
-    absl::string_view variable_name) {
+    std::string_view variable_name) {
   VariableNameBreakdown ret;
   ret.base_variable_name = BaseVariableName(variable_name);
-  std::optional<absl::string_view> subvariable_name =
+  std::optional<std::string_view> subvariable_name =
       SubvariableName(variable_name);
   if (subvariable_name.has_value()) {
     ret.subvariable_name = *subvariable_name;
@@ -54,14 +54,14 @@ VariableNameBreakdown CreateVariableNameBreakdown(
   return ret;
 }
 
-bool HasSubvariable(absl::string_view variable_name) {
+bool HasSubvariable(std::string_view variable_name) {
   return absl::StrContains(variable_name, '.');
 }
 
-std::optional<absl::string_view> SubvariableName(
-    absl::string_view variable_name) {
+std::optional<std::string_view> SubvariableName(
+    std::string_view variable_name) {
   auto pos = variable_name.find('.');
-  if (pos == absl::string_view::npos) {
+  if (pos == std::string_view::npos) {
     return std::nullopt;
   }
 

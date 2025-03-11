@@ -22,6 +22,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "absl/algorithm/container.h"
@@ -30,7 +31,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -99,7 +99,7 @@ MInteger& MInteger::AddConstraint(const SizeCategory& constraint) {
   return *this;
 }
 
-MInteger& MInteger::Is(absl::string_view integer_expression) {
+MInteger& MInteger::Is(std::string_view integer_expression) {
   return AddConstraint(Exactly(integer_expression));
 }
 
@@ -107,19 +107,19 @@ MInteger& MInteger::Between(int64_t minimum, int64_t maximum) {
   return AddConstraint(::moriarty::Between(minimum, maximum));
 }
 
-MInteger& MInteger::Between(absl::string_view minimum_integer_expression,
-                            absl::string_view maximum_integer_expression) {
+MInteger& MInteger::Between(std::string_view minimum_integer_expression,
+                            std::string_view maximum_integer_expression) {
   return AddConstraint(::moriarty::Between(minimum_integer_expression,
                                            maximum_integer_expression));
 }
 
 MInteger& MInteger::Between(int64_t minimum,
-                            absl::string_view maximum_integer_expression) {
+                            std::string_view maximum_integer_expression) {
   return AddConstraint(
       ::moriarty::Between(minimum, maximum_integer_expression));
 }
 
-MInteger& MInteger::Between(absl::string_view minimum_integer_expression,
+MInteger& MInteger::Between(std::string_view minimum_integer_expression,
                             int64_t maximum) {
   return AddConstraint(
       ::moriarty::Between(minimum_integer_expression, maximum));
@@ -129,7 +129,7 @@ MInteger& MInteger::AtLeast(int64_t minimum) {
   return AddConstraint(::moriarty::AtLeast(minimum));
 }
 
-MInteger& MInteger::AtLeast(absl::string_view minimum_integer_expression) {
+MInteger& MInteger::AtLeast(std::string_view minimum_integer_expression) {
   return AddConstraint(::moriarty::AtLeast(minimum_integer_expression));
 }
 
@@ -137,7 +137,7 @@ MInteger& MInteger::AtMost(int64_t maximum) {
   return AddConstraint(::moriarty::AtMost(maximum));
 }
 
-MInteger& MInteger::AtMost(absl::string_view maximum_integer_expression) {
+MInteger& MInteger::AtMost(std::string_view maximum_integer_expression) {
   return AddConstraint(::moriarty::AtMost(maximum_integer_expression));
 }
 
@@ -158,7 +158,7 @@ absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues(
 
   absl::flat_hash_map<std::string, int64_t> dependent_variables;
 
-  for (absl::string_view name : needed_dependent_variables) {
+  for (std::string_view name : needed_dependent_variables) {
     dependent_variables[name] = ctx.GenerateVariable<MInteger>(name);
   }
 
@@ -176,7 +176,7 @@ absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues(
 
   absl::flat_hash_map<std::string, int64_t> dependent_variables;
 
-  for (absl::string_view name : needed_dependent_variables) {
+  for (std::string_view name : needed_dependent_variables) {
     std::optional<int64_t> value = ctx.GetUniqueValue<MInteger>(name);
     if (!value) {
       return absl::InvalidArgumentError(

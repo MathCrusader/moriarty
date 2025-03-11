@@ -14,11 +14,11 @@
 
 #include "src/scenario.h"
 
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/strings/string_view.h"
 #include "src/property.h"
 
 namespace moriarty {
@@ -28,7 +28,7 @@ Scenario& Scenario::WithGeneralProperty(Property property) {
   return *this;
 }
 
-Scenario& Scenario::WithTypeSpecificProperty(absl::string_view mvariable_type,
+Scenario& Scenario::WithTypeSpecificProperty(std::string_view mvariable_type,
                                              Property property) {
   type_specific_properties_[mvariable_type].push_back(std::move(property));
   return *this;
@@ -39,7 +39,7 @@ std::vector<Property> Scenario::GetGeneralProperties() const {
 }
 
 std::vector<Property> Scenario::GetTypeSpecificProperties(
-    absl::string_view mvariable_type) const {
+    std::string_view mvariable_type) const {
   auto it = type_specific_properties_.find(mvariable_type);
   if (it == type_specific_properties_.end()) return {};
   return it->second;

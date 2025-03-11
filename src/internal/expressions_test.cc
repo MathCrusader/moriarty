@@ -19,17 +19,17 @@
 #include <limits>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/util/test_status_macro/status_testutil.h"
 
@@ -372,7 +372,7 @@ TEST(ExpressionsTest, UnknownVariablesShouldFail) {
 /* -------------------------------------------------------------------------- */
 
 [[nodiscard]] testing::AssertionResult EvaluateAndCheck(
-    absl::string_view expression, int64_t expected) {
+    std::string_view expression, int64_t expected) {
   absl::StatusOr<Expression> exp = ParseExpression(expression);
   if (!exp.ok())
     return testing::AssertionFailure()
@@ -729,7 +729,7 @@ TEST(ExpressionsTest, InvalidCharacter) {
 /* -------------------------------------------------------------------------- */
 
 [[nodiscard]] testing::AssertionResult EvaluateAndCheck(
-    absl::string_view expression,
+    std::string_view expression,
     const absl::flat_hash_map<std::string, int64_t>& variables,
     int64_t expected) {
   absl::StatusOr<Expression> exp = ParseExpression(expression);
@@ -751,7 +751,7 @@ TEST(ExpressionsTest, InvalidCharacter) {
 }
 
 absl::StatusOr<int64_t> Evaluate(
-    absl::string_view expression,
+    std::string_view expression,
     const absl::flat_hash_map<std::string, int64_t>& variables = {}) {
   MORIARTY_ASSIGN_OR_RETURN(Expression expr, ParseExpression(expression));
 
@@ -791,7 +791,7 @@ TEST(ExpressionsTest, MissingVariablesFails) {
 }
 
 TEST(ExpressionsTest, NeededVariables) {
-  auto needed_vars = [](absl::string_view expression)
+  auto needed_vars = [](std::string_view expression)
       -> absl::StatusOr<absl::flat_hash_set<std::string>> {
     MORIARTY_ASSIGN_OR_RETURN(Expression expr, ParseExpression(expression));
     return NeededVariables(expr);

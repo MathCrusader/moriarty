@@ -19,6 +19,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -28,7 +29,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -84,7 +84,7 @@ MString& MString::OfLength(int64_t length) {
   return AddConstraint(Length(length));
 }
 
-MString& MString::OfLength(absl::string_view length_expression) {
+MString& MString::OfLength(std::string_view length_expression) {
   return AddConstraint(Length(length_expression));
 }
 
@@ -93,22 +93,22 @@ MString& MString::OfLength(int64_t min_length, int64_t max_length) {
 }
 
 MString& MString::OfLength(int64_t min_length,
-                           absl::string_view max_length_expression) {
+                           std::string_view max_length_expression) {
   return AddConstraint(Length(Between(min_length, max_length_expression)));
 }
 
-MString& MString::OfLength(absl::string_view min_length_expression,
+MString& MString::OfLength(std::string_view min_length_expression,
                            int64_t max_length) {
   return AddConstraint(Length(Between(min_length_expression, max_length)));
 }
 
-MString& MString::OfLength(absl::string_view min_length_expression,
-                           absl::string_view max_length_expression) {
+MString& MString::OfLength(std::string_view min_length_expression,
+                           std::string_view max_length_expression) {
   return AddConstraint(
       Length(Between(min_length_expression, max_length_expression)));
 }
 
-MString& MString::WithAlphabet(absl::string_view valid_characters) {
+MString& MString::WithAlphabet(std::string_view valid_characters) {
   // If `valid_characters` isn't sorted or contains multiple occurrences of
   // the same letter, we need to create a new string in order to sort the
   // characters.
@@ -141,7 +141,7 @@ MString& MString::WithDistinctCharacters() {
   return AddConstraint(DistinctCharacters());
 }
 
-MString& MString::WithSimplePattern(absl::string_view simple_pattern) {
+MString& MString::WithSimplePattern(std::string_view simple_pattern) {
   absl::StatusOr<moriarty_internal::SimplePattern> pattern =
       moriarty_internal::SimplePattern::Create(simple_pattern);
   if (!pattern.ok()) {

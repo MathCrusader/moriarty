@@ -25,7 +25,6 @@
 
 #include "absl/base/log_severity.h"
 #include "absl/status/status.h"
-#include "absl/strings/string_view.h"
 #include "absl/time/time.h"
 #include "src/util/status_macro/ostringstream.h"
 #include "src/util/status_macro/source_location.h"
@@ -277,7 +276,7 @@ class [[nodiscard]] StatusBuilder {
   template <typename Adaptor>
   [[nodiscard]] auto
   With(Adaptor&& adaptor) && -> decltype(std::forward<Adaptor>(adaptor)(
-                                 std::move(*this))) {
+      std::move(*this))) {
     return std::forward<Adaptor>(adaptor)(std::move(*this));
   }
 

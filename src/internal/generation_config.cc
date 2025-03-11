@@ -19,20 +19,20 @@
 #include <optional>
 #include <stack>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
 absl::Status GenerationConfig::MarkStartGeneration(
-    absl::string_view variable_name) {
+    std::string_view variable_name) {
   auto [it, inserted] =
       generation_info_.insert({std::string(variable_name), GenerationInfo{}});
 
@@ -52,7 +52,7 @@ absl::Status GenerationConfig::MarkStartGeneration(
 }
 
 absl::Status GenerationConfig::MarkSuccessfulGeneration(
-    absl::string_view variable_name) {
+    std::string_view variable_name) {
   if (variables_actively_being_generated_.empty() ||
       variables_actively_being_generated_.top().variable_name !=
           variable_name) {
@@ -78,7 +78,7 @@ absl::Status GenerationConfig::MarkSuccessfulGeneration(
 }
 
 absl::Status GenerationConfig::MarkAbandonedGeneration(
-    absl::string_view variable_name) {
+    std::string_view variable_name) {
   if (variables_actively_being_generated_.empty() ||
       variables_actively_being_generated_.top().variable_name !=
           variable_name) {
@@ -115,7 +115,7 @@ std::vector<std::string> ExtractSuffix(std::vector<std::string>& vec,
 }  // namespace
 
 absl::StatusOr<GenerationConfig::RetryRecommendation>
-GenerationConfig::AddGenerationFailure(absl::string_view variable_name,
+GenerationConfig::AddGenerationFailure(std::string_view variable_name,
                                        absl::Status status) {
   if (variables_actively_being_generated_.empty() ||
       variables_actively_being_generated_.top().variable_name !=
@@ -160,7 +160,7 @@ GenerationConfig::AddGenerationFailure(absl::string_view variable_name,
 }
 
 absl::Status GenerationConfig::GetGenerationStatus(
-    absl::string_view variable_name) {
+    std::string_view variable_name) {
   auto it = generation_info_.find(variable_name);
 
   if (it == generation_info_.end()) {

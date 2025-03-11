@@ -18,8 +18,8 @@
 #define MORIARTY_SRC_VARIABLES_CONSTRAINTS_STRING_CONSTRAINTS_H_
 
 #include <string>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "src/variables/constraints/base_constraints.h"
 
 namespace moriarty {
@@ -29,7 +29,7 @@ namespace moriarty {
 class Alphabet : public MConstraint {
  public:
   // The string must only contain characters from the given alphabet.
-  explicit Alphabet(absl::string_view alphabet);
+  explicit Alphabet(std::string_view alphabet);
 
   // TODO(darcybest): Consider having allowing a container of chars as well.
 
@@ -77,7 +77,7 @@ class DistinctCharacters : public MConstraint {
 class SimplePattern : public MConstraint {
  public:
   // The string must match this simple pattern.
-  explicit SimplePattern(absl::string_view pattern);
+  explicit SimplePattern(std::string_view pattern);
 
   // Returns the pattern that the string must match.
   [[nodiscard]] std::string GetPattern() const;

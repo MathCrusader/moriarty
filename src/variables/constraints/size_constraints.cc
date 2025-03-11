@@ -17,8 +17,8 @@
 #include "src/variables/constraints/size_constraints.h"
 
 #include <string>
+#include <string_view>
 
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/librarian/size_property.h"
 
@@ -26,7 +26,7 @@ namespace moriarty {
 
 SizeCategory::SizeCategory(CommonSize size) : size_(size) {}
 
-SizeCategory::SizeCategory(absl::string_view size)
+SizeCategory::SizeCategory(std::string_view size)
     : size_(librarian::CommonSizeFromString(size)) {}
 
 SizeCategory SizeCategory::Any() { return SizeCategory(CommonSize::kAny); }

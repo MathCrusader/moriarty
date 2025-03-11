@@ -21,6 +21,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -29,7 +30,6 @@
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/internal/random_engine.h"
 #include "src/util/status_macro/status_macros.h"
@@ -42,11 +42,11 @@ namespace {
 bool IsNonNegativeChar(char ch) { return (ch >= 0 && ch <= 127); }
 
 bool IsSpecialCharacter(char ch) {
-  static constexpr absl::string_view kSpecialCharacters = R"(\()[]{}^?*+-|)";
+  static constexpr std::string_view kSpecialCharacters = R"(\()[]{}^?*+-|)";
   return absl::StrContains(kSpecialCharacters, ch);
 }
 
-bool ValidCharSetRange(absl::string_view range) {
+bool ValidCharSetRange(std::string_view range) {
   if (range.size() != 3) return false;
   if (range[1] != '-') return false;
   char a = range[0];
@@ -78,7 +78,7 @@ absl::Status RepeatedCharSet::SetRange(int64_t min, int64_t max) {
   return absl::OkStatus();
 }
 
-absl::Status RepeatedCharSet::IsValid(absl::string_view str) const {
+absl::Status RepeatedCharSet::IsValid(std::string_view str) const {
   if (str.length() < min_)
     return absl::InvalidArgumentError("String's length is too small.");
   if (str.length() > max_)
@@ -95,7 +95,7 @@ bool RepeatedCharSet::IsValidCharacter(char character) const {
 }
 
 absl::StatusOr<int64_t> RepeatedCharSet::LongestValidPrefix(
-    absl::string_view str) const {
+    std::string_view str) const {
   int64_t idx = 0;
   while (idx < str.size() && idx < max_) {
     if (!IsNonNegativeChar(str[idx]) || !valid_chars_[str[idx]]) break;
@@ -118,7 +118,7 @@ std::vector<char> RepeatedCharSet::ValidCharacters() const {
   return result;
 }
 
-absl::StatusOr<int> CharacterSetPrefixLength(absl::string_view pattern) {
+absl::StatusOr<int> CharacterSetPrefixLength(std::string_view pattern) {
   if (pattern.empty()) return absl::InvalidArgumentError("Empty pattern.");
   if (pattern[0] != '[') {
     if (IsSpecialCharacter(pattern[0])) {
@@ -150,7 +150,7 @@ absl::StatusOr<int> CharacterSetPrefixLength(absl::string_view pattern) {
   return *close_index + 1;
 }
 
-absl::StatusOr<RepeatedCharSet> ParseCharacterSetBody(absl::string_view chars) {
+absl::StatusOr<RepeatedCharSet> ParseCharacterSetBody(std::string_view chars) {
   if (chars.empty()) return absl::InvalidArgumentError("Empty character set.");
 
   RepeatedCharSet char_set;
@@ -197,20 +197,20 @@ absl::StatusOr<RepeatedCharSet> ParseCharacterSetBody(absl::string_view chars) {
   return char_set;
 }
 
-absl::StatusOr<int> RepetitionPrefixLength(absl::string_view pattern) {
+absl::StatusOr<int> RepetitionPrefixLength(std::string_view pattern) {
   if (pattern.empty()) return 0;
   if (pattern[0] == '?' || pattern[0] == '+' || pattern[0] == '*') return 1;
   if (pattern[0] != '{') return 0;
 
   int idx = pattern.find_first_of('}');
-  if (idx == absl::string_view::npos)
+  if (idx == std::string_view::npos)
     return absl::InvalidArgumentError("No '}' found to end repetition block.");
 
   return idx + 1;
 }
 
 absl::StatusOr<RepetitionRange> ParseRepetitionBody(
-    absl::string_view repetition) {
+    std::string_view repetition) {
   if (repetition.empty()) return RepetitionRange({1, 1});
   if (repetition.size() == 1) {
     if (repetition[0] == '?') return RepetitionRange({0, 1});
@@ -227,8 +227,8 @@ absl::StatusOr<RepetitionRange> ParseRepetitionBody(
   repetition.remove_prefix(1);
   repetition.remove_suffix(1);
 
-  absl::string_view min_str = repetition;
-  absl::string_view max_str = repetition;
+  std::string_view min_str = repetition;
+  std::string_view max_str = repetition;
   if (absl::StrContains(repetition, ',')) {
     min_str = repetition.substr(0, repetition.find(','));
     max_str = repetition.substr(repetition.find(',') + 1);
@@ -248,10 +248,10 @@ absl::StatusOr<RepetitionRange> ParseRepetitionBody(
 }
 
 absl::StatusOr<PatternNode> ParseRepeatedCharSetPrefix(
-    absl::string_view pattern) {
+    std::string_view pattern) {
   MORIARTY_ASSIGN_OR_RETURN(int char_set_len,
                             CharacterSetPrefixLength(pattern));
-  absl::string_view chars = pattern.substr(0, char_set_len);
+  std::string_view chars = pattern.substr(0, char_set_len);
   if (chars.size() >= 2 && chars.front() == '[' && chars.back() == ']') {
     chars = chars.substr(1, chars.size() - 2);
   }
@@ -277,7 +277,7 @@ absl::StatusOr<PatternNode> ParseRepeatedCharSetPrefix(
 namespace {
 
 absl::StatusOr<PatternNode> ParseAllOfNodeScopePrefix(
-    absl::string_view pattern) {
+    std::string_view pattern) {
   // The `allof_node` holds the concatenated elements. E.g., "a*(b|c)d" will
   // store 3 elements in `allof_node` ("a*", "(b|c)", "d").
   PatternNode allof_node;
@@ -313,7 +313,7 @@ absl::StatusOr<PatternNode> ParseAllOfNodeScopePrefix(
 
 // Converts "\\" -> "\" and "\ " -> " ". And removes empty spaces (does not
 // remove other whitespace characters).
-absl::StatusOr<std::string> Sanitize(absl::string_view pattern) {
+absl::StatusOr<std::string> Sanitize(std::string_view pattern) {
   std::string sanitized_pattern;
   for (int i = 0; i < pattern.size(); i++) {
     if (pattern[i] == '\\') {
@@ -337,7 +337,7 @@ absl::StatusOr<std::string> Sanitize(absl::string_view pattern) {
 
 }  // namespace
 
-absl::StatusOr<PatternNode> ParseScopePrefix(absl::string_view pattern) {
+absl::StatusOr<PatternNode> ParseScopePrefix(std::string_view pattern) {
   if (pattern.empty() || pattern[0] == ')')
     return absl::InvalidArgumentError("Empty scope.");
 
@@ -366,7 +366,7 @@ absl::StatusOr<PatternNode> ParseScopePrefix(absl::string_view pattern) {
 }
 
 absl::StatusOr<int64_t> MatchesPrefixLength(const PatternNode& pattern_node,
-                                            absl::string_view str) {
+                                            std::string_view str) {
   MORIARTY_ASSIGN_OR_RETURN(
       int64_t prefix_length,
       pattern_node.repeated_character_set.LongestValidPrefix(str));
@@ -398,7 +398,7 @@ absl::StatusOr<int64_t> MatchesPrefixLength(const PatternNode& pattern_node,
   return prefix_length;
 }
 
-absl::StatusOr<SimplePattern> SimplePattern::Create(absl::string_view pattern) {
+absl::StatusOr<SimplePattern> SimplePattern::Create(std::string_view pattern) {
   MORIARTY_ASSIGN_OR_RETURN(std::string sanitized_pattern, Sanitize(pattern));
   if (sanitized_pattern.empty())
     return absl::InvalidArgumentError("Empty pattern.");
@@ -422,7 +422,7 @@ SimplePattern::SimplePattern(std::string pattern)
 
 std::string SimplePattern::Pattern() const { return pattern_; }
 
-bool SimplePattern::Matches(absl::string_view str) const {
+bool SimplePattern::Matches(std::string_view str) const {
   absl::StatusOr<int64_t> prefix_length =
       MatchesPrefixLength(pattern_node_, str);
   return prefix_length.ok() && *prefix_length == str.length();
@@ -432,7 +432,7 @@ namespace {
 
 absl::StatusOr<std::string> GenerateRepeatedCharSet(
     const RepeatedCharSet& char_set,
-    std::optional<absl::string_view> restricted_alphabet,
+    std::optional<std::string_view> restricted_alphabet,
     RandomEngine& random_engine) {
   if (char_set.MaxLength() == std::numeric_limits<int64_t>::max()) {
     return absl::InvalidArgumentError(
@@ -474,7 +474,7 @@ absl::StatusOr<std::string> GenerateRepeatedCharSet(
 
 absl::StatusOr<std::string> GeneratePatternNode(
     const PatternNode& node,
-    std::optional<absl::string_view> restricted_alphabet,
+    std::optional<std::string_view> restricted_alphabet,
     RandomEngine& random_engine) {
   MORIARTY_ASSIGN_OR_RETURN(
       std::string result,
@@ -511,7 +511,7 @@ absl::StatusOr<std::string> SimplePattern::Generate(
 }
 
 absl::StatusOr<std::string> SimplePattern::GenerateWithRestrictions(
-    std::optional<absl::string_view> restricted_alphabet,
+    std::optional<std::string_view> restricted_alphabet,
     RandomEngine& random_engine) const {
   return GeneratePatternNode(pattern_node_, restricted_alphabet, random_engine);
 }

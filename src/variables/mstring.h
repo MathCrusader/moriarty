@@ -22,12 +22,12 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <vector>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
@@ -55,16 +55,16 @@ namespace moriarty {
 class MString : public librarian::MVariable<MString, std::string> {
  public:
   // Common alphabets to use for `WithAlphabet()`.
-  constexpr static absl::string_view kAlphabet =
+  constexpr static std::string_view kAlphabet =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-  constexpr static absl::string_view kUpperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  constexpr static absl::string_view kLowerCase = "abcdefghijklmnopqrstuvwxyz";
-  constexpr static absl::string_view kNumbers = "0123456789";
-  constexpr static absl::string_view kAlphaNumeric =
+  constexpr static std::string_view kUpperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  constexpr static std::string_view kLowerCase = "abcdefghijklmnopqrstuvwxyz";
+  constexpr static std::string_view kNumbers = "0123456789";
+  constexpr static std::string_view kAlphaNumeric =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  constexpr static absl::string_view kUpperAlphaNumeric =
+  constexpr static std::string_view kUpperAlphaNumeric =
       "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  constexpr static absl::string_view kLowerAlphaNumeric =
+  constexpr static std::string_view kLowerAlphaNumeric =
       "abcdefghijklmnopqrstuvwxyz0123456789";
 
   // Create an MString from a set of constraints. Logically equivalent to
@@ -100,19 +100,17 @@ class MString : public librarian::MVariable<MString, std::string> {
   // `OfLength("3 * N")` is equivalent to `OfLength(MInteger().Is("3 * N"))`.
   MString& OfLength(const MInteger& length);
   MString& OfLength(int64_t length);
-  MString& OfLength(absl::string_view length_expression);
+  MString& OfLength(std::string_view length_expression);
   MString& OfLength(int64_t min_length, int64_t max_length);
-  MString& OfLength(int64_t min_length,
-                    absl::string_view max_length_expression);
-  MString& OfLength(absl::string_view min_length_expression,
-                    int64_t max_length);
-  MString& OfLength(absl::string_view min_length_expression,
-                    absl::string_view max_length_expression);
+  MString& OfLength(int64_t min_length, std::string_view max_length_expression);
+  MString& OfLength(std::string_view min_length_expression, int64_t max_length);
+  MString& OfLength(std::string_view min_length_expression,
+                    std::string_view max_length_expression);
 
   // WithAlphabet()
   //
   // Sets the valid set of characters that this string will be made of.
-  MString& WithAlphabet(absl::string_view valid_characters);
+  MString& WithAlphabet(std::string_view valid_characters);
 
   // WithDistinctCharacters()
   //
@@ -135,7 +133,7 @@ class MString : public librarian::MVariable<MString, std::string> {
   // A "simple pattern" is a subset of normal regex, but acts in a greedy way
   // and only allows very basic regex strings.
   // TODO(darcybest): Add more specific documentation for simple pattern.
-  MString& WithSimplePattern(absl::string_view simple_pattern);
+  MString& WithSimplePattern(std::string_view simple_pattern);
 
  private:
   // A value of length must be set prior to GenerateValue() being called.

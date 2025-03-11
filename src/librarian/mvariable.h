@@ -38,7 +38,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/string_view.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/internal/view_only_context.h"
@@ -157,7 +156,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // parameter of type `ValueType`. `checker` should return true if the value
   // satisfies this constraint.
   VariableType& AddCustomConstraint(
-      absl::string_view constraint_name,
+      std::string_view constraint_name,
       std::function<bool(const ValueType&)> checker);
 
   // AddCustomConstraint()
@@ -171,7 +170,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // variable's name is in this list, you may use ConstraintValues::GetValue<>()
   // to access that variable's value.
   VariableType& AddCustomConstraint(
-      absl::string_view constraint_name, std::vector<std::string> deps,
+      std::string_view constraint_name, std::vector<std::string> deps,
       std::function<bool(const ValueType&, AnalysisContext ctx)> checker);
 
   // WithKnownProperty()
@@ -398,7 +397,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // With the corresponding function:
   //   absl::Status MInteger::WithSizeProperty(Property property) { ... }
-  void RegisterKnownProperty(absl::string_view property_category,
+  void RegisterKnownProperty(std::string_view property_category,
                              PropertyCallbackFunction property_fn);
 
   // DeclareSelfAsInvalid() [Helper for Librarians]
@@ -591,7 +590,7 @@ absl::Status MVariable<V, G>::TryMergeFrom(const V& other) {
 }
 
 template <typename V, typename G>
-V& MVariable<V, G>::AddCustomConstraint(absl::string_view constraint_name,
+V& MVariable<V, G>::AddCustomConstraint(std::string_view constraint_name,
                                         std::function<bool(const G&)> checker) {
   return AddCustomConstraint(
       constraint_name, {},
@@ -600,7 +599,7 @@ V& MVariable<V, G>::AddCustomConstraint(absl::string_view constraint_name,
 
 template <typename V, typename G>
 V& MVariable<V, G>::AddCustomConstraint(
-    absl::string_view constraint_name, std::vector<std::string> deps,
+    std::string_view constraint_name, std::vector<std::string> deps,
     std::function<bool(const G&, AnalysisContext ctx)> checker) {
   CustomConstraint c;
   c.name = constraint_name;
@@ -713,7 +712,7 @@ absl::StatusOr<std::string> MVariable<V, G>::ValueToStringImpl(
 
 template <typename V, typename G>
 void MVariable<V, G>::RegisterKnownProperty(
-    absl::string_view property_category, PropertyCallbackFunction property_fn) {
+    std::string_view property_category, PropertyCallbackFunction property_fn) {
   known_property_categories_[property_category] = property_fn;
 }
 

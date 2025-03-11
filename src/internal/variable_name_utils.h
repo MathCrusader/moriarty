@@ -19,8 +19,7 @@
 
 #include <optional>
 #include <string>
-
-#include "absl/strings/string_view.h"
+#include <string_view>
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -41,15 +40,15 @@ struct VariableNameBreakdown {
 // Given a variable name, returns the substring that corresponds to the
 // base variable where '.' separates subvariable names. For example if the
 // variable name is "A.0.length" then the base variable name is "A".
-absl::string_view BaseVariableName(absl::string_view variable_name);
+std::string_view BaseVariableName(std::string_view variable_name);
 
 // ConstructVariableName()
 //
 // Constructs a variable name given the base variable name and the subvariable
 // name with a `.`. For example, if you have a variable named "A" and a
 // subvariable "B" then this will return "A.B".
-std::string ConstructVariableName(absl::string_view base_variable_name,
-                                  absl::string_view subvariable_name);
+std::string ConstructVariableName(std::string_view base_variable_name,
+                                  std::string_view subvariable_name);
 
 // ConstructVariableName()
 //
@@ -64,14 +63,14 @@ std::string ConstructVariableName(const VariableNameBreakdown& variable_name);
 // should be used if you expect to use both the BaseVariableName() and
 // SubvariableName() instead of calling each separately.
 VariableNameBreakdown CreateVariableNameBreakdown(
-    absl::string_view variable_name);
+    std::string_view variable_name);
 
 // HasSubvariable()
 //
 // Returns true if the variable name has a subvariable component. This is
 // indicated by having a `.` in the name. For example the name "A.B" returns
 // true while "ABC" returns false.
-bool HasSubvariable(absl::string_view variable_name);
+bool HasSubvariable(std::string_view variable_name);
 
 // SubvariableName()
 //
@@ -80,8 +79,7 @@ bool HasSubvariable(absl::string_view variable_name);
 // subvariable names. For example if the variable name is "A.0.length" then the
 // subvariable name is "0.length". If the variable name is "A" then there is no
 // subvariable name.
-std::optional<absl::string_view> SubvariableName(
-    absl::string_view variable_name);
+std::optional<std::string_view> SubvariableName(std::string_view variable_name);
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

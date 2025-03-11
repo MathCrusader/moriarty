@@ -18,13 +18,13 @@
 #include <limits>
 #include <ostream>
 #include <string>
+#include <string_view>
 #include <vector>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/internal/random_engine.h"
 #include "src/util/test_status_macro/status_testutil.h"
 
@@ -46,6 +46,9 @@ void PrintTo(const PatternNode& node, std::ostream* os, int depth = 0) {
 
 namespace {
 
+using ::moriarty::IsOk;
+using ::moriarty::IsOkAndHolds;
+using ::moriarty::StatusIs;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Eq;
@@ -58,9 +61,6 @@ using ::testing::Le;
 using ::testing::Matches;
 using ::testing::Not;
 using ::testing::SizeIs;
-using ::moriarty::IsOk;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 
 TEST(SimplePatternTest, CreateShouldAcceptGoodPatterns) {
   MORIARTY_EXPECT_OK(SimplePattern::Create("abc"));
@@ -81,28 +81,26 @@ TEST(SimplePatternTest, CreateShouldRejectEmptyPattern) {
 }
 
 TEST(SimplePatternTest, PatternShouldMatchSimpleCase) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a"));
   EXPECT_TRUE(p.Matches("a"));
 }
 
 TEST(SimplePatternTest, PatternShouldMatchSimpleConcatCase) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("abc"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("abc"));
   EXPECT_TRUE(p.Matches("abc"));
 }
 
 TEST(SimplePatternTest, PatternShouldMatchSimpleOrCase) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a|b|c"));
+                                SimplePattern::Create("a|b|c"));
   EXPECT_TRUE(p.Matches("c"));
   EXPECT_TRUE(p.Matches("a"));
   EXPECT_TRUE(p.Matches("b"));
 }
 
 TEST(SimplePatternTest, NestedPatternShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      SimplePattern p, SimplePattern::Create("(a|b|c)(d|e|f)"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
+                                SimplePattern::Create("(a|b|c)(d|e|f)"));
   EXPECT_TRUE(p.Matches("ce"));
   EXPECT_TRUE(p.Matches("af"));
   EXPECT_FALSE(p.Matches("bx"));
@@ -110,16 +108,14 @@ TEST(SimplePatternTest, NestedPatternShouldMatch) {
 }
 
 TEST(SimplePatternTest, DotWildcardDoesNotExist) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("."));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("."));
 
   EXPECT_FALSE(p.Matches("a"));
   EXPECT_TRUE(p.Matches("."));
 }
 
 TEST(SimplePatternTest, StarWildcardsShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a*"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a*"));
 
   EXPECT_TRUE(p.Matches(""));
   EXPECT_TRUE(p.Matches("a"));
@@ -131,8 +127,7 @@ TEST(SimplePatternTest, StarWildcardsShouldMatch) {
 }
 
 TEST(SimplePatternTest, PlusWildcardsShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a+"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a+"));
 
   EXPECT_FALSE(p.Matches(""));
   EXPECT_TRUE(p.Matches("a"));
@@ -144,8 +139,7 @@ TEST(SimplePatternTest, PlusWildcardsShouldMatch) {
 }
 
 TEST(SimplePatternTest, QuestionMarkWildcardsShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a?"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a?"));
 
   EXPECT_TRUE(p.Matches(""));
   EXPECT_TRUE(p.Matches("a"));
@@ -156,8 +150,7 @@ TEST(SimplePatternTest, QuestionMarkWildcardsShouldMatch) {
 }
 
 TEST(SimplePatternTest, ExactLengthWildcardsShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a{2}"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a{2}"));
 
   EXPECT_FALSE(p.Matches(""));
   EXPECT_FALSE(p.Matches("a"));
@@ -170,7 +163,7 @@ TEST(SimplePatternTest, ExactLengthWildcardsShouldMatch) {
 
 TEST(SimplePatternTest, RangeLengthWildcardsShouldMatch) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a{1, 2}"));
+                                SimplePattern::Create("a{1, 2}"));
 
   EXPECT_FALSE(p.Matches(""));
   EXPECT_TRUE(p.Matches("a"));
@@ -183,7 +176,7 @@ TEST(SimplePatternTest, RangeLengthWildcardsShouldMatch) {
 
 TEST(SimplePatternTest, UpperBoundWildcardsShouldMatch) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a{,2}"));
+                                SimplePattern::Create("a{,2}"));
 
   EXPECT_TRUE(p.Matches(""));
   EXPECT_TRUE(p.Matches("a"));
@@ -196,7 +189,7 @@ TEST(SimplePatternTest, UpperBoundWildcardsShouldMatch) {
 
 TEST(SimplePatternTest, LowerBoundWildcardsShouldMatch) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a{2,}"));
+                                SimplePattern::Create("a{2,}"));
 
   EXPECT_FALSE(p.Matches(""));
   EXPECT_FALSE(p.Matches("a"));
@@ -209,7 +202,7 @@ TEST(SimplePatternTest, LowerBoundWildcardsShouldMatch) {
 
 TEST(SimplePatternTest, CharacterSetsSimpleCaseShouldWork) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("[abc]"));
+                                SimplePattern::Create("[abc]"));
 
   EXPECT_TRUE(p.Matches("a"));
   EXPECT_TRUE(p.Matches("b"));
@@ -220,7 +213,7 @@ TEST(SimplePatternTest, CharacterSetsSimpleCaseShouldWork) {
 
 TEST(SimplePatternTest, ConcatenatedCharacterSetsSimpleCaseShouldWork) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("[abc][def]"));
+                                SimplePattern::Create("[abc][def]"));
 
   EXPECT_TRUE(p.Matches("ad"));
   EXPECT_TRUE(p.Matches("bf"));
@@ -231,7 +224,7 @@ TEST(SimplePatternTest, ConcatenatedCharacterSetsSimpleCaseShouldWork) {
 
 TEST(SimplePatternTest, CharacterSetsWithRangesSimpleCaseShouldWork) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("[a-f]"));
+                                SimplePattern::Create("[a-f]"));
 
   EXPECT_TRUE(p.Matches("a"));
   EXPECT_TRUE(p.Matches("b"));
@@ -243,7 +236,7 @@ TEST(SimplePatternTest, CharacterSetsWithRangesSimpleCaseShouldWork) {
 TEST(SimplePatternTest,
      CharacterSetsWithRangesAndWildcardsSimpleCaseShouldWork) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("[a-f]*"));
+                                SimplePattern::Create("[a-f]*"));
 
   EXPECT_TRUE(p.Matches(""));
   EXPECT_TRUE(p.Matches("aaa"));
@@ -254,8 +247,8 @@ TEST(SimplePatternTest,
 }
 
 TEST(SimplePatternTest, RecursiveGroupingsShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      SimplePattern p, SimplePattern::Create("((hello|bye)world)"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
+                                SimplePattern::Create("((hello|bye)world)"));
 
   EXPECT_TRUE(p.Matches("helloworld"));
   EXPECT_TRUE(p.Matches("byeworld"));
@@ -265,8 +258,8 @@ TEST(SimplePatternTest, RecursiveGroupingsShouldWork) {
 }
 
 TEST(SimplePatternTest, GroupingsAndAnOrClauseShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      SimplePattern p, SimplePattern::Create("((hello|bye)|other)"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
+                                SimplePattern::Create("((hello|bye)|other)"));
 
   EXPECT_FALSE(p.Matches("helloother"));
   EXPECT_FALSE(p.Matches("byeother"));
@@ -294,15 +287,15 @@ TEST(SimplePatternTest, InvalidSyntaxShouldFail) {
 }
 
 TEST(SimplePatternTest, FineToHaveLotsOfSquareBrackets) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      SimplePattern p, SimplePattern::Create("[a][b][X][Y][Z][@][!]"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
+                                SimplePattern::Create("[a][b][X][Y][Z][@][!]"));
 
   EXPECT_TRUE(p.Matches("abXYZ@!"));
 }
 
 TEST(SimplePatternTest, SpecialCharactersCanBeUsedInsideSquareBrackets) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      SimplePattern p, SimplePattern::Create("[(][)][*][[][]][?][+]"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
+                                SimplePattern::Create("[(][)][*][[][]][?][+]"));
 
   EXPECT_TRUE(p.Matches("()*[]?+"));
 }
@@ -310,8 +303,7 @@ TEST(SimplePatternTest, SpecialCharactersCanBeUsedInsideSquareBrackets) {
 TEST(SimplePatternTest, SimpleGenerationWorks) {
   RandomEngine engine({1, 2, 3}, "v0.1");
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a"));
   for (int tries = 0; tries < 10; tries++) {
     EXPECT_THAT(p.Generate(engine), IsOkAndHolds("a"));
   }
@@ -319,7 +311,7 @@ TEST(SimplePatternTest, SimpleGenerationWorks) {
 
 TEST(SimplePatternTest, NonEscapedSpacesInCharSetShouldBeIgnored) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a[b c]d"));
+                                SimplePattern::Create("a[b c]d"));
 
   EXPECT_TRUE(p.Matches("abd"));
   EXPECT_TRUE(p.Matches("acd"));
@@ -327,8 +319,7 @@ TEST(SimplePatternTest, NonEscapedSpacesInCharSetShouldBeIgnored) {
 }
 
 TEST(SimplePatternTest, NonEscapedSpacesOutsideCharSetShouldBeIgnored) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("a bc"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a bc"));
 
   EXPECT_TRUE(p.Matches("abc"));
   EXPECT_FALSE(p.Matches("a bc"));
@@ -336,7 +327,7 @@ TEST(SimplePatternTest, NonEscapedSpacesOutsideCharSetShouldBeIgnored) {
 
 TEST(SimplePatternTest, EscapedSpacesShouldWork) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create(R"(a[b\ c]d)"));
+                                SimplePattern::Create(R"(a[b\ c]d)"));
 
   EXPECT_TRUE(p.Matches("abd"));
   EXPECT_TRUE(p.Matches("acd"));
@@ -345,7 +336,7 @@ TEST(SimplePatternTest, EscapedSpacesShouldWork) {
 
 TEST(SimplePatternTest, EscapedBackslashShouldWork) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create(R"(a[b\\c]d)"));
+                                SimplePattern::Create(R"(a[b\\c]d)"));
 
   EXPECT_TRUE(p.Matches("abd"));
   EXPECT_TRUE(p.Matches("acd"));
@@ -460,13 +451,11 @@ TEST(SimplePatternTest, GenerationWithNestedSubExpressionsShouldWork) {
 TEST(SimplePatternTest, GenerationWithLargeWildcardShouldThrowError) {
   RandomEngine engine({1, 2, 3, 4}, "v0.1");
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p1,
-                                         SimplePattern::Create("a+"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p1, SimplePattern::Create("a+"));
   EXPECT_THAT(p1.Generate(engine),
               StatusIs(absl::StatusCode::kInvalidArgument));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p2,
-                                         SimplePattern::Create("a*"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p2, SimplePattern::Create("a*"));
   EXPECT_THAT(p2.Generate(engine),
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
@@ -497,7 +486,7 @@ TEST(SimplePatternTest,
   // If the pattern doesn't allow the empty string, ensure it fails.
   RandomEngine engine({1, 2, 3, 4}, "v0.1");
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                         SimplePattern::Create("[a-f]{1, 10}"));
+                                SimplePattern::Create("[a-f]{1, 10}"));
   EXPECT_THAT(
       p.GenerateWithRestrictions(/*restricted_alphabet = */ "x", engine),
       StatusIs(absl::StatusCode::kInvalidArgument));
@@ -810,8 +799,7 @@ TEST(ParseCharSetTest, SpecialCharacterAsBodyShouldBeOk) {
 }
 
 TEST(ParseCharSetTest, SingleCaretShouldNotBeTreatedAsNegation) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("^"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("^"));
   MORIARTY_EXPECT_OK(r.IsValid("^"));
   EXPECT_THAT(r.IsValid("a"), StatusIs(absl::StatusCode::kInvalidArgument));
 }
@@ -821,15 +809,13 @@ TEST(ParseCharSetTest, StartingCaretShouldNotConsiderLaterCaretDuplicate) {
 }
 
 TEST(ParseCharSetTest, StartingCaretShouldNotInterferWithLaterCaret) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("^^"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("^^"));
   MORIARTY_EXPECT_OK(r.IsValid("a"));
   EXPECT_THAT(r.IsValid("^"), StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
 TEST(ParseCharSetTest, StartingCaretShouldBeTreatedAsNegation) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("^a"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("^a"));
   MORIARTY_EXPECT_OK(r.IsValid("b"));
   MORIARTY_EXPECT_OK(r.IsValid("^"));
   EXPECT_THAT(r.IsValid("a"), StatusIs(absl::StatusCode::kInvalidArgument));
@@ -837,19 +823,18 @@ TEST(ParseCharSetTest, StartingCaretShouldBeTreatedAsNegation) {
 
 TEST(ParseCharSetTest, TrailingNegativeSignShouldBeTreatedAsChar) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("abc-"));
+                                ParseCharacterSetBody("abc-"));
   MORIARTY_EXPECT_OK(r.IsValid("-"));
 }
 
 TEST(ParseCharSetTest, SingleNegativeSignShouldBeTreatedAsChar) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("-"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("-"));
   MORIARTY_EXPECT_OK(r.IsValid("-"));
 }
 
 TEST(ParseCharSetTest, NegativeSignInMiddleShouldBeTreatedAsRange) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("a-z"));
+                                ParseCharacterSetBody("a-z"));
   MORIARTY_EXPECT_OK(r.IsValid("a"));
   MORIARTY_EXPECT_OK(r.IsValid("b"));
   EXPECT_THAT(r.IsValid("-"), StatusIs(absl::StatusCode::kInvalidArgument));
@@ -857,7 +842,7 @@ TEST(ParseCharSetTest, NegativeSignInMiddleShouldBeTreatedAsRange) {
 
 TEST(ParseCharSetTest, UpperCaseRangeShouldWork) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("B-Z"));
+                                ParseCharacterSetBody("B-Z"));
   MORIARTY_EXPECT_OK(r.IsValid("B"));
   MORIARTY_EXPECT_OK(r.IsValid("Z"));
   EXPECT_THAT(r.IsValid("A"), StatusIs(absl::StatusCode::kInvalidArgument));
@@ -866,7 +851,7 @@ TEST(ParseCharSetTest, UpperCaseRangeShouldWork) {
 
 TEST(ParseCharSetTest, LowerCaseRangeShouldWork) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("a-q"));
+                                ParseCharacterSetBody("a-q"));
   MORIARTY_EXPECT_OK(r.IsValid("a"));
   MORIARTY_EXPECT_OK(r.IsValid("q"));
   EXPECT_THAT(r.IsValid("r"), StatusIs(absl::StatusCode::kInvalidArgument));
@@ -875,7 +860,7 @@ TEST(ParseCharSetTest, LowerCaseRangeShouldWork) {
 
 TEST(ParseCharSetTest, DigitRangeShouldWork) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("0-5"));
+                                ParseCharacterSetBody("0-5"));
   MORIARTY_EXPECT_OK(r.IsValid("0"));
   MORIARTY_EXPECT_OK(r.IsValid("5"));
   EXPECT_THAT(r.IsValid("6"), StatusIs(absl::StatusCode::kInvalidArgument));
@@ -901,7 +886,7 @@ TEST(ParseCharSetTest, InvalidRangeShouldFail) {
 
 TEST(ParseCharSetTest, BackToBackRangesShouldWork) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("A-Za-z"));
+                                ParseCharacterSetBody("A-Za-z"));
   MORIARTY_EXPECT_OK(r.IsValid("A"));
   MORIARTY_EXPECT_OK(r.IsValid("B"));
   MORIARTY_EXPECT_OK(r.IsValid("a"));
@@ -909,23 +894,21 @@ TEST(ParseCharSetTest, BackToBackRangesShouldWork) {
 }
 
 TEST(ParseCharSetTest, DotsShouldNotBeTreatedAsWildcards) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("."));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("."));
   MORIARTY_EXPECT_OK(r.IsValid("."));
   EXPECT_THAT(r.IsValid("a"), StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
 TEST(ParseCharSetTest, NegativeAtTheEndPlusRangesShouldNotCountAsDuplicate) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("a-z-"));
+                                ParseCharacterSetBody("a-z-"));
   MORIARTY_EXPECT_OK(r.IsValid("a"));
   MORIARTY_EXPECT_OK(r.IsValid("z"));
   MORIARTY_EXPECT_OK(r.IsValid("-"));
 }
 
 TEST(ParseCharSetTest, NegativeAtTheEndPlusShouldNotBeConsideredForRange) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                         ParseCharacterSetBody("a-"));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("a-"));
   MORIARTY_EXPECT_OK(r.IsValid("a"));
   MORIARTY_EXPECT_OK(r.IsValid("-"));
   EXPECT_THAT(r.IsValid("b"), StatusIs(absl::StatusCode::kInvalidArgument));
@@ -1137,7 +1120,7 @@ TEST(ParseRepeatedCharSetTest, CharacterSetParserShouldNotSetSubpattern) {
 TEST(ParseRepeatedCharSetTest,
      CharacterSetShouldNotIncludeSquareBracketsByDefault) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(PatternNode p,
-                                         ParseRepeatedCharSetPrefix("[a]"));
+                                ParseRepeatedCharSetPrefix("[a]"));
   RepeatedCharSet r = p.repeated_character_set;
   MORIARTY_EXPECT_OK(r.IsValid("a"));
   EXPECT_THAT(r.IsValid("["), StatusIs(absl::StatusCode::kInvalidArgument));
@@ -1180,7 +1163,7 @@ TEST(ParseScopePrefixTest, SingleCharacterShouldWork) {
   EXPECT_THAT(
       ParseScopePrefix("a"),
       IsOkAndHolds(SubpatternsAre(PatternNode::SubpatternType::kAllOf,
-                                  std::vector<absl::string_view>({"a"}))));
+                                  std::vector<std::string_view>({"a"}))));
 }
 
 TEST(ParseScopePrefixTest, ParsingFlatScopeShouldGetPatternCorrect) {
@@ -1204,12 +1187,12 @@ TEST(ParseScopePrefixTest, ParsingFlatScopeShouldGetSubpatternsCorrect) {
   EXPECT_THAT(
       ParseScopePrefix("ab"),
       IsOkAndHolds(SubpatternsAre(PatternNode::SubpatternType::kAllOf,
-                                  std::vector<absl::string_view>({"a", "b"}))));
+                                  std::vector<std::string_view>({"a", "b"}))));
 
   EXPECT_THAT(ParseScopePrefix("a*b+"),
-              IsOkAndHolds(SubpatternsAre(
-                  PatternNode::SubpatternType::kAllOf,
-                  std::vector<absl::string_view>({"a*", "b+"}))));
+              IsOkAndHolds(
+                  SubpatternsAre(PatternNode::SubpatternType::kAllOf,
+                                 std::vector<std::string_view>({"a*", "b+"}))));
 }
 
 TEST(ParseScopePrefixTest,
@@ -1217,24 +1200,24 @@ TEST(ParseScopePrefixTest,
   EXPECT_THAT(
       ParseScopePrefix("ab)cd"),
       IsOkAndHolds(SubpatternsAre(PatternNode::SubpatternType::kAllOf,
-                                  std::vector<absl::string_view>({"a", "b"}))));
+                                  std::vector<std::string_view>({"a", "b"}))));
 
   EXPECT_THAT(ParseScopePrefix("a*b+)c?d*"),
-              IsOkAndHolds(SubpatternsAre(
-                  PatternNode::SubpatternType::kAllOf,
-                  std::vector<absl::string_view>({"a*", "b+"}))));
+              IsOkAndHolds(
+                  SubpatternsAre(PatternNode::SubpatternType::kAllOf,
+                                 std::vector<std::string_view>({"a*", "b+"}))));
 }
 
 TEST(ParseScopePrefixTest, ParsingScopeWithOrClauseShouldGetPatternCorrect) {
   EXPECT_THAT(ParseScopePrefix("ab|cd"),
-              IsOkAndHolds(SubpatternsAre(
-                  PatternNode::SubpatternType::kAnyOf,
-                  std::vector<absl::string_view>({"ab", "cd"}))));
+              IsOkAndHolds(
+                  SubpatternsAre(PatternNode::SubpatternType::kAnyOf,
+                                 std::vector<std::string_view>({"ab", "cd"}))));
 
   EXPECT_THAT(ParseScopePrefix("a*b+|c?d*"),
               IsOkAndHolds(SubpatternsAre(
                   PatternNode::SubpatternType::kAnyOf,
-                  std::vector<absl::string_view>({"a*b+", "c?d*"}))));
+                  std::vector<std::string_view>({"a*b+", "c?d*"}))));
 }
 
 TEST(ParseScopePrefixTest, ParsingScopeWithEmptyOrClausesShouldFail) {
@@ -1248,21 +1231,21 @@ TEST(ParseScopePrefixTest, ParsingScopeWithEmptyOrClausesShouldFail) {
 TEST(ParseScopePrefixTest,
      ParsingScopeWithOrClauseAndEndBraceShouldGetSubpatternsCorrect) {
   EXPECT_THAT(ParseScopePrefix("ab|cd)ef"),
-              IsOkAndHolds(SubpatternsAre(
-                  PatternNode::SubpatternType::kAnyOf,
-                  std::vector<absl::string_view>({"ab", "cd"}))));
+              IsOkAndHolds(
+                  SubpatternsAre(PatternNode::SubpatternType::kAnyOf,
+                                 std::vector<std::string_view>({"ab", "cd"}))));
 
   EXPECT_THAT(ParseScopePrefix("a*b+|c?d*)ef"),
               IsOkAndHolds(SubpatternsAre(
                   PatternNode::SubpatternType::kAnyOf,
-                  std::vector<absl::string_view>({"a*b+", "c?d*"}))));
+                  std::vector<std::string_view>({"a*b+", "c?d*"}))));
 }
 
 TEST(ParseScopePrefixTest, SpecialCharactersCanBeUsedInsideSquareBrackets) {
   EXPECT_THAT(ParseScopePrefix("[(][)][*][[][]][?][+]"),
               IsOkAndHolds(SubpatternsAre(
                   PatternNode::SubpatternType::kAllOf,
-                  std::vector<absl::string_view>(
+                  std::vector<std::string_view>(
                       {"[(]", "[)]", "[*]", "[[]", "[]]", "[?]", "[+]"}))));
 }
 
@@ -1270,12 +1253,12 @@ TEST(ParseScopePrefixTest, NestingShouldGetSubpatternsCorrect) {
   EXPECT_THAT(ParseScopePrefix("a(bc(de|fg))"),
               IsOkAndHolds(SubpatternsAre(
                   PatternNode::SubpatternType::kAllOf,
-                  std::vector<absl::string_view>({"a", "(bc(de|fg))"}))));
+                  std::vector<std::string_view>({"a", "(bc(de|fg))"}))));
 
   EXPECT_THAT(ParseScopePrefix("(abc(de|fg))"),
               IsOkAndHolds(SubpatternsAre(
                   PatternNode::SubpatternType::kAllOf,
-                  std::vector<absl::string_view>({"(abc(de|fg))"}))));
+                  std::vector<std::string_view>({"(abc(de|fg))"}))));
 }
 
 }  // namespace

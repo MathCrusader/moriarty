@@ -15,17 +15,17 @@
 #include "src/internal/status_utils.h"
 
 #include <functional>
+#include <string_view>
 
 #include "absl/log/absl_check.h"
 #include "absl/log/absl_log.h"
 #include "absl/status/status.h"
-#include "absl/strings/string_view.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
 void TryFunctionOrCrash(std::function<absl::Status()> fn,
-                        absl::string_view function_name_without_try) {
+                        std::string_view function_name_without_try) {
   absl::Status status = fn();
   if (status.ok()) return;
 

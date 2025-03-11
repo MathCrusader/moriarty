@@ -17,21 +17,21 @@
 #include <any>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/string_view.h"
 #include "src/errors.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-bool ValueSet::Contains(absl::string_view variable_name) const {
+bool ValueSet::Contains(std::string_view variable_name) const {
   return values_.contains(variable_name);
 }
 
-void ValueSet::Erase(absl::string_view variable_name) {
+void ValueSet::Erase(std::string_view variable_name) {
   auto it = values_.find(variable_name);
   if (it == values_.end()) return;
 
@@ -43,13 +43,13 @@ void ValueSet::Erase(absl::string_view variable_name) {
 }
 
 // FIXME: Add tests
-void ValueSet::UnsafeSet(absl::string_view variable_name, std::any value) {
+void ValueSet::UnsafeSet(std::string_view variable_name, std::any value) {
   auto [it, inserted] = values_.emplace(variable_name, std::move(value));
   if (inserted) approximate_size_++;
 }
 
 absl::StatusOr<std::any> ValueSet::UnsafeGet(
-    absl::string_view variable_name) const {
+    std::string_view variable_name) const {
   auto it = values_.find(variable_name);
   if (it == values_.end()) return ValueNotFoundError(variable_name);
   return it->second;
