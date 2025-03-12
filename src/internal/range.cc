@@ -97,6 +97,15 @@ int64_t FindExtreme(int64_t initial_value, std::span<const Expression> exprs,
 
 }  // namespace
 
+auto Range::Extremes(std::function<int64_t(std::string_view)> get_value) const
+    -> absl::StatusOr<std::optional<ExtremeValues>> {
+  absl::flat_hash_map<std::string, int64_t> variables;
+  for (const std::string& var : needed_variables_) {
+    variables[var] = get_value(var);
+  }
+  return Extremes(variables);
+}
+
 absl::StatusOr<std::optional<Range::ExtremeValues>> Range::Extremes(
     const absl::flat_hash_map<std::string, int64_t>& variables) const {
   MORIARTY_RETURN_IF_ERROR(parameter_status_);

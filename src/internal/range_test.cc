@@ -17,10 +17,12 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <stdexcept>
+#include <string_view>
 
+#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/status/status.h"
 #include "src/util/test_status_macro/status_testutil.h"
 
 namespace moriarty {
@@ -176,6 +178,20 @@ TEST(RangeTest, ExtremesWork) {
   EXPECT_THAT(EmptyRange().Extremes(), IsOkAndHolds(std::nullopt));
 }
 
+TEST(RangeTest, ExtremesWithFnShouldWork) {
+  Range r;
+  MORIARTY_ASSERT_OK(r.AtLeast("x"));
+  MORIARTY_ASSERT_OK(r.AtMost("y + 1"));
+  auto get_value = [](std::string_view var) -> int64_t {
+    if (var == "x") return 1;
+    if (var == "y") return 20;
+    throw std::runtime_error("Unexpected variable: " + std::string(var));
+  };
+
+  EXPECT_THAT(r.Extremes(get_value),
+              IsOkAndHolds(Optional(Range::ExtremeValues({1, 21}))));
+}
+
 TEST(RangeTest,
      RepeatedCallsToAtMostAndAtLeastIntegerVersionsShouldConsiderAll) {
   Range R;
@@ -243,7 +259,7 @@ TEST(RangeTest, AtMostShouldConsiderBothIntegerAndExpression) {
 
   R.AtLeast(-100);
 
-  R.AtMost(10);                      // Upper bound for [3, infinity)
+  R.AtMost(10);                               // Upper bound for [3, infinity)
   MORIARTY_ASSERT_OK(R.AtMost("3 * N + 1"));  // Upper bound for (-infinity, 3]
 
   EXPECT_THAT(R.Extremes({{"N", 0}}),
@@ -258,7 +274,7 @@ TEST(RangeTest, AtLeastShouldConsiderBothIntegerAndExpression) {
   Range R;
   R.AtMost(100);
 
-  R.AtLeast(10);                      // Lower bound for [3, infinity)
+  R.AtLeast(10);                               // Lower bound for [3, infinity)
   MORIARTY_ASSERT_OK(R.AtLeast("3 * N + 1"));  // Lower bound for (-infinity, 3]
 
   EXPECT_THAT(R.Extremes({{"N", 0}}),

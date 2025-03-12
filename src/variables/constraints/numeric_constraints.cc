@@ -17,68 +17,126 @@
 #include "src/variables/constraints/numeric_constraints.h"
 
 #include <cstdint>
-#include <limits>
+#include <optional>
 #include <string>
 
+#include "src/internal/expressions.h"
 #include "src/internal/range.h"
 
 namespace moriarty {
 
+// -----------------------------------------------------------------------------
+//  Between
+
+// TODO: These hide absl::StatusOr<>. We should consider alternatives.
 Between::Between(int64_t minimum, int64_t maximum)
-    : bounds_(minimum, maximum) {}
+    : minimum_(*ParseExpression(std::to_string(minimum))),
+      maximum_(*ParseExpression(std::to_string(maximum))) {}
 
-Between::Between(int64_t minimum, IntegerExpression maximum) {
-  // Note: We are ignoring the error here since it will bubble up later when it
-  // is used. We should consider alternatives.
-  bounds_.AtLeast(minimum);
-  bounds_.AtMost(maximum).IgnoreError();
+Between::Between(int64_t minimum, IntegerExpression maximum)
+    : minimum_(*ParseExpression(std::to_string(minimum))),
+      maximum_(*ParseExpression(maximum)) {}
+
+Between::Between(IntegerExpression minimum, int64_t maximum)
+    : minimum_(*ParseExpression(minimum)),
+      maximum_(*ParseExpression(std::to_string(maximum))) {}
+
+Between::Between(IntegerExpression minimum, IntegerExpression maximum)
+    : minimum_(*ParseExpression(minimum)),
+      maximum_(*ParseExpression(maximum)) {}
+
+// FIXME: This is a silly way of doing this... We shouldn't reconstruct.
+Range Between::GetRange() const {
+  Range r;
+  r.AtLeast(minimum_.ToString()).IgnoreError();
+  r.AtMost(maximum_.ToString()).IgnoreError();
+  return r;
 }
 
-Between::Between(IntegerExpression minimum, int64_t maximum) {
-  // Note: We are ignoring the error here since it will bubble up later when it
-  // is used. We should consider alternatives.
-  bounds_.AtLeast(minimum).IgnoreError();
-  bounds_.AtMost(maximum);
+std::string Between::ToString() const {
+  return std::format("is between {} and {}", minimum_.ToString(),
+                     maximum_.ToString());
 }
 
-Between::Between(IntegerExpression minimum, IntegerExpression maximum) {
-  // Note: We are ignoring the error here since it will bubble up later when it
-  // is used. We should consider alternatives.
-  bounds_.AtLeast(minimum).IgnoreError();
-  bounds_.AtMost(maximum).IgnoreError();
+bool Between::IsSatisfiedWith(LookupVariableFn lookup_variable,
+                              int64_t value) const {
+  absl::StatusOr<std::optional<Range::ExtremeValues>> extremes =
+      GetRange().Extremes(lookup_variable);
+  if (!extremes.ok()) return false;
+  if (!extremes->has_value()) return false;
+  return value >= (*extremes)->min && value <= (*extremes)->max;
 }
 
-Range Between::GetRange() const { return bounds_; }
+std::string Between::Explanation(LookupVariableFn lookup_variable,
+                                 int64_t value) const {
+  return std::format("{} is not between {} and {}", value, minimum_.ToString(),
+                     maximum_.ToString());
+}
 
-// TODO(darcybest): This should say the word "Between".
-std::string Between::ToString() const { return bounds_.ToString(); }
+// -----------------------------------------------------------------------------
+//  AtMost
 
 AtMost::AtMost(int64_t maximum)
-    : bounds_(std::numeric_limits<int64_t>::min(), maximum) {}
+    : maximum_(*ParseExpression(std::to_string(maximum))) {}
 
-AtMost::AtMost(IntegerExpression maximum) {
-  // Note: We are ignoring the error here since it will bubble up later when it
-  // is used. We should consider alternatives.
-  bounds_.AtMost(maximum).IgnoreError();
+AtMost::AtMost(IntegerExpression maximum)
+    : maximum_(*ParseExpression(maximum)) {}
+
+Range AtMost::GetRange() const {
+  Range r;
+  r.AtMost(maximum_.ToString()).IgnoreError();
+  return r;
 }
 
-Range AtMost::GetRange() const { return bounds_; }
+std::string AtMost::ToString() const {
+  return std::format("is at most {}", maximum_.ToString());
+}
 
-// TODO(darcybest): This should say the word "AtMost".
-std::string AtMost::ToString() const { return bounds_.ToString(); }
+bool AtMost::IsSatisfiedWith(LookupVariableFn lookup_variable,
+                             int64_t value) const {
+  absl::StatusOr<std::optional<Range::ExtremeValues>> extremes =
+      GetRange().Extremes(lookup_variable);
+  if (!extremes.ok()) return false;
+  if (!extremes->has_value()) return false;
+  return value >= (*extremes)->min && value <= (*extremes)->max;
+}
+
+std::string AtMost::Explanation(LookupVariableFn lookup_variable,
+                                int64_t value) const {
+  return std::format("{} is not at most {}", value, maximum_.ToString());
+}
+
+// -----------------------------------------------------------------------------
+//  AtLeast
 
 AtLeast::AtLeast(int64_t minimum)
-    : bounds_(minimum, std::numeric_limits<int64_t>::max()) {}
+    : minimum_(*ParseExpression(std::to_string(minimum))) {}
 
-AtLeast::AtLeast(IntegerExpression minimum) {
-  // Note: We are ignoring the error here since it will bubble up later when it
-  // is used. We should consider alternatives.
-  bounds_.AtLeast(minimum).IgnoreError();
+AtLeast::AtLeast(IntegerExpression minimum)
+    : minimum_(*ParseExpression(minimum)) {}
+
+Range AtLeast::GetRange() const {
+  Range r;
+  r.AtLeast(minimum_.ToString()).IgnoreError();
+  return r;
 }
 
-Range AtLeast::GetRange() const { return bounds_; }
+std::string AtLeast::ToString() const {
+  return std::format("is at least {}", minimum_.ToString());
+}
 
-// TODO(darcybest): This should say the word "AtLeast".
-std::string AtLeast::ToString() const { return bounds_.ToString(); }
+bool AtLeast::IsSatisfiedWith(LookupVariableFn lookup_variable,
+                              int64_t value) const {
+  absl::StatusOr<std::optional<Range::ExtremeValues>> extremes =
+      GetRange().Extremes(lookup_variable);
+  if (!extremes.ok()) return false;
+  if (!extremes->has_value()) return false;
+  return value >= (*extremes)->min && value <= (*extremes)->max;
+}
+
+std::string AtLeast::Explanation(LookupVariableFn lookup_variable,
+                                 int64_t value) const {
+  return std::format("{} is not at least {}", value, minimum_.ToString());
+}
 
 }  // namespace moriarty

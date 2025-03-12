@@ -18,9 +18,11 @@
 #define MORIARTY_SRC_VARIABLES_NUMERIC_CONSTRAINTS_H_
 
 #include <cstdint>
+#include <functional>
 #include <string>
 #include <string_view>
 
+#include "src/internal/expressions.h"
 #include "src/internal/range.h"
 #include "src/variables/constraints/base_constraints.h"
 
@@ -32,6 +34,8 @@ using IntegerExpression = std::string_view;
 // [minimum, maximum].
 class Between : public MConstraint {
  public:
+  using LookupVariableFn = std::function<int64_t(std::string_view)>;
+
   // The numeric value must be in the inclusive range [minimum, maximum].
   explicit Between(int64_t minimum, int64_t maximum);
 
@@ -47,16 +51,28 @@ class Between : public MConstraint {
   // Returns the range of values that this constraint represents.
   [[nodiscard]] Range GetRange() const;
 
-  // Returns a string representation of this constraint.
+  // Returns a human-readable representation of this constraint.
   [[nodiscard]] std::string ToString() const;
 
+  // Returns true if the given value satisfies this constraint.
+  [[nodiscard]] bool IsSatisfiedWith(LookupVariableFn lookup_variable,
+                                     int64_t value) const;
+
+  // Gives a human-readable explanation of why value does not satisfy the
+  // constraints. Precondition: IsSatisfiedWith() == false;
+  [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
+                                        int64_t value) const;
+
  private:
-  Range bounds_;
+  Expression minimum_;
+  Expression maximum_;
 };
 
 // Constraint stating that the numeric value must be this value or smaller.
 class AtMost : public MConstraint {
  public:
+  using LookupVariableFn = std::function<int64_t(std::string_view)>;
+
   // The numeric value must be this value or smaller. E.g., AtMost(123)
   explicit AtMost(int64_t maximum);
 
@@ -70,13 +86,24 @@ class AtMost : public MConstraint {
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
 
+  // Returns true if the given value satisfies this constraint.
+  [[nodiscard]] bool IsSatisfiedWith(LookupVariableFn lookup_variable,
+                                     int64_t value) const;
+
+  // Gives a human-readable explanation of why value does not satisfy the
+  // constraints. Precondition: IsSatisfiedWith() == false;
+  [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
+                                        int64_t value) const;
+
  private:
-  Range bounds_;
+  Expression maximum_;
 };
 
 // Constraint stating that the numeric value must be this value or larger.
 class AtLeast : public MConstraint {
  public:
+  using LookupVariableFn = std::function<int64_t(std::string_view)>;
+
   // The numeric value must be this value or larger. E.g., AtLeast(123)
   explicit AtLeast(int64_t minimum);
 
@@ -90,8 +117,17 @@ class AtLeast : public MConstraint {
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
 
+  // Returns true if the given value satisfies this constraint.
+  [[nodiscard]] bool IsSatisfiedWith(LookupVariableFn lookup_variable,
+                                     int64_t value) const;
+
+  // Gives a human-readable explanation of why value does not satisfy the
+  // constraints. Precondition: IsSatisfiedWith() == false;
+  [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
+                                        int64_t value) const;
+
  private:
-  Range bounds_;
+  Expression minimum_;
 };
 
 }  // namespace moriarty

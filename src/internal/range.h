@@ -18,6 +18,7 @@
 #define MORIARTY_SRC_INTERNAL_RANGE_H_
 
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <string>
@@ -104,6 +105,15 @@ class Range {
     friend bool operator==(const ExtremeValues& e1,
                            const ExtremeValues& e2) = default;
   };
+
+  // Extremes()
+  //
+  // Returns the two extremes of the range (min and max). Returns `std::nullopt`
+  // if the range is empty.
+  //
+  // Uses get_value(var_name) to get the current value of any needed variables.
+  absl::StatusOr<std::optional<ExtremeValues>> Extremes(
+      std::function<int64_t(std::string_view)> get_value) const;
 
   // Extremes()
   //

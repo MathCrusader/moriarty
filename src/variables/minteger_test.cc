@@ -245,15 +245,12 @@ TEST(MIntegerTest, AtMostLargerThanAtLeastShouldFail) {
       std::runtime_error);
 }
 
-TEST(MIntegerTest, AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {
-  // The following should not crash. Do not depend on this behaviour.
-  MInteger x = MInteger().AtLeast("3 + ");
-  MInteger y = MInteger().AtMost("+ X +");
-  MInteger z = MInteger().Between("N + 2", "* M + M");
-
-  EXPECT_THROW({ Generate(x).IgnoreError(); }, std::runtime_error);
-  EXPECT_THROW({ Generate(y).IgnoreError(); }, std::runtime_error);
-  EXPECT_THROW({ Generate(z).IgnoreError(); }, std::runtime_error);
+TEST(MIntegerDeathTest,
+     AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {
+  // We should throw a nice exception here, not ABSL die.
+  EXPECT_DEATH({ MInteger().AtLeast("3 + "); }, "operation");
+  EXPECT_DEATH({ MInteger().AtMost("+ X +"); }, "operation");
+  EXPECT_DEATH({ MInteger().Between("N + 2", "* M + M"); }, "operation");
 }
 
 TEST(MIntegerTest, AtMostAndAtLeastWithExpressionsShouldLimitTheOutputRange) {
@@ -576,16 +573,12 @@ TEST(MIntegerNonBuilderTest, AtMostLargerThanAtLeastShouldFail) {
       std::runtime_error);
 }
 
-TEST(MIntegerNonBuilderTest,
+TEST(MIntegerNonBuilderDeathTest,
      AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {
-  // The following should not crash. Do not depend on this behaviour.
-  MInteger x = MInteger(AtLeast("3 + "));
-  MInteger y = MInteger(AtMost("+ X +"));
-  MInteger z = MInteger(Between("N + 2", "* M + M"));
-
-  EXPECT_THROW({ Generate(x).IgnoreError(); }, std::runtime_error);
-  EXPECT_THROW({ Generate(y).IgnoreError(); }, std::runtime_error);
-  EXPECT_THROW({ Generate(z).IgnoreError(); }, std::runtime_error);
+  // We should throw a nice exception here, not ABSL die.
+  EXPECT_DEATH({ MInteger(AtLeast("3 + ")); }, "operation");
+  EXPECT_DEATH({ MInteger(AtMost("+ X +")); }, "operation");
+  EXPECT_DEATH({ MInteger(Between("N + 2", "* M + M")); }, "operation");
 }
 
 TEST(MIntegerNonBuilderTest,
@@ -784,20 +777,18 @@ TEST(MIntegerNonBuilderTest, InvalidSizeCombinationsFailGeneration) {
 }
 
 TEST(MIntegerNonBuilderTest, InvalidExpressionsShouldFail) {
-  // TODO: This should throw
+  // TODO: These should all throw, not die or status.
   EXPECT_THAT(Generate(MInteger(Exactly("N + "))),
               StatusIs(absl::StatusCode::kFailedPrecondition,
                        HasSubstr("invalid expression")));
 
-  EXPECT_THROW(
-      { Generate(MInteger(AtMost("N + "))).IgnoreError(); },
-      std::runtime_error);
-  EXPECT_THROW(
-      { Generate(MInteger(AtLeast("N + "))).IgnoreError(); },
-      std::runtime_error);
-  EXPECT_THROW(
+  EXPECT_DEATH(
+      { Generate(MInteger(AtMost("N + "))).IgnoreError(); }, "operation");
+  EXPECT_DEATH(
+      { Generate(MInteger(AtLeast("N + "))).IgnoreError(); }, "operation");
+  EXPECT_DEATH(
       { Generate(MInteger(Between("& x", "N + "))).IgnoreError(); },
-      std::runtime_error);
+      "Unknown character");
 }
 
 }  // namespace
