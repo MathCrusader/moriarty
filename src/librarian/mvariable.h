@@ -50,6 +50,7 @@
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
 #include "src/internal/status_utils.h"
+#include "src/librarian/constraint_handler.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
 
@@ -78,7 +79,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
  protected:
   // Only derived classes should make copies of me directly to avoid accidental
   // slicing. Call derived class's constructors instead.
-  MVariable() {
+  MVariable() : constraints_("FIXME: Set a name for this variable.") {
     static_assert(std::default_initializable<VariableType>,
                   "Moriarty needs to be able to construct default versions of "
                   "your MVariable using its default constructor.");
@@ -149,6 +150,17 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Returns status on failure. See `MergeFrom()` for builder-like version.
   absl::Status TryMergeFrom(const VariableType& other);
+
+  // AddConstraint() // FIXME: Change to AddConstraint
+  //
+  // Adds a constraint to this variable. (E.g., Positive(), Even(), Length(5)).
+  // The constraint `c` must be associated with the corresponding MVariable.
+  template <typename Constraint>
+  VariableType& NewAddConstraint(Constraint c) {
+    constraints_.AddConstraint(c);
+    UnderlyingVariableType().AddConstraintImpl(c);
+    return UnderlyingVariableType();
+  }
 
   // AddCustomConstraint()
   //
@@ -416,6 +428,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   void DeclareSelfAsInvalid(absl::Status status);
 
  private:
+  ConstraintHandler<ValueType> constraints_;
+
   // `is_one_of_` is a list of values that Generate() should produce. If the
   // optional is set and the list is empty, then there are no viable values.
   std::optional<std::vector<ValueType>> is_one_of_;

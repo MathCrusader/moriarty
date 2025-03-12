@@ -27,6 +27,17 @@ package(
 licenses(["notice"])
 
 cc_library(
+    name = "constraint_handler",
+    hdrs = [
+        "constraint_handler.h",
+    ],
+    deps = [
+        ":cow_ptr",
+        "//src/contexts/librarian:analysis_context",
+    ],
+)
+
+cc_library(
     name = "cow_ptr",
     hdrs = [
         "cow_ptr.h",
@@ -39,6 +50,7 @@ cc_library(
         "mvariable.h",
     ],
     deps = [
+        ":constraint_handler",
         "//src:errors",
         "//src:property",
         "//src/contexts/librarian:analysis_context",
@@ -103,6 +115,18 @@ cc_library(
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
         "@googletest//:gtest",
+    ],
+)
+
+cc_test(
+    name = "constraint_handler_test",
+    srcs = [
+        "constraint_handler_test.cc",
+    ],
+    deps = [
+        ":constraint_handler",
+        "//src/contexts/librarian:analysis_context",
+        "@googletest//:gtest_main",
     ],
 )
 

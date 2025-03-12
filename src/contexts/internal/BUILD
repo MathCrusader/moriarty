@@ -126,6 +126,7 @@ cc_library(
     deps = [
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "@abseil-cpp//absl/status:statusor",
     ],
 )
 
