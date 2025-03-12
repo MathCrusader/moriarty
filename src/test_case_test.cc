@@ -45,10 +45,10 @@ using ::moriarty::StatusIs;
 using ::moriarty::moriarty_internal::GenerateAllValues;
 using ::moriarty::moriarty_internal::RandomEngine;
 using ::moriarty::moriarty_internal::ValueSet;
-using ::moriarty_testing::IsVariableNotFound;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::MTestType2;
 using ::moriarty_testing::TestType;
+using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::HasSubstr;
 
 template <typename T>
@@ -99,7 +99,8 @@ TEST(TestCaseTest, GetVariableWithWrongTypeShouldFail) {
 TEST(TestCaseTest, GetVariableWithWrongNameShouldNotFind) {
   TestCase T;
   T.ConstrainVariable("A", MTestType());
-  EXPECT_THAT(GetVariable<MTestType>(T, "xxx"), IsVariableNotFound("xxx"));
+  EXPECT_THAT([&] { GetVariable<MTestType>(T, "xxx").IgnoreError(); },
+              ThrowsVariableNotFound("xxx"));
 }
 
 TEST(TestCaseTest, AssignAllValuesGivesSomeValueForEachVariable) {

@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +16,7 @@
 #include "src/errors.h"
 
 #include <optional>
+#include <stdexcept>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -28,7 +30,7 @@ namespace {
 
 using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::moriarty_testing::IsValueNotFound;
-using ::moriarty_testing::IsVariableNotFound;
+using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::Not;
 
 // -----------------------------------------------------------------------------
@@ -39,7 +41,6 @@ TEST(StatusTest, IsMoriartyErrorAcceptsAllErrorFunctions) {
   // EXPECT_TRUE(IsMoriartyError(RetryableGenerationError("")));
   EXPECT_TRUE(IsMoriartyError(UnsatisfiedConstraintError("")));
   EXPECT_TRUE(IsMoriartyError(ValueNotFoundError("")));
-  EXPECT_TRUE(IsMoriartyError(VariableNotFoundError("")));
 }
 
 TEST(StatusTest, IsMoriartyErrorDoesNotAcceptOkStatus) {
@@ -59,7 +60,6 @@ TEST(StatusTest, MoriartyErrorsRecognizeAppropriateError) {
   // EXPECT_TRUE(IsRetryableGenerationError(RetryableGenerationError("")));
   EXPECT_TRUE(IsUnsatisfiedConstraintError(UnsatisfiedConstraintError("")));
   EXPECT_TRUE(IsValueNotFoundError(ValueNotFoundError("")));
-  EXPECT_TRUE(IsVariableNotFoundError(VariableNotFoundError("")));
 }
 
 TEST(StatusTest, MoriartyErrorsDoNotAcceptUnderlyingTypesAlone) {
@@ -72,8 +72,6 @@ TEST(StatusTest, MoriartyErrorsDoNotAcceptUnderlyingTypesAlone) {
       absl::Status(UnsatisfiedConstraintError("").code(), "")));
   EXPECT_FALSE(
       IsValueNotFoundError(absl::Status(ValueNotFoundError("").code(), "")));
-  EXPECT_FALSE(IsVariableNotFoundError(
-      absl::Status(VariableNotFoundError("").code(), "")));
 }
 
 TEST(StatusTest, MoriartyErrorsDoNotAcceptOkStatus) {
@@ -81,7 +79,6 @@ TEST(StatusTest, MoriartyErrorsDoNotAcceptOkStatus) {
   // EXPECT_FALSE(IsRetryableGenerationError(absl::OkStatus()));
   EXPECT_FALSE(IsUnsatisfiedConstraintError(absl::OkStatus()));
   EXPECT_FALSE(IsValueNotFoundError(absl::OkStatus()));
-  EXPECT_FALSE(IsVariableNotFoundError(absl::OkStatus()));
 }
 
 // -----------------------------------------------------------------------------
@@ -90,13 +87,6 @@ TEST(StatusTest, MoriartyErrorsDoNotAcceptOkStatus) {
 TEST(StatusTest, GetUnknownVariableNameFromValueNotFoundErrorReturnsName) {
   EXPECT_EQ(GetUnknownVariableName(ValueNotFoundError("var_name")), "var_name");
   EXPECT_EQ(GetUnknownVariableName(ValueNotFoundError("with spaces")),
-            "with spaces");
-}
-
-TEST(StatusTest, GetUnknownVariableNameFromVariableNotFoundErrorReturnsName) {
-  EXPECT_EQ(GetUnknownVariableName(VariableNotFoundError("var_name")),
-            "var_name");
-  EXPECT_EQ(GetUnknownVariableName(VariableNotFoundError("with spaces")),
             "with spaces");
 }
 
@@ -146,20 +136,42 @@ TEST(StatusTest, IsValueNotFoundGoogleTestMatcherWorks) {
 
   EXPECT_THAT(ValueNotFoundError("name"), Not(IsValueNotFound("other")));
   EXPECT_THAT(absl::NotFoundError("name"), Not(IsValueNotFound("name")));
-  EXPECT_THAT(VariableNotFoundError("name"), Not(IsValueNotFound("name")));
 }
 
-// -----------------------------------------------------------------------------
-//  VariableNotFoundError
-
-TEST(StatusTest, IsVariableNotFoundGoogleTestMatcherWorks) {
-  EXPECT_THAT(VariableNotFoundError("name"), IsVariableNotFound("name"));
-  EXPECT_THAT(absl::StatusOr<int>(VariableNotFoundError("name")),
-              IsVariableNotFound("name"));
-
-  EXPECT_THAT(VariableNotFoundError("name"), Not(IsVariableNotFound("other")));
-  EXPECT_THAT(absl::NotFoundError("name"), Not(IsVariableNotFound("name")));
-  EXPECT_THAT(ValueNotFoundError("name"), Not(IsVariableNotFound("name")));
+TEST(ErrorsTest, ThrowsVariableNotFoundMatcherShouldWorkCorrectly) {
+  {  // Happy path
+    EXPECT_THAT([] { throw VariableNotFound("X"); },
+                ThrowsVariableNotFound("X"));
+  }
+  {  // Wrong name
+    EXPECT_THAT([] { throw VariableNotFound("X"); },
+                Not(ThrowsVariableNotFound("other")));
+    EXPECT_THAT([] { throw VariableNotFound("X"); },
+                Not(ThrowsVariableNotFound("")));
+  }
+  {  // Wrong exception
+    EXPECT_THAT([] { throw std::runtime_error("words"); },
+                Not(ThrowsVariableNotFound("X")));
+    EXPECT_THAT([] { throw std::runtime_error("X"); },
+                Not(ThrowsVariableNotFound("X")));
+  }
+  {  // No exception
+    EXPECT_THAT([] {}, Not(ThrowsVariableNotFound("X")));
+  }
+  {  // Multiple throws (::testing::ThrowsMessage gets these wrong)
+    EXPECT_THAT(
+        [] {
+          throw std::runtime_error("words");
+          throw VariableNotFound("X");
+        },
+        Not(ThrowsVariableNotFound("X")));
+    EXPECT_THAT(
+        [] {
+          throw VariableNotFound("X");
+          throw std::runtime_error("words");
+        },
+        ThrowsVariableNotFound("X"));
+  }
 }
 
 }  // namespace

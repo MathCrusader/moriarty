@@ -22,6 +22,7 @@
 #include "gtest/gtest.h"
 #include "src/internal/value_set.h"
 #include "src/test_case.h"
+#include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/marray.h"
@@ -31,6 +32,7 @@ namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
+using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::ElementsAre;
 
 TEST(VariableIStreamContextTest, ReadNamedVariableShouldWork) {
@@ -50,7 +52,8 @@ TEST(VariableIStreamContextTest,
   VariableSet variables;
   VariableIStreamContext ctx(ss, WhitespaceStrictness::kPrecise, variables,
                              values);
-  EXPECT_THROW({ (void)ctx.ReadVariable<MInteger>("X"); }, std::runtime_error);
+  EXPECT_THAT([&] { (void)ctx.ReadVariable<MInteger>("X"); },
+              ThrowsVariableNotFound("X"));
 }
 
 TEST(VariableIStreamContextTest,
@@ -168,7 +171,8 @@ TEST(VariableIStreamContextTest, ReadVariableToWithUnknownVariableShouldFail) {
   std::istringstream ss("10");
   VariableIStreamContext ctx(ss, WhitespaceStrictness::kPrecise, variables,
                              values);
-  EXPECT_THROW({ ctx.ReadVariableTo("X", test_case); }, std::runtime_error);
+  EXPECT_THAT([&] { ctx.ReadVariableTo("X", test_case); },
+              ThrowsVariableNotFound("X"));
 }
 
 TEST(VariableIStreamContextTest,

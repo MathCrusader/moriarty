@@ -64,18 +64,28 @@ class VariableSet {
   // Returns a pointer to the variable. Ownership of this pointer is *not*
   // transferred to the caller.
   //
-  // Errors:
-  //  * VariableNotFoundError() if the variable does not exist.
+  // Throws:
+  //  * moriarty::VariableNotFound if the variable does not exist.
   absl::StatusOr<const AbstractVariable*> GetAbstractVariable(
       std::string_view name) const;
+
+  // GetAbstractVariable()
+  //
+  // Returns a pointer to the variable. Ownership of this pointer is *not*
+  // transferred to the caller.
+  //
+  // Throws:
+  //  * moriarty::VariableNotFound if the variable does not exist.
   absl::StatusOr<AbstractVariable*> GetAbstractVariable(std::string_view name);
 
   // GetVariable<>()
   //
   // Returns the variable named `name`.
   //
-  // Errors:
-  //  * VariableNotFoundError() if the variable does not exist.
+  // Throws:
+  //  * moriarty::VariableNotFound if the variable does not exist.
+  //
+  // Returns: // FIXME: Should throw std::invalid_argument instead of returning
   //  * kInvalidArgument if it is not convertible to `T`
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
@@ -111,8 +121,7 @@ template <typename T>
   requires std::derived_from<T, AbstractVariable>
 absl::StatusOr<T> VariableSet::GetVariable(std::string_view name) const {
   const AbstractVariable* var = GetAbstractVariableOrNull(name);
-  if (var == nullptr) return VariableNotFoundError(name);
-
+  if (var == nullptr) throw VariableNotFound(name);
   return ConvertTo<T>(var, name);
 }
 

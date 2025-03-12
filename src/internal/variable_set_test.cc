@@ -37,9 +37,9 @@ namespace {
 using ::moriarty::IsOkAndHolds;
 using ::moriarty::StatusIs;
 using ::moriarty_testing::Generate;
-using ::moriarty_testing::IsVariableNotFound;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::MTestType2;
+using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::HasSubstr;
 
 TEST(VariableSetTest, GetVariableCanRetrieveFromAddVariable) {
@@ -78,9 +78,10 @@ TEST(VariableSetTest, AddOrMergeVariableSetsProperlyWhenMerging) {
 TEST(VariableSetTest, GetVariableOnNonExistentVariableFails) {
   VariableSet v;
 
-  EXPECT_THAT(v.GetAbstractVariable("unknown"), IsVariableNotFound("unknown"));
-  EXPECT_THAT(v.GetVariable<MTestType>("unknown"),
-              IsVariableNotFound("unknown"));
+  EXPECT_THAT([&] { v.GetAbstractVariable("unknown1").IgnoreError(); },
+              ThrowsVariableNotFound("unknown1"));
+  EXPECT_THAT([&] { v.GetVariable<MTestType>("unknown2").IgnoreError(); },
+              ThrowsVariableNotFound("unknown2"));
 }
 
 TEST(VariableSetTest, GeneralScenariosAreAppliedToAllVariables) {
@@ -167,6 +168,18 @@ TEST(VariableSetTest, UnknownMandatoryPropertyInScenarioShouldFail) {
                   "MTestType", {.category = "unknown", .descriptor = "????"})),
               StatusIs(absl::StatusCode::kInvalidArgument,
                        HasSubstr("Property with non-optional category")));
+}
+
+TEST(VariableSetTest, GetAnonymousVariableShouldWork) {
+  VariableSet variables;
+  MORIARTY_ASSERT_OK(variables.AddVariable("A", MTestType()));
+  MORIARTY_ASSERT_OK(variables.AddVariable("B", MTestType()));
+  MORIARTY_ASSERT_OK(variables.AddVariable("C", MTestType2()));
+  MORIARTY_ASSERT_OK(variables.AddVariable("D", MTestType2()));
+
+  EXPECT_THAT(variables.GetAbstractVariable("A"), IsOk());
+  EXPECT_THAT([&] { variables.GetAbstractVariable("X").IgnoreError(); },
+              ThrowsVariableNotFound("X"));
 }
 
 }  // namespace

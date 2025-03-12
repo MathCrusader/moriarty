@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -24,6 +25,7 @@
 // For example:
 //  EXPECT_THAT(Generate(MInteger().Between(5, 4)), IsGenerationFailure());
 
+#include <functional>
 #include <optional>
 #include <string>
 
@@ -45,6 +47,28 @@ inline absl::Status GetStatus(const absl::Status& status) { return status; }
 template <typename T>
 inline absl::Status GetStatus(const absl::StatusOr<T>& status_or) {
   return status_or.status();
+}
+
+// https://github.com/google/googletest/issues/4073#issuecomment-1925047305
+template <class Function>
+std::function<void()> single_call(Function function) {
+  auto shared_exception_ptr = std::make_shared<std::exception_ptr>();
+  auto was_called = std::make_shared<bool>(false);
+  return [shared_exception_ptr, was_called, function]() {
+    if (*shared_exception_ptr) {
+      std::rethrow_exception(*shared_exception_ptr);
+    }
+    if (*was_called) {
+      return;
+    }
+    *was_called = true;
+    try {
+      std::invoke(function);
+    } catch (...) {
+      *shared_exception_ptr = std::current_exception();
+      std::rethrow_exception(*shared_exception_ptr);
+    }
+  };
 }
 
 }  // namespace moriarty_testing_internal
@@ -100,35 +124,34 @@ MATCHER_P(IsValueNotFound, expected_variable_name,
   return true;
 }
 
-// googletest matcher checking for a Moriarty VariableNotFoundError
-MATCHER_P(IsVariableNotFound, expected_variable_name,
-          absl::Substitute("$0 a Moriarty error saying that no variable with "
-                           "the name `$1` is known",
-                           (negation ? "is not" : "is"),
-                           expected_variable_name)) {
-  absl::Status status = moriarty_testing_internal::GetStatus(arg);
-  if (!moriarty::IsVariableNotFoundError(status)) {
-    *result_listener << "received status that is not a VariableNotFoundError: "
-                     << status;
-    return false;
-  }
+MATCHER_P(ThrowsVariableNotFound, expected_variable_name,
+          std::format("{} a function that throws a VariableNotFound exception "
+                      "with the variable name `{}`",
+                      (negation ? "is not" : "is"), expected_variable_name)) {
+  // This first line is to get a better compile error message when arg is not of
+  // the expected type.
+  std::function<void()> fn = arg;
 
-  std::optional<std::string> unknown_variable_name =
-      moriarty::GetUnknownVariableName(status);
-  if (!unknown_variable_name.has_value()) {
-    *result_listener << "received VariableNotFoundError with no variable name";
+  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  try {
+    function();
+    *result_listener << "did not throw";
     return false;
+  } catch (const moriarty::VariableNotFound& e) {
+    if (e.VariableName() != expected_variable_name) {
+      *result_listener
+          << "threw the expected exception, but the wrong variable name. `"
+          << e.VariableName() << "`";
+      return false;
+    }
+    *result_listener << "threw the expected exception";
+    return true;
+  } catch (...) {
+    // Call the built-in explainer to get a better message.
+    return ::testing::ExplainMatchResult(
+        ::testing::Throws<moriarty::VariableNotFound>(), function,
+        result_listener);
   }
-
-  if (*unknown_variable_name != expected_variable_name) {
-    *result_listener << "actual unknown variable name is `"
-                     << *unknown_variable_name << "`";
-    return false;
-  }
-
-  *result_listener << "is VariableNotFoundError for `" << expected_variable_name
-                   << "`";
-  return true;
 }
 
 }  // namespace moriarty_testing

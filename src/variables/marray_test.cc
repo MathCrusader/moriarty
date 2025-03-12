@@ -49,6 +49,7 @@ using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
 using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
+using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::AllOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
@@ -456,9 +457,9 @@ TEST(MArrayTest, ReadShouldBeAbleToDetermineLengthFromAnotherVariable) {
 
 TEST(MArrayTest,
      ReadShouldFailIfLengthDependsOnAnUnknownVariableOrNonUniqueInteger) {
-  EXPECT_THROW(
-      { Read(MArray(MInteger()).OfLength("N"), "1 2 3").IgnoreError(); },
-      std::runtime_error);
+  EXPECT_THAT(
+      [&] { Read(MArray(MInteger()).OfLength("N"), "1 2 3").IgnoreError(); },
+      ThrowsVariableNotFound("N"));
 
   EXPECT_THROW(
       { Read(MArray(MInteger()).OfLength(2, 3), "1 2 3").IgnoreError(); },
@@ -871,9 +872,9 @@ TEST(MArrayNonBuilderTest,
 
 TEST(MArrayNonBuilderTest,
      ReadShouldFailIfLengthDependsOnAnUnknownVariableOrNonUniqueInteger) {
-  EXPECT_THROW(
-      { Read(MArray<MInteger>(Length("N")), "1 2 3").IgnoreError(); },
-      std::runtime_error);
+  EXPECT_THAT(
+      [&] { Read(MArray<MInteger>(Length("N")), "1 2 3").IgnoreError(); },
+      ThrowsVariableNotFound("N"));
 
   EXPECT_THROW(
       { Read(MArray<MInteger>(Length(Between(2, 3))), "1 2 3").IgnoreError(); },

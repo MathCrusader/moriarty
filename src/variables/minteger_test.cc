@@ -26,8 +26,11 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/contexts/librarian/analysis_context.h"
+#include "src/internal/value_set.h"
+#include "src/internal/variable_set.h"
 #include "src/librarian/size_property.h"
 #include "src/librarian/test_utils.h"
+#include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
@@ -48,6 +51,7 @@ using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
 using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
+using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::AllOf;
 using ::testing::Each;
 using ::testing::Eq;
@@ -208,7 +212,18 @@ TEST(MIntegerTest, SatisfiesConstraintsWorksForInvalidExpressions) {
   EXPECT_THAT(
       MInteger().Between(1, "3 * N + 1"),
       IsNotSatisfiedWith(0, "range", Context().WithValue<MInteger>("N", 10)));
-  EXPECT_THAT(MInteger().Between(1, "3 * N + 1"), IsNotSatisfiedWith(0, ""));
+
+  moriarty_internal::ValueSet values;
+  moriarty_internal::VariableSet variables;
+  librarian::AnalysisContext ctx("_", variables, values);
+  EXPECT_THAT(
+      [&] {
+        MInteger()
+            .Between(1, "3 * N + 1")
+            .IsSatisfiedWith(ctx, 1)
+            .IgnoreError();
+      },
+      ThrowsVariableNotFound("N"));
 }
 
 TEST(MIntegerTest, AtMostAndAtLeastShouldLimitTheOutputRange) {
@@ -311,7 +326,8 @@ TEST(MIntegerTest, GetUniqueValueWithNestedDependenciesShouldWork) {
 }
 
 TEST(MIntegerTest, GetUniqueValueFailsWhenAVariableIsUnknown) {
-  EXPECT_EQ(GetUniqueValue(MInteger().Between("N", "N")), std::nullopt);
+  EXPECT_THAT([&] { GetUniqueValue(MInteger().Between("N", "N")); },
+              ThrowsVariableNotFound("N"));
 }
 
 TEST(MIntegerTest, GetUniqueValueShouldSucceedIfTheValueIsUnique) {
@@ -530,8 +546,15 @@ TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForInvalidExpressions) {
   EXPECT_THAT(
       MInteger(Between(1, "3 * N + 1")),
       IsNotSatisfiedWith(0, "range", Context().WithValue<MInteger>("N", 10)));
-  // FIXME: Add reason back
-  EXPECT_THAT(MInteger(Between(1, "3 * N + 1")), IsNotSatisfiedWith(0, ""));
+
+  moriarty_internal::ValueSet values;
+  moriarty_internal::VariableSet variables;
+  librarian::AnalysisContext ctx("_", variables, values);
+  EXPECT_THAT(
+      [&] {
+        MInteger(Between(1, "3 * N + 1")).IsSatisfiedWith(ctx, 2).IgnoreError();
+      },
+      ThrowsVariableNotFound("N"));
 }
 
 TEST(MIntegerNonBuilderTest, AtMostAndAtLeastShouldLimitTheOutputRange) {
@@ -633,7 +656,8 @@ TEST(MIntegerNonBuilderTest, GetUniqueValueWithNestedDependenciesShouldWork) {
 }
 
 TEST(MIntegerNonBuilderTest, GetUniqueValueFailsWhenAVariableIsUnknown) {
-  EXPECT_EQ(GetUniqueValue(MInteger(Between("N", "N"))), std::nullopt);
+  EXPECT_THAT([&] { GetUniqueValue(MInteger(Between("N", "N"))); },
+              ThrowsVariableNotFound("N"));
 }
 
 TEST(MIntegerNonBuilderTest, GetUniqueValueShouldSucceedIfTheValueIsUnique) {

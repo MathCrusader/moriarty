@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -38,9 +39,13 @@
 //  * RetryableGenerationError
 //  * UnsatisfiedConstraintError
 //  * ValueNotFoundError
-//  * VariableNotFoundError
+//
+// Exceptions:
+//  * VariableNotFound
 
+#include <format>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -55,7 +60,7 @@ bool IsMoriartyError(const absl::Status& status);
 
 // GetUnknownVariableName()
 //
-// If `status` is a `ValueNotFoundError` or `VariableNotFoundError`, returns the
+// If `status` is a `ValueNotFoundError`, returns the
 // name of the variable that wasn't found (if known). If the status is not an
 // error listed above or the name is unknown, returns `std::nullopt`.
 std::optional<std::string> GetUnknownVariableName(const absl::Status& status);
@@ -118,21 +123,23 @@ bool IsValueNotFoundError(const absl::Status& status);
 absl::Status ValueNotFoundError(std::string_view variable_name);
 
 // -----------------------------------------------------------------------------
-//   VariableNotFound -- when a variable is unknown
+//   Exceptions
 
-// IsVariableNotFoundError()
+// VariableNotFound
 //
-// Returns true if `status` signals that a variable not known.
-bool IsVariableNotFoundError(const absl::Status& status);
+// Thrown when the user asks about a variable that is not known. For the most
+// part, named variables are created via the `Moriarty` class.
+class VariableNotFound : public std::logic_error {
+ public:
+  explicit VariableNotFound(std::string_view variable_name)
+      : std::logic_error(std::format("Variable `{}` not found", variable_name)),
+        variable_name_(variable_name) {}
 
-// VariableNotFoundError()
-//
-// Returns a status specifying that `variable_name` is not known. In contexts
-// where variables and values may both be known, this normally means that no
-// variable or value is known for this name.
-//
-// It is not typical for users to need to use this function.
-absl::Status VariableNotFoundError(std::string_view variable_name);
+  const std::string& VariableName() const { return variable_name_; }
+
+ private:
+  std::string variable_name_;
+};
 
 }  // namespace moriarty
 

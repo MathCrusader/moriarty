@@ -16,8 +16,6 @@
 
 #include "src/contexts/internal/variable_ostream_context.h"
 
-#include <stdexcept>
-
 #include "gtest/gtest.h"
 #include "src/internal/value_set.h"
 #include "src/test_case.h"
@@ -27,6 +25,7 @@
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
+using moriarty_testing::ThrowsVariableNotFound;
 
 TEST(VariableOStreamContextTest, PrintNamedVariableSimpleCaseShouldWork) {
   std::ostringstream ss;
@@ -48,7 +47,7 @@ TEST(VariableOStreamContextTest,
   ValueSet values;
   VariableOStreamContext ctx(ss, variables, values);
 
-  EXPECT_THROW({ ctx.PrintVariable("X"); }, std::runtime_error);
+  EXPECT_THAT([&] { ctx.PrintVariable("X"); }, ThrowsVariableNotFound("X"));
 }
 
 TEST(VariableOStreamContextTest, PrintUnnamedVariableSimpleCaseShouldWork) {
@@ -86,8 +85,8 @@ TEST(VariableOStreamContextTest, PrintVariableToWithUnknownVariableShouldFail) {
     VariableOStreamContext ctx(ss, variables, values);
 
     ConcreteTestCase test_case;
-    EXPECT_THROW(
-        { ctx.PrintVariableFrom("X", test_case); }, std::runtime_error);
+    EXPECT_THAT([&] { ctx.PrintVariableFrom("X", test_case); },
+                ThrowsVariableNotFound("X"));
   }
   {  // No value
     std::ostringstream ss;
@@ -106,8 +105,8 @@ TEST(VariableOStreamContextTest, PrintVariableToWithUnknownVariableShouldFail) {
 
     ConcreteTestCase test_case;
     test_case.SetValue<MInteger>("X", 10);
-    EXPECT_THROW(
-        { ctx.PrintVariableFrom("X", test_case); }, std::runtime_error);
+    EXPECT_THAT([&] { ctx.PrintVariableFrom("X", test_case); },
+                ThrowsVariableNotFound("X"));
   }
 }
 

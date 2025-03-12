@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -42,7 +43,6 @@ constexpr std::string_view kMoriartyErrorSpace = "moriarty";
 constexpr std::string_view kUnsatisfiedConstraintErrorPayload =
     "UnsatisfiedConstraint";
 constexpr std::string_view kValueNotFoundErrorPayload = "ValueNotFound";
-constexpr std::string_view kVariableNotFoundErrorPayload = "VariableNotFound";
 
 absl::Status MakeMoriartyError(absl::StatusCode code, std::string_view message,
                                std::string_view payload) {
@@ -63,8 +63,6 @@ std::optional<std::string> GetUnknownVariableName(const absl::Status& status) {
 
   if (payload->StartsWith(kValueNotFoundErrorPayload)) {
     payload->RemovePrefix(kValueNotFoundErrorPayload.size() + 1);
-  } else if (payload->StartsWith(kVariableNotFoundErrorPayload)) {
-    payload->RemovePrefix(kVariableNotFoundErrorPayload.size() + 1);
   } else {
     return std::nullopt;
   }
@@ -111,20 +109,6 @@ absl::Status ValueNotFoundError(std::string_view variable_name) {
       absl::StatusCode::kNotFound,
       absl::Substitute("Value for `$0` not found", variable_name),
       absl::Substitute("$0 $1", kValueNotFoundErrorPayload, variable_name));
-}
-
-bool IsVariableNotFoundError(const absl::Status& status) {
-  std::optional<absl::Cord> payload = status.GetPayload(kMoriartyErrorSpace);
-  if (!payload.has_value()) return false;
-
-  return payload->StartsWith(kVariableNotFoundErrorPayload);
-}
-
-absl::Status VariableNotFoundError(std::string_view variable_name) {
-  return MakeMoriartyError(
-      absl::StatusCode::kNotFound,
-      absl::Substitute("Unknown variable: `$0`", variable_name),
-      absl::Substitute("$0 $1", kVariableNotFoundErrorPayload, variable_name));
 }
 
 }  // namespace moriarty

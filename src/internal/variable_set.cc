@@ -52,16 +52,14 @@ void VariableSet::Swap(VariableSet& other) {
 absl::StatusOr<const AbstractVariable*> VariableSet::GetAbstractVariable(
     std::string_view name) const {
   const AbstractVariable* var = GetAbstractVariableOrNull(name);
-  if (var == nullptr) return VariableNotFoundError(name);
-
+  if (var == nullptr) throw VariableNotFound(name);
   return var;
 }
 
 absl::StatusOr<AbstractVariable*> VariableSet::GetAbstractVariable(
     std::string_view name) {
   AbstractVariable* var = GetAbstractVariableOrNull(name);
-  if (var == nullptr) return VariableNotFoundError(name);
-
+  if (var == nullptr) throw VariableNotFound(name);
   return var;
 }
 

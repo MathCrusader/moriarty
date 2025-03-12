@@ -30,6 +30,7 @@ namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
+using moriarty_testing::ThrowsVariableNotFound;
 using testing::Not;
 using testing::SizeIs;
 
@@ -40,8 +41,8 @@ TEST(ViewOnlyContextTest, GetVariableShouldWork) {
   ViewOnlyContext ctx(variables, values);
 
   EXPECT_NO_THROW({ (void)ctx.GetVariable<MInteger>("X"); });
-  EXPECT_THROW(
-      { (void)ctx.GetVariable<MInteger>("Y"); }, std::runtime_error);  // Name
+  EXPECT_THAT([&] { (void)ctx.GetVariable<MInteger>("Y"); },
+              ThrowsVariableNotFound("Y"));
   EXPECT_THROW(
       { (void)ctx.GetVariable<MString>("X"); }, std::runtime_error);  // Type
 }
@@ -53,8 +54,8 @@ TEST(ViewOnlyContextTest, GetAnonymousVariableShouldWork) {
   ViewOnlyContext ctx(variables, values);
 
   EXPECT_NO_THROW({ (void)ctx.GetAnonymousVariable("X"); });
-  EXPECT_THROW(
-      { (void)ctx.GetAnonymousVariable("Y"); }, std::runtime_error);  // Name
+  EXPECT_THAT([&] { (void)ctx.GetAnonymousVariable("Y"); },
+              ThrowsVariableNotFound("Y"));
 }
 
 TEST(ViewOnlyContextTest, GetValueShouldWork) {

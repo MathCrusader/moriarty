@@ -293,9 +293,10 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Determines if `value` satisfies all of the constraints specified by this
   // variable.
   //
+  // FIXME: Fix this comment.
   // This function should return an `UnsatisfiedConstraintError()`. Almost every
   // other status returned will be treated as an internal error. The exceptions
-  // are `VariableNotFoundError` and `ValueNotFoundError`, which will be
+  // are `VariableNotFound` and `ValueNotFoundError`, which will be
   // converted into an `UnsatisfiedConstraintError` before returning to the
   // user. You may find the `CheckConstraint()` helpers useful.
   virtual absl::Status IsSatisfiedWithImpl(AnalysisContext ctx,
@@ -780,9 +781,10 @@ absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
         "`value` must be one of the options in Is() and IsOneOf()"));
   }
 
+  // FIXME: Determine semantics of which errors are propagated.
   absl::Status status = IsSatisfiedWithImpl(ctx, value);
   if (!status.ok()) {
-    if (IsVariableNotFoundError(status) || IsValueNotFoundError(status))
+    if (IsValueNotFoundError(status))
       return UnsatisfiedConstraintError(status.message());
     return status;
   }
@@ -887,11 +889,6 @@ absl::Status MVariable<V, G>::ValueSatisfiesConstraints(
       int start = error.find('`') + 1;
       int end = error.find('`', start);
       return moriarty::ValueNotFoundError(error.substr(start, end - start));
-    }
-    if (error.starts_with("NOT_FOUND: Unknown variable: `")) {
-      int start = error.find('`') + 1;
-      int end = error.find('`', start);
-      return moriarty::VariableNotFoundError(error.substr(start, end - start));
     }
 
     throw;
