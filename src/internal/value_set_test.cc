@@ -18,10 +18,10 @@
 #include <cstdint>
 #include <string>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/marray.h"
@@ -34,7 +34,7 @@ namespace {
 
 using ::moriarty::IsOkAndHolds;
 using ::moriarty::StatusIs;
-using ::moriarty_testing::IsValueNotFound;
+using ::moriarty_testing::ThrowsValueNotFound;
 using ::testing::AnyWith;
 using ::testing::StrEq;
 
@@ -62,10 +62,12 @@ TEST(ValueSetTest, MultipleVariablesShouldWork) {
 
 TEST(ValueSetTest, RequestingANonExistentVariableShouldThrow) {
   ValueSet value_set;
-  EXPECT_THAT(value_set.Get<MInteger>("x"), IsValueNotFound("x"));
+  EXPECT_THAT([&] { value_set.Get<MInteger>("x").IgnoreError(); },
+              ThrowsValueNotFound("x"));
 
   value_set.Set<MInteger>("x", 5);
-  EXPECT_THAT(value_set.Get<MInteger>("y"), IsValueNotFound("y"));
+  EXPECT_THAT([&] { value_set.Get<MInteger>("y").IgnoreError(); },
+              ThrowsValueNotFound("y"));
 }
 
 TEST(ValueSetTest, RequestingTheWrongTypeShouldThrow) {
@@ -102,10 +104,12 @@ TEST(ValueSetTest, UnsafeGetOverwritingTheSameVariableShouldReplaceTheValue) {
 
 TEST(ValueSetTest, UnsafeGetRequestingANonExistentVariableFails) {
   ValueSet value_set;
-  EXPECT_THAT(value_set.UnsafeGet("x"), IsValueNotFound("x"));
+  EXPECT_THAT([&] { value_set.UnsafeGet("x").IgnoreError(); },
+              ThrowsValueNotFound("x"));
 
   value_set.Set<MInteger>("x", 5);
-  EXPECT_THAT(value_set.UnsafeGet("y"), IsValueNotFound("y"));
+  EXPECT_THAT([&] { value_set.UnsafeGet("y").IgnoreError(); },
+              ThrowsValueNotFound("y"));
 }
 
 TEST(ValueSetTest, ContainsShouldWork) {

@@ -26,9 +26,9 @@ namespace moriarty_internal {
 namespace {
 
 using ::moriarty_testing::IsUnsatisfiedConstraint;
-using ::moriarty_testing::IsValueNotFound;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::TestType;
+using ::moriarty_testing::ThrowsValueNotFound;
 
 TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsSucceedsWithNoVariables) {
@@ -82,9 +82,11 @@ TEST(AnalysisBootstrapTest,
 
   values.Set<MTestType>("A", options[4]);
 
-  // FIXME:
-  EXPECT_THAT(AllVariablesSatisfyConstraints(variables, values),
-              IsValueNotFound("B"));
+  // FIXME: Determine semantics of satisfies constraints when a value is
+  // missing.
+  EXPECT_THAT(
+      [&] { AllVariablesSatisfyConstraints(variables, values).IgnoreError(); },
+      ThrowsValueNotFound("B"));
 }
 
 TEST(AnalysisBootstrapTest,
@@ -128,8 +130,9 @@ TEST(AnalysisBootstrapTest,
 
   MORIARTY_ASSERT_OK(variables.AddVariable("A", MTestType()));
 
-  EXPECT_THAT(AllVariablesSatisfyConstraints(variables, values),
-              IsValueNotFound("A"));
+  EXPECT_THAT(
+      [&] { AllVariablesSatisfyConstraints(variables, values).IgnoreError(); },
+      ThrowsValueNotFound("A"));
 }
 
 }  // namespace

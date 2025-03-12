@@ -163,9 +163,15 @@ template <typename T>
   requires std::derived_from<T, AbstractVariable>
 std::optional<typename T::value_type> ViewOnlyContext::GetValueIfKnown(
     std::string_view variable_name) const {
-  absl::StatusOr<typename T::value_type> value =
-      values_.get().Get<T>(variable_name);
-  if (value.ok()) return *value;
+  try {
+    // FIXME: Create a MaybeGet() function in ValueSet
+    absl::StatusOr<typename T::value_type> value =
+        values_.get().Get<T>(variable_name);
+    if (value.ok()) return *value;
+  } catch (const ValueNotFound&) {
+    return std::nullopt;
+  }
+
   return std::nullopt;
 }
 

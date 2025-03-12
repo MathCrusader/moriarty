@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,7 +68,7 @@ class ValueSet {
   //
   // Returns the stored value for the variable `variable_name`.
   //
-  //  * If `variable_name` is non-existent, returns `ValueNotFoundError()`.
+  //  * If `variable_name` is non-existent, throws `ValueNotFound`.
   //  * If the value cannot be converted to T, returns kFailedPrecondition.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
@@ -79,7 +80,7 @@ class ValueSet {
   // Returns the std::any value for the variable `variable_name`. Should only be
   // used when the value type is unknown.
   //
-  //  Returns ValueNotFoundError if the variable has not been set.
+  // Throws moriarty::ValueNotFound if the variable has not been set.
   absl::StatusOr<std::any> UnsafeGet(std::string_view variable_name) const;
 
   // Contains()
@@ -129,7 +130,7 @@ template <typename T>
 absl::StatusOr<typename T::value_type> ValueSet::Get(
     std::string_view variable_name) const {
   auto it = values_.find(variable_name);
-  if (it == values_.end()) return ValueNotFoundError(variable_name);
+  if (it == values_.end()) throw ValueNotFound(variable_name);
 
   using TV = typename T::value_type;
   const TV* val = std::any_cast<const TV>(&it->second);

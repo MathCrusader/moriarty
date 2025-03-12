@@ -87,6 +87,7 @@
 #define MORIARTY_SRC_LIBRARIAN_TEST_UTILS_H_
 
 #include <concepts>
+#include <iostream>
 #include <istream>
 #include <iterator>
 #include <optional>

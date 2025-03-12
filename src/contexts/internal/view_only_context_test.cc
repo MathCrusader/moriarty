@@ -30,6 +30,7 @@ namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
+using moriarty_testing::ThrowsValueNotFound;
 using moriarty_testing::ThrowsVariableNotFound;
 using testing::Not;
 using testing::SizeIs;
@@ -67,11 +68,15 @@ TEST(ViewOnlyContextTest, GetValueShouldWork) {
   ViewOnlyContext ctx(variables, values);
 
   EXPECT_EQ(ctx.GetValue<MInteger>("X"), 10);
-  EXPECT_THROW(
-      { (void)ctx.GetValue<MInteger>("Y"); }, std::runtime_error);  // No value
-  EXPECT_THROW(
-      { (void)ctx.GetValue<MInteger>("Z"); },
-      std::runtime_error);  // No value or variable
+  EXPECT_THAT([&] { (void)ctx.GetValue<MInteger>("Y"); },
+              ThrowsValueNotFound("Y"));  // No value
+
+  // Note that in this case, we should really be checking for a missing variable
+  // first... TBD if we will check for that in the future. It's technically
+  // better, but also an extra hashmap lookup on every happy path for slightly
+  // more consistent error messages.
+  EXPECT_THAT([&] { (void)ctx.GetValue<MInteger>("Z"); },
+              ThrowsValueNotFound("Z"));
 }
 
 TEST(ViewOnlyContextTest, GetValueIfKnownShouldWork) {

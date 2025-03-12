@@ -236,7 +236,11 @@ class MVariable : public moriarty_internal::AbstractVariable {
       }
 
       return GetUniqueValueImpl(ctx);
-    } catch (const std::runtime_error&) {  // FIXME: Only catch Moriarty errors.
+    } catch (const VariableNotFound& e) {
+      // Explicitly re-throw an unknown variable. If it's unknown, we will never
+      // be able to do anything with it.
+      throw;
+    } catch (...) {  // FIXME: Only catch Moriarty errors.
       return std::nullopt;
     }
   }
@@ -296,7 +300,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // FIXME: Fix this comment.
   // This function should return an `UnsatisfiedConstraintError()`. Almost every
   // other status returned will be treated as an internal error. The exceptions
-  // are `VariableNotFound` and `ValueNotFoundError`, which will be
+  // are `VariableNotFound` and `ValueNotFound`, which will be
   // converted into an `UnsatisfiedConstraintError` before returning to the
   // user. You may find the `CheckConstraint()` helpers useful.
   virtual absl::Status IsSatisfiedWithImpl(AnalysisContext ctx,
@@ -783,11 +787,7 @@ absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
 
   // FIXME: Determine semantics of which errors are propagated.
   absl::Status status = IsSatisfiedWithImpl(ctx, value);
-  if (!status.ok()) {
-    if (IsValueNotFoundError(status))
-      return UnsatisfiedConstraintError(status.message());
-    return status;
-  }
+  if (!status.ok()) return status;
 
   for (const auto& [checker_name, checker] : custom_constraints_) {
     MORIARTY_RETURN_IF_ERROR(CheckConstraint(
@@ -880,19 +880,7 @@ template <typename V, typename G>
 absl::Status MVariable<V, G>::ValueSatisfiesConstraints(
     AnalysisContext ctx) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
-
-  try {
-    return IsSatisfiedWith(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
-  } catch (const std::runtime_error& e) {
-    std::string_view error = e.what();
-    if (error.starts_with("NOT_FOUND: Value for `")) {
-      int start = error.find('`') + 1;
-      int end = error.find('`', start);
-      return moriarty::ValueNotFoundError(error.substr(start, end - start));
-    }
-
-    throw;
-  }
+  return IsSatisfiedWith(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
 
 template <typename V, typename G>

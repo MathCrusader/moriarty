@@ -138,8 +138,7 @@ ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
     if (!status.ok()) throw std::runtime_error(status.ToString());
   }
 
-  auto generated_values =
-      moriarty_internal::GenerateAllValues(variables, values, options);
+  auto generated_values = GenerateAllValues(variables, values, options);
   if (!generated_values.ok())
     throw std::runtime_error(generated_values.status().ToString());
   return *generated_values;

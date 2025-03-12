@@ -26,8 +26,6 @@
 //  EXPECT_THAT(Generate(MInteger().Between(5, 4)), IsGenerationFailure());
 
 #include <functional>
-#include <optional>
-#include <string>
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -93,37 +91,6 @@ MATCHER_P(
       result_listener);
 }
 
-// googletest matcher checking for a Moriarty ValueNotFoundError
-MATCHER_P(IsValueNotFound, expected_variable_name,
-          absl::Substitute("$0 a Moriarty error saying that a value for the "
-                           "variable `$1` is unknown",
-                           (negation ? "is not" : "is"),
-                           expected_variable_name)) {
-  absl::Status status = moriarty_testing_internal::GetStatus(arg);
-  if (!moriarty::IsValueNotFoundError(status)) {
-    *result_listener << "received status that is not a ValueNotFoundError: "
-                     << status;
-    return false;
-  }
-
-  std::optional<std::string> unknown_variable_name =
-      moriarty::GetUnknownVariableName(status);
-  if (!unknown_variable_name.has_value()) {
-    *result_listener << "received ValueNotFoundError with no variable name";
-    return false;
-  }
-
-  if (*unknown_variable_name != expected_variable_name) {
-    *result_listener << "actual unknown variable name is `"
-                     << *unknown_variable_name << "`";
-    return false;
-  }
-
-  *result_listener << "is ValueNotFoundError for `" << expected_variable_name
-                   << "`";
-  return true;
-}
-
 MATCHER_P(ThrowsVariableNotFound, expected_variable_name,
           std::format("{} a function that throws a VariableNotFound exception "
                       "with the variable name `{}`",
@@ -150,6 +117,36 @@ MATCHER_P(ThrowsVariableNotFound, expected_variable_name,
     // Call the built-in explainer to get a better message.
     return ::testing::ExplainMatchResult(
         ::testing::Throws<moriarty::VariableNotFound>(), function,
+        result_listener);
+  }
+}
+
+MATCHER_P(ThrowsValueNotFound, expected_variable_name,
+          std::format("{} a function that throws a ValueNotFound exception "
+                      "with the variable name `{}`",
+                      (negation ? "is not" : "is"), expected_variable_name)) {
+  // This first line is to get a better compile error message when arg is not of
+  // the expected type.
+  std::function<void()> fn = arg;
+
+  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  try {
+    function();
+    *result_listener << "did not throw";
+    return false;
+  } catch (const moriarty::ValueNotFound& e) {
+    if (e.VariableName() != expected_variable_name) {
+      *result_listener
+          << "threw the expected exception, but the wrong variable name. `"
+          << e.VariableName() << "`";
+      return false;
+    }
+    *result_listener << "threw the expected exception";
+    return true;
+  } catch (...) {
+    // Call the built-in explainer to get a better message.
+    return ::testing::ExplainMatchResult(
+        ::testing::Throws<moriarty::ValueNotFound>(), function,
         result_listener);
   }
 }

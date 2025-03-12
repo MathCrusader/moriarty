@@ -36,8 +36,8 @@ namespace moriarty {
 namespace {
 
 using ::moriarty_testing::IsUnsatisfiedConstraint;
-using ::moriarty_testing::IsValueNotFound;
 using ::moriarty_testing::MTestType;
+using ::moriarty_testing::ThrowsValueNotFound;
 using ::testing::AllOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
@@ -45,6 +45,7 @@ using ::testing::Ge;
 using ::testing::HasSubstr;
 using ::testing::Le;
 using ::testing::Pair;
+using ::testing::SizeIs;
 
 // -----------------------------------------------------------------------------
 //  Import / Export / Generate Helpers
@@ -232,20 +233,20 @@ TEST(
                                   Pair(2, 22), Pair(2, 22)));
 }
 
-TEST(MoriartyDeathTest, ExportAskingForNonExistentVariableShouldCrash) {
+TEST(MoriartyTest, ExportAskingForNonExistentVariableShouldThrow) {
   moriarty::Moriarty M;
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 11));
 
   // Exporter requests N, but only R and S are set...
-  EXPECT_THROW(
-      {
+  EXPECT_THAT(
+      [&] {
         M.ExportTestCases(
             [](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
               ExportSingleIntegerToVector(ctx, "N", cases);
             });
       },
-      std::runtime_error);
+      ThrowsValueNotFound("N"));
 }
 
 TEST(MoriartyDeathTest, ExportAskingForVariableOfTheWrongTypeShouldCrash) {
@@ -303,8 +304,8 @@ TEST(MoriartyTest, GeneralConstraintsAreConsideredInGenerators) {
         result = ExportSingleIntegerToVector(ctx, "R", cases);
       });
 
-  // General says 3 <= R <= 50. Generator says 1 <= R <= 10.
-  EXPECT_THAT(result, Each(AllOf(Ge(3), Le(10))));
+  // // General says 3 <= R <= 50. Generator says 1 <= R <= 10.
+  EXPECT_THAT(result, AllOf(SizeIs(1), Each(AllOf(Ge(3), Le(10)))));
 }
 
 TEST(MoriartyTest, ImportAndExportShouldWorkTypicalCase) {
@@ -382,7 +383,8 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
       .AddVariable("q", MInteger().Between(10, 30));  // Importer uses S, not q
   M.ImportTestCases(
       [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); });
-  EXPECT_THAT(M.TryValidateTestCases(), IsValueNotFound("q"));
+  EXPECT_THAT([&] { M.TryValidateTestCases().IgnoreError(); },
+              ThrowsValueNotFound("q"));
 }
 
 // TEST(MoriartyTest, ApproximateGenerationLimitStopsGenerationEarly) {

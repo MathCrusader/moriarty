@@ -25,6 +25,7 @@
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
+using moriarty_testing::ThrowsValueNotFound;
 using moriarty_testing::ThrowsVariableNotFound;
 
 TEST(VariableOStreamContextTest, PrintNamedVariableSimpleCaseShouldWork) {
@@ -95,8 +96,8 @@ TEST(VariableOStreamContextTest, PrintVariableToWithUnknownVariableShouldFail) {
     VariableOStreamContext ctx(ss, variables, values);
 
     ConcreteTestCase test_case;
-    EXPECT_THROW(
-        { ctx.PrintVariableFrom("X", test_case); }, std::runtime_error);
+    EXPECT_THAT([&] { ctx.PrintVariableFrom("X", test_case); },
+                ThrowsValueNotFound("X"));
   }
   {  // No variable
     std::ostringstream ss;

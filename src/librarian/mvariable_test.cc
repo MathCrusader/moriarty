@@ -28,6 +28,7 @@
 #include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
 #include "src/internal/random_engine.h"
@@ -36,6 +37,7 @@
 #include "src/librarian/test_utils.h"
 #include "src/property.h"
 #include "src/testing/mtest_type.h"
+#include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/minteger.h"
 
@@ -55,6 +57,7 @@ using ::moriarty_testing::MTestType;
 using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::moriarty_testing::TestType;
+using ::moriarty_testing::ThrowsValueNotFound;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Contains;
@@ -286,13 +289,37 @@ TEST(MVariableTest, SatisfiesConstraintsWorksForValid) {
 }
 
 TEST(MVariableTest, SatisfiesConstraintsNeedsDependentValues) {
-  // No value known
-  EXPECT_THAT(MTestType().SetAdder("t").SetMultiplier(MInteger().Between(3, 3)),
-              IsNotSatisfiedWith(1, "Value for `t` not found"));
-  // Variable, but no value known.
-  EXPECT_THAT(MTestType().SetAdder("t").SetMultiplier(MInteger().Between(3, 3)),
-              IsNotSatisfiedWith(1, "Value for `t` not found",
-                                 Context().WithVariable("t", MTestType())));
+  {  // No value or variable known
+    moriarty_internal::VariableSet variables;
+    moriarty_internal::ValueSet values;
+    librarian::AnalysisContext ctx("test", variables, values);
+
+    EXPECT_THAT(
+        [&] {
+          MTestType()
+              .SetAdder("t")
+              .SetMultiplier(MInteger(Between(3, 3)))
+              .IsSatisfiedWith(ctx, 1)
+              .IgnoreError();
+        },
+        ThrowsValueNotFound("t"));
+  }
+  {  // Variable known, but no value known.
+    moriarty_internal::VariableSet variables;
+    MORIARTY_ASSERT_OK(variables.AddVariable("t", MTestType()));
+    moriarty_internal::ValueSet values;
+    librarian::AnalysisContext ctx("test", variables, values);
+
+    EXPECT_THAT(
+        [&] {
+          MTestType()
+              .SetAdder("t")
+              .SetMultiplier(MInteger(Between(3, 3)))
+              .IsSatisfiedWith(ctx, 1)
+              .IgnoreError();
+        },
+        ThrowsValueNotFound("t"));
+  }
 }
 
 TEST(MVariableTest, SatisfiesConstraintsWorksWithDependentValues) {

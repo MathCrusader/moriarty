@@ -51,7 +51,7 @@ void ValueSet::UnsafeSet(std::string_view variable_name, std::any value) {
 absl::StatusOr<std::any> ValueSet::UnsafeGet(
     std::string_view variable_name) const {
   auto it = values_.find(variable_name);
-  if (it == values_.end()) return ValueNotFoundError(variable_name);
+  if (it == values_.end()) throw ValueNotFound(variable_name);
   return it->second;
 }
 
