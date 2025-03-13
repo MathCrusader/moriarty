@@ -27,7 +27,6 @@ licenses(["notice"])
 
 cc_library(
     name = "base_constraints",
-    srcs = ["base_constraints.cc"],
     hdrs = ["base_constraints.h"],
     deps = [
     ],
