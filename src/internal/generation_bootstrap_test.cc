@@ -30,6 +30,7 @@
 #include "src/internal/variable_set.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
+#include "src/variables/constraints/base_constraints.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"
 
@@ -80,7 +81,7 @@ TEST(
   RandomEngine rng({1, 2, 3}, "");
   ValueSet known_values;
   VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger().Between(123, 456)));
+  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between(123, 456))));
   known_values.Set<MInteger>("B", 10);
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(
@@ -94,8 +95,8 @@ TEST(
 TEST(GenerationBootstrapTest, GenerateAllValuesGivesValuesToVariables) {
   RandomEngine rng({1, 2, 3}, "");
   VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger().Between(123, 456)));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MInteger().Between(777, 888)));
+  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between(123, 456))));
+  MORIARTY_ASSERT_OK(variables.AddVariable("B", MInteger(Between(777, 888))));
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(
       ValueSet values,
@@ -108,7 +109,7 @@ TEST(GenerationBootstrapTest, GenerateAllValuesGivesValuesToVariables) {
 TEST(GenerationBootstrapTest, GenerateAllValuesRespectsKnownValues) {
   RandomEngine rng({1, 2, 3}, "");
   VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger().Between(123, 456)));
+  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between(123, 456))));
   ValueSet known_values;
   known_values.Set<MInteger>("A", 314);
 
@@ -123,8 +124,8 @@ TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentVariablesSucceeds) {
   RandomEngine rng({1, 2, 3}, "");
   VariableSet variables;
   MORIARTY_ASSERT_OK(
-      variables.AddVariable("A", MInteger().Between("N", "3 * N")));
-  MORIARTY_ASSERT_OK(variables.AddVariable("N", MInteger().Between(50, 100)));
+      variables.AddVariable("A", MInteger(Between("N", "3 * N"))));
+  MORIARTY_ASSERT_OK(variables.AddVariable("N", MInteger(Between(50, 100))));
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(
       ValueSet values,
@@ -139,9 +140,9 @@ TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentValuesSucceeds) {
   RandomEngine rng({1, 2, 3}, "");
   VariableSet variables;
   MORIARTY_ASSERT_OK(
-      variables.AddVariable("A", MInteger().Between("N", "3 * N")));
-  MORIARTY_ASSERT_OK(variables.AddVariable("C", MInteger().Is("N")));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MInteger().Is("2 * C")));
+      variables.AddVariable("A", MInteger(Between("N", "3 * N"))));
+  MORIARTY_ASSERT_OK(variables.AddVariable("C", MInteger(Exactly("N"))));
+  MORIARTY_ASSERT_OK(variables.AddVariable("B", MInteger(Exactly("2 * C"))));
   ValueSet known_values;
   known_values.Set<MInteger>("N", 53);
 
@@ -160,7 +161,7 @@ TEST(GenerationBootstrapTest,
   RandomEngine rng({1, 2, 3}, "");
   VariableSet variables;
   MORIARTY_ASSERT_OK(
-      variables.AddVariable("A", MInteger().Between("N", "3 * N")));
+      variables.AddVariable("A", MInteger(Between("N", "3 * N"))));
 
   EXPECT_THAT(GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}),
               StatusIs(absl::StatusCode::kFailedPrecondition,
@@ -204,7 +205,7 @@ TEST(GenerationBootstrapTest,
      GenerateAllValuesWithAKnownValueThatIsInvalidShouldFail) {
   RandomEngine rng({1, 2, 3}, "");
   VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger().Between(123, 456)));
+  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between(123, 456))));
   ValueSet known_values;
   known_values.Set<MInteger>("A", 0);
 
@@ -215,9 +216,9 @@ TEST(GenerationBootstrapTest,
 TEST(GenerationBootstrapTest,
      GenerateAllValuesGivesStableResultsNoMatterTheInsertionOrder) {
   absl::flat_hash_map<std::string, MInteger> named_variables = {
-      {"A", MInteger().Between(111, 222)},
-      {"B", MInteger().Between(333, 444)},
-      {"C", MInteger().Between(555, 666)},
+      {"A", MInteger(Between(111, 222))},
+      {"B", MInteger(Between(333, 444))},
+      {"C", MInteger(Between(555, 666))},
   };
   std::vector<std::string> names = {"A", "B", "C"};
 
@@ -244,13 +245,13 @@ TEST(GenerationBootstrapTest,
 TEST(GenerationBootstrapTest,
      GenerateAllValuesGivesStableResultsWithDependentVariables) {
   absl::flat_hash_map<std::string, MInteger> named_variables = {
-      {"A", MInteger().Between(111, "B")},  // Forwards in alphabet. A -> B
-      {"B", MInteger().Between(222, 333)},  //
-      {"C", MInteger().Between(444, 555)},  // Backwards in alphabet. D -> C
-      {"D", MInteger().Between("C", 666)},  //
-      {"E", MInteger().Between(777, "G")},  // Two layers deep E -> G -> F
-      {"F", MInteger().Between(888, 999)},  //
-      {"G", MInteger().Between("F", 999)}};
+      {"A", MInteger(Between(111, "B"))},  // Forwards in alphabet. A -> B
+      {"B", MInteger(Between(222, 333))},  //
+      {"C", MInteger(Between(444, 555))},  // Backwards in alphabet. D -> C
+      {"D", MInteger(Between("C", 666))},  //
+      {"E", MInteger(Between(777, "G"))},  // Two layers deep E -> G -> F
+      {"F", MInteger(Between(888, 999))},  //
+      {"G", MInteger(Between("F", 999))}};
   std::vector<std::string> names = {"A", "B", "C", "D", "E", "F", "G"};
 
   // Do all 7! = 5040 permutations, check they all generate the same values.

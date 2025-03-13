@@ -26,6 +26,7 @@
 #include "src/librarian/mvariable.h"
 #include "src/librarian/test_utils.h"
 #include "src/util/test_status_macro/status_testutil.h"
+#include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/constraints/string_constraints.h"
@@ -89,7 +90,7 @@ TEST(MStringTest, ReadAtEofShouldFail) {
 TEST(MStringTest, GenerateShouldSuccessfullyComplete) {
   MString variable;
   MORIARTY_EXPECT_OK(Generate(
-      variable.OfLength(MInteger().Between(4, 11)).WithAlphabet("abc")));
+      variable.OfLength(MInteger(Between(4, 11))).WithAlphabet("abc")));
   MORIARTY_EXPECT_OK(Generate(variable.OfLength(4, 11).WithAlphabet("abc")));
   MORIARTY_EXPECT_OK(Generate(variable.OfLength(4).WithAlphabet("abc")));
 }
@@ -266,7 +267,7 @@ TEST(MStringTest, SatisfiesConstraintsShouldCheckTheAlphabetIfSet) {
 }
 
 TEST(MStringTest, SatisfiesConstraintsWithInvalidLengthShouldFail) {
-  EXPECT_THAT(MString().OfLength(MInteger().AtMost(10).AtLeast(20)),
+  EXPECT_THAT(MString().OfLength(MInteger(AtMost(10), AtLeast(20))),
               IsNotSatisfiedWith("abcde", "length"));
 }
 
@@ -282,7 +283,7 @@ TEST(MStringTest, SatisfiesConstraintsShouldCheckForDistinctCharacters) {
 TEST(MStringTest, AllOverloadsForOfLengthProduceTheSameSequenceOfData) {
   // Exact size
   EXPECT_TRUE(AllGenerateSameValues<MString>(
-      {MString().WithAlphabet("abc").OfLength(MInteger().Is(5)),
+      {MString().WithAlphabet("abc").OfLength(MInteger(Exactly(5))),
        MString().WithAlphabet("abc").OfLength(5),
        MString().WithAlphabet("abc").OfLength(5, 5),
        MString().WithAlphabet("abc").OfLength(5, "5"),
@@ -291,7 +292,7 @@ TEST(MStringTest, AllOverloadsForOfLengthProduceTheSameSequenceOfData) {
 
   // Range of sizes
   EXPECT_TRUE(AllGenerateSameValues<MString>(
-      {MString().WithAlphabet("def").OfLength(MInteger().Between(1, 9)),
+      {MString().WithAlphabet("def").OfLength(MInteger(Between(1, 9))),
        MString().WithAlphabet("def").OfLength(1, 9),
        MString().WithAlphabet("def").OfLength(1, 9),
        MString().WithAlphabet("def").OfLength(1, "9"),
@@ -412,7 +413,7 @@ TEST(MStringTest, GenerateWithoutSimplePatternOrLengthOrAlphabetShouldFail) {
 
 TEST(MStringTest, SizePropertiesGiveDifferentSizes) {
   MString str = MString()
-                    .OfLength(MInteger().Between(1, 1000))
+                    .OfLength(MInteger(Between(1, 1000)))
                     .WithAlphabet(MString::kAlphabet);
 
   // The exact values here are fuzzy and may need to change with the
@@ -480,7 +481,7 @@ TEST(MStringTest, SimplePatternShouldRespectAlphabets) {
 TEST(MStringTest, GetDifficultInstancesContainsLengthCases) {
   EXPECT_THAT(
       GenerateDifficultInstancesValues(
-          MString().OfLength(MInteger().Between(0, 10)).WithAlphabet("a")),
+          MString().OfLength(MInteger(Between(0, 10))).WithAlphabet("a")),
       IsOkAndHolds(IsSupersetOf({"", "a", "aaaaaaaaaa"})));
 }
 

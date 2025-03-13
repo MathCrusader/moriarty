@@ -149,9 +149,9 @@ TEST(TestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
   };
 
   NameVariablePair a = {"A",
-                        MTestType().SetMultiplier(MInteger().Between(1, 10))};
+                        MTestType().SetMultiplier(MInteger(Between(1, 10)))};
   NameVariablePair b = {"B",
-                        MTestType().SetMultiplier(MInteger().Between(1, 3))};
+                        MTestType().SetMultiplier(MInteger(Between(1, 3)))};
   NameVariablePair c = {"C", MTestType().SetAdder("A")};
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(auto abc, gen(a, b, c));

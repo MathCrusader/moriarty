@@ -20,7 +20,6 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <vector>
 
 #include "absl/status/status.h"
 #include "gmock/gmock.h"
@@ -28,7 +27,6 @@
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/size_property.h"
 #include "src/librarian/test_utils.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -110,239 +108,6 @@ TEST(MIntegerTest, GenerateShouldSuccessfullyComplete) {
   MORIARTY_EXPECT_OK(Generate(variable));
 }
 
-TEST(MIntegerTest, BetweenShouldRestrictTheRangeProperly) {
-  EXPECT_THAT(MInteger().Between(5, 5), GeneratedValuesAre(5));
-  EXPECT_THAT(MInteger().Between(5, 10),
-              GeneratedValuesAre(AllOf(Ge(5), Le(10))));
-  EXPECT_THAT(MInteger().Between(-1, 1),
-              GeneratedValuesAre(AllOf(Ge(-1), Le(1))));
-}
-
-TEST(MIntegerTest, RepeatedBetweenCallsShouldBeIntersectedTogether) {
-  // All possible valid intersections
-  EXPECT_TRUE(
-      GenerateSameValues(MInteger().Between(0, 30).Between(1, 10),
-                         MInteger().Between(1, 10)));  // First is a superset
-  EXPECT_TRUE(
-      GenerateSameValues(MInteger().Between(1, 10).Between(0, 30),
-                         MInteger().Between(1, 10)));  // Second is a superset
-  EXPECT_TRUE(
-      GenerateSameValues(MInteger().Between(0, 10).Between(1, 30),
-                         MInteger().Between(1, 10)));  // First on the left
-  EXPECT_TRUE(
-      GenerateSameValues(MInteger().Between(1, 30).Between(0, 10),
-                         MInteger().Between(1, 10)));  // First on the right
-  EXPECT_TRUE(GenerateSameValues(MInteger().Between(1, 8).Between(8, 10),
-                                 MInteger().Between(8, 8)));  // Singleton Range
-
-  // Several chained calls to Between should work
-  EXPECT_TRUE(
-      GenerateSameValues(MInteger().Between(1, 20).Between(3, 21).Between(2, 5),
-                         MInteger().Between(3, 5)));
-}
-
-TEST(MIntegerTest, InvalidBoundsShouldCrash) {
-  // Need to use AtMost/AtLeast here since Between will crash on its own.
-  // Min > Max
-  EXPECT_THROW(
-      { Generate(MInteger().AtMost(-1).AtLeast(0)).IgnoreError(); },
-      std::runtime_error);
-
-  // Empty intersection (First interval to the left)
-  EXPECT_THROW(
-      { Generate(MInteger().Between(1, 10).Between(20, 30)).IgnoreError(); },
-      std::runtime_error);
-
-  // Empty intersection (First interval to the right)
-  EXPECT_THROW(
-      { Generate(MInteger().Between(20, 30).Between(1, 10)).IgnoreError(); },
-      std::runtime_error);
-}
-
-// TODO(darcybest): MInteger should have an equality operator instead of this.
-TEST(MIntegerTest, MergeFromCorrectlyMerges) {
-  // All possible valid intersections
-  EXPECT_TRUE(GenerateSameValues(
-      MInteger().Between(0, 30).MergeFrom(MInteger().Between(1, 10)),
-      MInteger().Between(0, 30).Between(1, 10)));  // First superset
-  EXPECT_TRUE(GenerateSameValues(
-      MInteger().Between(1, 10).MergeFrom(MInteger().Between(0, 30)),
-      MInteger().Between(1, 10).Between(0, 30)));  // Second superset
-  EXPECT_TRUE(GenerateSameValues(
-      MInteger().Between(0, 10).MergeFrom(MInteger().Between(1, 30)),
-      MInteger().Between(0, 10).Between(1, 30)));  // First on left
-  EXPECT_TRUE(GenerateSameValues(
-      MInteger().Between(1, 30).MergeFrom(MInteger().Between(0, 10)),
-      MInteger().Between(1, 30).Between(0, 10)));  // First on  right
-  EXPECT_TRUE(GenerateSameValues(
-      MInteger().Between(1, 8).MergeFrom(MInteger().Between(8, 10)),
-      MInteger().Between(1, 8).Between(8, 10)));  // Singleton Range
-}
-
-TEST(MIntegerTest, SatisfiesConstraintsWorksForGoodData) {
-  EXPECT_THAT(MInteger().Between(1, 10), IsSatisfiedWith(5));   // Middle
-  EXPECT_THAT(MInteger().Between(1, 10), IsSatisfiedWith(1));   // Low
-  EXPECT_THAT(MInteger().Between(1, 10), IsSatisfiedWith(10));  // High
-
-  // Whole range
-  EXPECT_THAT(MInteger(), IsSatisfiedWith(0));
-  EXPECT_THAT(MInteger(), IsSatisfiedWith(std::numeric_limits<int64_t>::min()));
-  EXPECT_THAT(MInteger(), IsSatisfiedWith(std::numeric_limits<int64_t>::max()));
-}
-
-TEST(MIntegerTest, SatisfiesConstraintsWorksForBadData) {
-  EXPECT_THAT(MInteger().Between(1, 10), IsNotSatisfiedWith(0, "between"));
-  EXPECT_THAT(MInteger().Between(1, 10), IsNotSatisfiedWith(11, "between"));
-
-  // Empty range
-  EXPECT_THAT(MInteger().AtMost(0).AtLeast(1),
-              AnyOf(IsNotSatisfiedWith(0, "at least"),
-                    IsNotSatisfiedWith(0, "at most")));
-}
-
-TEST(MIntegerTest, SatisfiesConstraintsWithExpressionsShouldWorkForGoodData) {
-  EXPECT_THAT(
-      MInteger().Between(1, "3 * N + 1"),
-      IsSatisfiedWith(5, Context().WithValue<MInteger>("N", 10)));  // Mid
-  EXPECT_THAT(
-      MInteger().Between(1, "3 * N + 1"),
-      IsSatisfiedWith(1, Context().WithValue<MInteger>("N", 10)));  // Lo
-  EXPECT_THAT(
-      MInteger().Between(1, "3 * N + 1"),
-      IsSatisfiedWith(31, Context().WithValue<MInteger>("N", 10)));  // High
-}
-
-TEST(MIntegerTest, SatisfiesConstraintsWithExpressionsShouldWorkForBadData) {
-  EXPECT_THAT(
-      MInteger().Between(1, "3 * N + 1"),
-      IsNotSatisfiedWith(0, "between", Context().WithValue<MInteger>("N", 10)));
-  EXPECT_THAT(MInteger().Between(1, "3 * N + 1"),
-              IsNotSatisfiedWith(32, "between",
-                                 Context().WithValue<MInteger>("N", 10)));
-
-  moriarty_internal::ValueSet values;
-  moriarty_internal::VariableSet variables;
-  librarian::AnalysisContext ctx("_", variables, values);
-  EXPECT_THAT(
-      [&] {
-        MInteger()
-            .Between(1, "3 * N + 1")
-            .IsSatisfiedWith(ctx, 1)
-            .IgnoreError();
-      },
-      ThrowsVariableNotFound("N"));  // Both value and variable are unknown
-}
-
-TEST(MIntegerTest, AtMostAndAtLeastShouldLimitTheOutputRange) {
-  EXPECT_THAT(MInteger().AtMost(10).AtLeast(-5),
-              GeneratedValuesAre(AllOf(Le(10), Ge(-5))));
-}
-
-TEST(MIntegerTest, AtMostLargerThanAtLeastShouldFail) {
-  EXPECT_THROW(
-      { Generate(MInteger().AtLeast(10).AtMost(0)).IgnoreError(); },
-      std::runtime_error);
-
-  EXPECT_THROW(
-      {
-        Generate(MInteger().AtLeast(0).AtMost("3 * N + 1"),
-                 Context().WithValue<MInteger>("N", -3))
-            .IgnoreError();
-      },
-      std::runtime_error);
-}
-
-TEST(MIntegerDeathTest,
-     AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {
-  // We should throw a nice exception here, not ABSL die.
-  EXPECT_DEATH({ MInteger().AtLeast("3 + "); }, "operation");
-  EXPECT_DEATH({ MInteger().AtMost("+ X +"); }, "operation");
-  EXPECT_DEATH({ MInteger().Between("N + 2", "* M + M"); }, "operation");
-}
-
-TEST(MIntegerTest, AtMostAndAtLeastWithExpressionsShouldLimitTheOutputRange) {
-  // TODO(darcybest): Make GeneratedValuesAre compatible with Context instead of
-  // using GenerateLots().
-  EXPECT_THAT(GenerateLots(MInteger().AtLeast(0).AtMost("3 * N + 1"),
-                           Context().WithValue<MInteger>("N", 10)),
-              IsOkAndHolds(Each(AllOf(Ge(0), Le(31)))));
-  EXPECT_THAT(GenerateLots(MInteger().AtLeast("3 * N + 1").AtMost(50),
-                           Context().WithValue<MInteger>("N", 10)),
-              IsOkAndHolds(Each(AllOf(Ge(31), Le(50)))));
-}
-
-TEST(
-    MIntegerTest,
-    MultipleExpressionsAndConstantsInAtLeastAtMostBetweenShouldRestrictOutput) {
-  // TODO(darcybest): Make GeneratedValuesAre compatible with Context.
-  EXPECT_THAT(
-      GenerateLots(
-          MInteger().AtLeast(0).AtMost("3 * N + 1").Between("N + M", 100),
-          Context().WithValue<MInteger>("N", 10).WithValue<MInteger>("M", 15)),
-      IsOkAndHolds(Each(AllOf(Ge(0), Le(31), Ge(25), Le(100)))));
-
-  EXPECT_THAT(
-      GenerateLots(
-          MInteger()
-              .AtLeast("3 * N + 1")
-              .AtLeast("3 * M + 3")
-              .AtMost(50)
-              .AtMost("M ^ 2"),
-          Context().WithValue<MInteger>("N", 6).WithValue<MInteger>("M", 5)),
-      IsOkAndHolds(Each(AllOf(Ge(19), Ge(18), Le(50), Le(25)))));
-}
-
-TEST(MIntegerTest, AllOverloadsOfBetweenAreEffective) {
-  EXPECT_THAT(MInteger().Between(1, 10),
-              GeneratedValuesAre(AllOf(Ge(1), Le(10))));
-  EXPECT_THAT(MInteger().Between(1, "10"),
-              GeneratedValuesAre(AllOf(Ge(1), Le(10))));
-  EXPECT_THAT(MInteger().Between("1", 10),
-              GeneratedValuesAre(AllOf(Ge(1), Le(10))));
-  EXPECT_THAT(MInteger().Between("1", "10"),
-              GeneratedValuesAre(AllOf(Ge(1), Le(10))));
-}
-
-TEST(MIntegerTest, IsMIntegerExpressionShouldRestrictInput) {
-  EXPECT_THAT(Generate(MInteger().Is("3 * N + 1"),
-                       Context().WithValue<MInteger>("N", 10)),
-              IsOkAndHolds(31));
-}
-
-TEST(MIntegerTest, GetUniqueValueWorksWhenUniqueValueKnown) {
-  EXPECT_THAT(GetUniqueValue(MInteger().Between("N", "N"),
-                             Context().WithValue<MInteger>("N", 10)),
-              Optional(10));
-
-  EXPECT_THAT(GetUniqueValue(MInteger().Between(20, "2 * N"),
-                             Context().WithValue<MInteger>("N", 10)),
-              Optional(20));
-}
-
-TEST(MIntegerTest, GetUniqueValueWithNestedDependenciesShouldWork) {
-  EXPECT_THAT(GetUniqueValue(
-                  MInteger().Between("X", "Y"),
-                  Context()
-                      .WithVariable<MInteger>("X", MInteger().Is(5))
-                      .WithVariable<MInteger>("Y", MInteger().Between(5, "N"))
-                      .WithValue<MInteger>("N", 5)),
-              Optional(5));
-}
-
-TEST(MIntegerTest, GetUniqueValueFailsWhenAVariableIsUnknown) {
-  EXPECT_THAT([&] { GetUniqueValue(MInteger().Between("N", "N")); },
-              ThrowsVariableNotFound("N"));
-}
-
-TEST(MIntegerTest, GetUniqueValueShouldSucceedIfTheValueIsUnique) {
-  EXPECT_THAT(GetUniqueValue(MInteger().Between(123, 123)), Optional(123));
-  EXPECT_THAT(GetUniqueValue(MInteger().Is(456)), Optional(456));
-}
-
-TEST(MIntegerTest, GetUniqueValueFailsWhenTheValueIsNotUnique) {
-  EXPECT_EQ(GetUniqueValue(MInteger().Between(8, 10)), std::nullopt);
-}
-
 TEST(MIntegerTest, OfSizePropertyOnlyAcceptsSizeAsCategory) {
   EXPECT_THAT(
       MInteger().OfSizeProperty({.category = "wrong"}),
@@ -370,84 +135,16 @@ TEST(MIntegerTest, GetDifficultInstancesIncludesIntMinAndMaxByDefault) {
 }
 
 TEST(MIntegerTest, GetDifficultInstancesIncludesMinAndMaxValues) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MInteger().Between(123, 234)),
+  EXPECT_THAT(GenerateDifficultInstancesValues(MInteger(Between(123, 234))),
               IsOkAndHolds(IsSupersetOf({123, 234})));
 }
 
 TEST(MIntegerTest, GetDifficultInstancesValuesAreNotRepeated) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MInteger().Between(-1, 1)),
+  EXPECT_THAT(GenerateDifficultInstancesValues(MInteger(Between(-1, 1))),
               IsOkAndHolds(UnorderedElementsAre(-1, 0, 1)));
 }
 
-TEST(MIntegerTest,
-     GetDifficultInstancesForFixedNonDifficultValueFailsGeneration) {
-  librarian::AnalysisContext ctx("test", {}, {});
-  MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<MInteger> instances,
-                                MInteger().Is(1234).GetDifficultInstances(ctx));
-
-  for (MInteger instance : instances) {
-    EXPECT_THROW({ Generate(instance).IgnoreError(); }, std::runtime_error);
-  }
-}
-
-TEST(MIntegerTest, WithSizeGivesAppropriatelySizedValues) {
-  // These values here are fuzzy and may need to be changed over time. "small"
-  // might be changed over time. The bounds here are mostly just to check the
-  // approximate sizes are considered.
-
-  EXPECT_THAT(MInteger().Between(1, "10^9").WithSize(CommonSize::kMin),
-              GeneratedValuesAre(Eq(1)));
-  EXPECT_THAT(MInteger().Between(1, "10^9").WithSize(CommonSize::kTiny),
-              GeneratedValuesAre(Le(30)));
-  EXPECT_THAT(MInteger().Between(1, "10^9").WithSize(CommonSize::kSmall),
-              GeneratedValuesAre(Le(2000)));
-  EXPECT_THAT(MInteger().Between(1, "10^9").WithSize(CommonSize::kMedium),
-              GeneratedValuesAre(Le(1000000)));
-  EXPECT_THAT(MInteger().Between(1, "10^9").WithSize(CommonSize::kLarge),
-              GeneratedValuesAre(Ge(1000000)));
-  EXPECT_THAT(MInteger().Between(1, "10^9").WithSize(CommonSize::kHuge),
-              GeneratedValuesAre(Ge(500000000)));
-  EXPECT_THAT(MInteger().Between(1, "10^9").WithSize(CommonSize::kMax),
-              GeneratedValuesAre(Eq(1000000000)));
-}
-
-TEST(MIntegerTest, WithSizeBehavesWithMergeFrom) {
-  MInteger small = MInteger().Between(1, "10^9").WithSize(CommonSize::kSmall);
-  MInteger tiny = MInteger().Between(1, "10^9").WithSize(CommonSize::kTiny);
-  MInteger large = MInteger().Between(1, "10^9").WithSize(CommonSize::kLarge);
-  MInteger any = MInteger().Between(1, "10^9").WithSize(CommonSize::kAny);
-
-  {
-    EXPECT_FALSE(GenerateSameValues(small, tiny));
-    MORIARTY_EXPECT_OK(small.TryMergeFrom(tiny));
-    EXPECT_TRUE(GenerateSameValues(small, tiny));
-  }
-  {
-    EXPECT_FALSE(GenerateSameValues(any, large));
-    MORIARTY_EXPECT_OK(any.TryMergeFrom(large));
-    EXPECT_TRUE(GenerateSameValues(any, large));
-  }
-
-  EXPECT_THAT(tiny.TryMergeFrom(large),
-              StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("size")));
-}
-
-TEST(MIntegerTest, ToStringWorks) {
-  EXPECT_THAT(MInteger().ToString(), HasSubstr("MInteger"));
-  EXPECT_THAT(MInteger().Between(1, 10).ToString(), HasSubstr("[1, 10]"));
-  EXPECT_THAT(MInteger().WithSize(CommonSize::kSmall).ToString(),
-              HasSubstr("mall"));  // [S|s]mall
-  EXPECT_THAT(MInteger().Between(1, 5).WithSize(CommonSize::kSmall).ToString(),
-              AllOf(HasSubstr("[1, 5]"), HasSubstr("mall")));  // [S|s]mall
-}
-
-// -----------------------------------------------------------------------------
-//  Tests for the non-builder version of MInteger's API
-//  These are copies of the above functions, but with the builder version of
-//  MInteger replaced with the non-builder version.
-// -----------------------------------------------------------------------------
-
-TEST(MIntegerNonBuilderTest, BetweenShouldRestrictTheRangeProperly) {
+TEST(MIntegerTest, BetweenShouldRestrictTheRangeProperly) {
   EXPECT_THAT(MInteger(Between(5, 5)), GeneratedValuesAre(5));
   EXPECT_THAT(MInteger(Between(5, 10)),
               GeneratedValuesAre(AllOf(Ge(5), Le(10))));
@@ -455,7 +152,7 @@ TEST(MIntegerNonBuilderTest, BetweenShouldRestrictTheRangeProperly) {
               GeneratedValuesAre(AllOf(Ge(-1), Le(1))));
 }
 
-TEST(MIntegerNonBuilderTest, RepeatedBetweenCallsShouldBeIntersectedTogether) {
+TEST(MIntegerTest, RepeatedBetweenCallsShouldBeIntersectedTogether) {
   // All possible valid intersections
   EXPECT_TRUE(
       GenerateSameValues(MInteger(Between(0, 30), Between(1, 10)),
@@ -478,7 +175,7 @@ TEST(MIntegerNonBuilderTest, RepeatedBetweenCallsShouldBeIntersectedTogether) {
       MInteger(Between(3, 5))));
 }
 
-TEST(MIntegerNonBuilderTest, InvalidBoundsShouldCrash) {
+TEST(MIntegerTest, InvalidBoundsShouldCrash) {
   // Need to use AtMost/AtLeast here since Between will crash on its own.
   // Min > Max
   EXPECT_THROW(
@@ -497,7 +194,7 @@ TEST(MIntegerNonBuilderTest, InvalidBoundsShouldCrash) {
 }
 
 // TODO(darcybest): MInteger should have an equality operator instead of this.
-TEST(MIntegerNonBuilderTest, MergeFromCorrectlyMerges) {
+TEST(MIntegerTest, MergeFromCorrectlyMerges) {
   // All possible valid intersections
   EXPECT_TRUE(GenerateSameValues(
       MInteger(Between(0, 30)).MergeFrom(MInteger(Between(1, 10))),
@@ -516,7 +213,7 @@ TEST(MIntegerNonBuilderTest, MergeFromCorrectlyMerges) {
       MInteger(Between(1, 8), Between(8, 10))));  // Singleton Range
 }
 
-TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForGoodData) {
+TEST(MIntegerTest, SatisfiesConstraintsWorksForGoodData) {
   EXPECT_THAT(MInteger(Between(1, 10)), IsSatisfiedWith(5));   // Middle
   EXPECT_THAT(MInteger(Between(1, 10)), IsSatisfiedWith(1));   // Low
   EXPECT_THAT(MInteger(Between(1, 10)), IsSatisfiedWith(10));  // High
@@ -527,7 +224,7 @@ TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForGoodData) {
   EXPECT_THAT(MInteger(), IsSatisfiedWith(std::numeric_limits<int64_t>::max()));
 }
 
-TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForBadData) {
+TEST(MIntegerTest, SatisfiesConstraintsWorksForBadData) {
   EXPECT_THAT(MInteger(Between(1, 10)), IsNotSatisfiedWith(0, "between"));
   EXPECT_THAT(MInteger(Between(1, 10)), IsNotSatisfiedWith(11, "between"));
 
@@ -537,8 +234,7 @@ TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForBadData) {
                     IsNotSatisfiedWith(0, "at most")));
 }
 
-TEST(MIntegerNonBuilderTest,
-     SatisfiesConstraintsWithExpressionsShouldWorkForGoodData) {
+TEST(MIntegerTest, SatisfiesConstraintsWithExpressionsShouldWorkForGoodData) {
   EXPECT_THAT(
       MInteger(Between(1, "3 * N + 1")),
       IsSatisfiedWith(5, Context().WithValue<MInteger>("N", 10)));  // Mid
@@ -550,8 +246,7 @@ TEST(MIntegerNonBuilderTest,
       IsSatisfiedWith(31, Context().WithValue<MInteger>("N", 10)));  // High
 }
 
-TEST(MIntegerNonBuilderTest,
-     SatisfiesConstraintsWithExpressionsShouldWorkForBadData) {
+TEST(MIntegerTest, SatisfiesConstraintsWithExpressionsShouldWorkForBadData) {
   EXPECT_THAT(
       MInteger(Between(1, "3 * N + 1")),
       IsNotSatisfiedWith(0, "between", Context().WithValue<MInteger>("N", 10)));
@@ -571,12 +266,12 @@ TEST(MIntegerNonBuilderTest,
       ThrowsVariableNotFound("N"));
 }
 
-TEST(MIntegerNonBuilderTest, AtMostAndAtLeastShouldLimitTheOutputRange) {
+TEST(MIntegerTest, AtMostAndAtLeastShouldLimitTheOutputRange) {
   EXPECT_THAT(MInteger(AtMost(10), AtLeast(-5)),
               GeneratedValuesAre(AllOf(Le(10), Ge(-5))));
 }
 
-TEST(MIntegerNonBuilderTest, AtMostLargerThanAtLeastShouldFail) {
+TEST(MIntegerTest, AtMostLargerThanAtLeastShouldFail) {
   EXPECT_THROW(
       { Generate(MInteger(AtLeast(10), AtMost(0))).IgnoreError(); },
       std::runtime_error);
@@ -598,8 +293,7 @@ TEST(MIntegerNonBuilderDeathTest,
   EXPECT_DEATH({ MInteger(Between("N + 2", "* M + M")); }, "operation");
 }
 
-TEST(MIntegerNonBuilderTest,
-     AtMostAndAtLeastWithExpressionsShouldLimitTheOutputRange) {
+TEST(MIntegerTest, AtMostAndAtLeastWithExpressionsShouldLimitTheOutputRange) {
   // TODO(darcybest): Make GeneratedValuesAre compatible with Context instead of
   // using GenerateLots().
   EXPECT_THAT(GenerateLots(MInteger(AtLeast(0), AtMost("3 * N + 1")),
@@ -611,7 +305,7 @@ TEST(MIntegerNonBuilderTest,
 }
 
 TEST(
-    MIntegerNonBuilderTest,
+    MIntegerTest,
     MultipleExpressionsAndConstantsInAtLeastAtMostBetweenShouldRestrictOutput) {
   // TODO(darcybest): Make GeneratedValuesAre compatible with Context.
   EXPECT_THAT(
@@ -628,7 +322,7 @@ TEST(
       IsOkAndHolds(Each(AllOf(Ge(19), Ge(18), Le(50), Le(25)))));
 }
 
-TEST(MIntegerNonBuilderTest, AllOverloadsOfExactlyAreEffective) {
+TEST(MIntegerTest, AllOverloadsOfExactlyAreEffective) {
   {  // No variables
     EXPECT_THAT(MInteger(Exactly(10)), GeneratedValuesAre(10));
     EXPECT_THAT(MInteger(Exactly("10")), GeneratedValuesAre(10));
@@ -645,7 +339,7 @@ TEST(MIntegerNonBuilderTest, AllOverloadsOfExactlyAreEffective) {
   }
 }
 
-TEST(MIntegerNonBuilderTest, AllOverloadsOfBetweenAreEffective) {
+TEST(MIntegerTest, AllOverloadsOfBetweenAreEffective) {
   EXPECT_THAT(MInteger(Between(1, 10)),
               GeneratedValuesAre(AllOf(Ge(1), Le(10))));
   EXPECT_THAT(MInteger(Between(1, "10")),
@@ -656,13 +350,13 @@ TEST(MIntegerNonBuilderTest, AllOverloadsOfBetweenAreEffective) {
               GeneratedValuesAre(AllOf(Ge(1), Le(10))));
 }
 
-TEST(MIntegerNonBuilderTest, IsMIntegerExpressionShouldRestrictInput) {
+TEST(MIntegerTest, IsMIntegerExpressionShouldRestrictInput) {
   EXPECT_THAT(Generate(MInteger(Exactly("3 * N + 1")),
                        Context().WithValue<MInteger>("N", 10)),
               IsOkAndHolds(31));
 }
 
-TEST(MIntegerNonBuilderTest, GetUniqueValueWorksWhenUniqueValueKnown) {
+TEST(MIntegerTest, GetUniqueValueWorksWhenUniqueValueKnown) {
   EXPECT_THAT(GetUniqueValue(MInteger(Between("N", "N")),
                              Context().WithValue<MInteger>("N", 10)),
               Optional(10));
@@ -672,7 +366,7 @@ TEST(MIntegerNonBuilderTest, GetUniqueValueWorksWhenUniqueValueKnown) {
               Optional(20));
 }
 
-TEST(MIntegerNonBuilderTest, GetUniqueValueWithNestedDependenciesShouldWork) {
+TEST(MIntegerTest, GetUniqueValueWithNestedDependenciesShouldWork) {
   EXPECT_THAT(
       GetUniqueValue(MInteger(Between("X", "Y")),
                      Context()
@@ -682,59 +376,21 @@ TEST(MIntegerNonBuilderTest, GetUniqueValueWithNestedDependenciesShouldWork) {
       Optional(5));
 }
 
-TEST(MIntegerNonBuilderTest, GetUniqueValueFailsWhenAVariableIsUnknown) {
+TEST(MIntegerTest, GetUniqueValueFailsWhenAVariableIsUnknown) {
   EXPECT_THAT([&] { GetUniqueValue(MInteger(Between("N", "N"))); },
               ThrowsVariableNotFound("N"));
 }
 
-TEST(MIntegerNonBuilderTest, GetUniqueValueShouldSucceedIfTheValueIsUnique) {
+TEST(MIntegerTest, GetUniqueValueShouldSucceedIfTheValueIsUnique) {
   EXPECT_THAT(GetUniqueValue(MInteger(Between(123, 123))), Optional(123));
   EXPECT_THAT(GetUniqueValue(MInteger(Exactly(456))), Optional(456));
 }
 
-TEST(MIntegerNonBuilderTest, GetUniqueValueFailsWhenTheValueIsNotUnique) {
+TEST(MIntegerTest, GetUniqueValueFailsWhenTheValueIsNotUnique) {
   EXPECT_EQ(GetUniqueValue(MInteger(Between(8, 10))), std::nullopt);
 }
 
-TEST(MIntegerNonBuilderTest, OfSizePropertyOnlyAcceptsSizeAsCategory) {
-  EXPECT_THAT(
-      MInteger().OfSizeProperty({.category = "wrong"}),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("category")));
-}
-
-TEST(MIntegerNonBuilderTest, OfSizePropertyOnlyAcceptsKnownSizes) {
-  EXPECT_THAT(
-      MInteger().OfSizeProperty(
-          {.category = "size", .descriptor = "unknown_type"}),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("Unknown size")));
-}
-
-TEST(MIntegerNonBuilderTest,
-     GetDifficultInstancesIncludesManyInterestingValues) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MInteger()),
-              IsOkAndHolds(IsSupersetOf(
-                  {0LL, 1LL, 2LL, -1LL, 1LL << 32, (1LL << 62) - 1})));
-}
-
-TEST(MIntegerNonBuilderTest,
-     GetDifficultInstancesIncludesIntMinAndMaxByDefault) {
-  EXPECT_THAT(
-      GenerateDifficultInstancesValues(MInteger()),
-      IsOkAndHolds(IsSupersetOf({std::numeric_limits<int64_t>::min(),
-                                 std::numeric_limits<int64_t>::max()})));
-}
-
-TEST(MIntegerNonBuilderTest, GetDifficultInstancesIncludesMinAndMaxValues) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MInteger(Between(123, 234))),
-              IsOkAndHolds(IsSupersetOf({123, 234})));
-}
-
-TEST(MIntegerNonBuilderTest, GetDifficultInstancesValuesAreNotRepeated) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MInteger(Between(-1, 1))),
-              IsOkAndHolds(UnorderedElementsAre(-1, 0, 1)));
-}
-
-TEST(MIntegerNonBuilderTest, WithSizeGivesAppropriatelySizedValues) {
+TEST(MIntegerTest, WithSizeGivesAppropriatelySizedValues) {
   // These values here are fuzzy and may need to be changed over time. "small"
   // might be changed over time. The bounds here are mostly just to check the
   // approximate sizes are considered.
@@ -755,7 +411,7 @@ TEST(MIntegerNonBuilderTest, WithSizeGivesAppropriatelySizedValues) {
               GeneratedValuesAre(Eq(1000000000)));
 }
 
-TEST(MIntegerNonBuilderTest, WithSizeBehavesWithMergeFrom) {
+TEST(MIntegerTest, WithSizeBehavesWithMergeFrom) {
   MInteger small = MInteger(Between(1, "10^9"), SizeCategory::Small());
   MInteger tiny = MInteger(Between(1, "10^9"), SizeCategory::Tiny());
   MInteger large = MInteger(Between(1, "10^9"), SizeCategory::Large());
@@ -776,7 +432,7 @@ TEST(MIntegerNonBuilderTest, WithSizeBehavesWithMergeFrom) {
               StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("size")));
 }
 
-TEST(MIntegerNonBuilderTest, ToStringWorks) {
+TEST(MIntegerTest, ToStringWorks) {
   EXPECT_THAT(MInteger().ToString(), HasSubstr("MInteger"));
   EXPECT_THAT(MInteger(Between(1, 10)).ToString(), HasSubstr("[1, 10]"));
   EXPECT_THAT(MInteger(SizeCategory::Small()).ToString(),
@@ -785,7 +441,7 @@ TEST(MIntegerNonBuilderTest, ToStringWorks) {
               AllOf(HasSubstr("[1, 5]"), HasSubstr("mall")));  // [S|s]mall
 }
 
-TEST(MIntegerNonBuilderTest, InvalidSizeCombinationsFailGeneration) {
+TEST(MIntegerTest, InvalidSizeCombinationsFailGeneration) {
   EXPECT_THAT(
       Generate(MInteger(SizeCategory::Small(), SizeCategory::Large())),
       StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("size")));
@@ -810,7 +466,7 @@ TEST(MIntegerNonBuilderTest, InvalidSizeCombinationsFailGeneration) {
               HasSubstr("Invalid size"));
 }
 
-TEST(MIntegerNonBuilderTest, InvalidExpressionsShouldFail) {
+TEST(MIntegerTest, InvalidExpressionsShouldFail) {
   // TODO: These should all throw, not die or status.
   EXPECT_DEATH(
       { Generate(MInteger(Exactly("N + "))).IgnoreError(); }, "operation");

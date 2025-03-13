@@ -292,7 +292,7 @@ TEST(MoriartyTest, GeneralConstraintsSetValueAreConsideredInGenerators) {
 TEST(MoriartyTest, GeneralConstraintsAreConsideredInGenerators) {
   moriarty::Moriarty M;
   M.SetSeed("abcde0123456789");
-  M.AddVariable("R", MInteger().Between(3, 50));
+  M.AddVariable("R", MInteger(Between(3, 50)));
   M.GenerateTestCases([](GenerateContext ctx) -> std::vector<TestCase> {
     return {
         TestCase().ConstrainVariable<MInteger>("R", MInteger(Between(1, 10)))};
@@ -379,8 +379,8 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSomeVariableInvalid) {
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
   Moriarty M;
-  M.AddVariable("R", MInteger().Between(1, 3))
-      .AddVariable("q", MInteger().Between(10, 30));  // Importer uses S, not q
+  M.AddVariable("R", MInteger(Between(1, 3)))
+      .AddVariable("q", MInteger(Between(10, 30)));  // Importer uses S, not q
   M.ImportTestCases(
       [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); });
   EXPECT_THAT([&] { M.TryValidateTestCases().IgnoreError(); },

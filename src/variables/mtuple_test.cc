@@ -137,7 +137,7 @@ TEST(MTupleTest, ReadingTheWrongTypeShouldFail) {
 TEST(MTupleTest, SimpleGenerateCaseWorks) {
   MORIARTY_ASSERT_OK_AND_ASSIGN(
       (std::tuple<int64_t, int64_t> t),
-      Generate(MTuple(MInteger().Between(1, 10), MInteger().Between(30, 40))));
+      Generate(MTuple(MInteger(Between(1, 10)), MInteger(Between(30, 40)))));
 
   EXPECT_THAT(std::get<0>(t), AllOf(Ge(1), Le(10)));
   EXPECT_THAT(std::get<1>(t), AllOf(Ge(30), Le(40)));
@@ -145,8 +145,8 @@ TEST(MTupleTest, SimpleGenerateCaseWorks) {
 
 TEST(MTupleTest, NestedMTupleWorksWithGenerate) {
   MTuple A =
-      MTuple(MInteger().Between(0, 9),
-             MTuple(MInteger().Between(10, 99), MInteger().Between(100, 999)));
+      MTuple(MInteger(Between(0, 9)),
+             MTuple(MInteger(Between(10, 99)), MInteger(Between(100, 999))));
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(
       (std::tuple<int64_t, std::tuple<int64_t, int64_t>> t), Generate(A));
@@ -167,23 +167,23 @@ TEST(MTupleTest, GenerateShouldSuccessfullyComplete) {
 
 TEST(MTupleTest, MergeFromCorrectlyMergesEachArgument) {
   {
-    MTuple a = MTuple(MInteger().Between(1, 10), MInteger().Between(20, 30));
-    MTuple b = MTuple(MInteger().Between(5, 15), MInteger().Between(22, 25));
-    MTuple c = MTuple(MInteger().Between(5, 10), MInteger().Between(22, 25));
+    MTuple a = MTuple(MInteger(Between(1, 10)), MInteger(Between(20, 30)));
+    MTuple b = MTuple(MInteger(Between(5, 15)), MInteger(Between(22, 25)));
+    MTuple c = MTuple(MInteger(Between(5, 10)), MInteger(Between(22, 25)));
 
     EXPECT_TRUE(GenerateSameValues(a.MergeFrom(b), c));
   }
 
   {
     MTuple a =
-        MTuple(MInteger().Between(1, 10),
-               MTuple(MInteger().Between(20, 30), MInteger().Between(40, 50)));
+        MTuple(MInteger(Between(1, 10)),
+               MTuple(MInteger(Between(20, 30)), MInteger(Between(40, 50))));
     MTuple b =
-        MTuple(MInteger().Between(5, 15),
-               MTuple(MInteger().Between(22, 25), MInteger().Between(34, 45)));
+        MTuple(MInteger(Between(5, 15)),
+               MTuple(MInteger(Between(22, 25)), MInteger(Between(34, 45))));
     MTuple c =
-        MTuple(MInteger().Between(5, 10),
-               MTuple(MInteger().Between(22, 25), MInteger().Between(40, 45)));
+        MTuple(MInteger(Between(5, 10)),
+               MTuple(MInteger(Between(22, 25)), MInteger(Between(40, 45))));
 
     EXPECT_TRUE(GenerateSameValues(a.MergeFrom(b), c));
   }
@@ -191,21 +191,21 @@ TEST(MTupleTest, MergeFromCorrectlyMergesEachArgument) {
 
 TEST(MTupleTest, OfShouldMergeIndependentArguments) {
   {
-    MTuple a = MTuple(MInteger().Between(1, 10), MInteger().Between(20, 30));
-    MTuple b = MTuple(MInteger().Between(5, 10), MInteger().Between(20, 30));
-    MInteger restrict_a = MInteger().Between(5, 15);
+    MTuple a = MTuple(MInteger(Between(1, 10)), MInteger(Between(20, 30)));
+    MTuple b = MTuple(MInteger(Between(5, 10)), MInteger(Between(20, 30)));
+    MInteger restrict_a = MInteger(Between(5, 15));
 
     EXPECT_TRUE(GenerateSameValues(a.Of<0>(restrict_a), b));
   }
 
   {
     MTuple a =
-        MTuple(MInteger().Between(1, 10),
-               MTuple(MInteger().Between(20, 30), MInteger().Between(40, 50)));
+        MTuple(MInteger(Between(1, 10)),
+               MTuple(MInteger(Between(20, 30)), MInteger(Between(40, 50))));
     MTuple b =
-        MTuple(MInteger().Between(1, 10),
-               MTuple(MInteger().Between(22, 30), MInteger().Between(40, 50)));
-    MInteger restrict_a = MInteger().Between(22, 40);
+        MTuple(MInteger(Between(1, 10)),
+               MTuple(MInteger(Between(22, 30)), MInteger(Between(40, 50))));
+    MInteger restrict_a = MInteger(Between(22, 40));
 
     EXPECT_TRUE(GenerateSameValues(a.Of<1>(MTuple(restrict_a, MInteger())), b));
   }
@@ -214,26 +214,25 @@ TEST(MTupleTest, OfShouldMergeIndependentArguments) {
 TEST(MTupleTest, SatisfiesConstraintsWorksForValid) {
   {  // Simple
     MTuple constraints =
-        MTuple(MInteger().Between(100, 111), MInteger().Between(200, 222));
+        MTuple(MInteger(Between(100, 111)), MInteger(Between(200, 222)));
     EXPECT_THAT(constraints,
                 IsSatisfiedWith(std::tuple<int64_t, int64_t>({105, 205})));
   }
 
   {  // Nested [1, [2, 3]]
     MTuple constraints = MTuple(
-        MInteger().Between(100, 111),
-        MTuple(MInteger().Between(200, 222), MInteger().Between(300, 333)));
+        MInteger(Between(100, 111)),
+        MTuple(MInteger(Between(200, 222)), MInteger(Between(300, 333))));
     using TupleType = std::tuple<int64_t, std::tuple<int64_t, int64_t>>;
     EXPECT_THAT(constraints, IsSatisfiedWith(TupleType({105, {205, 305}})));
   }
 
   {  // Very nested [1, [[2, 3], [4, 5, 6]]]
     MTuple constraints = MTuple(
-        MInteger().Between(100, 111),
-        MTuple(
-            MTuple(MInteger().Between(200, 222), MInteger().Between(300, 333)),
-            MTuple(MInteger().Between(400, 444), MInteger().Between(500, 555),
-                   MInteger().Between(600, 666))));
+        MInteger(Between(100, 111)),
+        MTuple(MTuple(MInteger(Between(200, 222)), MInteger(Between(300, 333))),
+               MTuple(MInteger(Between(400, 444)), MInteger(Between(500, 555)),
+                      MInteger(Between(600, 666)))));
     using TupleType =
         std::tuple<int64_t, std::tuple<std::tuple<int64_t, int64_t>,
                                        std::tuple<int64_t, int64_t, int64_t>>>;
@@ -245,7 +244,7 @@ TEST(MTupleTest, SatisfiesConstraintsWorksForValid) {
 TEST(MTupleTest, SatisfiesConstraintsWorksForInvalid) {
   {  // Simple
     MTuple constraints =
-        MTuple(MInteger().Between(100, 111), MInteger().Between(200, 222));
+        MTuple(MInteger(Between(100, 111)), MInteger(Between(200, 222)));
     using Type = std::tuple<int64_t, int64_t>;
 
     EXPECT_THAT(constraints, IsNotSatisfiedWith(Type{0, 205},
@@ -258,8 +257,8 @@ TEST(MTupleTest, SatisfiesConstraintsWorksForInvalid) {
 
   {  // Nested [1, [2, 3]]
     MTuple constraints = MTuple(
-        MInteger().Between(100, 111),
-        MTuple(MInteger().Between(200, 222), MInteger().Between(300, 333)));
+        MInteger(Between(100, 111)),
+        MTuple(MInteger(Between(200, 222)), MInteger(Between(300, 333))));
     using Type = std::tuple<int64_t, std::tuple<int64_t, int64_t>>;
 
     EXPECT_THAT(constraints,
@@ -277,7 +276,7 @@ TEST(MTupleTest, PropertiesArePassedToEachComponent) {
   // The exact value of 100 and 10^6 here are fuzzy and may need to change with
   // the meaning of "small".
   EXPECT_THAT(
-      MTuple(MInteger().Between(1, 1000), MInteger().Between(1, 1000))
+      MTuple(MInteger(Between(1, 1000)), MInteger(Between(1, 1000)))
           .WithKnownProperty({.category = "size", .descriptor = "small"}),
       GeneratedValuesAre(FieldsAre(Le(100L), Le(100L))));
 }
@@ -286,10 +285,10 @@ TEST(MTupleTest, PropertiesCanBePassedToMultipleDifferentTypes) {
   // The exact value of 100 here is fuzzy and may need to change with the
   // meaning of "small".
   EXPECT_THAT(
-      MTuple(MInteger().Between(1, 1000),
+      MTuple(MInteger(Between(1, 1000)),
              MString()
                  .WithAlphabet(MString::kNumbers)
-                 .OfLength(MInteger().Between(1, 1000)))
+                 .OfLength(MInteger(Between(1, 1000))))
           .WithKnownProperty({.category = "size", .descriptor = "small"}),
       GeneratedValuesAre(FieldsAre(Le(100L), SizeIs(Le(100L)))));
 }

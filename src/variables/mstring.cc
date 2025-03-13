@@ -240,7 +240,7 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
   MInteger length_local = *length_;
 
   // Negative string length is impossible.
-  length_local.AtLeast(0);
+  length_local.AddConstraint(AtLeast(0));
 
   if (length_size_property_) {
     auto status = length_local.OfSizeProperty(*length_size_property_);
@@ -250,7 +250,7 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
   }
 
   std::optional<int64_t> generation_limit = ctx.GetSoftGenerationLimit();
-  if (generation_limit) length_local.AtMost(*generation_limit);
+  if (generation_limit) length_local.AddConstraint(AtMost(*generation_limit));
 
   if (distinct_characters_) return GenerateImplWithDistinctCharacters(ctx);
 
@@ -282,7 +282,8 @@ std::string MString::GenerateImplWithDistinctCharacters(
   // Creating a copy in case the alphabet changes in the future, we don't want
   // to limit the length forever.
   MInteger mlength = *length_;
-  mlength.AtMost(alphabet_->size());  // Each char appears at most once.
+  // Each char appears at most once.
+  mlength.AddConstraint(AtMost(alphabet_->size()));
   int length = mlength.Generate(ctx.ForSubVariable("length"));
 
   std::vector<char> alphabet(alphabet_->begin(), alphabet_->end());

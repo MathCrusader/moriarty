@@ -65,23 +65,21 @@ MInteger& MInteger::AddConstraint(const Exactly<std::string>& constraint) {
   return AddConstraint(ExactlyIntegerExpression(constraint.GetValue()));
 }
 
-MInteger& MInteger::AddConstraint(const class Between& constraint) {
+MInteger& MInteger::AddConstraint(const Between& constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(
-      RangeConstraint(std::make_unique<class Between>(constraint)));
+  NewAddConstraint(RangeConstraint(std::make_unique<Between>(constraint)));
   return *this;
 }
 
-MInteger& MInteger::AddConstraint(const class AtMost& constraint) {
+MInteger& MInteger::AddConstraint(const AtMost& constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(RangeConstraint(std::make_unique<class AtMost>(constraint)));
+  NewAddConstraint(RangeConstraint(std::make_unique<AtMost>(constraint)));
   return *this;
 }
 
-MInteger& MInteger::AddConstraint(const class AtLeast& constraint) {
+MInteger& MInteger::AddConstraint(const AtLeast& constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(
-      RangeConstraint(std::make_unique<class AtLeast>(constraint)));
+  NewAddConstraint(RangeConstraint(std::make_unique<AtLeast>(constraint)));
   return *this;
 }
 
@@ -97,48 +95,6 @@ MInteger& MInteger::AddConstraint(const SizeCategory& constraint) {
                          librarian::ToString(approx_size_))));
   }
   return *this;
-}
-
-MInteger& MInteger::Is(std::string_view integer_expression) {
-  return AddConstraint(Exactly(integer_expression));
-}
-
-MInteger& MInteger::Between(int64_t minimum, int64_t maximum) {
-  return AddConstraint(::moriarty::Between(minimum, maximum));
-}
-
-MInteger& MInteger::Between(std::string_view minimum_integer_expression,
-                            std::string_view maximum_integer_expression) {
-  return AddConstraint(::moriarty::Between(minimum_integer_expression,
-                                           maximum_integer_expression));
-}
-
-MInteger& MInteger::Between(int64_t minimum,
-                            std::string_view maximum_integer_expression) {
-  return AddConstraint(
-      ::moriarty::Between(minimum, maximum_integer_expression));
-}
-
-MInteger& MInteger::Between(std::string_view minimum_integer_expression,
-                            int64_t maximum) {
-  return AddConstraint(
-      ::moriarty::Between(minimum_integer_expression, maximum));
-}
-
-MInteger& MInteger::AtLeast(int64_t minimum) {
-  return AddConstraint(::moriarty::AtLeast(minimum));
-}
-
-MInteger& MInteger::AtLeast(std::string_view minimum_integer_expression) {
-  return AddConstraint(::moriarty::AtLeast(minimum_integer_expression));
-}
-
-MInteger& MInteger::AtMost(int64_t maximum) {
-  return AddConstraint(::moriarty::AtMost(maximum));
-}
-
-MInteger& MInteger::AtMost(std::string_view maximum_integer_expression) {
-  return AddConstraint(::moriarty::AtMost(maximum_integer_expression));
 }
 
 std::optional<int64_t> MInteger::GetUniqueValueImpl(
@@ -191,10 +147,6 @@ absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues(
   return *extremes;
 }
 
-MInteger& MInteger::WithSize(CommonSize size) {
-  return AddConstraint(SizeCategory(size));
-}
-
 absl::Status MInteger::OfSizeProperty(Property property) {
   if (property.category != "size") {
     return absl::InvalidArgumentError(
@@ -207,7 +159,7 @@ absl::Status MInteger::OfSizeProperty(Property property) {
         absl::Substitute("Unknown size: $0", property.descriptor));
   }
 
-  WithSize(size);
+  AddConstraint(SizeCategory(size));
   return absl::OkStatus();
 }
 
@@ -262,7 +214,7 @@ absl::Status MInteger::MergeFromImpl(const MInteger& other) {
     return absl::InvalidArgumentError(
         "Attempting to merge MIntegers with different size properties.");
   }
-  WithSize(*merged_size);
+  approx_size_ = *merged_size;
 
   return absl::OkStatus();
 }

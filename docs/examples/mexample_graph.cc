@@ -25,6 +25,7 @@
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
 #include "src/util/status_macro/status_macros.h"
+#include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty_examples {
@@ -68,7 +69,7 @@ ExampleGraph MExampleGraph::GenerateImpl(
 
   if (is_connected_ && num_edges < num_nodes - 1) {
     moriarty::MInteger num_edges_copy = *num_edges_;
-    num_edges_copy.AtLeast(num_nodes - 1);
+    num_edges_copy.AddConstraint(moriarty::AtLeast(num_nodes - 1));
     num_edges = num_edges_copy.Generate(ctx.ForSubVariable("num_edges"));
   }
 

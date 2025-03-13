@@ -26,6 +26,8 @@
 #include "src/test_case.h"
 #include "src/variables/minteger.h"
 
+using ::moriarty::Between;
+using ::moriarty::Exactly;
 using ::moriarty::MInteger;
 using ::moriarty::Moriarty;
 using ::moriarty_examples::ExampleGraph;
@@ -48,11 +50,10 @@ int main() {
       Moriarty()
           .SetName("Example Graph Codelab")
           .SetSeed("b34ibhfberogh4tjbsfg843jf1s")
-          .AddVariable("N", MInteger().Between(5, 10))
-          .AddVariable("G",
-                       MExampleGraph()
-                           .WithNumNodes(MInteger().Is("N"))
-                           .WithNumEdges(MInteger().Between("N", "2 * N")));
+          .AddVariable("N", MInteger(Between(5, 10)))
+          .AddVariable("G", MExampleGraph()
+                                .WithNumNodes(MInteger(Exactly("N")))
+                                .WithNumEdges(MInteger(Between("N", "2 * N"))));
 
   // Random generation of test cases
   M.GenerateTestCases(

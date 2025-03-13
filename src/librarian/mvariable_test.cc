@@ -174,7 +174,7 @@ TEST(MVariableTest, MergeFromUsingAbstractVariablesShouldRespectIsAndIsOneOf) {
 }
 
 TEST(MVariableTest, SubvariablesShouldBeSetableAndUseable) {
-  MTestType var = MTestType().SetMultiplier(MInteger().Between(2, 2));
+  MTestType var = MTestType().SetMultiplier(MInteger(Between(2, 2)));
 
   EXPECT_THAT(Generate(var), IsOkAndHolds(2 * MTestType::kGeneratedValue));
 }
@@ -221,10 +221,10 @@ TEST(MVariableTest, DependentVariablesInSubvariablesCanChain) {
 
 TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
   moriarty_internal::VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger().Between("N", "N")));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MInteger().Between("N", "N")));
+  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between("N", "N"))));
+  MORIARTY_ASSERT_OK(variables.AddVariable("B", MInteger(Between("N", "N"))));
   MORIARTY_ASSERT_OK(
-      variables.AddVariable("N", MInteger().Between(1, 1000000000)));
+      variables.AddVariable("N", MInteger(Between(1, 1000000000))));
 
   moriarty_internal::ValueSet values;
 
@@ -277,14 +277,14 @@ TEST(MVariableTest, SatisfiesConstraintsWorksForValid) {
 
   // Now set the multiplier. The number must be a multiple of something in the
   // range.
-  EXPECT_THAT(MTestType().SetMultiplier(MInteger().Between(5, 5)),
+  EXPECT_THAT(MTestType().SetMultiplier(MInteger(Between(5, 5))),
               IsSatisfiedWith(100));
-  EXPECT_THAT(MTestType().SetMultiplier(MInteger().Between(3, 7)),
+  EXPECT_THAT(MTestType().SetMultiplier(MInteger(Between(3, 7))),
               IsSatisfiedWith(100));  // Multiple of both 4 and 5
 
   // 101 is prime, so not a multiple of 3,4,5,6,7.
   EXPECT_THAT(
-      MTestType().SetMultiplier(MInteger().Between(3, 7)),
+      MTestType().SetMultiplier(MInteger(Between(3, 7))),
       IsNotSatisfiedWith(101, "not a multiple of any valid multiplier"));
 }
 
@@ -326,10 +326,10 @@ TEST(MVariableTest, SatisfiesConstraintsWorksWithDependentValues) {
   // x = 107 + 3 * [something].
   //  So, 110 = 107 + 3 * 1 is valid, and 111 is not.
   EXPECT_THAT(
-      MTestType().SetAdder("t").SetMultiplier(MInteger().Between(3, 3)),
+      MTestType().SetAdder("t").SetMultiplier(MInteger(Between(3, 3))),
       IsSatisfiedWith(110, Context().WithValue<MTestType>("t", TestType(107))));
   EXPECT_THAT(
-      MTestType().SetAdder("t").SetMultiplier(MInteger().Between(3, 3)),
+      MTestType().SetAdder("t").SetMultiplier(MInteger(Between(3, 3))),
       IsNotSatisfiedWith(111, "not a multiple of any valid multiplier",
                          Context().WithValue<MTestType>("t", TestType(107))));
 }
@@ -349,7 +349,7 @@ TEST(MVariableTest, SatisfiesConstraintsShouldAcknowledgeIsAndIsOneOf) {
 
   // 8 is in the list and a multiple of 4.
   EXPECT_THAT(
-      MTestType().IsOneOf({2, 4, 8}).SetMultiplier(MInteger().Between(4, 4)),
+      MTestType().IsOneOf({2, 4, 8}).SetMultiplier(MInteger(Between(4, 4))),
       IsSatisfiedWith(8));
 }
 
@@ -357,7 +357,7 @@ TEST(MVariableTest,
      SatisfiesConstraintsShouldFailIfIsOneOfSucceedsButLowerFails) {
   // 2 is in the one-of list, but not a multiple of 4.
   EXPECT_THAT(
-      MTestType().IsOneOf({2, 4, 8}).SetMultiplier(MInteger().Between(4, 4)),
+      MTestType().IsOneOf({2, 4, 8}).SetMultiplier(MInteger(Between(4, 4))),
       IsNotSatisfiedWith(2, "not a multiple of any valid multiplier"));
 }
 
@@ -591,8 +591,7 @@ TEST(MVariableTest, GenerateShouldRetryIfNeeded) {
   // A single random guess should work 1/14 times. We'll generate 100. If
   // retries aren't there, this will fail frequently.
   EXPECT_THAT(
-      MInteger()
-          .Between(0, 999)
+      MInteger(Between(0, 999))
           .AddCustomConstraint("3 mod 7", [](int x) { return x % 7 == 3; })
           .AddCustomConstraint("3rd digit is even.",
                                [](int x) { return (x / 100) % 2 == 0; }),
@@ -604,8 +603,8 @@ TEST(MVariableTest, GenerateShouldRetryIfNeeded) {
 TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
   moriarty_internal::VariableSet variables;
   MORIARTY_ASSERT_OK(
-      variables.AddVariable("N", MInteger().Between(1, 1000000000)));
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger().Between(1, "N")));
+      variables.AddVariable("N", MInteger(Between(1, 1000000000))));
+  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between(1, "N"))));
 
   moriarty_internal::ValueSet values;
 

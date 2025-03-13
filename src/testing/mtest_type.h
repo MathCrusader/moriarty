@@ -117,7 +117,7 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
       moriarty::librarian::AnalysisContext ctx) const override;
 
  private:
-  moriarty::MInteger multiplier_ = moriarty::MInteger().Between(1, 1);
+  moriarty::MInteger multiplier_ = moriarty::MInteger(moriarty::Between(1, 1));
   std::optional<std::string> adder_variable_name_;
 
   bool merged_ = false;

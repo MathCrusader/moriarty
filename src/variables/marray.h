@@ -313,19 +313,19 @@ MArray<MElementType>& MArray<MElementType>::OfLength(
 template <typename MElementType>
 MArray<MElementType>& MArray<MElementType>::OfLength(int64_t min_length,
                                                      int64_t max_length) {
-  return OfLength(MInteger().Between(min_length, max_length));
+  return OfLength(MInteger(Between(min_length, max_length)));
 }
 
 template <typename MElementType>
 MArray<MElementType>& MArray<MElementType>::OfLength(
     int64_t min_length, std::string_view max_length_expression) {
-  return OfLength(MInteger().Between(min_length, max_length_expression));
+  return OfLength(MInteger(Between(min_length, max_length_expression)));
 }
 
 template <typename MElementType>
 MArray<MElementType>& MArray<MElementType>::OfLength(
     std::string_view min_length_expression, int64_t max_length) {
-  return OfLength(MInteger().Between(min_length_expression, max_length));
+  return OfLength(MInteger(Between(min_length_expression, max_length)));
 }
 
 template <typename MElementType>
@@ -333,7 +333,7 @@ MArray<MElementType>& MArray<MElementType>::OfLength(
     std::string_view min_length_expression,
     std::string_view max_length_expression) {
   return OfLength(
-      MInteger().Between(min_length_expression, max_length_expression));
+      MInteger(Between(min_length_expression, max_length_expression)));
 }
 
 template <typename MElementType>
@@ -374,7 +374,7 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
   MInteger length_local = *length_;
 
   // Ensure that the size is non-negative.
-  length_local.AtLeast(0);
+  length_local.AddConstraint(AtLeast(0));
 
   if (length_size_property_) {
     auto status = length_local.OfSizeProperty(*length_size_property_);
@@ -384,7 +384,7 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
   }
 
   std::optional<int64_t> generation_limit = ctx.GetSoftGenerationLimit();
-  if (generation_limit) length_local.AtMost(*generation_limit);
+  if (generation_limit) length_local.AddConstraint(AtMost(*generation_limit));
 
   int length = length_local.Generate(ctx.ForSubVariable("length"));
 
