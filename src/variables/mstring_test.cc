@@ -130,8 +130,9 @@ TEST(MStringTest, InvalidLengthShouldFail) {
       std::runtime_error);
   EXPECT_THROW(
       {
-        Generate(
-            MString().OfLength(MInteger().Between(0, -1)).WithAlphabet("a"))
+        Generate(MString()
+                     .OfLength(MInteger(AtMost(10), AtLeast(20)))
+                     .WithAlphabet("a"))
             .IgnoreError();
       },
       std::runtime_error);
@@ -265,7 +266,7 @@ TEST(MStringTest, SatisfiesConstraintsShouldCheckTheAlphabetIfSet) {
 }
 
 TEST(MStringTest, SatisfiesConstraintsWithInvalidLengthShouldFail) {
-  EXPECT_THAT(MString().OfLength(MInteger().Between(0, -1)),
+  EXPECT_THAT(MString().OfLength(MInteger().AtMost(10).AtLeast(20)),
               IsNotSatisfiedWith("abcde", "length"));
 }
 
@@ -551,7 +552,8 @@ TEST(MStringNonBuilderTest, InvalidLengthShouldFail) {
       std::runtime_error);
   EXPECT_THROW(
       {
-        Generate(MString(Length(Between(0, -1)), Alphabet("a"))).IgnoreError();
+        Generate(MString(Length(AtMost(10), AtLeast(20)), Alphabet("a")))
+            .IgnoreError();
       },
       std::runtime_error);
 }
@@ -683,7 +685,7 @@ TEST(MStringNonBuilderTest, SatisfiesConstraintsShouldCheckTheAlphabetIfSet) {
 }
 
 TEST(MStringNonBuilderTest, SatisfiesConstraintsWithInvalidLengthShouldFail) {
-  EXPECT_THAT(MString(Length(Between(0, -1))),
+  EXPECT_THAT(MString(Length(AtLeast(20), AtMost(10))),
               IsNotSatisfiedWith("abcde", "length"));
 }
 

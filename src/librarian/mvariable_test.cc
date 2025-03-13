@@ -335,8 +335,9 @@ TEST(MVariableTest, SatisfiesConstraintsWorksWithDependentValues) {
 }
 
 TEST(MVariableTest, SatisfiesConstraintsCanValidateSubvariablesIfNeeded) {
-  // MInteger().Between(5, 0) is an invalid range. Should fail validation.
-  EXPECT_THAT(MTestType().SetMultiplier(MInteger().Between(5, 0)),
+  // Must use AtMost/AtLeast since Between will not allow invalid range.
+  // (5, 0) is an invalid range. Should fail validation.
+  EXPECT_THAT(MTestType().SetMultiplier(MInteger(AtLeast(5), AtMost(0))),
               IsNotSatisfiedWith(1, "not a multiple of any valid multiplier"));
 }
 

@@ -86,6 +86,9 @@ MATCHER_P(
     return false;
   }
 
+  *result_listener << "received UnsatisfiedConstraintError with message: "
+                   << status.message();
+
   return testing::ExplainMatchResult(
       testing::HasSubstr(substr_in_error_message), status.message(),
       result_listener);

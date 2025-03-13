@@ -209,7 +209,7 @@ TEST(GenerationBootstrapTest,
   known_values.Set<MInteger>("A", 0);
 
   EXPECT_THAT(GenerateAllValues(variables, known_values, {rng, std::nullopt}),
-              IsUnsatisfiedConstraint("range"));
+              IsUnsatisfiedConstraint("between"));
 }
 
 TEST(GenerationBootstrapTest,

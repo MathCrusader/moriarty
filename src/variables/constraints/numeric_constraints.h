@@ -28,14 +28,22 @@
 
 namespace moriarty {
 
-using IntegerExpression = std::string_view;
+class IntegerRangeMConstraint : public MConstraint {
+ public:
+  using LookupVariableFn = std::function<int64_t(std::string_view)>;
+  using IntegerExpression = std::string_view;
+
+  virtual std::string ToString() const = 0;
+  virtual bool IsSatisfiedWith(LookupVariableFn lookup_variable,
+                               int64_t value) const = 0;
+  virtual std::string Explanation(LookupVariableFn lookup_variable,
+                                  int64_t value) const = 0;
+};
 
 // Constraint stating that the numeric value must be in the inclusive range
 // [minimum, maximum].
-class Between : public MConstraint {
+class Between : public IntegerRangeMConstraint {
  public:
-  using LookupVariableFn = std::function<int64_t(std::string_view)>;
-
   // The numeric value must be in the inclusive range [minimum, maximum].
   explicit Between(int64_t minimum, int64_t maximum);
 
@@ -69,7 +77,7 @@ class Between : public MConstraint {
 };
 
 // Constraint stating that the numeric value must be this value or smaller.
-class AtMost : public MConstraint {
+class AtMost : public IntegerRangeMConstraint {
  public:
   using LookupVariableFn = std::function<int64_t(std::string_view)>;
 
@@ -100,7 +108,7 @@ class AtMost : public MConstraint {
 };
 
 // Constraint stating that the numeric value must be this value or larger.
-class AtLeast : public MConstraint {
+class AtLeast : public IntegerRangeMConstraint {
  public:
   using LookupVariableFn = std::function<int64_t(std::string_view)>;
 

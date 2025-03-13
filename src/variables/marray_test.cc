@@ -169,7 +169,7 @@ TEST(MArrayTest, InvalidLengthShouldFail) {
       std::runtime_error);
   EXPECT_THROW(
       {
-        Generate(MArray(MInteger()).OfLength(MInteger().Between(0, -1)))
+        Generate(MArray(MInteger()).OfLength(MInteger(AtMost(10), AtLeast(20))))
             .IgnoreError();
       },
       std::runtime_error);
@@ -624,7 +624,10 @@ TEST(MArrayNonBuilderTest, InvalidLengthShouldFail) {
       { Generate(MArray<MInteger>(Length(-1))).IgnoreError(); },
       std::runtime_error);
   EXPECT_THROW(
-      { Generate(MArray<MInteger>(Length(Between(0, -1)))).IgnoreError(); },
+      {
+        Generate(MArray<MInteger>(Length(AtMost(10), AtLeast(21))))
+            .IgnoreError();
+      },
       std::runtime_error);
 }
 

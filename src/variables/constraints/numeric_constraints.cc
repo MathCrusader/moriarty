@@ -31,7 +31,12 @@ namespace moriarty {
 // TODO: These hide absl::StatusOr<>. We should consider alternatives.
 Between::Between(int64_t minimum, int64_t maximum)
     : minimum_(*ParseExpression(std::to_string(minimum))),
-      maximum_(*ParseExpression(std::to_string(maximum))) {}
+      maximum_(*ParseExpression(std::to_string(maximum))) {
+  if (minimum > maximum) {
+    throw std::invalid_argument(
+        "minimum must be less than or equal to maximum in Between()");
+  }
+}
 
 Between::Between(int64_t minimum, IntegerExpression maximum)
     : minimum_(*ParseExpression(std::to_string(minimum))),

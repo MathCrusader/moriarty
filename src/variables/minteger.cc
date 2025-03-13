@@ -18,6 +18,7 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <memory>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
@@ -72,16 +73,22 @@ MInteger& MInteger::AddConstraint(const Exactly<std::string>& constraint) {
 
 MInteger& MInteger::AddConstraint(const class Between& constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
+  NewAddConstraint(
+      RangeConstraint(std::make_unique<class Between>(std::move(constraint))));
   return *this;
 }
 
 MInteger& MInteger::AddConstraint(const class AtMost& constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
+  NewAddConstraint(
+      RangeConstraint(std::make_unique<class AtMost>(std::move(constraint))));
   return *this;
 }
 
 MInteger& MInteger::AddConstraint(const class AtLeast& constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
+  NewAddConstraint(
+      RangeConstraint(std::make_unique<class AtLeast>(std::move(constraint))));
   return *this;
 }
 

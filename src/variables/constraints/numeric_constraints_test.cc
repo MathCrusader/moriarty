@@ -18,6 +18,7 @@
 
 #include <string_view>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/range.h"
 
@@ -27,6 +28,7 @@ namespace {
 using ::moriarty::AtLeast;
 using ::moriarty::AtMost;
 using ::moriarty::Between;
+using ::testing::Throws;
 
 testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
   auto extremes1 = r1.Extremes();
@@ -62,25 +64,13 @@ testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
          << ", " << (*extremes2)->max << "]";
 }
 
-testing::AssertionResult IsEmptyRange(const Range& r) {
-  auto extremes = r.Extremes();
-  if (!extremes.ok())
-    return testing::AssertionFailure() << "Extremes() failed.";
-
-  if (!(*extremes))
-    return testing::AssertionSuccess() << "is an empty range";
-  else
-    return testing::AssertionFailure()
-           << "[" << (*extremes)->min << ", " << (*extremes)->min
-           << "] is a non-empty range";
-}
-
 TEST(NumericConstraintsTest, BetweenWorks) {
   EXPECT_TRUE(EqualRanges(Between(10, 20).GetRange(), Range(10, 20)));
   EXPECT_TRUE(EqualRanges(Between("10", 20).GetRange(), Range(10, 20)));
   EXPECT_TRUE(EqualRanges(Between(10, "20").GetRange(), Range(10, 20)));
   EXPECT_TRUE(EqualRanges(Between("10", "20").GetRange(), Range(10, 20)));
-  EXPECT_TRUE(IsEmptyRange(Between(0, -5).GetRange()));
+
+  EXPECT_THAT([] { Between(0, -5); }, Throws<std::invalid_argument>());
 }
 
 TEST(NumericConstraintsTest, BetweenToStringWorks) {

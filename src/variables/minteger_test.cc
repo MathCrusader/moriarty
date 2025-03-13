@@ -53,6 +53,7 @@ using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::AllOf;
+using ::testing::AnyOf;
 using ::testing::Each;
 using ::testing::Eq;
 using ::testing::Ge;
@@ -141,9 +142,10 @@ TEST(MIntegerTest, RepeatedBetweenCallsShouldBeIntersectedTogether) {
 }
 
 TEST(MIntegerTest, InvalidBoundsShouldCrash) {
+  // Need to use AtMost/AtLeast here since Between will crash on its own.
   // Min > Max
   EXPECT_THROW(
-      { Generate(MInteger().Between(0, -1)).IgnoreError(); },
+      { Generate(MInteger().AtMost(-1).AtLeast(0)).IgnoreError(); },
       std::runtime_error);
 
   // Empty intersection (First interval to the left)
@@ -177,7 +179,7 @@ TEST(MIntegerTest, MergeFromCorrectlyMerges) {
       MInteger().Between(1, 8).Between(8, 10)));  // Singleton Range
 }
 
-TEST(MIntegerTest, SatisfiesConstraintsWorksForValid) {
+TEST(MIntegerTest, SatisfiesConstraintsWorksForGoodData) {
   EXPECT_THAT(MInteger().Between(1, 10), IsSatisfiedWith(5));   // Middle
   EXPECT_THAT(MInteger().Between(1, 10), IsSatisfiedWith(1));   // Low
   EXPECT_THAT(MInteger().Between(1, 10), IsSatisfiedWith(10));  // High
@@ -188,15 +190,17 @@ TEST(MIntegerTest, SatisfiesConstraintsWorksForValid) {
   EXPECT_THAT(MInteger(), IsSatisfiedWith(std::numeric_limits<int64_t>::max()));
 }
 
-TEST(MIntegerTest, SatisfiesConstraintsWorksForInvalid) {
-  EXPECT_THAT(MInteger().Between(1, 10), IsNotSatisfiedWith(0, "range"));
-  EXPECT_THAT(MInteger().Between(1, 10), IsNotSatisfiedWith(11, "range"));
+TEST(MIntegerTest, SatisfiesConstraintsWorksForBadData) {
+  EXPECT_THAT(MInteger().Between(1, 10), IsNotSatisfiedWith(0, "between"));
+  EXPECT_THAT(MInteger().Between(1, 10), IsNotSatisfiedWith(11, "between"));
 
   // Empty range
-  EXPECT_THAT(MInteger().Between(1, 0), IsNotSatisfiedWith(0, "range"));
+  EXPECT_THAT(MInteger().AtMost(0).AtLeast(1),
+              AnyOf(IsNotSatisfiedWith(0, "at least"),
+                    IsNotSatisfiedWith(0, "at most")));
 }
 
-TEST(MIntegerTest, SatisfiesConstraintsWorksForValidExpressions) {
+TEST(MIntegerTest, SatisfiesConstraintsWithExpressionsShouldWorkForGoodData) {
   EXPECT_THAT(
       MInteger().Between(1, "3 * N + 1"),
       IsSatisfiedWith(5, Context().WithValue<MInteger>("N", 10)));  // Mid
@@ -208,10 +212,13 @@ TEST(MIntegerTest, SatisfiesConstraintsWorksForValidExpressions) {
       IsSatisfiedWith(31, Context().WithValue<MInteger>("N", 10)));  // High
 }
 
-TEST(MIntegerTest, SatisfiesConstraintsWorksForInvalidExpressions) {
+TEST(MIntegerTest, SatisfiesConstraintsWithExpressionsShouldWorkForBadData) {
   EXPECT_THAT(
       MInteger().Between(1, "3 * N + 1"),
-      IsNotSatisfiedWith(0, "range", Context().WithValue<MInteger>("N", 10)));
+      IsNotSatisfiedWith(0, "between", Context().WithValue<MInteger>("N", 10)));
+  EXPECT_THAT(MInteger().Between(1, "3 * N + 1"),
+              IsNotSatisfiedWith(32, "between",
+                                 Context().WithValue<MInteger>("N", 10)));
 
   moriarty_internal::ValueSet values;
   moriarty_internal::VariableSet variables;
@@ -223,7 +230,7 @@ TEST(MIntegerTest, SatisfiesConstraintsWorksForInvalidExpressions) {
             .IsSatisfiedWith(ctx, 1)
             .IgnoreError();
       },
-      ThrowsVariableNotFound("N"));
+      ThrowsVariableNotFound("N"));  // Both value and variable are unknown
 }
 
 TEST(MIntegerTest, AtMostAndAtLeastShouldLimitTheOutputRange) {
@@ -472,9 +479,10 @@ TEST(MIntegerNonBuilderTest, RepeatedBetweenCallsShouldBeIntersectedTogether) {
 }
 
 TEST(MIntegerNonBuilderTest, InvalidBoundsShouldCrash) {
+  // Need to use AtMost/AtLeast here since Between will crash on its own.
   // Min > Max
   EXPECT_THROW(
-      { Generate(MInteger(Between(0, -1))).IgnoreError(); },
+      { Generate(MInteger(AtLeast(0), AtMost(-1))).IgnoreError(); },
       std::runtime_error);
 
   // Empty intersection (First interval to the left)
@@ -508,7 +516,7 @@ TEST(MIntegerNonBuilderTest, MergeFromCorrectlyMerges) {
       MInteger(Between(1, 8), Between(8, 10))));  // Singleton Range
 }
 
-TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForValid) {
+TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForGoodData) {
   EXPECT_THAT(MInteger(Between(1, 10)), IsSatisfiedWith(5));   // Middle
   EXPECT_THAT(MInteger(Between(1, 10)), IsSatisfiedWith(1));   // Low
   EXPECT_THAT(MInteger(Between(1, 10)), IsSatisfiedWith(10));  // High
@@ -519,15 +527,18 @@ TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForValid) {
   EXPECT_THAT(MInteger(), IsSatisfiedWith(std::numeric_limits<int64_t>::max()));
 }
 
-TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForInvalid) {
-  EXPECT_THAT(MInteger(Between(1, 10)), IsNotSatisfiedWith(0, "range"));
-  EXPECT_THAT(MInteger(Between(1, 10)), IsNotSatisfiedWith(11, "range"));
+TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForBadData) {
+  EXPECT_THAT(MInteger(Between(1, 10)), IsNotSatisfiedWith(0, "between"));
+  EXPECT_THAT(MInteger(Between(1, 10)), IsNotSatisfiedWith(11, "between"));
 
   // Empty range
-  EXPECT_THAT(MInteger(Between(1, 0)), IsNotSatisfiedWith(0, "range"));
+  EXPECT_THAT(MInteger(AtLeast(1), AtMost(-1)),
+              AnyOf(IsNotSatisfiedWith(0, "at least"),
+                    IsNotSatisfiedWith(0, "at most")));
 }
 
-TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForValidExpressions) {
+TEST(MIntegerNonBuilderTest,
+     SatisfiesConstraintsWithExpressionsShouldWorkForGoodData) {
   EXPECT_THAT(
       MInteger(Between(1, "3 * N + 1")),
       IsSatisfiedWith(5, Context().WithValue<MInteger>("N", 10)));  // Mid
@@ -539,14 +550,20 @@ TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForValidExpressions) {
       IsSatisfiedWith(31, Context().WithValue<MInteger>("N", 10)));  // High
 }
 
-TEST(MIntegerNonBuilderTest, SatisfiesConstraintsWorksForInvalidExpressions) {
+TEST(MIntegerNonBuilderTest,
+     SatisfiesConstraintsWithExpressionsShouldWorkForBadData) {
   EXPECT_THAT(
       MInteger(Between(1, "3 * N + 1")),
-      IsNotSatisfiedWith(0, "range", Context().WithValue<MInteger>("N", 10)));
+      IsNotSatisfiedWith(0, "between", Context().WithValue<MInteger>("N", 10)));
+
+  EXPECT_THAT(MInteger(AtLeast(1), AtMost(-1)),
+              AnyOf(IsNotSatisfiedWith(0, "at least"),
+                    IsNotSatisfiedWith(0, "at most")));
 
   moriarty_internal::ValueSet values;
   moriarty_internal::VariableSet variables;
   librarian::AnalysisContext ctx("_", variables, values);
+  // Could be VariableNotFound as well (impl detail)
   EXPECT_THAT(
       [&] {
         MInteger(Between(1, "3 * N + 1")).IsSatisfiedWith(ctx, 2).IgnoreError();

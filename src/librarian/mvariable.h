@@ -26,6 +26,7 @@
 #include <iterator>
 #include <memory>
 #include <optional>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -157,8 +158,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // The constraint `c` must be associated with the corresponding MVariable.
   template <typename Constraint>
   VariableType& NewAddConstraint(Constraint c) {
-    constraints_.AddConstraint(c);
-    UnderlyingVariableType().AddConstraintImpl(c);
+    constraints_.AddConstraint(std::move(c));
     return UnderlyingVariableType();
   }
 
@@ -279,6 +279,11 @@ class MVariable : public moriarty_internal::AbstractVariable {
         moriarty_internal::ConvertTo<VariableType>(&other, "MergeFrom"));
     MergeFrom(typed_other);
     return absl::OkStatus();
+  }
+
+  // FIXME: Make this the implementation of ToString()
+  friend std::ostream& operator<<(std::ostream& os, const VariableType& var) {
+    return os << var.constraints_.ToString();
   }
 
  protected:
@@ -797,6 +802,11 @@ absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
     MORIARTY_RETURN_IF_ERROR(CheckConstraint(
         absl::c_binary_search(*is_one_of_, value),
         "`value` must be one of the options in Is() and IsOneOf()"));
+  }
+
+  if (!constraints_.IsSatisfiedWith(ctx, value)) {
+    std::string reason = constraints_.Explanation(ctx, value);
+    return UnsatisfiedConstraintError(reason);
   }
 
   // FIXME: Determine semantics of which errors are propagated.

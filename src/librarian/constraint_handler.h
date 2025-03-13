@@ -76,6 +76,7 @@ class ConstraintHandler {
   template <typename U>
   class ConstraintWrapper : public ConstraintHusk {
    public:
+    ~ConstraintWrapper() override = default;
     explicit ConstraintWrapper(U constraint)
         : constraint_(std::move(constraint)) {}
     auto IsSatisfiedWith(AnalysisContext ctx, const T& value) const

@@ -249,10 +249,11 @@ TEST(MTupleTest, SatisfiesConstraintsWorksForInvalid) {
     using Type = std::tuple<int64_t, int64_t>;
 
     EXPECT_THAT(constraints, IsNotSatisfiedWith(Type{0, 205},
-                                                "range"));  // first
+                                                "between"));  // first
     EXPECT_THAT(constraints,
-                IsNotSatisfiedWith(Type{105, 0}, "range"));  // second
-    EXPECT_THAT(constraints, IsNotSatisfiedWith(Type{0, 0}, "range"));  // both
+                IsNotSatisfiedWith(Type{105, 0}, "between"));  // second
+    EXPECT_THAT(constraints,
+                IsNotSatisfiedWith(Type{0, 0}, "between"));  // both
   }
 
   {  // Nested [1, [2, 3]]
@@ -262,13 +263,13 @@ TEST(MTupleTest, SatisfiesConstraintsWorksForInvalid) {
     using Type = std::tuple<int64_t, std::tuple<int64_t, int64_t>>;
 
     EXPECT_THAT(constraints,
-                IsNotSatisfiedWith(Type{0, {205, 305}}, "range"));  // first
+                IsNotSatisfiedWith(Type{0, {205, 305}}, "between"));  // first
     EXPECT_THAT(constraints, IsNotSatisfiedWith(Type{105, {0, 305}},
-                                                "range"));  // second.first
+                                                "between"));  // second.first
     EXPECT_THAT(constraints, IsNotSatisfiedWith(Type{105, {205, 0}},
-                                                "range"));  // second.Second
-    EXPECT_THAT(constraints,
-                IsNotSatisfiedWith(Type{105, {0, 0}}, "range"));  // second.both
+                                                "between"));  // second.Second
+    EXPECT_THAT(constraints, IsNotSatisfiedWith(Type{105, {0, 0}},
+                                                "between"));  // second.both
   }
 }
 
