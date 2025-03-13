@@ -64,44 +64,89 @@ testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
          << ", " << (*extremes2)->max << "]";
 }
 
-TEST(NumericConstraintsTest, BetweenWorks) {
-  EXPECT_TRUE(EqualRanges(Between(10, 20).GetRange(), Range(10, 20)));
-  EXPECT_TRUE(EqualRanges(Between("10", 20).GetRange(), Range(10, 20)));
-  EXPECT_TRUE(EqualRanges(Between(10, "20").GetRange(), Range(10, 20)));
-  EXPECT_TRUE(EqualRanges(Between("10", "20").GetRange(), Range(10, 20)));
-
+TEST(NumericConstraintsTest, InvalidBetweenShouldThrow) {
   EXPECT_THAT([] { Between(0, -5); }, Throws<std::invalid_argument>());
 }
 
-TEST(NumericConstraintsTest, BetweenToStringWorks) {
-  EXPECT_EQ(Between(10, 20).ToString(), "is between 10 and 20");
-  EXPECT_EQ(Between("10", 20).ToString(), "is between 10 and 20");
-  EXPECT_EQ(Between(10, "20").ToString(), "is between 10 and 20");
-  EXPECT_EQ(Between("10", "20").ToString(), "is between 10 and 20");
+TEST(NumericConstraintsTest, InvalidExpressionsShouldThrow) {
+  {
+    EXPECT_DEATH({ ExactlyIntegerExpression("2 *"); }, "INVALID_ARGUMENT");
+    EXPECT_DEATH({ Between("2 *", 5); }, "INVALID_ARGUMENT");
+    EXPECT_DEATH({ Between(5, "2 *"); }, "INVALID_ARGUMENT");
+    EXPECT_DEATH({ AtMost("2 *"); }, "INVALID_ARGUMENT");
+    EXPECT_DEATH({ AtLeast("2 *"); }, "INVALID_ARGUMENT");
+  }
+  {
+    EXPECT_DEATH({ ExactlyIntegerExpression(""); }, "INVALID_ARGUMENT");
+    EXPECT_DEATH({ Between("", 5); }, "INVALID_ARGUMENT");
+    EXPECT_DEATH({ Between(5, ""); }, "INVALID_ARGUMENT");
+    EXPECT_DEATH({ AtMost(""); }, "INVALID_ARGUMENT");
+    EXPECT_DEATH({ AtLeast(""); }, "INVALID_ARGUMENT");
+  }
+  // {
+  //   EXPECT_THAT([] { ExactlyIntegerExpression("2 *"); },
+  //               Throws<std::invalid_argument>());
+  //   EXPECT_THAT([] { Between("2 *", 5); }, Throws<std::invalid_argument>());
+  //   EXPECT_THAT([] { Between(5, "2 *"); }, Throws<std::invalid_argument>());
+  //   EXPECT_THAT([] { AtMost("2 *"); }, Throws<std::invalid_argument>());
+  //   EXPECT_THAT([] { AtLeast("2 *"); }, Throws<std::invalid_argument>());
+  // }
+  // {
+  //   EXPECT_THAT([] { ExactlyIntegerExpression(""); },
+  //               Throws<std::invalid_argument>());
+  //   EXPECT_THAT([] { Between("", 5); }, Throws<std::invalid_argument>());
+  //   EXPECT_THAT([] { Between(5, ""); }, Throws<std::invalid_argument>());
+  //   EXPECT_THAT([] { AtMost(""); }, Throws<std::invalid_argument>());
+  //   EXPECT_THAT([] { AtLeast(""); }, Throws<std::invalid_argument>());
+  // }
 }
 
-TEST(NumericConstraintsTest, AtLeastWorks) {
-  Range expected;
-  expected.AtLeast(20);
-  EXPECT_TRUE(EqualRanges(AtLeast(20).GetRange(), expected));
-  EXPECT_TRUE(EqualRanges(AtLeast("20").GetRange(), expected));
+TEST(NumericConstraintsTest, GetRangeShouldGiveCorrectValues) {
+  {
+    EXPECT_TRUE(EqualRanges(ExactlyIntegerExpression("3 * 10 + 1").GetRange(),
+                            Range(31, 31)));
+  }
+  {
+    EXPECT_TRUE(EqualRanges(Between(10, 20).GetRange(), Range(10, 20)));
+    EXPECT_TRUE(EqualRanges(Between("10", 20).GetRange(), Range(10, 20)));
+    EXPECT_TRUE(EqualRanges(Between(10, "20").GetRange(), Range(10, 20)));
+    EXPECT_TRUE(EqualRanges(Between("10", "20").GetRange(), Range(10, 20)));
+  }
+  {
+    Range expected;
+    expected.AtLeast(20);
+    EXPECT_TRUE(EqualRanges(AtLeast(20).GetRange(), expected));
+    EXPECT_TRUE(EqualRanges(AtLeast("20").GetRange(), expected));
+  }
+  {
+    Range expected;
+    expected.AtMost(23);
+    EXPECT_TRUE(EqualRanges(AtMost(23).GetRange(), expected));
+    EXPECT_TRUE(EqualRanges(AtMost("23").GetRange(), expected));
+  }
 }
 
-TEST(NumericConstraintsTest, AtMostWorks) {
-  Range expected;
-  expected.AtMost(23);
-  EXPECT_TRUE(EqualRanges(AtMost(23).GetRange(), expected));
-  EXPECT_TRUE(EqualRanges(AtMost("23").GetRange(), expected));
-}
+TEST(NumericConstraintsTest, ToStringShouldWork) {
+  {
+    EXPECT_EQ(ExactlyIntegerExpression("3 * X + 1").ToString(),
+              "is exactly 3 * X + 1");
+  }
+  {
+    EXPECT_EQ(Between(10, 20).ToString(), "is between 10 and 20");
+    EXPECT_EQ(Between("10 + X", 20).ToString(), "is between 10 + X and 20");
+    EXPECT_EQ(Between(10, "20 + Y").ToString(), "is between 10 and 20 + Y");
+    EXPECT_EQ(Between("10 + X", "20 + Y").ToString(),
+              "is between 10 + X and 20 + Y");
+  }
+  {
+    EXPECT_EQ(AtMost(10).ToString(), "is at most 10");
+    EXPECT_EQ(AtMost("N + 3").ToString(), "is at most N + 3");
+  }
 
-TEST(NumericConstraintsTest, AtMostToStringWorks) {
-  EXPECT_EQ(AtMost(10).ToString(), "is at most 10");
-  EXPECT_EQ(AtMost("N").ToString(), "is at most N");
-}
-
-TEST(NumericConstraintsTest, AtLeastToStringWorks) {
-  EXPECT_EQ(AtLeast(10).ToString(), "is at least 10");
-  EXPECT_EQ(AtLeast("N").ToString(), "is at least N");
+  {
+    EXPECT_EQ(AtLeast(10).ToString(), "is at least 10");
+    EXPECT_EQ(AtLeast("N + 5").ToString(), "is at least N + 5");
+  }
 }
 
 TEST(NumericConstraintsTest, IsSatisfiedWithWithNonExpressionWorks) {
@@ -109,6 +154,13 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithNonExpressionWorks) {
     throw std::runtime_error("Should not be called");
   };
 
+  {
+    EXPECT_TRUE(Between(10, 20).IsSatisfiedWith(tmp, 10));
+    EXPECT_TRUE(Between(10, 20).IsSatisfiedWith(tmp, 15));
+    EXPECT_TRUE(Between(10, 20).IsSatisfiedWith(tmp, 20));
+    EXPECT_FALSE(Between(10, 20).IsSatisfiedWith(tmp, 9));
+    EXPECT_FALSE(Between(10, 20).IsSatisfiedWith(tmp, 21));
+  }
   {
     EXPECT_TRUE(AtLeast(10).IsSatisfiedWith(tmp, 10));
     EXPECT_TRUE(AtLeast(10).IsSatisfiedWith(tmp, 11));
@@ -118,13 +170,6 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithNonExpressionWorks) {
     EXPECT_TRUE(AtMost(10).IsSatisfiedWith(tmp, 10));
     EXPECT_TRUE(AtMost(10).IsSatisfiedWith(tmp, 9));
     EXPECT_FALSE(AtMost(10).IsSatisfiedWith(tmp, 11));
-  }
-  {
-    EXPECT_TRUE(Between(10, 20).IsSatisfiedWith(tmp, 10));
-    EXPECT_TRUE(Between(10, 20).IsSatisfiedWith(tmp, 15));
-    EXPECT_TRUE(Between(10, 20).IsSatisfiedWith(tmp, 20));
-    EXPECT_FALSE(Between(10, 20).IsSatisfiedWith(tmp, 9));
-    EXPECT_FALSE(Between(10, 20).IsSatisfiedWith(tmp, 21));
   }
 }
 
@@ -136,6 +181,18 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
   };
 
   {
+    EXPECT_TRUE(ExactlyIntegerExpression("x").IsSatisfiedWith(tmp, 10));
+    EXPECT_FALSE(ExactlyIntegerExpression("x").IsSatisfiedWith(tmp, 11));
+    EXPECT_FALSE(ExactlyIntegerExpression("x").IsSatisfiedWith(tmp, 9));
+  }
+  {
+    EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 10));
+    EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 25));
+    EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 400));
+    EXPECT_FALSE(Between("x", "y^2").IsSatisfiedWith(tmp, 9));
+    EXPECT_FALSE(Between("x", "y^2").IsSatisfiedWith(tmp, 401));
+  }
+  {
     EXPECT_TRUE(AtLeast("x").IsSatisfiedWith(tmp, 10));
     EXPECT_TRUE(AtLeast("x").IsSatisfiedWith(tmp, 11));
     EXPECT_FALSE(AtLeast("x").IsSatisfiedWith(tmp, 9));
@@ -145,13 +202,6 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
     EXPECT_TRUE(AtMost("x + 1").IsSatisfiedWith(tmp, 10));
     EXPECT_FALSE(AtMost("x + 1").IsSatisfiedWith(tmp, 12));
   }
-  {
-    EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 10));
-    EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 25));
-    EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 400));
-    EXPECT_FALSE(Between("x", "y^2").IsSatisfiedWith(tmp, 9));
-    EXPECT_FALSE(Between("x", "y^2").IsSatisfiedWith(tmp, 401));
-  }
 }
 
 TEST(NumericConstraintsTest, ExplanationShouldWork) {
@@ -160,12 +210,8 @@ TEST(NumericConstraintsTest, ExplanationShouldWork) {
   };
 
   {
-    EXPECT_EQ(AtLeast("x").Explanation(tmp, 10), "10 is not at least x");
-    EXPECT_EQ(AtLeast(100).Explanation(tmp, 11), "11 is not at least 100");
-  }
-  {
-    EXPECT_EQ(AtMost("x + 1").Explanation(tmp, 11), "11 is not at most x + 1");
-    EXPECT_EQ(AtMost(5).Explanation(tmp, 10), "10 is not at most 5");
+    EXPECT_EQ(ExactlyIntegerExpression("x + 1").Explanation(tmp, 10),
+              "10 is not exactly x + 1");
   }
   {
     EXPECT_EQ(Between("x", 12).Explanation(tmp, 9),
@@ -176,6 +222,14 @@ TEST(NumericConstraintsTest, ExplanationShouldWork) {
               "401 is not between x and y^2");
     EXPECT_EQ(Between(18, 20).Explanation(tmp, 401),
               "401 is not between 18 and 20");
+  }
+  {
+    EXPECT_EQ(AtLeast("x").Explanation(tmp, 10), "10 is not at least x");
+    EXPECT_EQ(AtLeast(100).Explanation(tmp, 11), "11 is not at least 100");
+  }
+  {
+    EXPECT_EQ(AtMost("x + 1").Explanation(tmp, 11), "11 is not at most x + 1");
+    EXPECT_EQ(AtMost(5).Explanation(tmp, 10), "10 is not at most 5");
   }
 }
 

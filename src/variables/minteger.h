@@ -63,6 +63,8 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // The integer must be exactly this value.
   MInteger& AddConstraint(const Exactly<int64_t>& constraint);
   // The integer must be exactly this integer expression (e.g., "3 * N + 1").
+  MInteger& AddConstraint(const ExactlyIntegerExpression& constraint);
+  // The integer must be exactly this integer expression (e.g., "3 * N + 1").
   MInteger& AddConstraint(const Exactly<std::string>& constraint);
   // The integer must be in this inclusive range.
   MInteger& AddConstraint(const Between& constraint);

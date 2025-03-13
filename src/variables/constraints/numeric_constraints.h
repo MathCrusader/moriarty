@@ -40,6 +40,32 @@ class IntegerRangeMConstraint : public MConstraint {
                                   int64_t value) const = 0;
 };
 
+// Constraint stating that the variable must be exactly the value of this
+// expression. E.g., `ExactlyIntegerExpression("3 * N + 1")`.
+class ExactlyIntegerExpression : public IntegerRangeMConstraint {
+ public:
+  // The numeric value must be exactly this value.
+  explicit ExactlyIntegerExpression(IntegerExpression value);
+
+  // Returns the range of values that this constraint represents.
+  [[nodiscard]] Range GetRange() const;
+
+  // Returns a human-readable representation of this constraint.
+  [[nodiscard]] std::string ToString() const;
+
+  // Returns true if the given value satisfies this constraint.
+  [[nodiscard]] bool IsSatisfiedWith(LookupVariableFn lookup_variable,
+                                     int64_t value) const;
+
+  // Gives a human-readable explanation of why value does not satisfy the
+  // constraints. Precondition: IsSatisfiedWith() == false;
+  [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
+                                        int64_t value) const;
+
+ private:
+  Expression value_;
+};
+
 // Constraint stating that the numeric value must be in the inclusive range
 // [minimum, maximum].
 class Between : public IntegerRangeMConstraint {

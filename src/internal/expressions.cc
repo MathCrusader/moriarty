@@ -252,7 +252,8 @@ absl::Status GetUnknownVariables(
 }  // namespace moriarty_internal
 
 int64_t EvaluateIntegerExpression(const Expression& expression) {
-  return EvaluateIntegerExpression(expression, {});
+  return EvaluateIntegerExpression(expression,
+                                   absl::flat_hash_map<std::string, int64_t>{});
 }
 
 int64_t EvaluateIntegerExpression(
@@ -266,6 +267,20 @@ int64_t EvaluateIntegerExpression(
         "Expression does not evaluate to an integer value.");
   }
   return int64_t(std::get<absl::int128>(value));
+}
+
+int64_t EvaluateIntegerExpression(
+    const Expression& expression,
+    std::function<int64_t(std::string_view)> lookup_variable) {
+  absl::flat_hash_map<std::string, int64_t> values;
+  auto needed_variables = NeededVariables(expression);
+  if (!needed_variables.ok()) {
+    throw std::invalid_argument("Failed to get needed variables");
+  }
+  for (const std::string& variable : *needed_variables) {
+    values[variable] = lookup_variable(variable);
+  }
+  return EvaluateIntegerExpression(expression, values);
 }
 
 absl::StatusOr<absl::flat_hash_set<std::string>> NeededVariables(

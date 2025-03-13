@@ -26,6 +26,35 @@
 namespace moriarty {
 
 // -----------------------------------------------------------------------------
+//  ExactlyIntegerExpression
+
+// TODO: These hide absl::StatusOr<>. We should consider alternatives.
+ExactlyIntegerExpression::ExactlyIntegerExpression(IntegerExpression value)
+    : value_(*ParseExpression(value)) {}
+
+Range ExactlyIntegerExpression::GetRange() const {
+  Range r;
+  r.AtMost(value_.ToString()).IgnoreError();
+  r.AtLeast(value_.ToString()).IgnoreError();
+  return r;
+}
+
+std::string ExactlyIntegerExpression::ToString() const {
+  return std::format("is exactly {}", value_.ToString());
+}
+
+bool ExactlyIntegerExpression::IsSatisfiedWith(LookupVariableFn lookup_variable,
+                                               int64_t value) const {
+  int64_t expected = EvaluateIntegerExpression(value_, lookup_variable);
+  return expected == value;
+}
+
+std::string ExactlyIntegerExpression::Explanation(
+    LookupVariableFn lookup_variable, int64_t value) const {
+  return std::format("{} is not exactly {}", value, value_.ToString());
+}
+
+// -----------------------------------------------------------------------------
 //  Between
 
 // TODO: These hide absl::StatusOr<>. We should consider alternatives.

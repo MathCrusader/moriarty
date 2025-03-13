@@ -18,6 +18,7 @@
 #define MORIARTY_SRC_INTERNAL_EXPRESSIONS_H_
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -45,6 +46,9 @@ int64_t EvaluateIntegerExpression(const Expression& expression);
 int64_t EvaluateIntegerExpression(
     const Expression& expression,
     const absl::flat_hash_map<std::string, int64_t>& variables);
+int64_t EvaluateIntegerExpression(
+    const Expression& expression,
+    std::function<int64_t(std::string_view)> lookup_variable);
 
 // ParseExpression()
 //

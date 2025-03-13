@@ -628,6 +628,23 @@ TEST(
       IsOkAndHolds(Each(AllOf(Ge(19), Ge(18), Le(50), Le(25)))));
 }
 
+TEST(MIntegerNonBuilderTest, AllOverloadsOfExactlyAreEffective) {
+  {  // No variables
+    EXPECT_THAT(MInteger(Exactly(10)), GeneratedValuesAre(10));
+    EXPECT_THAT(MInteger(Exactly("10")), GeneratedValuesAre(10));
+    EXPECT_THAT(MInteger(ExactlyIntegerExpression("10")),
+                GeneratedValuesAre(10));
+  }
+  {  // With variables
+    EXPECT_THAT(GenerateLots(MInteger(Exactly("3 * N + 1")),
+                             Context().WithValue<MInteger>("N", 10)),
+                IsOkAndHolds(Each(31)));
+    EXPECT_THAT(GenerateLots(MInteger(ExactlyIntegerExpression("3 * N + 1")),
+                             Context().WithValue<MInteger>("N", 10)),
+                IsOkAndHolds(Each(31)));
+  }
+}
+
 TEST(MIntegerNonBuilderTest, AllOverloadsOfBetweenAreEffective) {
   EXPECT_THAT(MInteger(Between(1, 10)),
               GeneratedValuesAre(AllOf(Ge(1), Le(10))));
@@ -795,10 +812,8 @@ TEST(MIntegerNonBuilderTest, InvalidSizeCombinationsFailGeneration) {
 
 TEST(MIntegerNonBuilderTest, InvalidExpressionsShouldFail) {
   // TODO: These should all throw, not die or status.
-  EXPECT_THAT(Generate(MInteger(Exactly("N + "))),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("invalid expression")));
-
+  EXPECT_DEATH(
+      { Generate(MInteger(Exactly("N + "))).IgnoreError(); }, "operation");
   EXPECT_DEATH(
       { Generate(MInteger(AtMost("N + "))).IgnoreError(); }, "operation");
   EXPECT_DEATH(

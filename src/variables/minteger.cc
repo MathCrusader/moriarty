@@ -54,41 +54,34 @@ MInteger& MInteger::AddConstraint(const Exactly<int64_t>& constraint) {
   return *this;
 }
 
-MInteger& MInteger::AddConstraint(const Exactly<std::string>& constraint) {
-  Range r;
-  if (absl::Status status = r.AtLeast(constraint.GetValue()); !status.ok()) {
-    DeclareSelfAsInvalid(UnsatisfiedConstraintError(
-        absl::StrCat("Exactly() ", status.message())));
-    return *this;
-  }
-  if (absl::Status status = r.AtMost(constraint.GetValue()); !status.ok()) {
-    DeclareSelfAsInvalid(UnsatisfiedConstraintError(
-        absl::StrCat("Exactly() ", status.message())));
-    return *this;
-  }
-
-  bounds_.Mutable().Intersect(r);
+MInteger& MInteger::AddConstraint(const ExactlyIntegerExpression& constraint) {
+  bounds_.Mutable().Intersect(constraint.GetRange());
+  NewAddConstraint(
+      RangeConstraint(std::make_unique<ExactlyIntegerExpression>(constraint)));
   return *this;
+}
+
+MInteger& MInteger::AddConstraint(const Exactly<std::string>& constraint) {
+  return AddConstraint(ExactlyIntegerExpression(constraint.GetValue()));
 }
 
 MInteger& MInteger::AddConstraint(const class Between& constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
   NewAddConstraint(
-      RangeConstraint(std::make_unique<class Between>(std::move(constraint))));
+      RangeConstraint(std::make_unique<class Between>(constraint)));
   return *this;
 }
 
 MInteger& MInteger::AddConstraint(const class AtMost& constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(
-      RangeConstraint(std::make_unique<class AtMost>(std::move(constraint))));
+  NewAddConstraint(RangeConstraint(std::make_unique<class AtMost>(constraint)));
   return *this;
 }
 
 MInteger& MInteger::AddConstraint(const class AtLeast& constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
   NewAddConstraint(
-      RangeConstraint(std::make_unique<class AtLeast>(std::move(constraint))));
+      RangeConstraint(std::make_unique<class AtLeast>(constraint)));
   return *this;
 }
 
