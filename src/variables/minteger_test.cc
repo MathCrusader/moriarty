@@ -507,6 +507,14 @@ TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithNoVariablesShouldWork) {
     EXPECT_THAT(MInteger(OneOf({5, 6, 7}), Between(1, 6)),
                 GeneratedValuesAre(AnyOf(5, 6)));
   }
+  {  // GetUniqueValue
+    EXPECT_THAT(GetUniqueValue(MInteger(Exactly(5))), Optional(5));
+    EXPECT_THAT(GetUniqueValue(MInteger(OneOf({5, 6, 7}))), std::nullopt);
+    EXPECT_THAT(GetUniqueValue(MInteger(OneOf({5, 6, 7, 8}), Exactly(5))),
+                Optional(5));
+    EXPECT_THAT(GetUniqueValue(MInteger(OneOf({5, 6, 7, 8}), OneOf({9, 7, 4}))),
+                Optional(7));
+  }
 }
 
 TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithVariablesShouldWork) {
@@ -551,6 +559,24 @@ TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithVariablesShouldWork) {
     EXPECT_THAT(MInteger(Exactly(5), Between(1, 10)), GeneratedValuesAre(5));
     EXPECT_THAT(MInteger(OneOf({5, 6, 7}), Between(1, 6)),
                 GeneratedValuesAre(AnyOf(5, 6)));
+  }
+  {  // GetUniqueValue
+    EXPECT_THAT(GetUniqueValue(MInteger(Exactly("N")),
+                               Context().WithValue<MInteger>("N", 10)),
+                Optional(10));
+    EXPECT_THAT(GetUniqueValue(MInteger(OneOf({"N", "N+1", "N+4"})),
+                               Context().WithValue<MInteger>("N", 10)),
+                std::nullopt);
+
+    EXPECT_THAT(GetUniqueValue(MInteger(OneOf({"N", "N+1"}), Exactly("N")),
+                               Context().WithValue<MInteger>("N", 10)),
+                Optional(10));
+
+    // We cannot figure this out today, but we should be able to with a little
+    // work.
+    // EXPECT_THAT(GetUniqueValue(MInteger(OneOf({"N", "N+1"}), OneOf({9, 10})),
+    //                            Context().WithValue<MInteger>("N", 10)),
+    //             Optional(10));
   }
 }
 

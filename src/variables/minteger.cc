@@ -136,6 +136,24 @@ MInteger& MInteger::AddConstraint(SizeCategory constraint) {
 
 std::optional<int64_t> MInteger::GetUniqueValueImpl(
     librarian::AnalysisContext ctx) const {
+  auto option1 = one_of_int_->GetUniqueValue();
+  if (option1) return *option1;
+
+  auto option2 = one_of_expr_->GetUniqueValue();
+  if (option2) {
+    auto expr = *ParseExpression(*option2);
+    try {
+      return EvaluateIntegerExpression(expr, [&](std::string_view var) {
+        auto value = ctx.GetUniqueValue<MInteger>(var);
+        if (!value) throw ValueNotFound(var);
+        return *value;
+      });
+    } catch (const ValueNotFound& e) {
+      // There is a unique-value, but we can't evaluate it.
+      return std::nullopt;
+    }
+  }
+
   absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
   if (!extremes.ok()) return std::nullopt;
   if (extremes->min != extremes->max) return std::nullopt;
@@ -313,8 +331,8 @@ void MInteger::PrintImpl(librarian::PrinterContext ctx,
 
 absl::Status MInteger::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
                                            const int64_t& value) const {
-  // In the new ConstraintWrapper world, they do all the checking. TODO: Remove
-  // this.
+  // In the new ConstraintWrapper world, they do all the checking. TODO:
+  // Remove this.
   return absl::OkStatus();
 }
 
@@ -331,12 +349,13 @@ absl::StatusOr<std::vector<MInteger>> MInteger::GetDifficultInstancesImpl(
   std::vector<int64_t> values = {min};
   if (min != max) values.push_back(max);
 
-  // Takes all elements in `insert_list` and inserts the ones between `min` and
-  // `max` into `values`.
+  // Takes all elements in `insert_list` and inserts the ones between `min`
+  // and `max` into `values`.
 
   auto insert_into_values = [&](const std::vector<int64_t>& insert_list) {
     for (int64_t v : insert_list) {
-      // min and max are already in, only include values strictly in (min, max).
+      // min and max are already in, only include values strictly in (min,
+      // max).
       if (min < v && v < max && absl::c_find(values, v) == values.end())
         values.push_back(v);
     }
