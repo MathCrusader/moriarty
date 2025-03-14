@@ -433,7 +433,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   void DeclareSelfAsInvalid(absl::Status status);
 
  private:
-  ConstraintHandler<ValueType> constraints_;
+  ConstraintHandler<VariableType, ValueType> constraints_;
 
   // `is_one_of_` is a list of values that Generate() should produce. If the
   // optional is set and the list is empty, then there are no viable values.
@@ -608,6 +608,8 @@ absl::Status MVariable<V, G>::TryMergeFrom(const V& other) {
 
   if (other.is_one_of_) IsOneOf(*other.is_one_of_);
   MORIARTY_RETURN_IF_ERROR(MergeFromImpl(other));
+
+  other.constraints_.ApplyAllTo(UnderlyingVariableType());
 
   // The merge may have caused a new error to occur.
   return overall_status_;

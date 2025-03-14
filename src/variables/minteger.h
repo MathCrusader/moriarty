@@ -20,6 +20,7 @@
 
 #include <concepts>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
@@ -37,6 +38,7 @@
 #include "src/internal/range.h"
 #include "src/librarian/cow_ptr.h"
 #include "src/librarian/mvariable.h"
+#include "src/librarian/one_of_handler.h"
 #include "src/librarian/size_property.h"
 #include "src/property.h"
 #include "src/variables/constraints/base_constraints.h"
@@ -60,20 +62,38 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
     requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
   explicit MInteger(Constraints&&... constraints);
 
+  // ---------------------------------------------------------------------------
+  //  Constrain the value to a specific set of values
+
   // The integer must be exactly this value.
-  MInteger& AddConstraint(const Exactly<int64_t>& constraint);
+  MInteger& AddConstraint(Exactly<int64_t> constraint);
   // The integer must be exactly this integer expression (e.g., "3 * N + 1").
-  MInteger& AddConstraint(const ExactlyIntegerExpression& constraint);
+  MInteger& AddConstraint(ExactlyIntegerExpression constraint);
   // The integer must be exactly this integer expression (e.g., "3 * N + 1").
-  MInteger& AddConstraint(const Exactly<std::string>& constraint);
+  MInteger& AddConstraint(Exactly<std::string> constraint);
+
+  // The integer must be one of these values.
+  MInteger& AddConstraint(OneOf<int64_t> constraint);
+  // The integer must be one of these integer expressions.
+  MInteger& AddConstraint(OneOfIntegerExpression constraint);
+  // The integer must be one of these integer expressions.
+  MInteger& AddConstraint(OneOf<std::string> constraint);
+
+  // ---------------------------------------------------------------------------
+  //  Constraints about ranges
+
   // The integer must be in this inclusive range.
-  MInteger& AddConstraint(const Between& constraint);
+  MInteger& AddConstraint(Between constraint);
   // The integer must be this value or smaller.
-  MInteger& AddConstraint(const AtMost& constraint);
+  MInteger& AddConstraint(AtMost constraint);
   // The integer must be this value or larger.
-  MInteger& AddConstraint(const AtLeast& constraint);
+  MInteger& AddConstraint(AtLeast constraint);
+
+  // ---------------------------------------------------------------------------
+  //  Pseudo-constraints on size
+
   // The integer should be approximately this size.
-  MInteger& AddConstraint(const SizeCategory& constraint);
+  MInteger& AddConstraint(SizeCategory constraint);
 
   [[nodiscard]] std::string Typename() const override { return "MInteger"; }
 
@@ -86,6 +106,8 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
 
  private:
   librarian::CowPtr<Range> bounds_;
+  librarian::CowPtr<librarian::OneOfHandler<int64_t>> one_of_int_;
+  librarian::CowPtr<librarian::OneOfHandler<std::string>> one_of_expr_;
 
   // What approximate size should the int64_t be when it is generated.
   CommonSize approx_size_ = CommonSize::kAny;
@@ -101,8 +123,10 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   struct RangeConstraint {
    public:
     explicit RangeConstraint(
-        std::unique_ptr<IntegerRangeMConstraint> constraint)
-        : constraint_(std::move(constraint)) {};
+        std::unique_ptr<IntegerRangeMConstraint> constraint,
+        std::function<void(MInteger&)> apply_to_fn)
+        : constraint_(std::move(constraint)),
+          apply_to_fn_(std::move(apply_to_fn)) {};
 
     bool IsSatisfiedWith(librarian::AnalysisContext ctx, int64_t value) const {
       return constraint_->IsSatisfiedWith(Wrap(ctx), value);
@@ -112,9 +136,11 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
       return constraint_->Explanation(Wrap(ctx), value);
     }
     std::string ToString() const { return constraint_->ToString(); }
+    void ApplyTo(MInteger& other) const { apply_to_fn_(other); }
 
    private:
     std::unique_ptr<IntegerRangeMConstraint> constraint_;
+    std::function<void(MInteger&)> apply_to_fn_;
 
     IntegerRangeMConstraint::LookupVariableFn Wrap(
         librarian::AnalysisContext ctx) const {

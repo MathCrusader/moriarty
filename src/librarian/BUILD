@@ -126,6 +126,8 @@ cc_test(
     deps = [
         ":constraint_handler",
         "//src/contexts/librarian:analysis_context",
+        "//src/variables:minteger",
+        "//src/variables:mstring",
         "@googletest//:gtest_main",
     ],
 )

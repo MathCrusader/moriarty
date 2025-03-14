@@ -17,8 +17,11 @@
 #include "src/variables/constraints/numeric_constraints.h"
 
 #include <cstdint>
+#include <format>
 #include <optional>
+#include <span>
 #include <string>
+#include <vector>
 
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
@@ -52,6 +55,65 @@ bool ExactlyIntegerExpression::IsSatisfiedWith(LookupVariableFn lookup_variable,
 std::string ExactlyIntegerExpression::Explanation(
     LookupVariableFn lookup_variable, int64_t value) const {
   return std::format("{} is not exactly {}", value, value_.ToString());
+}
+
+// -----------------------------------------------------------------------------
+//  OneOfIntegerExpression
+
+OneOfIntegerExpression::OneOfIntegerExpression(
+    std::initializer_list<IntegerExpression> options)
+    : moriarty::OneOfIntegerExpression(
+          std::span<const IntegerExpression>{options}) {}
+
+OneOfIntegerExpression::OneOfIntegerExpression(
+    std::span<const IntegerExpression> options) {
+  for (const auto& option : options) {
+    auto expr = ParseExpression(option);
+    if (!expr.ok()) {
+      throw std::invalid_argument(
+          std::format("OneOfIntegerExpression: {}", expr.status().ToString()));
+    }
+    options_.push_back(*std::move(expr));
+  }
+}
+
+namespace {
+
+std::string OptionString(const std::vector<Expression>& exprs) {
+  std::string options = "{";
+  for (const auto& option : exprs) {
+    if (options.size() > 1) options += ", ";
+    options += option.ToString();
+  }
+  options += "}";
+  return options;
+}
+
+}  // namespace
+
+std::vector<std::string> OneOfIntegerExpression::GetOptions() const {
+  std::vector<std::string> options;
+  options.reserve(options_.size());
+  for (const auto& option : options_) options.push_back(option.ToString());
+  return options;
+}
+
+std::string OneOfIntegerExpression::ToString() const {
+  return std::format("is one of {}", OptionString(options_));
+}
+
+bool OneOfIntegerExpression::IsSatisfiedWith(LookupVariableFn lookup_variable,
+                                             int64_t value) const {
+  for (const auto& option : options_) {
+    int64_t expected = EvaluateIntegerExpression(option, lookup_variable);
+    if (expected == value) return true;
+  }
+  return false;
+}
+
+std::string OneOfIntegerExpression::Explanation(
+    LookupVariableFn lookup_variable, int64_t value) const {
+  return std::format("{} is not one of {}", value, OptionString(options_));
 }
 
 // -----------------------------------------------------------------------------
@@ -98,7 +160,7 @@ bool Between::IsSatisfiedWith(LookupVariableFn lookup_variable,
       GetRange().Extremes(lookup_variable);
   if (!extremes.ok()) return false;
   if (!extremes->has_value()) return false;
-  return value >= (*extremes)->min && value <= (*extremes)->max;
+  return (*extremes)->min <= value && value <= (*extremes)->max;
 }
 
 std::string Between::Explanation(LookupVariableFn lookup_variable,

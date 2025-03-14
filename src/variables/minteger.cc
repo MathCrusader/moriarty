@@ -24,6 +24,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "absl/algorithm/container.h"
@@ -38,7 +39,9 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
+#include "src/internal/expressions.h"
 #include "src/internal/range.h"
+#include "src/librarian/one_of_handler.h"
 #include "src/librarian/size_property.h"
 #include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
@@ -48,42 +51,76 @@
 
 namespace moriarty {
 
-MInteger& MInteger::AddConstraint(const Exactly<int64_t>& constraint) {
+namespace {
+
+std::string IntToStr(int64_t value) { return std::to_string(value); }
+
+}  // namespace
+
+MInteger& MInteger::AddConstraint(Exactly<int64_t> constraint) {
   bounds_.Mutable().Intersect(
       Range(constraint.GetValue(), constraint.GetValue()));
+  constraint.SetPrinter(IntToStr);
+  NewAddConstraint(std::move(constraint));
   return *this;
 }
 
-MInteger& MInteger::AddConstraint(const ExactlyIntegerExpression& constraint) {
+MInteger& MInteger::AddConstraint(ExactlyIntegerExpression constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(
-      RangeConstraint(std::make_unique<ExactlyIntegerExpression>(constraint)));
+  NewAddConstraint(RangeConstraint(
+      std::make_unique<ExactlyIntegerExpression>(constraint),
+      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
   return *this;
 }
 
-MInteger& MInteger::AddConstraint(const Exactly<std::string>& constraint) {
+MInteger& MInteger::AddConstraint(Exactly<std::string> constraint) {
   return AddConstraint(ExactlyIntegerExpression(constraint.GetValue()));
 }
 
-MInteger& MInteger::AddConstraint(const Between& constraint) {
-  bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(RangeConstraint(std::make_unique<Between>(constraint)));
+MInteger& MInteger::AddConstraint(OneOf<int64_t> constraint) {
+  one_of_int_.Mutable().ConstrainOptions(constraint.GetOptions());
+  constraint.SetPrinter(IntToStr);
+  NewAddConstraint(std::move(constraint));
   return *this;
 }
 
-MInteger& MInteger::AddConstraint(const AtMost& constraint) {
-  bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(RangeConstraint(std::make_unique<AtMost>(constraint)));
+MInteger& MInteger::AddConstraint(OneOfIntegerExpression constraint) {
+  one_of_expr_.Mutable().ConstrainOptions(constraint.GetOptions());
+  NewAddConstraint(RangeConstraint(
+      std::make_unique<OneOfIntegerExpression>(std::move(constraint)),
+      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
   return *this;
 }
 
-MInteger& MInteger::AddConstraint(const AtLeast& constraint) {
+MInteger& MInteger::AddConstraint(OneOf<std::string> constraint) {
+  return AddConstraint(OneOfIntegerExpression(constraint.GetOptions()));
+}
+
+MInteger& MInteger::AddConstraint(Between constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(RangeConstraint(std::make_unique<AtLeast>(constraint)));
+  NewAddConstraint(RangeConstraint(
+      std::make_unique<Between>(constraint),
+      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
   return *this;
 }
 
-MInteger& MInteger::AddConstraint(const SizeCategory& constraint) {
+MInteger& MInteger::AddConstraint(AtMost constraint) {
+  bounds_.Mutable().Intersect(constraint.GetRange());
+  NewAddConstraint(RangeConstraint(
+      std::make_unique<AtMost>(constraint),
+      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
+  return *this;
+}
+
+MInteger& MInteger::AddConstraint(AtLeast constraint) {
+  bounds_.Mutable().Intersect(constraint.GetRange());
+  NewAddConstraint(RangeConstraint(
+      std::make_unique<AtLeast>(constraint),
+      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
+  return *this;
+}
+
+MInteger& MInteger::AddConstraint(SizeCategory constraint) {
   std::optional<CommonSize> size =
       librarian::MergeSizes(approx_size_, constraint.GetCommonSize());
   if (size) {
@@ -163,11 +200,51 @@ absl::Status MInteger::OfSizeProperty(Property property) {
   return absl::OkStatus();
 }
 
+namespace {
+
+[[nodiscard]] std::vector<int64_t> ExtractOneOfOptions(
+    librarian::ResolverContext ctx,
+    const librarian::OneOfHandler<int64_t>& ints,
+    const librarian::OneOfHandler<std::string>& exprs) {
+  std::vector<int64_t> options;
+
+  if (ints.HasBeenConstrained()) {
+    for (int64_t option : ints.GetOptions()) {
+      options.push_back(option);
+    }
+  }
+
+  if (exprs.HasBeenConstrained()) {
+    std::vector<int64_t> options;
+    for (const std::string& option : exprs.GetOptions()) {
+      Expression expr = *ParseExpression(option);
+      options.push_back(
+          EvaluateIntegerExpression(expr, [&](std::string_view var) {
+            return ctx.GenerateVariable<MInteger>(var);
+          }));
+    }
+  }
+
+  return options;
+}
+
+}  // namespace
+
 int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
   auto extremes = GetExtremeValues(ctx);
   if (!extremes.ok()) {
     throw std::runtime_error(std::string(extremes.status().message()));
   }
+
+  if (one_of_int_->HasBeenConstrained() || one_of_expr_->HasBeenConstrained()) {
+    std::vector<int64_t> options =
+        ExtractOneOfOptions(ctx, *one_of_int_, *one_of_expr_);
+    std::erase_if(options, [&](int64_t value) {
+      return !(extremes->min <= value && value <= extremes->max);
+    });
+    return ctx.RandomElement(options);
+  }
+
   if (approx_size_ == CommonSize::kAny)
     return ctx.RandomInteger(extremes->min, extremes->max);
 
@@ -206,8 +283,6 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
 }
 
 absl::Status MInteger::MergeFromImpl(const MInteger& other) {
-  bounds_.Mutable().Intersect(*other.bounds_);
-
   std::optional<CommonSize> merged_size =
       librarian::MergeSizes(approx_size_, other.approx_size_);
   if (!merged_size.has_value()) {
@@ -238,15 +313,8 @@ void MInteger::PrintImpl(librarian::PrinterContext ctx,
 
 absl::Status MInteger::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
                                            const int64_t& value) const {
-  absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
-  MORIARTY_RETURN_IF_ERROR(
-      CheckConstraint(extremes.status(), "range should be valid"));
-
-  MORIARTY_RETURN_IF_ERROR(
-      CheckConstraint(extremes->min <= value && value <= extremes->max,
-                      absl::Substitute("$0 is not in the range [$1, $2]", value,
-                                       extremes->min, extremes->max)));
-
+  // In the new ConstraintWrapper world, they do all the checking. TODO: Remove
+  // this.
   return absl::OkStatus();
 }
 

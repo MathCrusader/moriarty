@@ -67,12 +67,12 @@ class OneOfHandler {
   // Returns the unique value if there is only one possible value.
   std::optional<T> GetUniqueValue() const;
 
-  // GetValidOptions()
+  // GetOptions()
   //
   // Returns a list of all valid values.
   //
   // Precondition: HasBeenConstrained() == true
-  [[nodiscard]] const std::vector<T>& GetValidOptions() const;
+  [[nodiscard]] const std::vector<T>& GetOptions() const;
 
  private:
   std::optional<std::vector<T>> valid_options_;
@@ -106,7 +106,7 @@ std::optional<T> OneOfHandler<T>::GetUniqueValue() const {
 }
 
 template <typename T>
-const std::vector<T>& OneOfHandler<T>::GetValidOptions() const {
+const std::vector<T>& OneOfHandler<T>::GetOptions() const {
   return *valid_options_;
 }
 

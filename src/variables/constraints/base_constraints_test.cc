@@ -33,6 +33,9 @@ namespace {
 using testing::ElementsAre;
 using testing::Throws;
 
+std::string IntToStr(int64_t value) { return std::to_string(value); }
+std::string StrToStr(const std::string& value) { return value; }
+
 TEST(BaseConstraintsTest, ExactlyForVariousIntegerTypesWorks) {
   static_assert(std::is_same_v<decltype(Exactly(123)), Exactly<int64_t>>);
   static_assert(std::is_same_v<decltype(Exactly(static_cast<int32_t>(123))),
@@ -115,11 +118,8 @@ TEST(BaseConstraintsTest, ExactlyForOtherTypesWorks) {
 }
 
 TEST(BaseConstraintsTest, ExactlyToStringWorks) {
-  EXPECT_EQ(
-      Exactly(123).ToString([](const auto& v) { return std::to_string(v); }),
-      "is exactly 123");
-  EXPECT_EQ(Exactly("abc").ToString([](const auto& v) { return v; }),
-            "is exactly abc");
+  EXPECT_EQ(Exactly(123).SetPrinter(IntToStr).ToString(), "is exactly 123");
+  EXPECT_EQ(Exactly("abc").SetPrinter(StrToStr).ToString(), "is exactly abc");
 }
 
 TEST(BaseConstraintsTest, ExactlyWithTooLargeOfIntegersShouldThrow) {
@@ -139,11 +139,9 @@ TEST(BaseConstraintsTest, ExactlyIsSatisfiedWithShouldWork) {
 }
 
 TEST(BaseConstraintsTest, ExactlyExplanationShouldWork) {
-  auto int_to_string = [](const auto& v) { return std::to_string(v); };
-  auto str_to_string = [](const auto& v) { return v; };
-  EXPECT_EQ(Exactly(123).Explanation(int_to_string, 11),
+  EXPECT_EQ(Exactly(123).SetPrinter(IntToStr).Explanation(11),
             "`11` is not exactly `123`");
-  EXPECT_EQ(Exactly("abc").Explanation(str_to_string, "hello"),
+  EXPECT_EQ(Exactly("abc").SetPrinter(StrToStr).Explanation("hello"),
             "`hello` is not exactly `abc`");
 }
 
@@ -244,9 +242,9 @@ TEST(BaseConstraintsTest, OneOfToStringWorks) {
   auto int_to_string = [](const auto& v) { return std::to_string(v); };
   auto str_to_string = [](const auto& v) { return v; };
 
-  EXPECT_EQ(OneOf({123, 456}).ToString(int_to_string),
+  EXPECT_EQ(OneOf({123, 456}).SetPrinter(int_to_string).ToString(),
             "is one of {`123`, `456`}");
-  EXPECT_EQ(OneOf({"abc", "def"}).ToString(str_to_string),
+  EXPECT_EQ(OneOf({"abc", "def"}).SetPrinter(str_to_string).ToString(),
             "is one of {`abc`, `def`}");
 }
 
@@ -275,11 +273,9 @@ TEST(BaseConstraintsTest, OneOfIsSatisfiedWithShouldWork) {
 }
 
 TEST(BaseConstraintsTest, OneOfExplanationShouldWork) {
-  auto int_to_string = [](const auto& v) { return std::to_string(v); };
-  auto str_to_string = [](const auto& v) { return v; };
-  EXPECT_EQ(OneOf({123, 456}).Explanation(int_to_string, 11),
+  EXPECT_EQ(OneOf({123, 456}).SetPrinter(IntToStr).Explanation(11),
             "`11` is not one of {`123`, `456`}");
-  EXPECT_EQ(OneOf({"abc", "def"}).Explanation(str_to_string, "hello"),
+  EXPECT_EQ(OneOf({"abc", "def"}).SetPrinter(StrToStr).Explanation("hello"),
             "`hello` is not one of {`abc`, `def`}");
 }
 

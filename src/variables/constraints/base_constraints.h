@@ -23,6 +23,8 @@
 #include <format>
 #include <functional>
 #include <initializer_list>
+#include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -78,22 +80,29 @@ class Exactly : public MConstraint {
   // Returns the value that the variable must be.
   [[nodiscard]] T GetValue() const;
 
-  // Returns a human-readable representation of this constraint. Uses
-  // `to_string` to print `value` in the message.
-  [[nodiscard]] std::string ToString(
-      std::function<std::string(const T&)> to_string) const;
+  // Returns a human-readable representation of this constraint.
+  [[nodiscard]] std::string ToString() const;
 
   // Determines if all constraints are satisfied with the given value.
   [[nodiscard]] bool IsSatisfiedWith(const T& value) const;
 
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  // Uses `to_string` to print `value` in the message.
-  [[nodiscard]] std::string Explanation(
-      std::function<std::string(const T&)> to_string, const T& value) const;
+  [[nodiscard]] std::string Explanation(const T& value) const;
+
+  // Set a custom printer for the value.
+  Exactly& SetPrinter(std::function<std::string(const T&)> printer) {
+    printer_ = printer;
+    return *this;
+  }
 
  private:
   T value_;
+  std::optional<std::function<std::string(const T&)>> printer_;
+
+  void ValidatePrinter() const {
+    if (!printer_) throw std::logic_error("Printer not set in Exactly");
+  }
 };
 
 // The variable must be one of these values.
@@ -142,22 +151,29 @@ class OneOf : public MConstraint {
   // Returns the values that the variable must be one of.
   [[nodiscard]] std::vector<T> GetOptions() const;
 
-  // Returns a human-readable representation of this constraint. Uses
-  // `to_string` to print `options` in the message.
-  [[nodiscard]] std::string ToString(
-      std::function<std::string(const T&)> to_string) const;
+  // Returns a human-readable representation of this constraint.
+  [[nodiscard]] std::string ToString() const;
 
   // Determines if all constraints are satisfied with the given value.
   [[nodiscard]] bool IsSatisfiedWith(const T& value) const;
 
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  // Uses `to_string` to print `options` and `value` in the message.
-  [[nodiscard]] std::string Explanation(
-      std::function<std::string(const T&)> to_string, const T& value) const;
+  [[nodiscard]] std::string Explanation(const T& value) const;
+
+  // Set a custom printer for the options.
+  OneOf& SetPrinter(std::function<std::string(const T&)> printer) {
+    printer_ = printer;
+    return *this;
+  }
 
  private:
   std::vector<T> options_;
+  std::optional<std::function<std::string(const T&)>> printer_;
+
+  void ValidatePrinter() const {
+    if (!printer_) throw std::logic_error("Printer not set in OneOf");
+  }
 };
 
 // -----------------------------------------------------------------------------
@@ -259,9 +275,9 @@ T Exactly<T>::GetValue() const {
 }
 
 template <typename T>
-std::string Exactly<T>::ToString(
-    std::function<std::string(const T&)> to_string) const {
-  return std::format("is exactly {}", to_string(value_));
+std::string Exactly<T>::ToString() const {
+  this->ValidatePrinter();
+  return std::format("is exactly {}", (*printer_)(value_));
 }
 
 template <typename T>
@@ -270,10 +286,10 @@ bool Exactly<T>::IsSatisfiedWith(const T& value) const {
 }
 
 template <typename T>
-std::string Exactly<T>::Explanation(
-    std::function<std::string(const T&)> to_string, const T& value) const {
-  return std::format("`{}` is not exactly `{}`", to_string(value),
-                     to_string(value_));
+std::string Exactly<T>::Explanation(const T& value) const {
+  this->ValidatePrinter();
+  return std::format("`{}` is not exactly `{}`", (*printer_)(value),
+                     (*printer_)(value_));
 }
 
 template <typename T>
@@ -364,12 +380,12 @@ std::vector<T> OneOf<T>::GetOptions() const {
 }
 
 template <typename T>
-std::string OneOf<T>::ToString(
-    std::function<std::string(const T&)> to_string) const {
+std::string OneOf<T>::ToString() const {
+  this->ValidatePrinter();
   std::string options = "{";
   for (const auto& option : options_) {
     if (options.size() > 1) options += ", ";
-    options += std::format("`{}`", to_string(option));
+    options += std::format("`{}`", (*printer_)(option));
   }
   options += "}";
 
@@ -382,16 +398,16 @@ bool OneOf<T>::IsSatisfiedWith(const T& value) const {
 }
 
 template <typename T>
-std::string OneOf<T>::Explanation(
-    std::function<std::string(const T&)> to_string, const T& value) const {
+std::string OneOf<T>::Explanation(const T& value) const {
+  this->ValidatePrinter();
   std::string options = "{";
   for (const auto& option : options_) {
     if (options.size() > 1) options += ", ";
-    options += std::format("`{}`", to_string(option));
+    options += std::format("`{}`", (*printer_)(option));
   }
   options += "}";
 
-  return std::format("`{}` is not one of {}", to_string(value), options);
+  return std::format("`{}` is not one of {}", (*printer_)(value), options);
 }
 
 }  // namespace moriarty

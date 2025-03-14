@@ -92,21 +92,21 @@ TEST(OneOfHandler, GetUniqueValueReturnsTheUniqueValueIfThereIsOne) {
   }
 }
 
-TEST(OneOfHandler, GetValidOptionsReturnsAllValidOptions) {
+TEST(OneOfHandler, GetOptionsReturnsAllValidOptions) {
   {
     OneOfHandler<int> handler;
     handler.ConstrainOptions(std::vector{1, 2, 3});
-    EXPECT_THAT(handler.GetValidOptions(), UnorderedElementsAre(1, 2, 3));
+    EXPECT_THAT(handler.GetOptions(), UnorderedElementsAre(1, 2, 3));
     handler.ConstrainOptions(std::vector{1, 2});
-    EXPECT_THAT(handler.GetValidOptions(), UnorderedElementsAre(1, 2));
+    EXPECT_THAT(handler.GetOptions(), UnorderedElementsAre(1, 2));
     handler.ConstrainOptions(std::vector{2});
-    EXPECT_THAT(handler.GetValidOptions(), UnorderedElementsAre(2));
+    EXPECT_THAT(handler.GetOptions(), UnorderedElementsAre(2));
   }
   {
     OneOfHandler<int> handler;
     handler.ConstrainOptions(std::vector{1, 2, 3});
     handler.ConstrainOptions(std::vector{2, 3, 4});
-    EXPECT_THAT(handler.GetValidOptions(), UnorderedElementsAre(2, 3));
+    EXPECT_THAT(handler.GetOptions(), UnorderedElementsAre(2, 3));
   }
 }
 

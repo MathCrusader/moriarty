@@ -28,6 +28,7 @@ namespace {
 using ::moriarty::AtLeast;
 using ::moriarty::AtMost;
 using ::moriarty::Between;
+using ::testing::ElementsAre;
 using ::testing::Throws;
 
 testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
@@ -71,6 +72,8 @@ TEST(NumericConstraintsTest, InvalidBetweenShouldThrow) {
 TEST(NumericConstraintsTest, InvalidExpressionsShouldThrow) {
   {
     EXPECT_DEATH({ ExactlyIntegerExpression("2 *"); }, "INVALID_ARGUMENT");
+    EXPECT_THAT([] { OneOfIntegerExpression({"3", "2 *"}); },
+                Throws<std::invalid_argument>());
     EXPECT_DEATH({ Between("2 *", 5); }, "INVALID_ARGUMENT");
     EXPECT_DEATH({ Between(5, "2 *"); }, "INVALID_ARGUMENT");
     EXPECT_DEATH({ AtMost("2 *"); }, "INVALID_ARGUMENT");
@@ -78,13 +81,18 @@ TEST(NumericConstraintsTest, InvalidExpressionsShouldThrow) {
   }
   {
     EXPECT_DEATH({ ExactlyIntegerExpression(""); }, "INVALID_ARGUMENT");
+    EXPECT_THAT([] { OneOfIntegerExpression({""}); },
+                Throws<std::invalid_argument>());
     EXPECT_DEATH({ Between("", 5); }, "INVALID_ARGUMENT");
     EXPECT_DEATH({ Between(5, ""); }, "INVALID_ARGUMENT");
     EXPECT_DEATH({ AtMost(""); }, "INVALID_ARGUMENT");
     EXPECT_DEATH({ AtLeast(""); }, "INVALID_ARGUMENT");
   }
+
   // {
   //   EXPECT_THAT([] { ExactlyIntegerExpression("2 *"); },
+  //               Throws<std::invalid_argument>());
+  //   EXPECT_THAT([] { OneOfIntegerExpression({"3", "2 *"}); },
   //               Throws<std::invalid_argument>());
   //   EXPECT_THAT([] { Between("2 *", 5); }, Throws<std::invalid_argument>());
   //   EXPECT_THAT([] { Between(5, "2 *"); }, Throws<std::invalid_argument>());
@@ -93,6 +101,8 @@ TEST(NumericConstraintsTest, InvalidExpressionsShouldThrow) {
   // }
   // {
   //   EXPECT_THAT([] { ExactlyIntegerExpression(""); },
+  //               Throws<std::invalid_argument>());
+  //   EXPECT_THAT([] { OneOfIntegerExpression({""}); },
   //               Throws<std::invalid_argument>());
   //   EXPECT_THAT([] { Between("", 5); }, Throws<std::invalid_argument>());
   //   EXPECT_THAT([] { Between(5, ""); }, Throws<std::invalid_argument>());
@@ -126,10 +136,26 @@ TEST(NumericConstraintsTest, GetRangeShouldGiveCorrectValues) {
   }
 }
 
+TEST(NumericConstraintsTest, GetOptionsShouldGiveCorrectValues) {
+  {
+    OneOfIntegerExpression one_of({"1", "2", "3"});
+    EXPECT_THAT(one_of.GetOptions(), ElementsAre("1", "2", "3"));
+  }
+  {
+    OneOfIntegerExpression one_of({"x", "y", "z"});
+    EXPECT_THAT(one_of.GetOptions(), ElementsAre("x", "y", "z"));
+  }
+}
+
 TEST(NumericConstraintsTest, ToStringShouldWork) {
   {
     EXPECT_EQ(ExactlyIntegerExpression("3 * X + 1").ToString(),
               "is exactly 3 * X + 1");
+  }
+  {
+    EXPECT_EQ(OneOfIntegerExpression({"1", "x+3"}).ToString(),
+              "is one of {1, x+3}");
+    EXPECT_EQ(OneOfIntegerExpression({"x+3"}).ToString(), "is one of {x+3}");
   }
   {
     EXPECT_EQ(Between(10, 20).ToString(), "is between 10 and 20");
@@ -186,6 +212,12 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
     EXPECT_FALSE(ExactlyIntegerExpression("x").IsSatisfiedWith(tmp, 9));
   }
   {
+    EXPECT_TRUE(OneOfIntegerExpression({"x", "14"}).IsSatisfiedWith(tmp, 10));
+    EXPECT_TRUE(OneOfIntegerExpression({"x", "14"}).IsSatisfiedWith(tmp, 14));
+    EXPECT_FALSE(OneOfIntegerExpression({"x", "14"}).IsSatisfiedWith(tmp, 9));
+    EXPECT_FALSE(OneOfIntegerExpression({"x", "14"}).IsSatisfiedWith(tmp, 15));
+  }
+  {
     EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 10));
     EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 25));
     EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 400));
@@ -212,6 +244,12 @@ TEST(NumericConstraintsTest, ExplanationShouldWork) {
   {
     EXPECT_EQ(ExactlyIntegerExpression("x + 1").Explanation(tmp, 10),
               "10 is not exactly x + 1");
+  }
+  {
+    EXPECT_EQ(OneOfIntegerExpression({"x", "14"}).Explanation(tmp, 10),
+              "10 is not one of {x, 14}");
+    EXPECT_EQ(OneOfIntegerExpression({"x", "14"}).Explanation(tmp, 15),
+              "15 is not one of {x, 14}");
   }
   {
     EXPECT_EQ(Between("x", 12).Explanation(tmp, 9),

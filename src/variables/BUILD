@@ -70,6 +70,7 @@ cc_library(
         "//src/internal:range",
         "//src/librarian:cow_ptr",
         "//src/librarian:mvariable",
+        "//src/librarian:one_of_handler",
         "//src/librarian:size_property",
         "//src/util/status_macro:status_macros",
         "//src/variables/constraints:base_constraints",

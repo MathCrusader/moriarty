@@ -479,5 +479,80 @@ TEST(MIntegerTest, InvalidExpressionsShouldFail) {
       "Unknown character");
 }
 
+TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithNoVariablesShouldWork) {
+  {  // IsSatisfiedWith
+    EXPECT_THAT(MInteger(Exactly(5)), IsSatisfiedWith(5));
+    EXPECT_THAT(MInteger(Exactly(5)), IsNotSatisfiedWith(6, "exactly"));
+
+    EXPECT_THAT(
+        MInteger(OneOf({5, 6, 7})),
+        AllOf(IsSatisfiedWith(5), IsSatisfiedWith(6), IsSatisfiedWith(7)));
+    EXPECT_THAT(MInteger(OneOf({5, 6, 7})), IsNotSatisfiedWith(8, "one of"));
+
+    EXPECT_THAT(MInteger(Exactly(5), OneOf({5, 6, 7})), IsSatisfiedWith(5));
+    EXPECT_THAT(MInteger(Exactly(5), OneOf({4, 5, 6}), Between(5, 1000000)),
+                IsSatisfiedWith(5));
+    EXPECT_THAT(MInteger(Exactly(5), OneOf({5, 6, 7})),
+                IsNotSatisfiedWith(6, "exactly"));
+    EXPECT_THAT(MInteger(Exactly(5), OneOf({6, 7, 8})),
+                IsNotSatisfiedWith(5, "one of"));
+  }
+  {  // Generate
+    EXPECT_THAT(MInteger(Exactly(5)), GeneratedValuesAre(5));
+    EXPECT_THAT(MInteger(OneOf({5, 6, 7})), GeneratedValuesAre(AnyOf(5, 6, 7)));
+    EXPECT_THAT(MInteger(Exactly(5), OneOf({5, 6, 7})), GeneratedValuesAre(5));
+    EXPECT_THAT(MInteger(Exactly(5), OneOf({4, 5, 6}), Between(5, 10)),
+                GeneratedValuesAre(5));
+    EXPECT_THAT(MInteger(Exactly(5), Between(1, 10)), GeneratedValuesAre(5));
+    EXPECT_THAT(MInteger(OneOf({5, 6, 7}), Between(1, 6)),
+                GeneratedValuesAre(AnyOf(5, 6)));
+  }
+}
+
+TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithVariablesShouldWork) {
+  {  // IsSatisfiedWith
+    EXPECT_THAT(MInteger(Exactly("N")),
+                IsSatisfiedWith(10, Context().WithValue<MInteger>("N", 10)));
+    EXPECT_THAT(MInteger(Exactly("N")),
+                IsNotSatisfiedWith(11, "exactly",
+                                   Context().WithValue<MInteger>("N", 10)));
+
+    EXPECT_THAT(
+        MInteger(OneOf({"N", "N+1", "N+2", "123"})),
+        AllOf(IsSatisfiedWith(5, Context().WithValue<MInteger>("N", 5)),
+              IsSatisfiedWith(6, Context().WithValue<MInteger>("N", 5)),
+              IsSatisfiedWith(7, Context().WithValue<MInteger>("N", 5)),
+              IsSatisfiedWith(123, Context().WithValue<MInteger>("N", 5))));
+    EXPECT_THAT(
+        MInteger(OneOf({"N", "N+1", "N+2"})),
+        IsNotSatisfiedWith(8, "one of", Context().WithValue<MInteger>("N", 5)));
+
+    EXPECT_THAT(MInteger(Exactly("N"), OneOf({"N-1", "N+1", "N*1", "N/1"})),
+                IsSatisfiedWith(5, Context().WithValue<MInteger>("N", 5)));
+    EXPECT_THAT(MInteger(Exactly("N + 1"), OneOf({"N-1", "N+1", "N*1", "N/1"}),
+                         Between("N-1", 1000)),
+                IsSatisfiedWith(6, Context().WithValue<MInteger>("N", 5)));
+    EXPECT_THAT(MInteger(Exactly("N"), OneOf({"N", "N+1", "N+2"})),
+                IsNotSatisfiedWith(6, "exactly",
+                                   Context().WithValue<MInteger>("N", 5)));
+    EXPECT_THAT(
+        MInteger(Exactly("N"), OneOf({6, 7, 8})),
+        IsNotSatisfiedWith(5, "one of", Context().WithValue<MInteger>("N", 5)));
+    EXPECT_THAT(
+        MInteger(Exactly("N"), OneOf({"N+1", "N+2"})),
+        IsNotSatisfiedWith(5, "one of", Context().WithValue<MInteger>("N", 5)));
+  }
+  {  // Generate
+    EXPECT_THAT(MInteger(Exactly(5)), GeneratedValuesAre(5));
+    EXPECT_THAT(MInteger(OneOf({5, 6, 7})), GeneratedValuesAre(AnyOf(5, 6, 7)));
+    EXPECT_THAT(MInteger(Exactly(5), OneOf({5, 6, 7})), GeneratedValuesAre(5));
+    EXPECT_THAT(MInteger(Exactly(5), OneOf({4, 5, 6}), Between(5, 10)),
+                GeneratedValuesAre(5));
+    EXPECT_THAT(MInteger(Exactly(5), Between(1, 10)), GeneratedValuesAre(5));
+    EXPECT_THAT(MInteger(OneOf({5, 6, 7}), Between(1, 6)),
+                GeneratedValuesAre(AnyOf(5, 6)));
+  }
+}
+
 }  // namespace
 }  // namespace moriarty

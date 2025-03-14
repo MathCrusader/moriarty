@@ -19,8 +19,11 @@
 
 #include <cstdint>
 #include <functional>
+#include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
@@ -64,6 +67,46 @@ class ExactlyIntegerExpression : public IntegerRangeMConstraint {
 
  private:
   Expression value_;
+};
+
+// Constraint stating that the variable must be exactly the value of this
+// expression. E.g., `OneOfIntegerExpression({"3 * N + 1", "14"})`.
+class OneOfIntegerExpression : public IntegerRangeMConstraint {
+ public:
+  // The numeric value must be exactly these values.
+  template <typename Container>
+  explicit OneOfIntegerExpression(const Container& options) {
+    for (const std::string& option : options) {
+      auto expr = ParseExpression(option);
+      if (!expr.ok()) {
+        throw std::invalid_argument(
+            std::format("Invalid expression: {}", option));
+      }
+      options_.push_back(*std::move(expr));
+    }
+  }
+
+  explicit OneOfIntegerExpression(std::span<const IntegerExpression> options);
+  explicit OneOfIntegerExpression(
+      std::initializer_list<IntegerExpression> options);
+
+  // Returns the options that this constraint represents.
+  [[nodiscard]] std::vector<std::string> GetOptions() const;
+
+  // Returns a human-readable representation of this constraint.
+  [[nodiscard]] std::string ToString() const;
+
+  // Returns true if the given value satisfies this constraint.
+  [[nodiscard]] bool IsSatisfiedWith(LookupVariableFn lookup_variable,
+                                     int64_t value) const;
+
+  // Gives a human-readable explanation of why value does not satisfy the
+  // constraints. Precondition: IsSatisfiedWith() == false;
+  [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
+                                        int64_t value) const;
+
+ private:
+  std::vector<Expression> options_;
 };
 
 // Constraint stating that the numeric value must be in the inclusive range

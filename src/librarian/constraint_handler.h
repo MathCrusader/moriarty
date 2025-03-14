@@ -18,6 +18,7 @@
 #define MORIARTY_SRC_LIBRARIAN_CONSTRAINT_HANDLER_H_
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "src/contexts/librarian/analysis_context.h"
@@ -26,13 +27,29 @@
 namespace moriarty {
 namespace librarian {
 
+template <typename ConstraintType, typename ValueType>
+concept ConstraintHasSimplifiedIsSatisfiedWithFn =
+    requires(const ConstraintType& c, const ValueType& v) {
+      { c.IsSatisfiedWith(v) } -> std::same_as<bool>;
+    };
+
+template <typename ConstraintType, typename ValueType>
+concept ConstraintHasSimplifiedExplanationFn =
+    requires(const ConstraintType& c, const ValueType& v) {
+      { c.Explanation(v) } -> std::same_as<std::string>;
+    };
+
+template <typename ConstraintType, typename VariableType>
+concept ConstraintHasCustomApplyToFn =
+    requires(const ConstraintType& c, VariableType& v) {
+      { c.ApplyTo(v) } -> std::same_as<void>;
+    };
+
 // ConstraintHandler
 //
 // Holds a collection of type-erased constraints. Each constraint must have a
 // particular API.
-//
-// T is the type we are adding constraints to (int, std::string, etc).
-template <typename T>
+template <typename VariableType, typename ValueType>
 class ConstraintHandler {
  public:
   // to_string_prefix will be prepended to the string representation of the
@@ -43,34 +60,42 @@ class ConstraintHandler {
   // AddConstraint()
   //
   // Adds a constraint to the system.
-  template <typename U>
-  void AddConstraint(U constraint);
+  template <typename ConstraintType>
+  void AddConstraint(ConstraintType constraint);
 
   // IsSatisfiedWith()
   //
   // Determines if all constraints are satisfied with the given value.
-  auto IsSatisfiedWith(AnalysisContext ctx, const T& value) const -> bool;
+  auto IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const
+      -> bool;
 
   // Explanation()
   //
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  auto Explanation(AnalysisContext ctx, const T& value) const -> std::string;
+  auto Explanation(AnalysisContext ctx, const ValueType& value) const
+      -> std::string;
 
   // ToString()
   //
   // Returns a string representation of the constraints.
   auto ToString() const -> std::string;
 
+  // ApplyAllTo()
+  //
+  // Apply all constraints stored in this handler into `other`.
+  void ApplyAllTo(VariableType& other) const;
+
  private:
   class ConstraintHusk {
    public:
     virtual ~ConstraintHusk() = default;
-    virtual auto IsSatisfiedWith(AnalysisContext ctx, const T& value) const
-        -> bool = 0;
-    virtual auto Explanation(AnalysisContext ctx, const T& value) const
+    virtual auto IsSatisfiedWith(AnalysisContext ctx,
+                                 const ValueType& value) const -> bool = 0;
+    virtual auto Explanation(AnalysisContext ctx, const ValueType& value) const
         -> std::string = 0;
     virtual auto ToString() const -> std::string = 0;
+    virtual auto ApplyTo(VariableType& other) const -> void = 0;
   };
 
   template <typename U>
@@ -79,16 +104,31 @@ class ConstraintHandler {
     ~ConstraintWrapper() override = default;
     explicit ConstraintWrapper(U constraint)
         : constraint_(std::move(constraint)) {}
-    auto IsSatisfiedWith(AnalysisContext ctx, const T& value) const
+    auto IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const
         -> bool override {
-      return constraint_.IsSatisfiedWith(ctx, value);
+      if constexpr (ConstraintHasSimplifiedIsSatisfiedWithFn<U, ValueType>) {
+        return constraint_.IsSatisfiedWith(value);
+      } else {
+        return constraint_.IsSatisfiedWith(ctx, value);
+      }
     }
-    auto Explanation(AnalysisContext ctx, const T& value) const
+    auto Explanation(AnalysisContext ctx, const ValueType& value) const
         -> std::string override {
-      return constraint_.Explanation(ctx, value);
+      if constexpr (ConstraintHasSimplifiedExplanationFn<U, ValueType>) {
+        return constraint_.Explanation(value);
+      } else {
+        return constraint_.Explanation(ctx, value);
+      }
     }
     auto ToString() const -> std::string override {
       return constraint_.ToString();
+    }
+    auto ApplyTo(VariableType& other) const -> void override {
+      if constexpr (ConstraintHasCustomApplyToFn<U, VariableType>) {
+        constraint_.ApplyTo(other);
+      } else {
+        other.AddConstraint(constraint_);
+      }
     }
 
    private:
@@ -105,16 +145,16 @@ class ConstraintHandler {
 // AddConstraint()
 //
 // Adds a constraint to the system.
-template <typename T>
+template <typename VariableType, typename ValueType>
 template <typename U>
-void ConstraintHandler<T>::AddConstraint(U constraint) {
+void ConstraintHandler<VariableType, ValueType>::AddConstraint(U constraint) {
   constraints_.push_back(
       CowPtr<ConstraintHusk>(new ConstraintWrapper<U>(std::move(constraint))));
 }
 
-template <typename T>
-auto ConstraintHandler<T>::IsSatisfiedWith(AnalysisContext ctx,
-                                           const T& value) const -> bool {
+template <typename VariableType, typename ValueType>
+auto ConstraintHandler<VariableType, ValueType>::IsSatisfiedWith(
+    AnalysisContext ctx, const ValueType& value) const -> bool {
   for (const auto& constraint : constraints_) {
     if (!constraint->IsSatisfiedWith(ctx, value)) {
       return false;
@@ -123,9 +163,9 @@ auto ConstraintHandler<T>::IsSatisfiedWith(AnalysisContext ctx,
   return true;
 }
 
-template <typename T>
-auto ConstraintHandler<T>::Explanation(AnalysisContext ctx,
-                                       const T& value) const -> std::string {
+template <typename VariableType, typename ValueType>
+auto ConstraintHandler<VariableType, ValueType>::Explanation(
+    AnalysisContext ctx, const ValueType& value) const -> std::string {
   std::string explanation;
   for (const auto& constraint : constraints_) {
     if (!constraint->IsSatisfiedWith(ctx, value)) {
@@ -136,12 +176,21 @@ auto ConstraintHandler<T>::Explanation(AnalysisContext ctx,
   return explanation;
 }
 
-template <typename T>
-auto ConstraintHandler<T>::ToString() const -> std::string {
-  std::string str = to_string_prefix_ + "\n";
+template <typename VariableType, typename ValueType>
+auto ConstraintHandler<VariableType, ValueType>::ToString() const
+    -> std::string {
+  std::string str =
+      std::format("{} (with {} constraint{})\n", to_string_prefix_,
+                  constraints_.size(), constraints_.size() == 1 ? "" : "s");
   for (const auto& constraint : constraints_)
     str += " * " + constraint->ToString() + "\n";
   return str;
+}
+
+template <typename VariableType, typename ValueType>
+void ConstraintHandler<VariableType, ValueType>::ApplyAllTo(
+    VariableType& other) const {
+  for (const auto& constraint : constraints_) constraint->ApplyTo(other);
 }
 
 }  // namespace librarian
