@@ -45,6 +45,12 @@ cc_library(
 )
 
 cc_library(
+    name = "debug_print",
+    srcs = ["debug_print.cc"],
+    hdrs = ["debug_print.h"],
+)
+
+cc_library(
     name = "mvariable",
     hdrs = [
         "mvariable.h",
@@ -137,6 +143,15 @@ cc_test(
     srcs = ["cow_ptr_test.cc"],
     deps = [
         ":cow_ptr",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "debug_print_test",
+    srcs = ["debug_print_test.cc"],
+    deps = [
+        ":debug_print",
         "@googletest//:gtest_main",
     ],
 )

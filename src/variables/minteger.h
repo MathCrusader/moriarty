@@ -166,9 +166,6 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
       librarian::AnalysisContext ctx) const override;
   std::optional<int64_t> GetUniqueValueImpl(
       librarian::AnalysisContext ctx) const override;
-  std::string ToStringImpl() const override;
-  absl::StatusOr<std::string> ValueToStringImpl(
-      const int64_t& value) const override;
   // ---------------------------------------------------------------------------
 };
 

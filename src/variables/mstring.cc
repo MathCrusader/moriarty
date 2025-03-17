@@ -17,18 +17,18 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <format>
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-#include "absl/algorithm/container.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/str_cat.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -47,116 +47,57 @@
 
 namespace moriarty {
 
-MString& MString::AddConstraint(const Exactly<std::string>& constraint) {
-  return Is(constraint.GetValue());
+MString& MString::AddConstraint(Exactly<std::string> constraint) {
+  one_of_.ConstrainOptions(std::vector{constraint.GetValue()});
+  NewAddConstraint(std::move(constraint));
+  return *this;
 }
 
-MString& MString::AddConstraint(const Length& constraint) {
+MString& MString::AddConstraint(Length constraint) {
   if (length_)
     length_->MergeFrom(constraint.GetConstraints());
   else
     length_ = constraint.GetConstraints();
+  NewAddConstraint(std::move(constraint));
   return *this;
 }
 
-MString& MString::AddConstraint(const Alphabet& constraint) {
-  return WithAlphabet(constraint.GetAlphabet());
+MString& MString::AddConstraint(Alphabet constraint) {
+  // We later assume that there are no duplicates in the alphabet.
+  std::string options = constraint.GetAlphabet();
+  std::sort(options.begin(), options.end());
+  auto last = std::unique(options.begin(), options.end());
+  options.erase(last, options.end());
+
+  alphabet_.ConstrainOptions(options);
+  return *this;
 }
 
-MString& MString::AddConstraint(const DistinctCharacters& constraint) {
+MString& MString::AddConstraint(DistinctCharacters constraint) {
   distinct_characters_ = true;
   return *this;
 }
 
-MString& MString::AddConstraint(const SimplePattern& constraint) {
-  return WithSimplePattern(constraint.GetPattern());
-}
-
-MString& MString::AddConstraint(const SizeCategory& constraint) {
-  return AddConstraint(Length(constraint));
-}
-
-MString& MString::OfLength(const MInteger& length) {
-  return AddConstraint(Length(length));
-}
-
-MString& MString::OfLength(int64_t length) {
-  return AddConstraint(Length(length));
-}
-
-MString& MString::OfLength(std::string_view length_expression) {
-  return AddConstraint(Length(length_expression));
-}
-
-MString& MString::OfLength(int64_t min_length, int64_t max_length) {
-  return AddConstraint(Length(Between(min_length, max_length)));
-}
-
-MString& MString::OfLength(int64_t min_length,
-                           std::string_view max_length_expression) {
-  return AddConstraint(Length(Between(min_length, max_length_expression)));
-}
-
-MString& MString::OfLength(std::string_view min_length_expression,
-                           int64_t max_length) {
-  return AddConstraint(Length(Between(min_length_expression, max_length)));
-}
-
-MString& MString::OfLength(std::string_view min_length_expression,
-                           std::string_view max_length_expression) {
-  return AddConstraint(
-      Length(Between(min_length_expression, max_length_expression)));
-}
-
-MString& MString::WithAlphabet(std::string_view valid_characters) {
-  // If `valid_characters` isn't sorted or contains multiple occurrences of
-  // the same letter, we need to create a new string in order to sort the
-  // characters.
-  std::string valid_character_str;
-  if (!absl::c_is_sorted(valid_characters) ||
-      absl::c_adjacent_find(valid_characters) != std::end(valid_characters)) {
-    valid_character_str = valid_characters;
-
-    // Sort
-    absl::c_sort(valid_character_str);
-    // Remove duplicates
-    valid_character_str.erase(
-        std::unique(valid_character_str.begin(), valid_character_str.end()),
-        valid_character_str.end());
-    valid_characters = valid_character_str;
-  }
-
-  if (!alphabet_) {
-    alphabet_ = valid_characters;
-  } else {  // Do set intersection of the two alphabets
-    alphabet_->erase(absl::c_set_intersection(valid_characters, *alphabet_,
-                                              alphabet_->begin()),
-                     alphabet_->end());
-  }
-
-  return *this;
-}
-
-MString& MString::WithDistinctCharacters() {
-  return AddConstraint(DistinctCharacters());
-}
-
-MString& MString::WithSimplePattern(std::string_view simple_pattern) {
+MString& MString::AddConstraint(SimplePattern constraint) {
   absl::StatusOr<moriarty_internal::SimplePattern> pattern =
-      moriarty_internal::SimplePattern::Create(simple_pattern);
+      moriarty_internal::SimplePattern::Create(constraint.GetPattern());
   if (!pattern.ok()) {
-    DeclareSelfAsInvalid(
-        UnsatisfiedConstraintError(pattern.status().ToString()));
-    return *this;
+    throw std::invalid_argument(
+        std::format("Invalid simple pattern; {}", pattern.status().ToString()));
   }
 
   simple_patterns_.push_back(*std::move(pattern));
   return *this;
 }
 
+MString& MString::AddConstraint(SizeCategory constraint) {
+  return AddConstraint(Length(constraint));
+}
+
 absl::Status MString::MergeFromImpl(const MString& other) {
-  if (other.length_) OfLength(*other.length_);
-  if (other.alphabet_) WithAlphabet(*other.alphabet_);
+  if (other.length_) AddConstraint(Length(*other.length_));
+  if (other.alphabet_.HasBeenConstrained())
+    alphabet_.ConstrainOptions(other.alphabet_.GetOptions());
   distinct_characters_ = other.distinct_characters_;
   for (const auto& pattern : other.simple_patterns_)
     simple_patterns_.push_back(pattern);
@@ -172,12 +113,12 @@ absl::Status MString::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
                         "length of string is invalid"));
   }
 
-  if (alphabet_) {
+  if (alphabet_.HasBeenConstrained()) {
     for (char c : value) {
-      MORIARTY_RETURN_IF_ERROR(CheckConstraint(
-          absl::c_binary_search(*alphabet_, c),
-          absl::Substitute("character '$0' not in alphabet, but in '$1'", c,
-                           value)));
+      if (!alphabet_.IsSatisfiedWith(c)) {
+        return UnsatisfiedConstraintError(
+            absl::Substitute("character '$0' not in alphabet", c));
+      }
     }
   }
 
@@ -215,7 +156,7 @@ absl::StatusOr<std::vector<MString>> MString::GetDifficultInstancesImpl(
 
   values.reserve(lengthCases.size());
   for (const auto& c : lengthCases) {
-    values.push_back(MString().OfLength(c));
+    values.push_back(MString(Length(c)));
   }
   // TODO(hivini): Add alphabet cases, pattern cases and integrate
   // SimplePattern.
@@ -224,7 +165,7 @@ absl::StatusOr<std::vector<MString>> MString::GetDifficultInstancesImpl(
 }
 
 std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
-  if (simple_patterns_.empty() && (!alphabet_ || alphabet_->empty())) {
+  if (simple_patterns_.empty() && !alphabet_.HasBeenConstrained()) {
     throw std::runtime_error(
         "Cannot generate a string with an empty alphabet and no simple "
         "pattern.");
@@ -256,7 +197,7 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
 
   int length = length_local.Generate(ctx.ForSubVariable("length"));
 
-  std::vector<char> alphabet(alphabet_->begin(), alphabet_->end());
+  std::vector<char> alphabet(alphabet_.GetOptions());
   std::vector<char> ret = ctx.RandomElementsWithReplacement(alphabet, length);
 
   return std::string(ret.begin(), ret.end());
@@ -266,11 +207,18 @@ std::string MString::GenerateSimplePattern(
     librarian::ResolverContext ctx) const {
   ABSL_CHECK(!simple_patterns_.empty());
 
+  std::optional<std::string> maybe_alphabet =
+      [&]() -> std::optional<std::string> {
+    if (!alphabet_.HasBeenConstrained()) return std::nullopt;
+    std::vector<char> alphabet(alphabet_.GetOptions());
+    return std::string(alphabet.begin(), alphabet.end());
+  }();
+
   // Use the last pattern, since it's probably the most specific. This choice is
   // arbitrary since all patterns must be satisfied.
   absl::StatusOr<std::string> result =
       simple_patterns_.back().GenerateWithRestrictions(
-          alphabet_, ctx.UnsafeGetRandomEngine());
+          maybe_alphabet, ctx.UnsafeGetRandomEngine());
   if (!result.ok()) {
     throw std::runtime_error(result.status().ToString());
   }
@@ -283,12 +231,11 @@ std::string MString::GenerateImplWithDistinctCharacters(
   // to limit the length forever.
   MInteger mlength = *length_;
   // Each char appears at most once.
-  mlength.AddConstraint(AtMost(alphabet_->size()));
+  mlength.AddConstraint(AtMost(alphabet_.GetOptions().size()));
   int length = mlength.Generate(ctx.ForSubVariable("length"));
 
-  std::vector<char> alphabet(alphabet_->begin(), alphabet_->end());
   std::vector<char> ret =
-      ctx.RandomElementsWithoutReplacement(alphabet, length);
+      ctx.RandomElementsWithoutReplacement(alphabet_.GetOptions(), length);
 
   return std::string(ret.begin(), ret.end());
 }
@@ -309,25 +256,6 @@ std::string MString::ReadImpl(librarian::ReaderContext ctx) const {
 void MString::PrintImpl(librarian::PrinterContext ctx,
                         const std::string& value) const {
   ctx.PrintToken(value);
-}
-
-std::string MString::ToStringImpl() const {
-  std::string result;
-  if (length_) absl::StrAppend(&result, "length: ", length_->ToString(), "; ");
-  if (alphabet_) absl::StrAppend(&result, "alphabet: ", *alphabet_, "; ");
-  if (distinct_characters_)
-    absl::StrAppend(&result, "Only distinct characters; ");
-  for (const moriarty_internal::SimplePattern& pattern : simple_patterns_)
-    absl::StrAppend(&result, "simple_pattern: ", pattern.Pattern(), "; ");
-  if (length_size_property_.has_value())
-    absl::StrAppend(&result, "length: ", length_size_property_->ToString(),
-                    "; ");
-  return result;
-}
-
-absl::StatusOr<std::string> MString::ValueToStringImpl(
-    const std::string& value) const {
-  return value;
 }
 
 }  // namespace moriarty

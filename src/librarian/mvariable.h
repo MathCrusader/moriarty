@@ -27,6 +27,7 @@
 #include <memory>
 #include <optional>
 #include <ostream>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -259,6 +260,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   absl::Status IsSatisfiedWith(AnalysisContext ctx,
                                const ValueType& value) const;
+  [[nodiscard]] std::string Explanation(AnalysisContext ctx,
+                                        const ValueType& value) const;
 
   [[nodiscard]] ValueType Generate(ResolverContext ctx) const;
 
@@ -550,25 +553,29 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
 template <typename V, typename G>
 std::string MVariable<V, G>::ToString() const {
-  if (!overall_status_.ok()) return overall_status_.ToString();
-  std::string result = Typename();
-  if (is_one_of_) {
-    absl::StrAppend(&result,
-                    absl::Substitute("; $0 option(s) from Is()/IsOneOf()",
-                                     is_one_of_->size()));
-    if (!is_one_of_->empty() &&
-        !absl::IsUnimplemented(
-            ValueToStringImpl(is_one_of_->front()).status())) {
-      bool first = true;
-      for (const G& value : *is_one_of_) {
-        absl::StrAppend(&result, (first ? ": " : ", "),
-                        ValueToStringImpl(value).value_or("[ToString error]"));
-        first = false;
-      }
-    }
-  }
+  std::stringstream ss;
+  ss << UnderlyingVariableType();
+  return ss.str();
+  // if (!overall_status_.ok()) return overall_status_.ToString();
+  // std::string result = Typename();
+  // if (is_one_of_) {
+  //   absl::StrAppend(&result,
+  //                   absl::Substitute("; $0 option(s) from Is()/IsOneOf()",
+  //                                    is_one_of_->size()));
+  //   if (!is_one_of_->empty() &&
+  //       !absl::IsUnimplemented(
+  //           ValueToStringImpl(is_one_of_->front()).status())) {
+  //     bool first = true;
+  //     for (const G& value : *is_one_of_) {
+  //       absl::StrAppend(&result, (first ? ": " : ", "),
+  //                       ValueToStringImpl(value).value_or("[ToString
+  //                       error]"));
+  //       first = false;
+  //     }
+  //   }
+  // }
 
-  return absl::StrCat(result, "; ", ToStringImpl());
+  // return absl::StrCat(result, "; ", ToStringImpl());
 }
 
 template <typename V, typename G>
@@ -823,6 +830,14 @@ absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
   }
 
   return absl::OkStatus();
+}
+
+template <typename V, typename G>
+std::string MVariable<V, G>::Explanation(AnalysisContext ctx,
+                                         const G& value) const {
+  auto status = IsSatisfiedWith(ctx, value);
+  if (status.ok()) throw std::invalid_argument("Value satisfies constraints.");
+  return std::string(status.message());
 }
 
 template <typename V, typename G>

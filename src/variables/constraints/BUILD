@@ -48,6 +48,8 @@ cc_library(
     hdrs = ["container_constraints.h"],
     deps = [
         ":base_constraints",
+        "//src/contexts/librarian:analysis_context",
+        "//src/librarian:debug_print",
         "//src/variables:minteger",
         "@abseil-cpp//absl/strings",
     ],
@@ -102,6 +104,7 @@ cc_test(
         "//src/librarian:test_utils",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
+        "//src/variables:mstring",
         "@googletest//:gtest_main",
     ],
 )

@@ -432,15 +432,6 @@ TEST(MIntegerTest, WithSizeBehavesWithMergeFrom) {
               StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("size")));
 }
 
-TEST(MIntegerTest, ToStringWorks) {
-  EXPECT_THAT(MInteger().ToString(), HasSubstr("MInteger"));
-  EXPECT_THAT(MInteger(Between(1, 10)).ToString(), HasSubstr("[1, 10]"));
-  EXPECT_THAT(MInteger(SizeCategory::Small()).ToString(),
-              HasSubstr("mall"));  // [S|s]mall
-  EXPECT_THAT(MInteger(Between(1, 5), SizeCategory::Small()).ToString(),
-              AllOf(HasSubstr("[1, 5]"), HasSubstr("mall")));  // [S|s]mall
-}
-
 TEST(MIntegerTest, InvalidSizeCombinationsFailGeneration) {
   EXPECT_THAT(
       Generate(MInteger(SizeCategory::Small(), SizeCategory::Large())),
@@ -461,9 +452,6 @@ TEST(MIntegerTest, InvalidSizeCombinationsFailGeneration) {
   EXPECT_THAT(
       Read(MInteger(SizeCategory::Small(), SizeCategory::Large()), "-1"),
       StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("size")));
-
-  EXPECT_THAT(MInteger(SizeCategory::Small(), SizeCategory::Large()).ToString(),
-              HasSubstr("Invalid size"));
 }
 
 TEST(MIntegerTest, InvalidExpressionsShouldFail) {

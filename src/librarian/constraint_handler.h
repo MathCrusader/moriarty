@@ -179,12 +179,12 @@ auto ConstraintHandler<VariableType, ValueType>::Explanation(
 template <typename VariableType, typename ValueType>
 auto ConstraintHandler<VariableType, ValueType>::ToString() const
     -> std::string {
-  std::string str =
-      std::format("{} (with {} constraint{})\n", to_string_prefix_,
-                  constraints_.size(), constraints_.size() == 1 ? "" : "s");
-  for (const auto& constraint : constraints_)
-    str += " * " + constraint->ToString() + "\n";
-  return str;
+  if (constraints_.empty()) return "has no constraints";
+  std::string s;
+  for (const auto& constraint : constraints_) {
+    s += (s.empty() ? "" : ", ") + constraint->ToString();
+  }
+  return s;
 }
 
 template <typename VariableType, typename ValueType>

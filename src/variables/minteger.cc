@@ -32,7 +32,6 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/str_cat.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -392,19 +391,6 @@ std::vector<std::string> MInteger::GetDependenciesImpl() const {
       bounds_->NeededVariables();
   if (!needed.ok()) return {};
   return std::vector<std::string>(needed->begin(), needed->end());
-}
-
-std::string MInteger::ToStringImpl() const {
-  std::string result;
-  if (approx_size_ != CommonSize::kAny)
-    absl::StrAppend(&result, "size: ", librarian::ToString(approx_size_), "; ");
-  absl::StrAppend(&result, "bounds: ", bounds_->ToString(), "; ");
-  return result;
-}
-
-absl::StatusOr<std::string> MInteger::ValueToStringImpl(
-    const int64_t& value) const {
-  return std::to_string(value);
 }
 
 }  // namespace moriarty

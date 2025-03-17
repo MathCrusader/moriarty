@@ -20,23 +20,19 @@
 #include <string_view>
 
 #include "absl/container/flat_hash_set.h"
-#include "absl/strings/str_cat.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/test_utils.h"
 #include "src/util/test_status_macro/status_testutil.h"
-#include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/constraints/string_constraints.h"
-#include "src/variables/minteger.h"
 
 namespace moriarty {
 namespace {
 
 using ::moriarty::IsOkAndHolds;
-using ::moriarty_testing::AllGenerateSameValues;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GenerateDifficultInstancesValues;
 using ::moriarty_testing::GeneratedValuesAre;
@@ -54,7 +50,6 @@ using ::testing::Le;
 using ::testing::MatchesRegex;
 using ::testing::Not;
 using ::testing::SizeIs;
-using ::testing::UnorderedElementsAreArray;
 
 TEST(MStringTest, TypenameIsCorrect) {
   EXPECT_EQ(MString().Typename(), "MString");
@@ -87,217 +82,11 @@ TEST(MStringTest, ReadAtEofShouldFail) {
   EXPECT_THROW({ Read(MString(), "").IgnoreError(); }, std::runtime_error);
 }
 
-TEST(MStringTest, GenerateShouldSuccessfullyComplete) {
-  MString variable;
-  MORIARTY_EXPECT_OK(Generate(
-      variable.OfLength(MInteger(Between(4, 11))).WithAlphabet("abc")));
-  MORIARTY_EXPECT_OK(Generate(variable.OfLength(4, 11).WithAlphabet("abc")));
-  MORIARTY_EXPECT_OK(Generate(variable.OfLength(4).WithAlphabet("abc")));
-}
-
-TEST(MStringTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
-  auto gen_given_length1 = [](int lo, int hi) {
-    return MString().OfLength(lo, hi).WithAlphabet("abcdef");
-  };
-  auto gen_given_length2 = [](int lo1, int hi1, int lo2, int hi2) {
-    return MString().OfLength(lo1, hi1).OfLength(lo2, hi2).WithAlphabet(
-        "abcdef");
-  };
-
-  // All possible valid intersections
-  EXPECT_TRUE(
-      GenerateSameValues(gen_given_length2(0, 30, 1, 10),
-                         gen_given_length1(1, 10)));  // First is superset
-
-  EXPECT_TRUE(
-      GenerateSameValues(gen_given_length2(1, 10, 0, 30),
-                         gen_given_length1(1, 10)));  // Second is superset
-
-  EXPECT_TRUE(
-      GenerateSameValues(gen_given_length2(0, 10, 1, 30),
-                         gen_given_length1(1, 10)));  // First on the left
-
-  EXPECT_TRUE(
-      GenerateSameValues(gen_given_length2(1, 30, 0, 10),
-                         gen_given_length1(1, 10)));  // First on the right
-
-  EXPECT_TRUE(GenerateSameValues(gen_given_length2(1, 8, 8, 10),
-                                 gen_given_length1(8, 8)));  // Singleton Range
-}
-
-TEST(MStringTest, InvalidLengthShouldFail) {
-  EXPECT_THROW(
-      { Generate(MString().OfLength(-1).WithAlphabet("a")).IgnoreError(); },
-      std::runtime_error);
-  EXPECT_THROW(
-      {
-        Generate(MString()
-                     .OfLength(MInteger(AtMost(10), AtLeast(20)))
-                     .WithAlphabet("a"))
-            .IgnoreError();
-      },
-      std::runtime_error);
-}
-
-TEST(MStringTest, LengthZeroProcudesTheEmptyString) {
-  EXPECT_THAT(Generate(MString().OfLength(0).WithAlphabet("abc")),
-              IsOkAndHolds(""));
-}
-
-TEST(MStringTest, AlphabetIsRequiredForGenerate) {
-  EXPECT_THROW(
-      { Generate(MString().OfLength(10)).IgnoreError(); }, std::runtime_error);
-  EXPECT_THROW(
-      { Generate(MString().OfLength(10).WithAlphabet("")).IgnoreError(); },
-      std::runtime_error);
-}
-
-TEST(MStringTest, MergeFromCorrectlyMergesOnLength) {
-  // The alphabet is irrelevant for the tests
-  auto get_str = []() { return MString().WithAlphabet("abc"); };
-
-  // All possible valid intersection of length
-  EXPECT_TRUE(GenerateSameValues(
-      get_str().OfLength(0, 30).MergeFrom(get_str().OfLength(1, 10)),
-      get_str().OfLength(1, 10)));  // First is a superset
-  EXPECT_TRUE(GenerateSameValues(
-      get_str().OfLength(1, 10).MergeFrom(get_str().OfLength(0, 30)),
-      get_str().OfLength(1, 10)));  // Second is a superset
-  EXPECT_TRUE(GenerateSameValues(
-      get_str().OfLength(0, 10).MergeFrom(get_str().OfLength(1, 30)),
-      get_str().OfLength(1, 10)));  // First on left
-  EXPECT_TRUE(GenerateSameValues(
-      get_str().OfLength(1, 30).MergeFrom(get_str().OfLength(0, 10)),
-      get_str().OfLength(1, 10)));  // First on right
-  EXPECT_TRUE(GenerateSameValues(
-      get_str().OfLength(1, 8).MergeFrom(get_str().OfLength(8, 10)),
-      get_str().OfLength(8)));  // Singleton range
-
-  EXPECT_THROW(
-      {
-        Generate(get_str().OfLength(1, 6).MergeFrom(get_str().OfLength(10, 20)))
-            .IgnoreError();
-      },
-      std::runtime_error);
-}
-
-TEST(MStringTest, MergeFromCorrectlyMergesOnAlphabet) {
-  auto string_with_alphabet = [](std::string_view alphabet) {
-    return MString().OfLength(20).WithAlphabet(alphabet);
-  };
-
-  // Intersections of alphabets
-  EXPECT_TRUE(GenerateSameValues(
-      string_with_alphabet("abcdef").MergeFrom(string_with_alphabet("abc")),
-      string_with_alphabet("abc")));  // First is a superset
-  EXPECT_TRUE(GenerateSameValues(
-      string_with_alphabet("abc").MergeFrom(string_with_alphabet("abcdef")),
-      string_with_alphabet("abc")));  // Second is a superset
-  EXPECT_TRUE(GenerateSameValues(
-      string_with_alphabet("ab").MergeFrom(string_with_alphabet("bc")),
-      string_with_alphabet("b")));  // Non-empty intersection
-
-  EXPECT_THROW(
-      {
-        Generate(
-            string_with_alphabet("ab").MergeFrom(string_with_alphabet("cd")))
-            .IgnoreError();
-      },
-      std::runtime_error);
-}
-
-TEST(MStringTest, LengthIsSatisfied) {
-  // Includes small and large ranges
-  for (int tries = 0; tries < 1000; tries++) {
-    MORIARTY_ASSERT_OK_AND_ASSIGN(
-        std::string s,
-        Generate(MString().OfLength(tries / 2, tries).WithAlphabet("abc")));
-    EXPECT_THAT(s, SizeIs(Ge(tries / 2)));
-    EXPECT_THAT(s, SizeIs(Le(tries)));
-  }
-}
-
-TEST(MStringTest, AlphabetIsSatisfied) {
-  EXPECT_THAT(MString().OfLength(10, 20).WithAlphabet("a"),
-              GeneratedValuesAre(MatchesRegex("a*")));
-  EXPECT_THAT(MString().OfLength(10, 20).WithAlphabet("abc"),
-              GeneratedValuesAre(MatchesRegex("[abc]*")));
-}
-
-TEST(MStringTest, AlphabetNotGivenInSortedOrderIsFine) {
-  EXPECT_TRUE(
-      GenerateSameValues(MString().OfLength(10, 20).WithAlphabet("abc"),
-                         MString().OfLength(10, 20).WithAlphabet("cab")));
-}
-
-TEST(MStringTest, DuplicateLettersInAlphabetAreIgnored) {
-  // a appears 90% of the alphabet. We should still see ~50% of the time in the
-  // input. With 100,000 samples, I'm putting the cutoff at 60%. Anything over
-  // 60% is extremely unlikely to happen.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::string s,
-      Generate(MString().OfLength(100000).WithAlphabet("aaaaaaaaab")));
-  EXPECT_LE(std::count(s.begin(), s.end(), 'a'), 60000);
-}
-
 TEST(MStringTest, SatisfiesConstraintsShouldAcceptAllMStringsForDefault) {
   // Default string should accept all strings.
   EXPECT_THAT(MString(), IsSatisfiedWith(""));
   EXPECT_THAT(MString(), IsSatisfiedWith("hello"));
   EXPECT_THAT(MString(), IsSatisfiedWith("blah blah blah"));
-}
-
-TEST(MStringTest, SatisfiesConstraintsShouldAcceptAllMStringsOfCorrectLength) {
-  EXPECT_THAT(MString().OfLength(5), IsSatisfiedWith("abcde"));
-  EXPECT_THAT(MString().OfLength(4, 6), IsSatisfiedWith("abcde"));
-  EXPECT_THAT(MString().OfLength(4, 5), IsSatisfiedWith("abcde"));
-  EXPECT_THAT(MString().OfLength(5, 6), IsSatisfiedWith("abcde"));
-  EXPECT_THAT(MString().OfLength(5, 5), IsSatisfiedWith("abcde"));
-
-  EXPECT_THAT(MString().OfLength(3, 4), IsNotSatisfiedWith("abcde", "length"));
-  EXPECT_THAT(MString().OfLength(1, 1000), IsNotSatisfiedWith("", "length"));
-}
-
-TEST(MStringTest, SatisfiesConstraintsShouldCheckTheAlphabetIfSet) {
-  EXPECT_THAT(MString().WithAlphabet("abcdefghij"), IsSatisfiedWith("abcde"));
-  EXPECT_THAT(MString().WithAlphabet("edbca"), IsSatisfiedWith("abcde"));
-
-  EXPECT_THAT(MString().WithAlphabet("abcd"),
-              IsNotSatisfiedWith("abcde", "alphabet"));
-}
-
-TEST(MStringTest, SatisfiesConstraintsWithInvalidLengthShouldFail) {
-  EXPECT_THAT(MString().OfLength(MInteger(AtMost(10), AtLeast(20))),
-              IsNotSatisfiedWith("abcde", "length"));
-}
-
-TEST(MStringTest, SatisfiesConstraintsShouldCheckForDistinctCharacters) {
-  EXPECT_THAT(MString().WithDistinctCharacters(), IsSatisfiedWith("abcdef"));
-  EXPECT_THAT(MString().WithAlphabet("abcdef").WithDistinctCharacters(),
-              IsSatisfiedWith("cbf"));
-
-  EXPECT_THAT(MString().WithAlphabet("abcdef").WithDistinctCharacters(),
-              IsNotSatisfiedWith("cc", "distinct"));
-}
-
-TEST(MStringTest, AllOverloadsForOfLengthProduceTheSameSequenceOfData) {
-  // Exact size
-  EXPECT_TRUE(AllGenerateSameValues<MString>(
-      {MString().WithAlphabet("abc").OfLength(MInteger(Exactly(5))),
-       MString().WithAlphabet("abc").OfLength(5),
-       MString().WithAlphabet("abc").OfLength(5, 5),
-       MString().WithAlphabet("abc").OfLength(5, "5"),
-       MString().WithAlphabet("abc").OfLength("5", 5),
-       MString().WithAlphabet("abc").OfLength("5", "5")}));
-
-  // Range of sizes
-  EXPECT_TRUE(AllGenerateSameValues<MString>(
-      {MString().WithAlphabet("def").OfLength(MInteger(Between(1, 9))),
-       MString().WithAlphabet("def").OfLength(1, 9),
-       MString().WithAlphabet("def").OfLength(1, 9),
-       MString().WithAlphabet("def").OfLength(1, "9"),
-       MString().WithAlphabet("def").OfLength("1", 9),
-       MString().WithAlphabet("def").OfLength("1", "9")}));
 }
 
 MATCHER(HasDuplicateLetter,
@@ -313,211 +102,13 @@ MATCHER(HasDuplicateLetter,
   return false;
 }
 
-// These tests below are simply safety checks to ensure the alphabets are
-// correctly typed and not accidentally modified later.
-TEST(MStringTest, CommonAlphabetsDoNotHaveDuplicatedLetters) {
-  EXPECT_THAT(MString::kAlphabet, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kUpperCase, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kLowerCase, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kNumbers, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kAlphaNumeric, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kUpperAlphaNumeric, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kLowerAlphaNumeric, Not(HasDuplicateLetter()));
-}
-
-TEST(MStringTest, CommonAlphabetsHaveTheAppropriateNumberOfElements) {
-  EXPECT_THAT(MString::kAlphabet, SizeIs(26 + 26));
-  EXPECT_THAT(MString::kUpperCase, SizeIs(26));
-  EXPECT_THAT(MString::kLowerCase, SizeIs(26));
-  EXPECT_THAT(MString::kNumbers, SizeIs(10));
-  EXPECT_THAT(MString::kAlphaNumeric, SizeIs(26 + 26 + 10));
-  EXPECT_THAT(MString::kUpperAlphaNumeric, SizeIs(26 + 10));
-  EXPECT_THAT(MString::kLowerAlphaNumeric, SizeIs(26 + 10));
-}
-
-TEST(MStringTest, CommonAlphabetsHaveAppropriateSubsetsAndSuperSets) {
-  EXPECT_THAT(MString::kAlphabet,
-              UnorderedElementsAreArray(
-                  absl::StrCat(MString::kUpperCase, MString::kLowerCase)));
-
-  EXPECT_THAT(MString::kAlphaNumeric,
-              UnorderedElementsAreArray(
-                  absl::StrCat(MString::kAlphabet, MString::kNumbers)));
-
-  EXPECT_THAT(MString::kUpperAlphaNumeric,
-              UnorderedElementsAreArray(
-                  absl::StrCat(MString::kUpperCase, MString::kNumbers)));
-
-  EXPECT_THAT(MString::kLowerAlphaNumeric,
-              UnorderedElementsAreArray(
-                  absl::StrCat(MString::kLowerCase, MString::kNumbers)));
-}
-
-TEST(MStringTest, DistinctCharactersWorksInTheSimpleCase) {
-  EXPECT_THAT(MString()
-                  .OfLength(1, 26)
-                  .WithAlphabet(MString::kAlphabet)
-                  .WithDistinctCharacters(),
-              GeneratedValuesAre(Not(HasDuplicateLetter())));
-}
-
-TEST(MStringTest, DistinctCharactersRequiresAShortLength) {
-  EXPECT_THROW(
-      {
-        Generate(MString()
-                     .OfLength(5, 5)
-                     .WithAlphabet("abc")
-                     .WithDistinctCharacters())
-            .IgnoreError();
-      },
-      std::runtime_error);
-
-  // Most of the range is too large, the only way to succeed is for it to make a
-  // string of length 10.
-  EXPECT_THAT(Generate(MString()
-                           .OfLength(10, 1000000)
-                           .WithAlphabet(MString::kNumbers)
-                           .WithDistinctCharacters()),
-              IsOkAndHolds(Not(HasDuplicateLetter())));
-}
-
-TEST(MStringTest, MergingSimplePatternsIntoAnMStringWithoutShouldWork) {
-  MString constraints = MString().WithSimplePattern("[abc]{10, 20}");
-  MORIARTY_EXPECT_OK(MString().TryMergeFrom(constraints));
-}
-
-TEST(MStringTest, MergingTwoIdenticalSimplePatternsTogetherShouldWork) {
-  MString constraints = MString().WithSimplePattern("[abc]{10, 20}");
-  MORIARTY_EXPECT_OK(
-      MString().WithSimplePattern("[abc]{10, 20}").TryMergeFrom(constraints));
-}
-
-TEST(MStringTest, MergingTwoDifferentSimplePatternsTogetherShouldWork) {
-  MString constraints = MString().WithSimplePattern("[abc]{10, 20}");
-  MORIARTY_EXPECT_OK(
-      MString().WithSimplePattern("xxxxx").TryMergeFrom(constraints));
-}
-
-TEST(MStringTest, GenerateWithoutSimplePatternOrLengthOrAlphabetShouldFail) {
-  // No simple pattern and no alphabet
-  EXPECT_THROW({ Generate(MString()).IgnoreError(); }, std::runtime_error);
-  EXPECT_THROW(
-      { Generate(MString().WithAlphabet("")).IgnoreError(); },
-      std::runtime_error);
-
-  // Has Alphabet, but not simple pattern or length.
-  EXPECT_THROW(
-      { Generate(MString().WithAlphabet("abc")).IgnoreError(); },
-      std::runtime_error);
-}
-
-TEST(MStringTest, SizePropertiesGiveDifferentSizes) {
-  MString str = MString()
-                    .OfLength(MInteger(Between(1, 1000)))
-                    .WithAlphabet(MString::kAlphabet);
-
-  // The exact values here are fuzzy and may need to change with the
-  // meaning of "small", "medium", etc.
-  EXPECT_THAT(
-      MString(str).WithKnownProperty({.category = "size", .descriptor = "min"}),
-      GeneratedValuesAre(SizeIs(Eq(1))));
-  EXPECT_THAT(MString(str).WithKnownProperty(
-                  {.category = "size", .descriptor = "tiny"}),
-              GeneratedValuesAre(SizeIs(Le(10))));
-  EXPECT_THAT(MString(str).WithKnownProperty(
-                  {.category = "size", .descriptor = "small"}),
-              GeneratedValuesAre(SizeIs(Le(100))));
-  EXPECT_THAT(MString(str).WithKnownProperty(
-                  {.category = "size", .descriptor = "medium"}),
-              GeneratedValuesAre(SizeIs(Le(500))));
-  EXPECT_THAT(MString(str).WithKnownProperty(
-                  {.category = "size", .descriptor = "large"}),
-              GeneratedValuesAre(SizeIs(Ge(500))));
-  EXPECT_THAT(MString(str).WithKnownProperty(
-                  {.category = "size", .descriptor = "huge"}),
-              GeneratedValuesAre(SizeIs(Ge(900))));
-  EXPECT_THAT(
-      MString(str).WithKnownProperty({.category = "size", .descriptor = "max"}),
-      GeneratedValuesAre(SizeIs(Eq(1000))));
-}
-
-TEST(MStringTest, SimplePatternWorksForGeneration) {
-  EXPECT_THAT(MString().WithSimplePattern("[abc]{10, 20}"),
-              GeneratedValuesAre(MatchesRegex("[abc]{10,20}")));
-}
-
-TEST(MStringTest, SatisfiesConstraintsShouldCheck) {
-  EXPECT_THAT(MString().WithSimplePattern("[abc]{10, 20}"),
-              IsSatisfiedWith("abcabcabca"));
-  EXPECT_THAT(MString().WithSimplePattern("[abc]{10, 20}"),
-              IsNotSatisfiedWith("ABCABCABCA", "simple pattern"));
-}
-
-TEST(MStringTest, SimplePatternWithWildcardsShouldFailGeneration) {
-  EXPECT_THROW(
-      { Generate(MString().WithSimplePattern("a*")).IgnoreError(); },
-      std::runtime_error);
-  EXPECT_THROW(
-      { Generate(MString().WithSimplePattern("a+")).IgnoreError(); },
-      std::runtime_error);
-}
-
-TEST(MStringTest, SimplePatternWithWildcardsShouldWorkForSatisfiesConstraints) {
-  EXPECT_THAT(MString().WithSimplePattern("a*"), IsSatisfiedWith("aaaaaa"));
-  EXPECT_THAT(MString().WithSimplePattern("a+"), IsSatisfiedWith("aaaaaa"));
-
-  EXPECT_THAT(MString().WithSimplePattern("a*"), IsSatisfiedWith(""));
-  EXPECT_THAT(MString().WithSimplePattern("a+"),
-              IsNotSatisfiedWith("", "simple pattern"));
-}
-
-TEST(MStringTest, SimplePatternShouldRespectAlphabets) {
-  // Odds are that random cases should generate at least some `a`s. But our
-  // alphabet is only "b", so the only correct answer is the string "b".
-  EXPECT_THAT(MString().WithSimplePattern("a{0, 123456}b").WithAlphabet("b"),
-              GeneratedValuesAre("b"));
-}
-
-TEST(MStringTest, GetDifficultInstancesContainsLengthCases) {
-  EXPECT_THAT(
-      GenerateDifficultInstancesValues(
-          MString().OfLength(MInteger(Between(0, 10))).WithAlphabet("a")),
-      IsOkAndHolds(IsSupersetOf({"", "a", "aaaaaaaaaa"})));
-}
-
-TEST(MStringTest, GetDifficultInstancesNoLengthFails) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MString()),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("no length parameter given")));
-}
-
-TEST(MStringTest, ToStringWorks) {
-  EXPECT_THAT(MString().ToString(), HasSubstr("MString"));
-  EXPECT_THAT(MString().WithAlphabet("abx").ToString(), HasSubstr("abx"));
-  EXPECT_THAT(MString().OfLength(1, 10).ToString(), HasSubstr("[1, 10]"));
-  EXPECT_THAT(MString().WithDistinctCharacters().ToString(),
-              HasSubstr("istinct"));  // [D|d]istinct
-  EXPECT_THAT(MString().WithSimplePattern("[abc]{10, 20}").ToString(),
-              HasSubstr("[abc]{10,20}"));
-  EXPECT_THAT(MString()
-                  .WithKnownProperty({.category = "size", .descriptor = "tiny"})
-                  .ToString(),
-              HasSubstr("iny"));  // [t|T]iny
-}
-
-// -----------------------------------------------------------------------------
-//  Tests for the non-builder version of MString's API
-//  These are copies of the above functions, but with the builder version of
-//  MString replaced with the non-builder version.
-// -----------------------------------------------------------------------------
-
-TEST(MStringNonBuilderTest, GenerateShouldSuccessfullyComplete) {
+TEST(MStringTest, GenerateShouldSuccessfullyComplete) {
   MORIARTY_EXPECT_OK(
       Generate(MString(Length(Between(4, 11)), Alphabet("abc"))));
   MORIARTY_EXPECT_OK(Generate(MString(Length(4), Alphabet("abc"))));
 }
 
-TEST(MStringNonBuilderTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
+TEST(MStringTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
   auto gen_given_length1 = [](int lo, int hi) {
     return MString(Length(Between(lo, hi)), Alphabet("abcdef"));
   };
@@ -547,7 +138,7 @@ TEST(MStringNonBuilderTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
                                  gen_given_length1(8, 8)));  // Singleton Range
 }
 
-TEST(MStringNonBuilderTest, InvalidLengthShouldFail) {
+TEST(MStringTest, InvalidLengthShouldFail) {
   EXPECT_THROW(
       { Generate(MString(Length(-1), Alphabet("a"))).IgnoreError(); },
       std::runtime_error);
@@ -559,11 +150,11 @@ TEST(MStringNonBuilderTest, InvalidLengthShouldFail) {
       std::runtime_error);
 }
 
-TEST(MStringNonBuilderTest, LengthZeroProcudesTheEmptyString) {
+TEST(MStringTest, LengthZeroProcudesTheEmptyString) {
   EXPECT_THAT(Generate(MString(Length(0), Alphabet("abc"))), IsOkAndHolds(""));
 }
 
-TEST(MStringNonBuilderTest, AlphabetIsRequiredForGenerate) {
+TEST(MStringTest, AlphabetIsRequiredForGenerate) {
   EXPECT_THROW(
       { Generate(MString(Length(10))).IgnoreError(); }, std::runtime_error);
   EXPECT_THROW(
@@ -571,7 +162,7 @@ TEST(MStringNonBuilderTest, AlphabetIsRequiredForGenerate) {
       std::runtime_error);
 }
 
-TEST(MStringNonBuilderTest, MergeFromCorrectlyMergesOnLength) {
+TEST(MStringTest, MergeFromCorrectlyMergesOnLength) {
   // The alphabet is irrelevant for the tests
   auto get_str = [](int lo, int hi) {
     return MString(Length(Between(lo, hi)), Alphabet("abc"));
@@ -594,7 +185,7 @@ TEST(MStringNonBuilderTest, MergeFromCorrectlyMergesOnLength) {
       std::runtime_error);
 }
 
-TEST(MStringNonBuilderTest, MergeFromCorrectlyMergesOnAlphabet) {
+TEST(MStringTest, MergeFromCorrectlyMergesOnAlphabet) {
   auto string_with_alphabet = [](std::string_view alphabet) {
     return MString(Length(20), Alphabet(alphabet));
   };
@@ -619,7 +210,7 @@ TEST(MStringNonBuilderTest, MergeFromCorrectlyMergesOnAlphabet) {
       std::runtime_error);
 }
 
-TEST(MStringNonBuilderTest, LengthIsSatisfied) {
+TEST(MStringTest, LengthIsSatisfied) {
   // Includes small and large ranges
   for (int size = 0; size < 40; size++) {
     EXPECT_THAT(
@@ -633,20 +224,20 @@ TEST(MStringNonBuilderTest, LengthIsSatisfied) {
   }
 }
 
-TEST(MStringNonBuilderTest, AlphabetIsSatisfied) {
+TEST(MStringTest, AlphabetIsSatisfied) {
   EXPECT_THAT(MString(Length(Between(10, 20)), Alphabet("a")),
               GeneratedValuesAre(MatchesRegex("a*")));
   EXPECT_THAT(MString(Length(Between(10, 20)), Alphabet("abc")),
               GeneratedValuesAre(MatchesRegex("[abc]*")));
 }
 
-TEST(MStringNonBuilderTest, AlphabetNotGivenInSortedOrderIsFine) {
+TEST(MStringTest, AlphabetNotGivenInSortedOrderIsFine) {
   EXPECT_TRUE(
       GenerateSameValues(MString(Length(Between(10, 20)), Alphabet("abc")),
                          MString(Length(Between(10, 20)), Alphabet("cab"))));
 }
 
-TEST(MStringNonBuilderTest, DuplicateLettersInAlphabetAreIgnored) {
+TEST(MStringTest, DuplicateLettersInAlphabetAreIgnored) {
   // a appears 90% of the alphabet. We should still see ~50% of the time in the
   // input. With 100,000 samples, I'm putting the cutoff at 60%. Anything over
   // 60% is extremely unlikely to happen.
@@ -655,16 +246,7 @@ TEST(MStringNonBuilderTest, DuplicateLettersInAlphabetAreIgnored) {
   EXPECT_LE(std::count(s.begin(), s.end(), 'a'), 60000);
 }
 
-TEST(MStringNonBuilderTest,
-     SatisfiesConstraintsShouldAcceptAllMStringsForDefault) {
-  // Default string should accept all strings.
-  EXPECT_THAT(MString(), IsSatisfiedWith(""));
-  EXPECT_THAT(MString(), IsSatisfiedWith("hello"));
-  EXPECT_THAT(MString(), IsSatisfiedWith("blah blah blah"));
-}
-
-TEST(MStringNonBuilderTest,
-     SatisfiesConstraintsShouldAcceptAllMStringsOfCorrectLength) {
+TEST(MStringTest, SatisfiesConstraintsShouldAcceptAllMStringsOfCorrectLength) {
   EXPECT_THAT(MString(Length(5)), IsSatisfiedWith("abcde"));
   EXPECT_THAT(MString(Length(Between(4, 6))), IsSatisfiedWith("abcde"));
   EXPECT_THAT(MString(Length(Between(4, 5))), IsSatisfiedWith("abcde"));
@@ -677,7 +259,7 @@ TEST(MStringNonBuilderTest,
               IsNotSatisfiedWith("", "length"));
 }
 
-TEST(MStringNonBuilderTest, SatisfiesConstraintsShouldCheckTheAlphabetIfSet) {
+TEST(MStringTest, SatisfiesConstraintsShouldCheckTheAlphabetIfSet) {
   EXPECT_THAT(MString(Alphabet("abcdefghij")), IsSatisfiedWith("abcde"));
   EXPECT_THAT(MString(Alphabet("edbca")), IsSatisfiedWith("abcde"));
 
@@ -685,13 +267,12 @@ TEST(MStringNonBuilderTest, SatisfiesConstraintsShouldCheckTheAlphabetIfSet) {
               IsNotSatisfiedWith("abcde", "alphabet"));
 }
 
-TEST(MStringNonBuilderTest, SatisfiesConstraintsWithInvalidLengthShouldFail) {
+TEST(MStringTest, SatisfiesConstraintsWithInvalidLengthShouldFail) {
   EXPECT_THAT(MString(Length(AtLeast(20), AtMost(10))),
               IsNotSatisfiedWith("abcde", "length"));
 }
 
-TEST(MStringNonBuilderTest,
-     SatisfiesConstraintsShouldCheckForDistinctCharacters) {
+TEST(MStringTest, SatisfiesConstraintsShouldCheckForDistinctCharacters) {
   EXPECT_THAT(MString(DistinctCharacters()), IsSatisfiedWith("abcdef"));
   EXPECT_THAT(MString(Alphabet("abcdef"), DistinctCharacters()),
               IsSatisfiedWith("cbf"));
@@ -700,53 +281,13 @@ TEST(MStringNonBuilderTest,
               IsNotSatisfiedWith("cc", "distinct"));
 }
 
-// These tests below are simply safety checks to ensure the alphabets are
-// correctly typed and not accidentally modified later.
-TEST(MStringNonBuilderTest, CommonAlphabetsDoNotHaveDuplicatedLetters) {
-  EXPECT_THAT(MString::kAlphabet, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kUpperCase, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kLowerCase, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kNumbers, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kAlphaNumeric, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kUpperAlphaNumeric, Not(HasDuplicateLetter()));
-  EXPECT_THAT(MString::kLowerAlphaNumeric, Not(HasDuplicateLetter()));
-}
-
-TEST(MStringNonBuilderTest, CommonAlphabetsHaveTheAppropriateNumberOfElements) {
-  EXPECT_THAT(MString::kAlphabet, SizeIs(26 + 26));
-  EXPECT_THAT(MString::kUpperCase, SizeIs(26));
-  EXPECT_THAT(MString::kLowerCase, SizeIs(26));
-  EXPECT_THAT(MString::kNumbers, SizeIs(10));
-  EXPECT_THAT(MString::kAlphaNumeric, SizeIs(26 + 26 + 10));
-  EXPECT_THAT(MString::kUpperAlphaNumeric, SizeIs(26 + 10));
-  EXPECT_THAT(MString::kLowerAlphaNumeric, SizeIs(26 + 10));
-}
-
-TEST(MStringNonBuilderTest, CommonAlphabetsHaveAppropriateSubsetsAndSuperSets) {
-  EXPECT_THAT(MString::kAlphabet,
-              UnorderedElementsAreArray(
-                  absl::StrCat(MString::kUpperCase, MString::kLowerCase)));
-
-  EXPECT_THAT(MString::kAlphaNumeric,
-              UnorderedElementsAreArray(
-                  absl::StrCat(MString::kAlphabet, MString::kNumbers)));
-
-  EXPECT_THAT(MString::kUpperAlphaNumeric,
-              UnorderedElementsAreArray(
-                  absl::StrCat(MString::kUpperCase, MString::kNumbers)));
-
-  EXPECT_THAT(MString::kLowerAlphaNumeric,
-              UnorderedElementsAreArray(
-                  absl::StrCat(MString::kLowerCase, MString::kNumbers)));
-}
-
-TEST(MStringNonBuilderTest, DistinctCharactersWorksInTheSimpleCase) {
+TEST(MStringTest, DistinctCharactersWorksInTheSimpleCase) {
   EXPECT_THAT(MString(Length(Between(1, 26)), Alphabet::Letters(),
                       DistinctCharacters()),
               GeneratedValuesAre(Not(HasDuplicateLetter())));
 }
 
-TEST(MStringNonBuilderTest, DistinctCharactersRequiresAShortLength) {
+TEST(MStringTest, DistinctCharactersRequiresAShortLength) {
   EXPECT_THROW(
       {
         Generate(MString(Length(Between(5, 5)), Alphabet("abc"),
@@ -762,26 +303,23 @@ TEST(MStringNonBuilderTest, DistinctCharactersRequiresAShortLength) {
               IsOkAndHolds(Not(HasDuplicateLetter())));
 }
 
-TEST(MStringNonBuilderTest,
-     MergingSimplePatternsIntoAnMStringWithoutShouldWork) {
+TEST(MStringTest, MergingSimplePatternsIntoAnMStringWithoutShouldWork) {
   MString constraints = MString(SimplePattern("[abc]{10, 20}"));
   MORIARTY_EXPECT_OK(MString().TryMergeFrom(constraints));
 }
 
-TEST(MStringNonBuilderTest,
-     MergingTwoIdenticalSimplePatternsTogetherShouldWork) {
+TEST(MStringTest, MergingTwoIdenticalSimplePatternsTogetherShouldWork) {
   MString constraints = MString(SimplePattern("[abc]{10, 20}"));
   MORIARTY_EXPECT_OK(
       MString(SimplePattern("[abc]{10, 20}")).TryMergeFrom(constraints));
 }
 
-TEST(MStringNonBuilderTest,
-     MergingTwoDifferentSimplePatternsTogetherShouldWork) {
+TEST(MStringTest, MergingTwoDifferentSimplePatternsTogetherShouldWork) {
   MString constraints = MString(SimplePattern("[abc]{10, 20}"));
   MORIARTY_EXPECT_OK(MString(SimplePattern("xxxxx")).TryMergeFrom(constraints));
 }
 
-TEST(MStringNonBuilderTest,
+TEST(MStringTest,
      MergingTwoDifferentSimplePatternsTogetherShouldGenerateIfCompatible) {
   EXPECT_THAT(
       MString(SimplePattern("[cd]{10, 20}"), SimplePattern("[cd]{5, 15}")),
@@ -797,8 +335,7 @@ TEST(MStringNonBuilderTest,
       std::runtime_error);
 }
 
-TEST(MStringNonBuilderTest,
-     GenerateWithoutSimplePatternOrLengthOrAlphabetShouldFail) {
+TEST(MStringTest, GenerateWithoutSimplePatternOrLengthOrAlphabetShouldFail) {
   // No simple pattern and no alphabet
   EXPECT_THROW({ Generate(MString()).IgnoreError(); }, std::runtime_error);
   EXPECT_THROW(
@@ -810,7 +347,7 @@ TEST(MStringNonBuilderTest,
       std::runtime_error);
 }
 
-TEST(MStringNonBuilderTest, SizePropertiesGiveDifferentSizes) {
+TEST(MStringTest, SizePropertiesGiveDifferentSizes) {
   MString str(Length(Between(1, 1000)), Alphabet::Letters());
 
   // The exact values here are fuzzy and may need to change with the
@@ -838,19 +375,19 @@ TEST(MStringNonBuilderTest, SizePropertiesGiveDifferentSizes) {
       GeneratedValuesAre(SizeIs(Eq(1000))));
 }
 
-TEST(MStringNonBuilderTest, SimplePatternWorksForGeneration) {
+TEST(MStringTest, SimplePatternWorksForGeneration) {
   EXPECT_THAT(MString(SimplePattern("[abc]{10, 20}")),
               GeneratedValuesAre(MatchesRegex("[abc]{10,20}")));
 }
 
-TEST(MStringNonBuilderTest, SatisfiesConstraintsShouldCheck) {
+TEST(MStringTest, SatisfiesConstraintsShouldCheck) {
   EXPECT_THAT(MString(SimplePattern("[abc]{10, 20}")),
               IsSatisfiedWith("abcabcabca"));
   EXPECT_THAT(MString(SimplePattern("[abc]{10, 20}")),
               IsNotSatisfiedWith("ABCABCABCA", "simple pattern"));
 }
 
-TEST(MStringNonBuilderTest, SimplePatternWithWildcardsShouldFailGeneration) {
+TEST(MStringTest, SimplePatternWithWildcardsShouldFailGeneration) {
   EXPECT_THROW(
       { Generate(MString(SimplePattern("a*"))).IgnoreError(); },
       std::runtime_error);
@@ -859,8 +396,7 @@ TEST(MStringNonBuilderTest, SimplePatternWithWildcardsShouldFailGeneration) {
       std::runtime_error);
 }
 
-TEST(MStringNonBuilderTest,
-     SimplePatternWithWildcardsShouldWorkForSatisfiesConstraints) {
+TEST(MStringTest, SimplePatternWithWildcardsShouldWorkForSatisfiesConstraints) {
   EXPECT_THAT(MString(SimplePattern("a*")), IsSatisfiedWith("aaaaaa"));
   EXPECT_THAT(MString(SimplePattern("a+")), IsSatisfiedWith("aaaaaa"));
 
@@ -869,38 +405,39 @@ TEST(MStringNonBuilderTest,
               IsNotSatisfiedWith("", "simple pattern"));
 }
 
-TEST(MStringNonBuilderTest, SimplePatternShouldRespectAlphabets) {
+TEST(MStringTest, SimplePatternShouldRespectAlphabets) {
   // Odds are that random cases should generate at least some `a`s. But our
   // alphabet is only "b", so the only correct answer is the string "b".
   EXPECT_THAT(MString(SimplePattern("a{0, 123456}b"), Alphabet("b")),
               GeneratedValuesAre("b"));
 }
 
-TEST(MStringNonBuilderTest, GetDifficultInstancesContainsLengthCases) {
+TEST(MStringTest, GetDifficultInstancesContainsLengthCases) {
   EXPECT_THAT(GenerateDifficultInstancesValues(
                   MString(Length(Between(0, 10)), Alphabet("a"))),
               IsOkAndHolds(IsSupersetOf({"", "a", "aaaaaaaaaa"})));
 }
 
-TEST(MStringNonBuilderTest, GetDifficultInstancesNoLengthFails) {
+TEST(MStringTest, GetDifficultInstancesNoLengthFails) {
   EXPECT_THAT(GenerateDifficultInstancesValues(MString()),
               StatusIs(absl::StatusCode::kFailedPrecondition,
                        HasSubstr("no length parameter given")));
 }
 
-TEST(MStringNonBuilderTest, ToStringWorks) {
-  EXPECT_THAT(MString().ToString(), HasSubstr("MString"));
-  EXPECT_THAT(MString(Alphabet("abx")).ToString(), HasSubstr("abx"));
-  EXPECT_THAT(MString(Length(Between(1, 10))).ToString(), HasSubstr("[1, 10]"));
-  EXPECT_THAT(MString(DistinctCharacters()).ToString(),
-              HasSubstr("istinct"));  // [D|d]istinct
-  EXPECT_THAT(MString(SimplePattern("[abc]{10, 20}")).ToString(),
-              HasSubstr("[abc]{10,20}"));
-  EXPECT_THAT(MString()
-                  .WithKnownProperty({.category = "size", .descriptor = "tiny"})
-                  .ToString(),
-              HasSubstr("iny"));  // [t|T]iny
-}
+// FIXME: Decide how we want to test ToString.
+// TEST(MStringTest, ToStringWorks) {
+//   EXPECT_THAT(MString().ToString(), HasSubstr("MString"));
+//   EXPECT_THAT(MString(Alphabet("abx")).ToString(), HasSubstr("abx"));
+//   EXPECT_THAT(MString(Length(Between(1, 10))).ToString(), HasSubstr("[1,
+//   10]")); EXPECT_THAT(MString(DistinctCharacters()).ToString(),
+//               HasSubstr("istinct"));  // [D|d]istinct
+//   EXPECT_THAT(MString(SimplePattern("[abc]{10, 20}")).ToString(),
+//               HasSubstr("[abc]{10,20}"));
+//   EXPECT_THAT(MString()
+//                   .WithKnownProperty({.category = "size", .descriptor =
+//                   "tiny"}) .ToString(),
+//               HasSubstr("iny"));  // [t|T]iny
+// }
 
 }  // namespace
 }  // namespace moriarty

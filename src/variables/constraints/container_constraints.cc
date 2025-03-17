@@ -16,10 +16,10 @@
 
 #include "src/variables/constraints/container_constraints.h"
 
+#include <format>
 #include <string>
 #include <string_view>
 
-#include "absl/strings/str_cat.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/minteger.h"
 
@@ -30,7 +30,11 @@ MInteger Length::GetConstraints() const { return length_; }
 Length::Length(std::string_view expression) : length_(Exactly(expression)) {}
 
 std::string Length::ToString() const {
-  return absl::StrCat("Length(", length_.ToString(), ")");
+  return std::format("has length that {}", length_.ToString());
+}
+
+std::string DistinctElements::ToString() const {
+  return "has distinct elements";
 }
 
 }  // namespace moriarty

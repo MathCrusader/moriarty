@@ -122,6 +122,8 @@ void OneOfHandler<T>::ConstrainOptions(Container&& one_of) {
     });
   }
 
+  // FIXME: We use this for non-Exactly/OneOf constraints (e.g.,
+  // MString::Alphabet). We need to update this message to be clearer.
   if (valid_options_->empty()) {
     throw std::runtime_error(
         "No valid options remaining after calls to Exactly/OneOf.");

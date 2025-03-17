@@ -24,6 +24,7 @@
 #include "src/librarian/mvariable.h"
 #include "src/librarian/test_utils.h"
 #include "src/util/test_status_macro/status_testutil.h"
+#include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"
 
@@ -286,9 +287,7 @@ TEST(MTupleTest, PropertiesCanBePassedToMultipleDifferentTypes) {
   // meaning of "small".
   EXPECT_THAT(
       MTuple(MInteger(Between(1, 1000)),
-             MString()
-                 .WithAlphabet(MString::kNumbers)
-                 .OfLength(MInteger(Between(1, 1000))))
+             MString(Alphabet::Numbers(), Length(Between(1, 1000))))
           .WithKnownProperty({.category = "size", .descriptor = "small"}),
       GeneratedValuesAre(FieldsAre(Le(100L), SizeIs(Le(100L)))));
 }

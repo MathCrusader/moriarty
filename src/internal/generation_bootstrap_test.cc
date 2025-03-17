@@ -31,6 +31,8 @@
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/container_constraints.h"
+#include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"
 
@@ -188,7 +190,7 @@ TEST(GenerationBootstrapTest,
   RandomEngine rng({1, 2, 3}, "");
   VariableSet variables;
   MORIARTY_ASSERT_OK(variables.AddVariable(
-      "S", MString().WithAlphabet("abc").OfLength(50, 10000)));
+      "S", MString(Alphabet("abc"), Length(Between(50, 10000)))));
 
   // S could generate a string with a really long length. However, the soft
   // generation limit of 100 should stop a large string being generated.

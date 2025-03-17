@@ -17,12 +17,18 @@
 
 #include "src/variables/constraints/container_constraints.h"
 
+#include <string>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/contexts/librarian/analysis_context.h"
+#include "src/internal/value_set.h"
+#include "src/internal/variable_set.h"
 #include "src/librarian/test_utils.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/minteger.h"
+#include "src/variables/mstring.h"
 
 namespace moriarty {
 namespace {
@@ -34,7 +40,6 @@ using ::moriarty_testing::GenerateLots;
 using ::testing::AllOf;
 using ::testing::Each;
 using ::testing::Ge;
-using ::testing::HasSubstr;
 using ::testing::Le;
 
 TEST(ContainerConstraintsTest, LengthConstraintsAreCorrect) {
@@ -47,6 +52,41 @@ TEST(ContainerConstraintsTest, LengthConstraintsAreCorrect) {
               IsOkAndHolds(Each(AllOf(Ge(3), Le(15)))));
 }
 
+TEST(ContainerConstraintsTest, LengthToStringWorks) {
+  EXPECT_EQ(Length(Between(1, 10)).ToString(),
+            "has length that is between 1 and 10");
+}
+
+TEST(ContainerConstraintsTest, LengthExplanationWorks) {
+  moriarty_internal::VariableSet variables;
+  moriarty_internal::ValueSet values;
+  librarian::AnalysisContext ctx("N", variables, values);
+
+  EXPECT_EQ(Length(Between(1, 10))
+                .Explanation(ctx, std::string("this string is long")),
+            "has length (which is `19`) that is not between 1 and 10");
+  EXPECT_EQ(Length(Between(3, 10)).Explanation(ctx, std::vector<int>{1, 2}),
+            "has length (which is `2`) that is not between 3 and 10");
+}
+
+TEST(ContainerConstraintsTest, LengthIsSatisfiedWithWorks) {
+  moriarty_internal::VariableSet variables;
+  moriarty_internal::ValueSet values;
+  librarian::AnalysisContext ctx("N", variables, values);
+
+  EXPECT_TRUE(
+      Length(Between(1, 10)).IsSatisfiedWith(ctx, std::string("123456")));
+  EXPECT_TRUE(Length(Between(1, 10)).IsSatisfiedWith(ctx, std::string("1")));
+  EXPECT_TRUE(
+      Length(Between(1, 10)).IsSatisfiedWith(ctx, std::string("1234567890")));
+  EXPECT_TRUE(
+      Length(Between(1, 10)).IsSatisfiedWith(ctx, std::vector{1, 2, 3}));
+
+  EXPECT_FALSE(Length(Between(1, 10)).IsSatisfiedWith(ctx, std::string("")));
+  EXPECT_FALSE(Length(Between(1, 10)).IsSatisfiedWith(ctx, std::vector<int>{}));
+  EXPECT_FALSE(Length(Between(2, 3)).IsSatisfiedWith(ctx, std::vector{1}));
+}
+
 TEST(ContainerConstraintsTest, ElementsConstraintsAreCorrect) {
   EXPECT_THAT(Elements<MInteger>(Between(1, 10)).GetConstraints(),
               GeneratedValuesAre(AllOf(Ge(1), Le(10))));
@@ -56,9 +96,100 @@ TEST(ContainerConstraintsTest, ElementsConstraintsAreCorrect) {
               IsOkAndHolds(Each(AllOf(Ge(3), Le(15)))));
 }
 
-TEST(ContainerConstraintsTest, LengthToStringWorks) {
-  EXPECT_THAT(Length(Between(1, 10)).ToString(),
-              AllOf(HasSubstr("Length"), HasSubstr("1, 10")));
+TEST(ContainerConstraintsTest, ElementsToStringWorks) {
+  EXPECT_EQ(Elements<MInteger>(Between(1, 10)).ToString(),
+            "each element is between 1 and 10");
+  EXPECT_EQ(Elements<MString>(Length(Between(1, 10))).ToString(),
+            "each element has length that is between 1 and 10");
 }
+
+TEST(ContainerConstraintsTest, ElementsExplanationWorks) {
+  moriarty_internal::VariableSet variables;
+  moriarty_internal::ValueSet values;
+  librarian::AnalysisContext ctx("N", variables, values);
+
+  EXPECT_EQ(Elements<MInteger>(Between(1, 10)).Explanation(ctx, {-1, 2, 3}),
+            "array index 0 (which is `-1`) is not between 1 and 10");
+  EXPECT_EQ(
+      Elements<MString>(Length(Between(3, 10)))
+          .Explanation(ctx, std::vector<std::string>{"hello", "moto", "me"}),
+      "array index 2 (which is `me`) has length (which is `2`) that is not "
+      "between 3 and 10");
+}
+
+TEST(ContainerConstraintsTest, ElementsIsSatisfiedWithWorks) {
+  moriarty_internal::VariableSet variables;
+  moriarty_internal::ValueSet values;
+  values.Set<MInteger>("X", 10);
+  librarian::AnalysisContext ctx("N", variables, values);
+
+  {
+    EXPECT_TRUE(Elements<MString>(Length(Between(1, 10)))
+                    .IsSatisfiedWith(ctx, std::vector<std::string>{}));
+    EXPECT_TRUE(
+        Elements<MString>(Length(Between(1, 10)))
+            .IsSatisfiedWith(ctx, std::vector<std::string>{"hello", "moto"}));
+    EXPECT_TRUE(
+        Elements<MString>(Length(Between(1, "X")))
+            .IsSatisfiedWith(ctx, std::vector<std::string>{"hello", "moto"}));
+  }
+  {
+    EXPECT_TRUE(Elements<MInteger>(Between(1, 10))
+                    .IsSatisfiedWith(ctx, std::vector<int64_t>{1, 2, 3}));
+    EXPECT_TRUE(Elements<MInteger>(Between(1, "X"))
+                    .IsSatisfiedWith(ctx, std::vector<int64_t>{1}));
+  }
+  {
+    EXPECT_FALSE(Elements<MString>(Length(Between(1, 4)))
+                     .IsSatisfiedWith(ctx, std::vector<std::string>{"hello"}));
+    EXPECT_FALSE(
+        Elements<MString>(Length(Between(2, 10)))
+            .IsSatisfiedWith(ctx, std::vector<std::string>{"hello", "m"}));
+  }
+  {
+    EXPECT_FALSE(Elements<MInteger>(Between(1, 10))
+                     .IsSatisfiedWith(ctx, std::vector<int64_t>{1, 2, 11}));
+    EXPECT_FALSE(Elements<MInteger>(Between(1, "X"))
+                     .IsSatisfiedWith(ctx, std::vector<int64_t>{1, 2, 11}));
+  }
+}
+
+TEST(ContainerConstraintsTest, DistinctElementsToStringWorks) {
+  EXPECT_EQ(DistinctElements().ToString(), "has distinct elements");
+}
+
+TEST(ContainerConstraintsTest, DistinctElementsExplanationWorks) {
+  moriarty_internal::VariableSet variables;
+  moriarty_internal::ValueSet values;
+  librarian::AnalysisContext ctx("N", variables, values);
+
+  EXPECT_EQ(DistinctElements().Explanation(ctx, std::vector{11, 22, 11}),
+            "array indices 0 and 2 (which are `11`) are not distinct");
+  EXPECT_EQ(DistinctElements().Explanation(
+                ctx, std::vector<std::string>{"hello", "hell", "help", "hell"}),
+            "array indices 1 and 3 (which are `hell`) are not distinct");
+  EXPECT_EQ(DistinctElements().Explanation(ctx, std::vector{1, 2, 3, 2, 2, 3}),
+            "array indices 1 and 3 (which are `2`) are not distinct");
+}
+
+TEST(ContainerConstraintsTest, DistinctElementsIsSatisfiedWithWorks) {
+  moriarty_internal::VariableSet variables;
+  moriarty_internal::ValueSet values;
+  librarian::AnalysisContext ctx("N", variables, values);
+
+  {
+    EXPECT_TRUE(
+        DistinctElements().IsSatisfiedWith(ctx, std::vector<std::string>{}));
+    EXPECT_TRUE(DistinctElements().IsSatisfiedWith(
+        ctx, std::vector<std::string>{"hello", "moto"}));
+  }
+  {
+    EXPECT_FALSE(DistinctElements().IsSatisfiedWith(
+        ctx, std::vector<std::string>{"a", "a"}));
+    EXPECT_FALSE(DistinctElements().IsSatisfiedWith(
+        ctx, std::vector<std::string>{"a", "ba", "ba"}));
+  }
+}
+
 }  // namespace
 }  // namespace moriarty

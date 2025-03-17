@@ -243,31 +243,30 @@ TEST(NumericConstraintsTest, ExplanationShouldWork) {
 
   {
     EXPECT_EQ(ExactlyIntegerExpression("x + 1").Explanation(tmp, 10),
-              "10 is not exactly x + 1");
+              "is not exactly x + 1");
   }
   {
     EXPECT_EQ(OneOfIntegerExpression({"x", "14"}).Explanation(tmp, 10),
-              "10 is not one of {x, 14}");
+              "is not one of {x, 14}");
     EXPECT_EQ(OneOfIntegerExpression({"x", "14"}).Explanation(tmp, 15),
-              "15 is not one of {x, 14}");
+              "is not one of {x, 14}");
   }
   {
-    EXPECT_EQ(Between("x", 12).Explanation(tmp, 9),
-              "9 is not between x and 12");
+    EXPECT_EQ(Between("x", 12).Explanation(tmp, 9), "is not between x and 12");
     EXPECT_EQ(Between(4, "y^2").Explanation(tmp, 401),
-              "401 is not between 4 and y^2");
+              "is not between 4 and y^2");
     EXPECT_EQ(Between("x", "y^2").Explanation(tmp, 401),
-              "401 is not between x and y^2");
+              "is not between x and y^2");
     EXPECT_EQ(Between(18, 20).Explanation(tmp, 401),
-              "401 is not between 18 and 20");
+              "is not between 18 and 20");
   }
   {
-    EXPECT_EQ(AtLeast("x").Explanation(tmp, 10), "10 is not at least x");
-    EXPECT_EQ(AtLeast(100).Explanation(tmp, 11), "11 is not at least 100");
+    EXPECT_EQ(AtLeast("x").Explanation(tmp, 10), "is not at least x");
+    EXPECT_EQ(AtLeast(100).Explanation(tmp, 11), "is not at least 100");
   }
   {
-    EXPECT_EQ(AtMost("x + 1").Explanation(tmp, 11), "11 is not at most x + 1");
-    EXPECT_EQ(AtMost(5).Explanation(tmp, 10), "10 is not at most 5");
+    EXPECT_EQ(AtMost("x + 1").Explanation(tmp, 11), "is not at most x + 1");
+    EXPECT_EQ(AtMost(5).Explanation(tmp, 10), "is not at most 5");
   }
 }
 

@@ -54,7 +54,7 @@ bool ExactlyIntegerExpression::IsSatisfiedWith(LookupVariableFn lookup_variable,
 
 std::string ExactlyIntegerExpression::Explanation(
     LookupVariableFn lookup_variable, int64_t value) const {
-  return std::format("{} is not exactly {}", value, value_.ToString());
+  return std::format("is not exactly {}", value_.ToString());
 }
 
 // -----------------------------------------------------------------------------
@@ -113,7 +113,7 @@ bool OneOfIntegerExpression::IsSatisfiedWith(LookupVariableFn lookup_variable,
 
 std::string OneOfIntegerExpression::Explanation(
     LookupVariableFn lookup_variable, int64_t value) const {
-  return std::format("{} is not one of {}", value, OptionString(options_));
+  return std::format("is not one of {}", OptionString(options_));
 }
 
 // -----------------------------------------------------------------------------
@@ -165,7 +165,7 @@ bool Between::IsSatisfiedWith(LookupVariableFn lookup_variable,
 
 std::string Between::Explanation(LookupVariableFn lookup_variable,
                                  int64_t value) const {
-  return std::format("{} is not between {} and {}", value, minimum_.ToString(),
+  return std::format("is not between {} and {}", minimum_.ToString(),
                      maximum_.ToString());
 }
 
@@ -199,7 +199,7 @@ bool AtMost::IsSatisfiedWith(LookupVariableFn lookup_variable,
 
 std::string AtMost::Explanation(LookupVariableFn lookup_variable,
                                 int64_t value) const {
-  return std::format("{} is not at most {}", value, maximum_.ToString());
+  return std::format("is not at most {}", maximum_.ToString());
 }
 
 // -----------------------------------------------------------------------------
@@ -232,7 +232,7 @@ bool AtLeast::IsSatisfiedWith(LookupVariableFn lookup_variable,
 
 std::string AtLeast::Explanation(LookupVariableFn lookup_variable,
                                  int64_t value) const {
-  return std::format("{} is not at least {}", value, minimum_.ToString());
+  return std::format("is not at least {}", minimum_.ToString());
 }
 
 }  // namespace moriarty
