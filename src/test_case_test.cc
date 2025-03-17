@@ -29,9 +29,7 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/scenario.h"
 #include "src/testing/mtest_type.h"
-#include "src/testing/mtest_type2.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -46,33 +44,25 @@ using ::moriarty::moriarty_internal::GenerateAllValues;
 using ::moriarty::moriarty_internal::RandomEngine;
 using ::moriarty::moriarty_internal::ValueSet;
 using ::moriarty_testing::MTestType;
-using ::moriarty_testing::MTestType2;
 using ::moriarty_testing::TestType;
 using ::moriarty_testing::ThrowsVariableNotFound;
-using ::testing::HasSubstr;
 
 template <typename T>
 absl::StatusOr<T> GetVariable(const TestCase& test_case,
                               std::string_view name) {
-  auto [variables, values, scenarios] =
-      UnsafeExtractTestCaseInternals(test_case);
+  auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
   return variables.GetVariable<T>(name);
 }
 
 template <typename T>
 absl::StatusOr<typename T::value_type> GetValue(const TestCase& test_case,
                                                 std::string_view name) {
-  auto [variables, values, scenarios] =
-      UnsafeExtractTestCaseInternals(test_case);
+  auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
   return values.Get<T>(name);
 }
 
 absl::StatusOr<ValueSet> AssignAllValues(const TestCase& test_case) {
-  auto [variables, values, scenarios] =
-      UnsafeExtractTestCaseInternals(test_case);
-  for (const Scenario& scenario : scenarios) {
-    MORIARTY_RETURN_IF_ERROR(variables.WithScenario(scenario));
-  }
+  auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
   RandomEngine rng({1, 2, 3}, "v0.1");
   return GenerateAllValues(variables, values, {rng, std::nullopt});
 }
@@ -171,83 +161,6 @@ TEST(TestCaseTest, AssignAllValuesShouldRespectSpecificValuesSet) {
 
   EXPECT_THAT(value_set.Get<MTestType>("A"), IsOkAndHolds(TestType(789)));
   EXPECT_THAT(value_set.Get<MTestType>("B"), IsOkAndHolds(TestType(654)));
-}
-
-TEST(TestCaseTest, GeneralScenariosShouldBeRespected) {
-  TestCase T = TestCase()
-                   .ConstrainVariable("A", MTestType())
-                   .ConstrainVariable("B", MTestType())
-                   .WithScenario(Scenario().WithGeneralProperty(
-                       {.category = "size", .descriptor = "small"}));
-
-  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
-
-  EXPECT_THAT(value_set.Get<MTestType>("A"),
-              IsOkAndHolds(MTestType::kGeneratedValueSmallSize));
-  EXPECT_THAT(value_set.Get<MTestType>("B"),
-              IsOkAndHolds(MTestType::kGeneratedValueSmallSize));
-}
-
-TEST(TestCaseTest, TypeSpecificScenariosAreAppliedToAllAppropriateVariables) {
-  TestCase T =
-      TestCase()
-          .ConstrainVariable("A", MTestType())
-          .ConstrainVariable("B", MTestType())
-          .ConstrainVariable("C", MTestType2())
-          .ConstrainVariable("D", MTestType2())
-          .WithScenario(Scenario().WithTypeSpecificProperty(
-              "MTestType", {.category = "size", .descriptor = "small"}));
-
-  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
-
-  EXPECT_THAT(value_set.Get<MTestType>("A"),
-              IsOkAndHolds(MTestType::kGeneratedValueSmallSize));
-  EXPECT_THAT(value_set.Get<MTestType>("B"),
-              IsOkAndHolds(MTestType::kGeneratedValueSmallSize));
-  EXPECT_THAT(value_set.Get<MTestType2>("C"),
-              IsOkAndHolds(MTestType2::kGeneratedValue));
-  EXPECT_THAT(value_set.Get<MTestType2>("D"),
-              IsOkAndHolds(MTestType2::kGeneratedValue));
-}
-
-TEST(TestCaseTest,
-     DifferentTypeSpecificScenariosArePassedToTheAppropriateType) {
-  TestCase T =
-      TestCase()
-          .ConstrainVariable("A", MTestType())
-          .ConstrainVariable("B", MTestType())
-          .ConstrainVariable("C", MTestType2())
-          .ConstrainVariable("D", MTestType2())
-          .WithScenario(Scenario().WithTypeSpecificProperty(
-              "MTestType", {.category = "size", .descriptor = "small"}))
-          .WithScenario(Scenario().WithTypeSpecificProperty(
-              "MTestType2", {.category = "size", .descriptor = "large"}));
-
-  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
-
-  EXPECT_THAT(value_set.Get<MTestType>("A"),
-              IsOkAndHolds(MTestType::kGeneratedValueSmallSize));
-  EXPECT_THAT(value_set.Get<MTestType>("B"),
-              IsOkAndHolds(MTestType::kGeneratedValueSmallSize));
-  EXPECT_THAT(value_set.Get<MTestType2>("C"),
-              IsOkAndHolds(MTestType2::kGeneratedValueLargeSize));
-  EXPECT_THAT(value_set.Get<MTestType2>("D"),
-              IsOkAndHolds(MTestType2::kGeneratedValueLargeSize));
-}
-
-TEST(TestCaseTest, UnknownMandatoryPropertyInScenarioShouldFail) {
-  TestCase T =
-      TestCase()
-          .ConstrainVariable("A", MTestType())
-          .ConstrainVariable("B", MTestType())
-          .ConstrainVariable("C", MTestType2())
-          .ConstrainVariable("D", MTestType2())
-          .WithScenario(Scenario().WithTypeSpecificProperty(
-              "MTestType", {.category = "unknown", .descriptor = "???"}));
-
-  EXPECT_THAT(AssignAllValues(T),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("Property with non-optional category")));
 }
 
 }  // namespace

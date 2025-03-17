@@ -19,15 +19,11 @@
 
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/status/status.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/scenario.h"
-#include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
 
@@ -44,18 +40,6 @@ TestCase& TestCase::UnsafeSetAnonymousValue(std::string_view variable_name,
   return *this;
 }
 
-TestCase& TestCase::WithScenario(Scenario scenario) {
-  scenarios_.push_back(std::move(scenario));
-  return *this;
-}
-
-absl::Status TestCase::DistributeScenarios() {
-  for (const Scenario& scenario : scenarios_) {
-    MORIARTY_RETURN_IF_ERROR(variables_.WithScenario(scenario));
-  }
-  return absl::OkStatus();
-}
-
 ConcreteTestCase& ConcreteTestCase::UnsafeSetAnonymousValue(
     std::string_view variable_name, std::any value) {
   values_.UnsafeSet(variable_name, std::move(value));
@@ -63,7 +47,7 @@ ConcreteTestCase& ConcreteTestCase::UnsafeSetAnonymousValue(
 }
 
 TCInternals UnsafeExtractTestCaseInternals(const TestCase& test_case) {
-  return {test_case.variables_, test_case.values_, test_case.scenarios_};
+  return {test_case.variables_, test_case.values_};
 }
 
 moriarty_internal::ValueSet UnsafeExtractConcreteTestCaseInternals(

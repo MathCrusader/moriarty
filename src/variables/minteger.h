@@ -40,7 +40,6 @@
 #include "src/librarian/mvariable.h"
 #include "src/librarian/one_of_handler.h"
 #include "src/librarian/size_property.h"
-#include "src/property.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/constraints/size_constraints.h"
@@ -96,13 +95,6 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   MInteger& AddConstraint(SizeCategory constraint);
 
   [[nodiscard]] std::string Typename() const override { return "MInteger"; }
-
-  // OfSizeProperty()
-  //
-  // Tells this int to have a specific size. `property.category` must be
-  // "size". The exact values here are not guaranteed and may change over
-  // time. If exact values are required, specify them manually.
-  absl::Status OfSizeProperty(Property property);
 
  private:
   librarian::CowPtr<Range> bounds_;
@@ -174,7 +166,6 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
 template <typename... Constraints>
   requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
 MInteger::MInteger(Constraints&&... constraints) {
-  RegisterKnownProperty("size", &MInteger::OfSizeProperty);
   (AddConstraint(std::forward<Constraints>(constraints)), ...);
 }
 

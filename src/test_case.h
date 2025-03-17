@@ -23,15 +23,12 @@
 #include <stdexcept>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/status/status.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/mvariable.h"
-#include "src/scenario.h"
 
 namespace moriarty {
 
@@ -39,7 +36,6 @@ namespace moriarty {
 struct TCInternals {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  std::vector<Scenario> scenarios;
 };
 
 // TestCase
@@ -90,11 +86,6 @@ class TestCase {
                                librarian::MVariable<T, typename T::value_type>>
   TestCase& ConstrainVariable(std::string_view variable_name, T constraints);
 
-  // WithScenario()
-  //
-  // This TestCase is covering this `scenario`.
-  TestCase& WithScenario(Scenario scenario);
-
   // Adds extra constraints to a variable. This version is for when you do not
   // know the exact type of the variable. Prefer to use `ConstrainVariable()`.
   // This function may be removed in the future.
@@ -118,10 +109,6 @@ class TestCase {
  private:
   moriarty_internal::VariableSet variables_;
   moriarty_internal::ValueSet values_;
-  std::vector<Scenario> scenarios_;
-
-  // Distributes all known scenarios to the variable set.
-  absl::Status DistributeScenarios();
 
   friend TCInternals UnsafeExtractTestCaseInternals(const TestCase& test_case);
 };

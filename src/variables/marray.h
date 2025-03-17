@@ -42,7 +42,6 @@
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
 #include "src/librarian/mvariable.h"
-#include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
@@ -133,17 +132,6 @@ class MArray : public librarian::MVariable<
   // when reading/writing. Default = kSpace.
   MArray& WithSeparator(Whitespace separator);
 
-  // OfSizeProperty()
-  //
-  // Tells this string to have a specific size. `property.category` must
-  // be "size". The exact values here are not guaranteed and may change over
-  // time. If exact values are required, specify them manually.
-  //
-  // Note that "size" and "length" are different topics. The "length" is the
-  // number of elements in the array, while the "size" is a subjective measure
-  // -- "small", "medium", "large", etc.
-  absl::Status OfSizeProperty(Property property);
-
  private:
   static constexpr const int kGenerateRetries = 100;
 
@@ -152,8 +140,6 @@ class MArray : public librarian::MVariable<
   bool distinct_elements_ = false;
   std::optional<Whitespace> separator_;
   Whitespace GetSeparator() const;
-
-  std::optional<Property> length_size_property_;
 
   // GenerateNDistinctImpl()
   //
@@ -239,7 +225,6 @@ MArray<MElementType>::MArray(Constraints&&... constraints) {
                             MElementType, typename MElementType::value_type>>,
       "The T used in MArray<T> must be a Moriarty variable. For example, "
       "MArray<MInteger> or MArray<MCustomType>.");
-  this->RegisterKnownProperty("size", &MArray<MElementType>::OfSizeProperty);
   (AddConstraint(std::forward<Constraints>(constraints)), ...);
 }
 
@@ -376,13 +361,6 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
   // Ensure that the size is non-negative.
   length_local.AddConstraint(AtLeast(0));
 
-  if (length_size_property_) {
-    auto status = length_local.OfSizeProperty(*length_size_property_);
-    if (!status.ok()) {
-      throw std::runtime_error(std::string(status.message()));
-    }
-  }
-
   std::optional<int64_t> generation_limit = ctx.GetSoftGenerationLimit();
   if (generation_limit) length_local.AddConstraint(AtMost(*generation_limit));
 
@@ -456,12 +434,6 @@ int MArray<MElementType>::GetNumberOfRetriesForDistinctElements(int n) {
   for (int i = n; i >= 1; i--) H_n += 1.0 / i;
 
   return n * H_n + 14 * n;
-}
-
-template <typename MElementType>
-absl::Status MArray<MElementType>::OfSizeProperty(Property property) {
-  length_size_property_ = std::move(property);
-  return absl::OkStatus();
 }
 
 template <typename MElementType>

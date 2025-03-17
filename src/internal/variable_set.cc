@@ -26,9 +26,6 @@
 #include "absl/strings/substitute.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
-#include "src/property.h"
-#include "src/scenario.h"
-#include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -75,19 +72,6 @@ const AbstractVariable* VariableSet::GetAbstractVariableOrNull(
   auto it = variables_.find(name);
   if (it == variables_.end()) return nullptr;
   return it->second.get();
-}
-
-absl::Status VariableSet::WithScenario(const Scenario& scenario) {
-  for (const auto& [var_name, var_ptr] : variables_) {
-    for (const Property& property : scenario.GetGeneralProperties()) {
-      MORIARTY_RETURN_IF_ERROR(var_ptr->WithProperty(property));
-    }
-    for (const Property& property :
-         scenario.GetTypeSpecificProperties(var_ptr->Typename())) {
-      MORIARTY_RETURN_IF_ERROR(var_ptr->WithProperty(property));
-    }
-  }
-  return absl::OkStatus();
 }
 
 const absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>&

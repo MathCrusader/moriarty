@@ -38,7 +38,6 @@
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
 #include "src/librarian/mvariable.h"
-#include "src/property.h"
 
 namespace moriarty {
 
@@ -93,25 +92,11 @@ class MTuple : public librarian::MVariable<
   // when reading/writing. Default = kSpace.
   MTuple& WithSeparator(Whitespace separator);
 
-  // OfSizeProperty()
-  //
-  // Tells each component that they should each have this size property.
-  // `property.category` must be "size". The exact values here are not
-  // guaranteed and may change over time. If exact values are required, specify
-  // them manually.
-  absl::Status OfSizeProperty(Property property);
-
  private:
   std::tuple<MElementTypes...> elements_;
 
   std::optional<Whitespace> separator_;
   Whitespace GetSeparator() const;
-
-  // Pass `property` along to all variables in this tuple.
-  absl::Status DistributePropertyToValues(Property property);
-  template <std::size_t... I>
-  absl::Status DistributePropertyToValues(Property property,
-                                          std::index_sequence<I...>);
 
   template <std::size_t I>
   void GenerateSingleElement(librarian::ResolverContext ctx,
@@ -181,8 +166,6 @@ MTuple<MElementTypes...>::MTuple() {
        ...),
       "The T1, T2, etc used in MTuple<T1, T2> must be a Moriarty variable. "
       "For example, MTuple<MInteger, MString>.");
-  this->RegisterKnownProperty("size",
-                              &MTuple<MElementTypes...>::OfSizeProperty);
 }
 
 template <typename... MElementTypes>
@@ -196,8 +179,6 @@ MTuple<MElementTypes...>::MTuple(MElementTypes... values)
        ...),
       "The T1, T2, etc used in MTuple<T1, T2> must be a Moriarty variable. "
       "For example, MTuple<MInteger, MString>.");
-  this->RegisterKnownProperty("size",
-                              &MTuple<MElementTypes...>::OfSizeProperty);
 }
 
 template <typename... MElementTypes>
@@ -358,27 +339,6 @@ void MTuple<MElementTypes...>::TryReadAndSet(
 template <typename... MElementTypes>
 Whitespace MTuple<MElementTypes...>::GetSeparator() const {
   return separator_.value_or(Whitespace::kSpace);
-}
-
-template <typename... MElementTypes>
-absl::Status MTuple<MElementTypes...>::DistributePropertyToValues(
-    Property property) {
-  return DistributePropertyToValues(
-      std::move(property), std::index_sequence_for<MElementTypes...>());
-}
-
-template <typename... MElementTypes>
-template <std::size_t... I>
-absl::Status MTuple<MElementTypes...>::DistributePropertyToValues(
-    Property property, std::index_sequence<I...>) {
-  absl::Status status;
-  (status.Update(std::get<I>(elements_).TryWithKnownProperty(property)), ...);
-  return status;
-}
-
-template <typename... MElementTypes>
-absl::Status MTuple<MElementTypes...>::OfSizeProperty(Property property) {
-  return DistributePropertyToValues(std::move(property));
 }
 
 }  // namespace moriarty

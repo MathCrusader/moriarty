@@ -32,7 +32,6 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/librarian/mvariable.h"
-#include "src/property.h"
 #include "src/variables/minteger.h"
 
 // TODO(darcybest): If we need more TestTypes, we should make this process more
@@ -85,8 +84,6 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   static constexpr int64_t kCorner1 = 99991;
   static constexpr int64_t kCorner2 = 99992;
 
-  MTestType();
-
   std::string Typename() const override { return "MTestType"; };
 
   TestType ReadImpl(moriarty::librarian::ReaderContext ctx) const override;
@@ -97,9 +94,6 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   absl::Status MergeFromImpl(const MTestType& other) override;
 
   bool WasMerged() const;
-
-  // Acceptable `KnownProperty`s: "size":"small"/"large"
-  absl::Status WithSizeProperty(moriarty::Property property);
 
   // My value is increased by this other variable's value
   MTestType& SetAdder(std::string_view variable_name);

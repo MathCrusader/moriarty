@@ -36,7 +36,6 @@
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
 #include "src/internal/simple_pattern.h"
-#include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
@@ -183,13 +182,6 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
   // Negative string length is impossible.
   length_local.AddConstraint(AtLeast(0));
 
-  if (length_size_property_) {
-    auto status = length_local.OfSizeProperty(*length_size_property_);
-    if (!status.ok()) {
-      throw std::runtime_error(std::string(status.message()));
-    }
-  }
-
   std::optional<int64_t> generation_limit = ctx.GetSoftGenerationLimit();
   if (generation_limit) length_local.AddConstraint(AtMost(*generation_limit));
 
@@ -238,11 +230,6 @@ std::string MString::GenerateImplWithDistinctCharacters(
       ctx.RandomElementsWithoutReplacement(alphabet_.GetOptions(), length);
 
   return std::string(ret.begin(), ret.end());
-}
-
-absl::Status MString::OfSizeProperty(Property property) {
-  length_size_property_ = std::move(property);
-  return absl::OkStatus();
 }
 
 std::vector<std::string> MString::GetDependenciesImpl() const {

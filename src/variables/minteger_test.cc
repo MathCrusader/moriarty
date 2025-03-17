@@ -38,7 +38,6 @@ namespace moriarty {
 namespace {
 
 using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GenerateDifficultInstancesValues;
@@ -55,7 +54,6 @@ using ::testing::AnyOf;
 using ::testing::Each;
 using ::testing::Eq;
 using ::testing::Ge;
-using ::testing::HasSubstr;
 using ::testing::IsSupersetOf;
 using ::testing::Le;
 using ::testing::Optional;
@@ -107,19 +105,6 @@ TEST(MIntegerTest, InvalidReadShouldFail) {
 TEST(MIntegerTest, GenerateShouldSuccessfullyComplete) {
   moriarty::MInteger variable;
   MORIARTY_EXPECT_OK(Generate(variable));
-}
-
-TEST(MIntegerTest, OfSizePropertyOnlyAcceptsSizeAsCategory) {
-  EXPECT_THAT(
-      MInteger().OfSizeProperty({.category = "wrong"}),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("category")));
-}
-
-TEST(MIntegerTest, OfSizePropertyOnlyAcceptsKnownSizes) {
-  EXPECT_THAT(
-      MInteger().OfSizeProperty(
-          {.category = "size", .descriptor = "unknown_type"}),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("Unknown size")));
 }
 
 TEST(MIntegerTest, GetDifficultInstancesIncludesManyInterestingValues) {

@@ -35,7 +35,6 @@
 #include <vector>
 
 #include "absl/algorithm/container.h"
-#include "absl/container/flat_hash_map.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
@@ -53,7 +52,6 @@
 #include "src/internal/generation_config.h"
 #include "src/internal/status_utils.h"
 #include "src/librarian/constraint_handler.h"
-#include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
@@ -185,21 +183,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   VariableType& AddCustomConstraint(
       std::string_view constraint_name, std::vector<std::string> deps,
       std::function<bool(const ValueType&, AnalysisContext ctx)> checker);
-
-  // WithKnownProperty()
-  //
-  // Adds a known property to this variable.
-  //
-  // Crashes on failure. See `TryWithKnownProperty()` for non-crashing version.
-  VariableType& WithKnownProperty(Property property);
-
-  // TryWithKnownProperty()
-  //
-  // Adds a known property to this variable.
-  //
-  // Returns status on failure. See `WithKnownProperty()` for simpler API
-  // version.
-  absl::Status TryWithKnownProperty(Property property);
 
   // GetDifficultCases()
   //
@@ -400,31 +383,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   virtual absl::StatusOr<std::string> ValueToStringImpl(
       const ValueType& value) const;
 
-  // ---------------------------------------------------------------------------
-  //  Functions to fully register this MVariable with Moriarty.
-
-  // PropertyCallbackFunction is a *pointer-to-member-function* to some method
-  // of the underlying variable type (e.g., MInteger, MString).
-  using PropertyCallbackFunction = absl::Status (VariableType::*)(Property);
-
-  // RegisterKnownProperty() [Registration Point for Librarians]
-  //
-  // Informs MVariable that `property_category` is a property that the derived
-  // class knows how to interpret. When this category is requested, MVariable
-  // will call `property_fn`. This should return `absl::OkStatus` if the
-  // property was interpreted and handled properly.
-  //
-  // This function *must* be a member function of your class and not a
-  // free-function.
-  //
-  // Example call:
-  //   RegisterKnownProperty("size", &MInteger::WithSizeProperty);
-  //
-  // With the corresponding function:
-  //   absl::Status MInteger::WithSizeProperty(Property property) { ... }
-  void RegisterKnownProperty(std::string_view property_category,
-                             PropertyCallbackFunction property_fn);
-
   // DeclareSelfAsInvalid() [Helper for Librarians]
   //
   // Sets the status of this variable to `status`. This must be a non-ok
@@ -454,10 +412,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   };
   std::vector<CustomConstraint> custom_constraints_;
 
-  // The known properties of this variable. Maps from category -> function.
-  absl::flat_hash_map<std::string, PropertyCallbackFunction>
-      known_property_categories_;
-
   // The overall status of this variable. If this is not ok, then all FooImpl()
   // that return an absl::Status will be intercepted and return this instead.
   // (E.g., GenerateImpl(), PrintImpl(), etc.)
@@ -470,11 +424,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Clones the object, similar to a copy-constructor.
   [[nodiscard]] std::unique_ptr<moriarty_internal::AbstractVariable> Clone()
       const override;
-
-  // WithProperty()
-  //
-  // Tells this variable that it should satisfy `property`.
-  absl::Status WithProperty(Property property) override;
 
   // Try to generate exactly once, without any retries.
   ValueType GenerateOnce(ResolverContext ctx) const;
@@ -647,44 +596,6 @@ V& MVariable<V, G>::AddCustomConstraint(
 }
 
 template <typename V, typename G>
-V& MVariable<V, G>::WithKnownProperty(Property property) {
-  moriarty_internal::TryFunctionOrCrash(
-      [this, &property]() {
-        return this->TryWithKnownProperty(std::move(property));
-      },
-      "WithKnownProperty");
-  return UnderlyingVariableType();
-}
-
-template <typename V, typename G>
-absl::Status MVariable<V, G>::TryWithKnownProperty(Property property) {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-  auto it = known_property_categories_.find(property.category);
-  if (it == known_property_categories_.end()) {
-    if (property.enforcement == Property::Enforcement::kIgnoreIfUnknown)
-      return absl::OkStatus();
-
-    return absl::InvalidArgumentError(
-        absl::Substitute("Property with non-optional category '$0' "
-                         "requested, but unknown to this variable.",
-                         property.category));
-  }
-
-  Property::Enforcement enforcement = property.enforcement;  // Grab before move
-
-  // it->second is the callback function provided in RegisterKnownProperty.
-  absl::Status status =
-      std::invoke(it->second, UnderlyingVariableType(), std::move(property));
-
-  if (!status.ok() && enforcement == Property::Enforcement::kFailIfUnknown) {
-    return absl::FailedPreconditionError(absl::Substitute(
-        "Failed to add property in WithKnownProperty: $0", status.ToString()));
-  }
-
-  return absl::OkStatus();
-}
-
-template <typename V, typename G>
 absl::StatusOr<std::vector<V>> MVariable<V, G>::GetDifficultInstances(
     AnalysisContext ctx) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
@@ -741,12 +652,6 @@ absl::StatusOr<std::string> MVariable<V, G>::ValueToStringImpl(
     const G& value) const {
   return absl::UnimplementedError(
       absl::StrCat("ValueToString() not implemented for ", Typename()));
-}
-
-template <typename V, typename G>
-void MVariable<V, G>::RegisterKnownProperty(
-    std::string_view property_category, PropertyCallbackFunction property_fn) {
-  known_property_categories_[property_category] = property_fn;
 }
 
 template <typename V, typename G>
@@ -870,12 +775,6 @@ std::unique_ptr<moriarty_internal::AbstractVariable> MVariable<V, G>::Clone()
     const {
   // Use V's copy constructor.
   return std::make_unique<V>(UnderlyingVariableType());
-}
-
-template <typename V, typename G>
-absl::Status MVariable<V, G>::WithProperty(Property property) {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-  return TryWithKnownProperty(std::move(property));
 }
 
 template <typename V, typename G>

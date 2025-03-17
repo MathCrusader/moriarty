@@ -42,7 +42,6 @@
 #include "src/internal/range.h"
 #include "src/librarian/one_of_handler.h"
 #include "src/librarian/size_property.h"
-#include "src/property.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
@@ -183,22 +182,6 @@ absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues(
                             bounds_->Extremes(dependent_variables));
   if (!extremes) return absl::InvalidArgumentError("Valid range is empty");
   return *extremes;
-}
-
-absl::Status MInteger::OfSizeProperty(Property property) {
-  if (property.category != "size") {
-    return absl::InvalidArgumentError(
-        "Property's category must be 'size' in OfSizeProperty()");
-  }
-
-  CommonSize size = librarian::CommonSizeFromString(property.descriptor);
-  if (size == CommonSize::kUnknown) {
-    return absl::InvalidArgumentError(
-        absl::Substitute("Unknown size: $0", property.descriptor));
-  }
-
-  AddConstraint(SizeCategory(size));
-  return absl::OkStatus();
 }
 
 namespace {

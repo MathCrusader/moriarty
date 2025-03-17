@@ -35,7 +35,6 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/test_utils.h"
-#include "src/property.h"
 #include "src/testing/mtest_type.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -616,71 +615,6 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
 
   // Should not have changed.
   EXPECT_THAT(values.Get<MInteger>("N"), IsOkAndHolds(N));
-}
-
-TEST(MVariableTest, KnownPropertyCallsCorrectCallbackOnCopiedVariable) {
-  MTestType a;
-  MTestType b = a;
-  b.WithKnownProperty({.category = "size",
-                       .descriptor = "small",
-                       .enforcement = Property::kFailIfUnknown});
-
-  EXPECT_THAT(Generate(a), IsOkAndHolds(MTestType::kGeneratedValue));
-  EXPECT_THAT(Generate(b), IsOkAndHolds(MTestType::kGeneratedValueSmallSize));
-}
-
-TEST(MVariableTest, KnownPropertyWorksInSimpleCase) {
-  EXPECT_THAT(Generate(MTestType().WithKnownProperty(
-                  {.category = "size",
-                   .descriptor = "small",
-                   .enforcement = Property::kFailIfUnknown})),
-              IsOkAndHolds(MTestType::kGeneratedValueSmallSize));
-  EXPECT_THAT(Generate(MTestType().WithKnownProperty(
-                  {.category = "size",
-                   .descriptor = "large",
-                   .enforcement = Property::kFailIfUnknown})),
-              IsOkAndHolds(MTestType::kGeneratedValueLargeSize));
-}
-
-TEST(MVariableTest, KnownPropertyWithAnUnknownOptionalPropertyIsIgnored) {
-  EXPECT_THAT(Generate(MTestType().WithKnownProperty(
-                  {.category = "unknown",
-                   .descriptor = "small",
-                   .enforcement = Property::kIgnoreIfUnknown})),
-              IsOkAndHolds(MTestType::kGeneratedValue));
-}
-
-TEST(MVariableDeathTest,
-     KnownPropertyWithAnUnknownMandatoryPropertyShouldCrash) {
-  EXPECT_DEATH(
-      {
-        MTestType().WithKnownProperty(
-            {.category = "mystery",
-             .descriptor = "small",
-             .enforcement = Property::kFailIfUnknown});
-      },
-      "mystery");
-}
-
-TEST(MVariableDeathTest,
-     PropertyWithAnKnownCategoryButUnknownDescriptorShouldCrashIfRequested) {
-  EXPECT_DEATH(
-      {
-        MTestType().WithKnownProperty(
-            {.category = "size",
-             .descriptor = "hahaha",
-             .enforcement = Property::kFailIfUnknown});
-      },
-      "hahaha");
-}
-
-TEST(MVariableTest,
-     PropertyWithAnKnownCategoryButUnknownDescriptorShouldIgnoreIfRequested) {
-  EXPECT_THAT(Generate(MTestType().WithKnownProperty(
-                  {.category = "size",
-                   .descriptor = "what is this?",
-                   .enforcement = Property::kIgnoreIfUnknown})),
-              IsOkAndHolds(MTestType::kGeneratedValue));
 }
 
 }  // namespace

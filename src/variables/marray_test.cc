@@ -53,7 +53,6 @@ using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::AllOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
-using ::testing::Eq;
 using ::testing::Ge;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
@@ -471,47 +470,6 @@ TEST(MArrayTest,
       std::runtime_error);
 }
 
-TEST(MArrayTest, LengthPropertyIsProcessedProperly) {
-  MArray<MInteger> arr = MArray(MInteger()).OfLength(MInteger(Between(1, 200)));
-
-  // The exact values here are fuzzy and may need to change with the
-  // meaning of "small", "medium", etc.
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "min"}),
-              GeneratedValuesAre(SizeIs(Eq(1))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "tiny"}),
-              GeneratedValuesAre(SizeIs(Le(10))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "small"}),
-              GeneratedValuesAre(SizeIs(Le(50))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "medium"}),
-              GeneratedValuesAre(SizeIs(Le(100))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "large"}),
-              GeneratedValuesAre(SizeIs(Ge(100))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "huge"}),
-              GeneratedValuesAre(SizeIs(Ge(150))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "max"}),
-              GeneratedValuesAre(SizeIs(Eq(200))));
-
-  // Different ways of constructing the size.
-  EXPECT_THAT(
-      MArray<MInteger>()
-          .OfLength(MInteger(Between(1, 1000)))
-          .WithKnownProperty({.category = "size", .descriptor = "small"}),
-      GeneratedValuesAre(SizeIs(Le(200))));
-
-  EXPECT_THAT(
-      MArray(MInteger())
-          .OfLength(MInteger(Between(1, 1000)))
-          .WithKnownProperty({.category = "size", .descriptor = "small"}),
-      GeneratedValuesAre(SizeIs(Le(200))));
-}
-
 TEST(MArrayTest, GetDifficultInstancesContainsLengthCases) {
   EXPECT_THAT(GenerateDifficultInstancesValues(
                   MArray(MInteger()).OfLength(MInteger(Between(0, 1000)))),
@@ -883,34 +841,6 @@ TEST(MArrayNonBuilderTest,
   EXPECT_THROW(
       { Read(MArray<MInteger>(Length(Between(3, 4))), "1 2 3").IgnoreError(); },
       std::runtime_error);
-}
-
-TEST(MArrayNonBuilderTest, LengthPropertyIsProcessedProperly) {
-  MArray<MInteger> arr = MArray<MInteger>(Length(Between(1, 200)));
-
-  // The exact values here are fuzzy and may need to change with the
-  // meaning of "small", "medium", etc.
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "min"}),
-              GeneratedValuesAre(SizeIs(Eq(1))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "tiny"}),
-              GeneratedValuesAre(SizeIs(Le(10))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "small"}),
-              GeneratedValuesAre(SizeIs(Le(50))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "medium"}),
-              GeneratedValuesAre(SizeIs(Le(100))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "large"}),
-              GeneratedValuesAre(SizeIs(Ge(100))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "huge"}),
-              GeneratedValuesAre(SizeIs(Ge(150))));
-  EXPECT_THAT(MArray<MInteger>(arr).WithKnownProperty(
-                  {.category = "size", .descriptor = "max"}),
-              GeneratedValuesAre(SizeIs(Eq(200))));
 }
 
 TEST(MArrayNonBuilderTest, GetDifficultInstancesContainsLengthCases) {

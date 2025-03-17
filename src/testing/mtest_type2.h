@@ -32,7 +32,6 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/librarian/mvariable.h"
-#include "src/property.h"
 #include "src/variables/minteger.h"
 
 // This is identical to mtest_type.h, just with different constants (e.g.,
@@ -86,8 +85,6 @@ class MTestType2
   static constexpr int64_t kCorner1 = 99991;
   static constexpr int64_t kCorner2 = 99992;
 
-  MTestType2();
-
   std::string Typename() const override { return "MTestType2"; };
 
   TestType2 ReadImpl(moriarty::librarian::ReaderContext ctx) const override;
@@ -98,9 +95,6 @@ class MTestType2
   absl::Status MergeFromImpl(const MTestType2& other) override;
 
   bool WasMerged() const;
-
-  // Acceptable `KnownProperty`s: "size":"small"/"large"
-  absl::Status WithSizeProperty(moriarty::Property property);
 
   // My value is increased by this other variable's value
   MTestType2& SetAdder(std::string_view variable_name);

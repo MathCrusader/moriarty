@@ -26,7 +26,6 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
-#include "src/property.h"
 
 namespace moriarty::librarian {
 class AnalysisContext;    // Forward declaring AnalysisContext
@@ -122,11 +121,6 @@ class AbstractVariable {
   // 1 <= x <= 10 and the other says 5 <= x <= 20, then then merged version
   // should have 5 <= x <= 10.
   virtual absl::Status MergeFrom(const AbstractVariable& other) = 0;
-
-  // WithProperty() [pure virtual]
-  //
-  // Tells this variable that it should satisfy `property`.
-  virtual absl::Status WithProperty(Property property) = 0;
 
   // ValueSatisfiesConstraints() [pure virtual]
   //

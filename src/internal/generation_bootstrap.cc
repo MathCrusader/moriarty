@@ -126,15 +126,10 @@ absl::StatusOr<std::vector<std::string>> GetGenerationOrder(
 
 ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
                           const GenerationOptions& options) {
-  auto [extra_constraints, values, scenarios] =
-      UnsafeExtractTestCaseInternals(test_case);
+  auto [extra_constraints, values] = UnsafeExtractTestCaseInternals(test_case);
 
   for (auto& [name, constraints] : extra_constraints.GetAllVariables()) {
     auto status = variables.AddOrMergeVariable(name, *constraints);
-    if (!status.ok()) throw std::runtime_error(status.ToString());
-  }
-  for (const Scenario& scenario : scenarios) {
-    auto status = variables.WithScenario(scenario);
     if (!status.ok()) throw std::runtime_error(status.ToString());
   }
 

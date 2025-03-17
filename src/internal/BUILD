@@ -32,7 +32,6 @@ cc_library(
         "abstract_variable.h",
     ],
     deps = [
-        "//src:property",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
@@ -179,8 +178,6 @@ cc_library(
     deps = [
         ":abstract_variable",
         "//src:errors",
-        "//src:property",
-        "//src:scenario",
         "//src/util/status_macro:status_macros",
         "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/status",
@@ -338,7 +335,6 @@ cc_test(
         ":random_engine",
         ":value_set",
         ":variable_set",
-        "//src:scenario",
         "//src/librarian:test_utils",
         "//src/testing:mtest_type",
         "//src/testing:mtest_type2",

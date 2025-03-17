@@ -42,7 +42,6 @@ using ::moriarty_testing::IsSatisfiedWith;
 using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::testing::AllOf;
-using ::testing::Eq;
 using ::testing::Ge;
 using ::testing::HasSubstr;
 using ::testing::IsSupersetOf;
@@ -347,34 +346,6 @@ TEST(MStringTest, GenerateWithoutSimplePatternOrLengthOrAlphabetShouldFail) {
       std::runtime_error);
 }
 
-TEST(MStringTest, SizePropertiesGiveDifferentSizes) {
-  MString str(Length(Between(1, 1000)), Alphabet::Letters());
-
-  // The exact values here are fuzzy and may need to change with the
-  // meaning of "small", "medium", etc.
-  EXPECT_THAT(
-      MString(str).WithKnownProperty({.category = "size", .descriptor = "min"}),
-      GeneratedValuesAre(SizeIs(Eq(1))));
-  EXPECT_THAT(MString(str).WithKnownProperty(
-                  {.category = "size", .descriptor = "tiny"}),
-              GeneratedValuesAre(SizeIs(Le(10))));
-  EXPECT_THAT(MString(str).WithKnownProperty(
-                  {.category = "size", .descriptor = "small"}),
-              GeneratedValuesAre(SizeIs(Le(100))));
-  EXPECT_THAT(MString(str).WithKnownProperty(
-                  {.category = "size", .descriptor = "medium"}),
-              GeneratedValuesAre(SizeIs(Le(500))));
-  EXPECT_THAT(MString(str).WithKnownProperty(
-                  {.category = "size", .descriptor = "large"}),
-              GeneratedValuesAre(SizeIs(Ge(500))));
-  EXPECT_THAT(MString(str).WithKnownProperty(
-                  {.category = "size", .descriptor = "huge"}),
-              GeneratedValuesAre(SizeIs(Ge(900))));
-  EXPECT_THAT(
-      MString(str).WithKnownProperty({.category = "size", .descriptor = "max"}),
-      GeneratedValuesAre(SizeIs(Eq(1000))));
-}
-
 TEST(MStringTest, SimplePatternWorksForGeneration) {
   EXPECT_THAT(MString(SimplePattern("[abc]{10, 20}")),
               GeneratedValuesAre(MatchesRegex("[abc]{10,20}")));
@@ -433,10 +404,6 @@ TEST(MStringTest, GetDifficultInstancesNoLengthFails) {
 //               HasSubstr("istinct"));  // [D|d]istinct
 //   EXPECT_THAT(MString(SimplePattern("[abc]{10, 20}")).ToString(),
 //               HasSubstr("[abc]{10,20}"));
-//   EXPECT_THAT(MString()
-//                   .WithKnownProperty({.category = "size", .descriptor =
-//                   "tiny"}) .ToString(),
-//               HasSubstr("iny"));  // [t|T]iny
 // }
 
 }  // namespace

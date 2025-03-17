@@ -24,7 +24,6 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
@@ -33,16 +32,11 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
-#include "src/property.h"
 #include "src/variables/minteger.h"
 
 // LINT.IfChange
 
 namespace moriarty_testing {
-
-MTestType::MTestType() {
-  RegisterKnownProperty("size", &MTestType::WithSizeProperty);
-}
 
 TestType MTestType::ReadImpl(moriarty::librarian::ReaderContext ctx) const {
   std::string token = ctx.ReadToken();
@@ -66,22 +60,6 @@ absl::Status MTestType::MergeFromImpl(const MTestType& other) {
 }
 
 bool MTestType::WasMerged() const { return merged_; }
-
-// Acceptable `KnownProperty`s: "size":"small"/"large"
-absl::Status MTestType::WithSizeProperty(moriarty::Property property) {
-  // Size is the only known property
-  ABSL_CHECK_EQ(property.category, "size");
-
-  if (property.descriptor == "small")
-    Is(kGeneratedValueSmallSize);
-  else if (property.descriptor == "large")
-    Is(kGeneratedValueLargeSize);
-  else
-    return absl::InvalidArgumentError(absl::Substitute(
-        "Unknown property descriptor: $0", property.descriptor));
-
-  return absl::OkStatus();
-}
 
 MTestType& MTestType::SetAdder(std::string_view variable_name) {
   adder_variable_name_ = variable_name;

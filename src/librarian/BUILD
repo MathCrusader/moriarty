@@ -58,7 +58,6 @@ cc_library(
     deps = [
         ":constraint_handler",
         "//src:errors",
-        "//src:property",
         "//src/contexts/librarian:analysis_context",
         "//src/contexts/librarian:assignment_context",
         "//src/contexts/librarian:printer_context",
@@ -166,7 +165,6 @@ cc_test(
         ":mvariable",
         ":test_utils",
         "//src:errors",
-        "//src:property",
         "//src/internal:abstract_variable",
         "//src/internal:generation_config",
         "//src/internal:random_engine",

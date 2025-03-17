@@ -34,7 +34,6 @@ namespace {
 using ::moriarty::IsOkAndHolds;
 using ::moriarty::StatusIs;
 using ::moriarty_testing::Generate;
-using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GenerateSameValues;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
@@ -44,7 +43,6 @@ using ::testing::AllOf;
 using ::testing::FieldsAre;
 using ::testing::Ge;
 using ::testing::Le;
-using ::testing::SizeIs;
 
 TEST(MTupleTest, TypenameIsCorrect) {
   EXPECT_EQ(MTuple(MInteger()).Typename(), "MTuple<MInteger>");
@@ -271,25 +269,6 @@ TEST(MTupleTest, SatisfiesConstraintsWorksForInvalid) {
     EXPECT_THAT(constraints, IsNotSatisfiedWith(Type{105, {0, 0}},
                                                 "between"));  // second.both
   }
-}
-
-TEST(MTupleTest, PropertiesArePassedToEachComponent) {
-  // The exact value of 100 and 10^6 here are fuzzy and may need to change with
-  // the meaning of "small".
-  EXPECT_THAT(
-      MTuple(MInteger(Between(1, 1000)), MInteger(Between(1, 1000)))
-          .WithKnownProperty({.category = "size", .descriptor = "small"}),
-      GeneratedValuesAre(FieldsAre(Le(100L), Le(100L))));
-}
-
-TEST(MTupleTest, PropertiesCanBePassedToMultipleDifferentTypes) {
-  // The exact value of 100 here is fuzzy and may need to change with the
-  // meaning of "small".
-  EXPECT_THAT(
-      MTuple(MInteger(Between(1, 1000)),
-             MString(Alphabet::Numbers(), Length(Between(1, 1000))))
-          .WithKnownProperty({.category = "size", .descriptor = "small"}),
-      GeneratedValuesAre(FieldsAre(Le(100L), SizeIs(Le(100L)))));
 }
 
 // TODO: These tests only work because of DeclareSelfAsInvalid. They will be

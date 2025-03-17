@@ -21,7 +21,6 @@
 #include <concepts>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <type_traits>
 #include <vector>
 
@@ -34,7 +33,6 @@
 #include "src/internal/simple_pattern.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/one_of_handler.h"
-#include "src/property.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/size_constraints.h"
@@ -94,20 +92,12 @@ class MString : public librarian::MVariable<MString, std::string> {
 
   [[nodiscard]] std::string Typename() const override { return "MString"; }
 
-  // OfSizeProperty()
-  //
-  // Tells this string to have a specific size/length. `property.category` must
-  // be "size". The exact values here are not guaranteed and may change over
-  // time. If exact values are required, specify them manually.
-  absl::Status OfSizeProperty(Property property);
-
  private:
   librarian::OneOfHandler<std::string> one_of_;
   std::optional<MInteger> length_;
   librarian::OneOfHandler<char> alphabet_;
   bool distinct_characters_ = false;
   std::vector<moriarty_internal::SimplePattern> simple_patterns_;
-  std::optional<Property> length_size_property_;
 
   std::string GenerateSimplePattern(librarian::ResolverContext ctx) const;
   std::string GenerateImplWithDistinctCharacters(
@@ -135,7 +125,6 @@ class MString : public librarian::MVariable<MString, std::string> {
 template <typename... Constraints>
   requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
 MString::MString(Constraints&&... constraints) {
-  RegisterKnownProperty("size", &MString::OfSizeProperty);
   (AddConstraint(std::forward<Constraints>(constraints)), ...);
 }
 

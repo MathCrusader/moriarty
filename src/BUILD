@@ -87,30 +87,6 @@ cc_library(
 )
 
 cc_library(
-    name = "property",
-    srcs = [
-        "property.cc",
-    ],
-    hdrs = [
-        "property.h",
-    ],
-    deps = ["@abseil-cpp//absl/strings"],
-)
-
-cc_library(
-    name = "scenario",
-    srcs = ["scenario.cc"],
-    hdrs = [
-        "scenario.h",
-    ],
-    deps = [
-        ":property",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/strings",
-    ],
-)
-
-cc_library(
     name = "simple_io",
     srcs = ["simple_io.cc"],
     hdrs = ["simple_io.h"],
@@ -130,7 +106,6 @@ cc_library(
         "test_case.h",
     ],
     deps = [
-        ":scenario",
         "//src/internal:abstract_variable",
         "//src/internal:value_set",
         "//src/internal:variable_set",
@@ -192,20 +167,9 @@ cc_test(
 )
 
 cc_test(
-    name = "scenario_test",
-    srcs = ["scenario_test.cc"],
-    deps = [
-        ":property",
-        ":scenario",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
     name = "test_case_test",
     srcs = ["test_case_test.cc"],
     deps = [
-        ":scenario",
         ":test_case",
         "//src/internal:generation_bootstrap",
         "//src/internal:random_engine",

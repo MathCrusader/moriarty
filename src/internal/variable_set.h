@@ -31,7 +31,6 @@
 #include "absl/status/statusor.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
-#include "src/scenario.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -96,12 +95,6 @@ class VariableSet {
   // Returns the map of internal variables.
   const absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>&
   GetAllVariables() const;
-
-  // WithScenario()
-  //
-  // Adds a scenario to all variables in this object. Calls `WithProperty`
-  // on all applicable types.
-  absl::Status WithScenario(const Scenario& scenario);
 
  private:
   absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>
