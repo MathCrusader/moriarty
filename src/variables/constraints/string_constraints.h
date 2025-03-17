@@ -20,6 +20,7 @@
 #include <string>
 #include <string_view>
 
+#include "src/internal/simple_pattern.h"
 #include "src/variables/constraints/base_constraints.h"
 
 namespace moriarty {
@@ -51,8 +52,15 @@ class Alphabet : public MConstraint {
   // Returns the alphabet that the string must only contain characters from.
   [[nodiscard]] std::string GetAlphabet() const;
 
+  // Determines if the string has the correct characters.
+  [[nodiscard]] bool IsSatisfiedWith(std::string_view value) const;
+
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
+
+  // Returns a string explaining why the value does not satisfy the constraints.
+  // It is assumed that IsSatisfiedWith() returned false.
+  [[nodiscard]] std::string Explanation(std::string_view value) const;
 
  private:
   std::string alphabet_;
@@ -63,6 +71,16 @@ class DistinctCharacters : public MConstraint {
  public:
   // The characters in the string must all be distinct.
   explicit DistinctCharacters() = default;
+
+  // Determines if the string has the correct characters.
+  [[nodiscard]] bool IsSatisfiedWith(std::string_view value) const;
+
+  // Returns a string representation of this constraint.
+  [[nodiscard]] std::string ToString() const;
+
+  // Returns a string explaining why the value does not satisfy the constraints.
+  // It is assumed that IsSatisfiedWith() returned false.
+  [[nodiscard]] std::string Explanation(std::string_view value) const;
 };
 
 // Constraint stating that the string must match this simple pattern.
@@ -82,11 +100,21 @@ class SimplePattern : public MConstraint {
   // Returns the pattern that the string must match.
   [[nodiscard]] std::string GetPattern() const;
 
+  // Returns the compiled pattern that the string must match.
+  [[nodiscard]] moriarty_internal::SimplePattern GetCompiledPattern() const;
+
+  // Determines if the string has the correct characters.
+  [[nodiscard]] bool IsSatisfiedWith(std::string_view value) const;
+
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
 
+  // Returns a string explaining why the value does not satisfy the constraints.
+  // It is assumed that IsSatisfiedWith() returned false.
+  [[nodiscard]] std::string Explanation(std::string_view value) const;
+
  private:
-  std::string pattern_;
+  moriarty_internal::SimplePattern pattern_;
 };
 
 }  // namespace moriarty

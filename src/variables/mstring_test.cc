@@ -262,8 +262,7 @@ TEST(MStringTest, SatisfiesConstraintsShouldCheckTheAlphabetIfSet) {
   EXPECT_THAT(MString(Alphabet("abcdefghij")), IsSatisfiedWith("abcde"));
   EXPECT_THAT(MString(Alphabet("edbca")), IsSatisfiedWith("abcde"));
 
-  EXPECT_THAT(MString(Alphabet("abcd")),
-              IsNotSatisfiedWith("abcde", "alphabet"));
+  EXPECT_THAT(MString(Alphabet("abcd")), IsNotSatisfiedWith("abcde", "`abcd`"));
 }
 
 TEST(MStringTest, SatisfiesConstraintsWithInvalidLengthShouldFail) {
@@ -277,7 +276,7 @@ TEST(MStringTest, SatisfiesConstraintsShouldCheckForDistinctCharacters) {
               IsSatisfiedWith("cbf"));
 
   EXPECT_THAT(MString(Alphabet("abcdef"), DistinctCharacters()),
-              IsNotSatisfiedWith("cc", "distinct"));
+              IsNotSatisfiedWith("cc", "multiple times"));
 }
 
 TEST(MStringTest, DistinctCharactersWorksInTheSimpleCase) {

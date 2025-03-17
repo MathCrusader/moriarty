@@ -16,9 +16,9 @@
 #include "src/variables/mtuple.h"
 
 #include <cstdint>
+#include <stdexcept>
 #include <tuple>
 
-#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/mvariable.h"
@@ -32,7 +32,6 @@ namespace moriarty {
 namespace {
 
 using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GenerateSameValues;
 using ::moriarty_testing::IsNotSatisfiedWith;
@@ -43,6 +42,7 @@ using ::testing::AllOf;
 using ::testing::FieldsAre;
 using ::testing::Ge;
 using ::testing::Le;
+using ::testing::Throws;
 
 TEST(MTupleTest, TypenameIsCorrect) {
   EXPECT_EQ(MTuple(MInteger()).Typename(), "MTuple<MInteger>");
@@ -271,28 +271,21 @@ TEST(MTupleTest, SatisfiesConstraintsWorksForInvalid) {
   }
 }
 
-// TODO: These tests only work because of DeclareSelfAsInvalid. They will be
-// exceptions in the future.
-TEST(MTupleTest, MultipleIOSeparatorsShouldFailGenerationAndReadAndPrint) {
-  EXPECT_THAT(Generate(MTuple(MInteger(), MInteger())
-                           .WithSeparator(Whitespace::kNewline)
-                           .WithSeparator(Whitespace::kTab)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(Read(MTuple(MInteger(), MInteger())
-                       .WithSeparator(Whitespace::kNewline)
-                       .WithSeparator(Whitespace::kTab),
-                   "1 2"),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(Print(MTuple(MInteger(), MInteger())
-                        .WithSeparator(Whitespace::kNewline)
-                        .WithSeparator(Whitespace::kTab),
-                    {1, 2}),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+TEST(MTupleTest, MultipleIOSeparatorsShouldThrow) {
   EXPECT_THAT(
-      MTuple(MInteger(), MInteger())
-          .WithSeparator(Whitespace::kNewline)
-          .WithSeparator(Whitespace::kTab),
-      IsNotSatisfiedWith(std::tuple<int64_t, int64_t>({1, 2}), "separator"));
+      [] {
+        MTuple(MInteger(), MInteger())
+            .WithSeparator(Whitespace::kNewline)
+            .WithSeparator(Whitespace::kTab);
+      },
+      Throws<std::runtime_error>());
+  EXPECT_THAT(
+      [] {
+        MTuple(MInteger(), MInteger())
+            .WithSeparator(Whitespace::kTab)
+            .WithSeparator(Whitespace::kSpace);
+      },
+      Throws<std::runtime_error>());
 }
 
 }  // namespace

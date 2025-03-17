@@ -14,10 +14,22 @@
 
 #include "src/librarian/debug_print.h"
 
+#include <cctype>
 #include <format>
 
 namespace moriarty {
 namespace librarian {
+
+std::string DebugString(char c, int max_len, bool include_backticks) {
+  return DebugString(static_cast<unsigned char>(c), max_len, include_backticks);
+}
+
+std::string DebugString(unsigned char c, int max_len, bool include_backticks) {
+  if (std::isprint(c))
+    return ShortenDebugString(std::string(1, c), max_len, include_backticks);
+  return ShortenDebugString(std::format("{{ASCII_VALUE:{}}}", int(c)), max_len,
+                            include_backticks);
+}
 
 std::string DebugString(const std::string& x, int max_len,
                         bool include_backticks) {

@@ -45,6 +45,13 @@ TEST(DebugStringTest, IntegerShouldWork) {
   EXPECT_EQ(DebugString(0), "`0`");
 }
 
+TEST(DebugStringTest, CharactersShouldWork) {
+  EXPECT_EQ(DebugString('x'), "`x`");
+  EXPECT_EQ(DebugString(' '), "` `");
+  EXPECT_EQ(DebugString('\n'), "`{ASCII_VALUE:10}`");
+  EXPECT_EQ(DebugString(char(4)), "`{ASCII_VALUE:4}`");
+}
+
 TEST(DebugStringTest, StringShouldWork) {
   EXPECT_EQ(DebugString("hello"), "`hello`");
   EXPECT_EQ(DebugString("this is a very long string", 10), "`this...ing`");

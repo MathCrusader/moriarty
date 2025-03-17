@@ -21,7 +21,6 @@
 #include <concepts>
 #include <cstddef>
 #include <iterator>
-#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -36,7 +35,8 @@
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
-#include "src/errors.h"
+#include "src/io_config.h"
+#include "src/librarian/locked_optional.h"
 #include "src/librarian/mvariable.h"
 
 namespace moriarty {
@@ -94,9 +94,8 @@ class MTuple : public librarian::MVariable<
 
  private:
   std::tuple<MElementTypes...> elements_;
-
-  std::optional<Whitespace> separator_;
-  Whitespace GetSeparator() const;
+  librarian::LockedOptional<Whitespace> separator_ =
+      librarian::LockedOptional<Whitespace>{Whitespace::kSpace};
 
   template <std::size_t I>
   void GenerateSingleElement(librarian::ResolverContext ctx,
@@ -192,12 +191,10 @@ std::string MTuple<MElementTypes...>::Typename() const {
 template <typename... MElementTypes>
 MTuple<MElementTypes...>& MTuple<MElementTypes...>::WithSeparator(
     Whitespace separator) {
-  if (separator_ && *separator_ != separator) {
-    this->DeclareSelfAsInvalid(UnsatisfiedConstraintError(
-        "Attempting to set multiple I/O separators for the same MTuple."));
-    return *this;
+  if (!separator_.Set(separator)) {
+    throw std::runtime_error(
+        "Attempting to set multiple I/O separators for the same MTuple.");
   }
-  separator_ = separator;
   return *this;
 }
 
@@ -280,7 +277,7 @@ template <typename... MElementTypes>
 template <std::size_t I>
 void MTuple<MElementTypes...>::PrintElementWithLeadingSeparator(
     librarian::PrinterContext ctx, const tuple_value_type& value) const {
-  if (I > 0) ctx.PrintWhitespace(GetSeparator());
+  if (I > 0) ctx.PrintWhitespace(separator_.Get());
   std::get<I>(elements_).Print(ctx, std::get<I>(value));
 }
 
@@ -332,13 +329,8 @@ template <typename... MElementTypes>
 template <std::size_t I>
 void MTuple<MElementTypes...>::TryReadAndSet(
     librarian::ReaderContext ctx, tuple_value_type& read_values) const {
-  if (I > 0) ctx.ReadWhitespace(GetSeparator());
+  if (I > 0) ctx.ReadWhitespace(separator_.Get());
   std::get<I>(read_values) = std::get<I>(elements_).Read(ctx);
-}
-
-template <typename... MElementTypes>
-Whitespace MTuple<MElementTypes...>::GetSeparator() const {
-  return separator_.value_or(Whitespace::kSpace);
 }
 
 }  // namespace moriarty

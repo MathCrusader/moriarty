@@ -32,6 +32,12 @@ template <std::integral IntLike>
 std::string DebugString(IntLike x, int max_len = kMaxDebugStringLength,
                         bool include_backticks = true);
 
+std::string DebugString(char x, int max_len = kMaxDebugStringLength,
+                        bool include_backticks = true);
+
+std::string DebugString(unsigned char x, int max_len = kMaxDebugStringLength,
+                        bool include_backticks = true);
+
 template <typename T>
 std::string DebugString(const std::vector<T>& x,
                         int max_len = kMaxDebugStringLength,

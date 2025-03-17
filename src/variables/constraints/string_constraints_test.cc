@@ -16,9 +16,9 @@
 
 #include "src/variables/constraints/string_constraints.h"
 
+#include "absl/container/flat_hash_set.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/container/flat_hash_set.h"
 
 namespace moriarty {
 namespace {
@@ -71,17 +71,134 @@ TEST(AlphabetTest, BasicConstructorShouldReturnExactAlphabet) {
   EXPECT_EQ(Alphabet("AAA").GetAlphabet(), "AAA");
 }
 
+TEST(AlphabetTest, IsSatisfiedWithShouldWork) {
+  EXPECT_TRUE(Alphabet("abc").IsSatisfiedWith("a"));
+  EXPECT_FALSE(Alphabet("abc").IsSatisfiedWith("A"));
+
+  {
+    EXPECT_TRUE(Alphabet::AlphaNumeric().IsSatisfiedWith("b"));
+    EXPECT_TRUE(Alphabet::AlphaNumeric().IsSatisfiedWith("B"));
+    EXPECT_TRUE(Alphabet::AlphaNumeric().IsSatisfiedWith("3"));
+    EXPECT_FALSE(Alphabet::AlphaNumeric().IsSatisfiedWith("%"));
+  }
+  {
+    EXPECT_TRUE(Alphabet::Letters().IsSatisfiedWith("b"));
+    EXPECT_TRUE(Alphabet::Letters().IsSatisfiedWith("B"));
+    EXPECT_FALSE(Alphabet::Letters().IsSatisfiedWith("3"));
+    EXPECT_FALSE(Alphabet::Letters().IsSatisfiedWith("%"));
+  }
+  {
+    EXPECT_TRUE(Alphabet::LowerAlphaNumeric().IsSatisfiedWith("b"));
+    EXPECT_FALSE(Alphabet::LowerAlphaNumeric().IsSatisfiedWith("B"));
+    EXPECT_TRUE(Alphabet::LowerAlphaNumeric().IsSatisfiedWith("3"));
+    EXPECT_FALSE(Alphabet::LowerAlphaNumeric().IsSatisfiedWith("%"));
+  }
+  {
+    EXPECT_TRUE(Alphabet::LowerCase().IsSatisfiedWith("b"));
+    EXPECT_FALSE(Alphabet::LowerCase().IsSatisfiedWith("B"));
+    EXPECT_FALSE(Alphabet::LowerCase().IsSatisfiedWith("3"));
+    EXPECT_FALSE(Alphabet::LowerCase().IsSatisfiedWith("%"));
+  }
+  {
+    EXPECT_FALSE(Alphabet::Numbers().IsSatisfiedWith("b"));
+    EXPECT_FALSE(Alphabet::Numbers().IsSatisfiedWith("B"));
+    EXPECT_TRUE(Alphabet::Numbers().IsSatisfiedWith("3"));
+    EXPECT_FALSE(Alphabet::Numbers().IsSatisfiedWith("%"));
+  }
+  {
+    EXPECT_FALSE(Alphabet::UpperAlphaNumeric().IsSatisfiedWith("b"));
+    EXPECT_TRUE(Alphabet::UpperAlphaNumeric().IsSatisfiedWith("B"));
+    EXPECT_TRUE(Alphabet::UpperAlphaNumeric().IsSatisfiedWith("3"));
+    EXPECT_FALSE(Alphabet::UpperAlphaNumeric().IsSatisfiedWith("%"));
+  }
+  {
+    EXPECT_FALSE(Alphabet::UpperCase().IsSatisfiedWith("b"));
+    EXPECT_TRUE(Alphabet::UpperCase().IsSatisfiedWith("B"));
+    EXPECT_FALSE(Alphabet::UpperCase().IsSatisfiedWith("3"));
+    EXPECT_FALSE(Alphabet::UpperCase().IsSatisfiedWith("%"));
+  }
+}
+
 TEST(AlphabetTest, ToStringShouldWork) {
-  EXPECT_EQ(Alphabet("abc").ToString(), "Alphabet(abc)");
-  EXPECT_EQ(Alphabet("AbC").ToString(), "Alphabet(AbC)");
+  EXPECT_EQ(Alphabet("abc").ToString(), "contains only `abc`");
+  EXPECT_EQ(Alphabet("AbC").ToString(), "contains only `AbC`");
   // TODO(darcybest): Consider escaping whitespace characters in string.
-  EXPECT_EQ(Alphabet("A\tC").ToString(), "Alphabet(A\tC)");
-  EXPECT_EQ(Alphabet("AAA").ToString(), "Alphabet(AAA)");
+  EXPECT_EQ(Alphabet("A\tC").ToString(), "contains only `A\tC`");
+  EXPECT_EQ(Alphabet("AAA").ToString(), "contains only `AAA`");
+}
+
+TEST(AlphabetTest, ExplanationShouldWork) {
+  EXPECT_EQ(Alphabet("abc").Explanation("A"),
+            "character at index 0 (which is `A`) is not a valid character "
+            "(valid characters are `abc`)");
+  // TODO: Consider a nicer message for the common cases.
+  EXPECT_EQ(Alphabet::LowerCase().Explanation("abcXdef"),
+            "character at index 3 (which is `X`) is not a valid character "
+            "(valid characters are `abcdefghijklmnopqrstuvwxyz`)");
+}
+
+TEST(DistinctCharactersTest, IsSatisfiedWithShouldWork) {
+  EXPECT_TRUE(DistinctCharacters().IsSatisfiedWith(""));
+  EXPECT_TRUE(DistinctCharacters().IsSatisfiedWith("a"));
+  EXPECT_TRUE(DistinctCharacters().IsSatisfiedWith("ab"));
+  EXPECT_TRUE(DistinctCharacters().IsSatisfiedWith("abc"));
+  EXPECT_FALSE(DistinctCharacters().IsSatisfiedWith("aa"));
+  EXPECT_FALSE(DistinctCharacters().IsSatisfiedWith("aba"));
+  EXPECT_FALSE(DistinctCharacters().IsSatisfiedWith("abcabc"));
+  EXPECT_TRUE(DistinctCharacters().IsSatisfiedWith("abcABC"));
+}
+
+TEST(DistinctCharactersTest, ToStringShouldWork) {
+  EXPECT_EQ(DistinctCharacters().ToString(), "has distinct characters");
+}
+
+TEST(DistinctCharactersTest, ExplanationShouldWork) {
+  EXPECT_EQ(DistinctCharacters().Explanation("aa"),
+            "character at index 1 (which is `a`) appears multiple times");
+  EXPECT_EQ(DistinctCharacters().Explanation("abb"),
+            "character at index 2 (which is `b`) appears multiple times");
+  EXPECT_EQ(DistinctCharacters().Explanation("abca"),
+            "character at index 3 (which is `a`) appears multiple times");
+}
+
+TEST(SimplePatternTest, IsSatisfiedWithShouldWork) {
+  // See moriarty_internal::SimplePattern class for a more exhaustive set of
+  // tests.
+  {
+    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith(""));
+    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith("a"));
+    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith("abc"));
+    EXPECT_FALSE(SimplePattern("[a-z]*").IsSatisfiedWith("ABC"));
+  }
+  {
+    EXPECT_FALSE(SimplePattern("[a-z]+").IsSatisfiedWith(""));
+    EXPECT_TRUE(SimplePattern("[a-z]+").IsSatisfiedWith("a"));
+    EXPECT_TRUE(SimplePattern("[a-z]+").IsSatisfiedWith("abc"));
+    EXPECT_FALSE(SimplePattern("[a-z]+").IsSatisfiedWith("ABC"));
+  }
+  {
+    EXPECT_TRUE(SimplePattern("[a-z]?").IsSatisfiedWith(""));
+    EXPECT_TRUE(SimplePattern("[a-z]?").IsSatisfiedWith("a"));
+    EXPECT_FALSE(SimplePattern("[a-z]?").IsSatisfiedWith("abc"));
+    EXPECT_FALSE(SimplePattern("[a-z]?").IsSatisfiedWith("ABC"));
+  }
+  EXPECT_TRUE(SimplePattern("a|b").IsSatisfiedWith("a"));
+  EXPECT_TRUE(SimplePattern("a|b").IsSatisfiedWith("b"));
+  EXPECT_FALSE(SimplePattern("a|b").IsSatisfiedWith("c"));
 }
 
 TEST(SimplePatternTest, ToStringShouldWork) {
-  EXPECT_EQ(SimplePattern("[a-z]*").ToString(), "SimplePattern([a-z]*)");
-  EXPECT_EQ(SimplePattern("[^a-z]?").ToString(), "SimplePattern([^a-z]?)");
+  EXPECT_EQ(SimplePattern("[a-z]*").ToString(),
+            "has a simple pattern of `[a-z]*`");
+  EXPECT_EQ(SimplePattern("[^a-z]?").ToString(),
+            "has a simple pattern of `[^a-z]?`");
+}
+
+TEST(SimplePatternTest, ExplanationShouldWork) {
+  EXPECT_EQ(SimplePattern("[a-z]*").Explanation("A"),
+            "does not follow the simple pattern of `[a-z]*`");
+  EXPECT_EQ(SimplePattern("[^a-z]?").Explanation("a"),
+            "does not follow the simple pattern of `[^a-z]?`");
 }
 
 }  // namespace

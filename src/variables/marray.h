@@ -41,6 +41,8 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/errors.h"
+#include "src/io_config.h"
+#include "src/librarian/locked_optional.h"
 #include "src/librarian/mvariable.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/variables/constraints/base_constraints.h"
@@ -133,13 +135,11 @@ class MArray : public librarian::MVariable<
   MArray& WithSeparator(Whitespace separator);
 
  private:
-  static constexpr const int kGenerateRetries = 100;
-
   MElementType element_constraints_;
   std::optional<MInteger> length_;
   bool distinct_elements_ = false;
-  std::optional<Whitespace> separator_;
-  Whitespace GetSeparator() const;
+  librarian::LockedOptional<Whitespace> separator_ =
+      librarian::LockedOptional<Whitespace>{Whitespace::kSpace};
 
   // GenerateNDistinctImpl()
   //
@@ -255,7 +255,12 @@ MArray<MElementType>& MArray<MElementType>::AddConstraint(
 template <typename MElementType>
 MArray<MElementType>& MArray<MElementType>::AddConstraint(
     const IOSeparator& constraint) {
-  return WithSeparator(constraint.GetSeparator());
+  if (!separator_.Set(constraint.GetSeparator())) {
+    throw std::runtime_error(
+        "Attempting to set multiple I/O separators for the same MArray.");
+  }
+
+  return *this;
 }
 
 template <typename MElementType>
@@ -330,11 +335,9 @@ MArray<MElementType>& MArray<MElementType>::WithDistinctElements() {
 template <typename MElementType>
 MArray<MElementType>& MArray<MElementType>::WithSeparator(
     Whitespace separator) {
-  if (separator_.has_value() && *separator_ != separator) {
-    this->DeclareSelfAsInvalid(UnsatisfiedConstraintError(
-        "Attempting to set multiple I/O separators for the same MArray."));
-  } else {
-    separator_ = separator;
+  if (!separator_.Set(separator)) {
+    throw std::runtime_error(
+        "Attempting to set multiple I/O separators for the same MArray.");
   }
   return *this;
 }
@@ -377,11 +380,6 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
   }
 
   return res;
-}
-
-template <typename MElementType>
-Whitespace MArray<MElementType>::GetSeparator() const {
-  return separator_.value_or(Whitespace::kSpace);
 }
 
 template <typename MElementType>
@@ -448,7 +446,7 @@ template <typename MoriartyElementType>
 void MArray<MoriartyElementType>::PrintImpl(
     librarian::PrinterContext ctx, const vector_value_type& value) const {
   for (int i = 0; i < value.size(); i++) {
-    if (i > 0) ctx.PrintWhitespace(GetSeparator());
+    if (i > 0) ctx.PrintWhitespace(separator_.Get());
     element_constraints_.Print(ctx, value[i]);
   }
 }
@@ -469,7 +467,7 @@ MArray<MoriartyElementType>::ReadImpl(librarian::ReaderContext ctx) const {
   vector_value_type res;
   res.reserve(*length);
   for (int i = 0; i < *length; i++) {
-    if (i > 0) ctx.ReadWhitespace(GetSeparator());
+    if (i > 0) ctx.ReadWhitespace(separator_.Get());
     res.push_back(element_constraints_.Read(ctx));
   }
   return res;

@@ -16,6 +16,7 @@
 #include "src/variables/marray.h"
 
 #include <cstdint>
+#include <stdexcept>
 #include <utility>
 #include <vector>
 
@@ -60,6 +61,7 @@ using ::testing::IsSupersetOf;
 using ::testing::Le;
 using ::testing::Not;
 using ::testing::SizeIs;
+using ::testing::Throws;
 using ::testing::UnorderedElementsAre;
 
 TEST(MArrayTest, TypenameIsCorrect) {
@@ -421,14 +423,13 @@ TEST(MArrayTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
 }
 
 TEST(MArrayTest, WhitespaceSeparatorShouldFailWithTwoSeparators) {
-  // TODO: This will eventually throw an exception (once DeclareSelfAsInvalid is
-  // gone).
-  EXPECT_THAT(Read(MArray(MInteger())
-                       .WithSeparator(Whitespace::kNewline)
-                       .WithSeparator(Whitespace::kTab)
-                       .OfLength(6),
-                   "1\n2\n3\n4\n5\n6"),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THAT(
+      [] {
+        MArray(MInteger())
+            .WithSeparator(Whitespace::kNewline)
+            .WithSeparator(Whitespace::kTab);
+      },
+      Throws<std::runtime_error>());
 }
 
 TEST(MArrayTest, ReadShouldBeAbleToDetermineLengthFromAnotherVariable) {
@@ -799,12 +800,13 @@ TEST(MArrayNonBuilderTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
 }
 
 TEST(MArrayNonBuilderTest, WhitespaceSeparatorShouldFailWithTwoSeparators) {
-  // TODO: This will eventually throw an exception (once DeclareSelfAsInvalid is
-  // gone).
-  EXPECT_THAT(Read(MArray<MInteger>(IOSeparator(Whitespace::kNewline),
-                                    IOSeparator(Whitespace::kTab), Length(6)),
-                   "1\n2\n3\n4\n5\n6"),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THAT(
+      [] {
+        MArray(MInteger())
+            .WithSeparator(Whitespace::kNewline)
+            .WithSeparator(Whitespace::kTab);
+      },
+      Throws<std::runtime_error>());
 }
 
 TEST(MArrayNonBuilderTest,

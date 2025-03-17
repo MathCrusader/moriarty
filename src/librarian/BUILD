@@ -51,6 +51,11 @@ cc_library(
 )
 
 cc_library(
+    name = "locked_optional",
+    hdrs = ["locked_optional.h"],
+)
+
+cc_library(
     name = "mvariable",
     hdrs = [
         "mvariable.h",
@@ -151,6 +156,15 @@ cc_test(
     srcs = ["debug_print_test.cc"],
     deps = [
         ":debug_print",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "locked_optional_test",
+    srcs = ["locked_optional_test.cc"],
+    deps = [
+        ":locked_optional",
         "@googletest//:gtest_main",
     ],
 )

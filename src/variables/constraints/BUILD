@@ -52,7 +52,6 @@ cc_library(
         "//src/contexts/librarian:analysis_context",
         "//src/librarian:debug_print",
         "//src/variables:minteger",
-        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -82,6 +81,7 @@ cc_library(
     hdrs = ["string_constraints.h"],
     deps = [
         ":base_constraints",
+        "//src/internal:simple_pattern",
         "@abseil-cpp//absl/strings",
     ],
 )

@@ -17,7 +17,6 @@
 
 #include <algorithm>
 #include <cstdint>
-#include <format>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -25,17 +24,13 @@
 #include <utility>
 #include <vector>
 
-#include "absl/container/flat_hash_set.h"
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
-#include "src/errors.h"
-#include "src/internal/simple_pattern.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
@@ -69,76 +64,33 @@ MString& MString::AddConstraint(Alphabet constraint) {
   options.erase(last, options.end());
 
   alphabet_.ConstrainOptions(options);
+
+  NewAddConstraint(std::move(constraint));
   return *this;
 }
 
 MString& MString::AddConstraint(DistinctCharacters constraint) {
   distinct_characters_ = true;
+  NewAddConstraint(std::move(constraint));
   return *this;
 }
 
 MString& MString::AddConstraint(SimplePattern constraint) {
-  absl::StatusOr<moriarty_internal::SimplePattern> pattern =
-      moriarty_internal::SimplePattern::Create(constraint.GetPattern());
-  if (!pattern.ok()) {
-    throw std::invalid_argument(
-        std::format("Invalid simple pattern; {}", pattern.status().ToString()));
-  }
-
-  simple_patterns_.push_back(*std::move(pattern));
+  simple_patterns_.push_back(constraint.GetCompiledPattern());
+  NewAddConstraint(std::move(constraint));
   return *this;
 }
 
 MString& MString::AddConstraint(SizeCategory constraint) {
-  return AddConstraint(Length(std::move(constraint)));
+  return AddConstraint(Length(constraint));
 }
 
 absl::Status MString::MergeFromImpl(const MString& other) {
-  if (other.length_) AddConstraint(Length(*other.length_));
-  if (other.alphabet_.HasBeenConstrained())
-    alphabet_.ConstrainOptions(other.alphabet_.GetOptions());
-  distinct_characters_ = other.distinct_characters_;
-  for (const auto& pattern : other.simple_patterns_)
-    simple_patterns_.push_back(pattern);
-
   return absl::OkStatus();
 }
 
 absl::Status MString::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
                                           const std::string& value) const {
-  if (length_) {
-    MORIARTY_RETURN_IF_ERROR(
-        CheckConstraint(length_->IsSatisfiedWith(ctx, value.length()),
-                        "length of string is invalid"));
-  }
-
-  if (alphabet_.HasBeenConstrained()) {
-    for (char c : value) {
-      if (!alphabet_.IsSatisfiedWith(c)) {
-        return UnsatisfiedConstraintError(
-            absl::Substitute("character '$0' not in alphabet", c));
-      }
-    }
-  }
-
-  if (distinct_characters_) {
-    absl::flat_hash_set<char> seen;
-    for (char c : value) {
-      auto [it, inserted] = seen.insert(c);
-      MORIARTY_RETURN_IF_ERROR(CheckConstraint(
-          inserted,
-          absl::Substitute(
-              "Characters are not distinct. '$0' appears multiple times.", c)));
-    }
-  }
-
-  for (const moriarty_internal::SimplePattern& pattern : simple_patterns_) {
-    MORIARTY_RETURN_IF_ERROR(CheckConstraint(
-        pattern.Matches(value),
-        absl::Substitute("string '$0' does not match simple pattern '$1'",
-                         value, pattern.Pattern())));
-  }
-
   return absl::OkStatus();
 }
 
