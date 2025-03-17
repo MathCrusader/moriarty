@@ -40,7 +40,6 @@ namespace {
 
 using ::moriarty::IsOkAndHolds;
 using ::moriarty::StatusIs;
-using ::moriarty_testing::AllGenerateSameValues;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GenerateDifficultInstancesValues;
@@ -75,276 +74,6 @@ TEST(MArrayTest, TypenameIsCorrect) {
       "MArray<MTuple<MInteger, MTuple<MInteger, MInteger>>>");
 }
 
-TEST(MArrayTest, PrintShouldSucceed) {
-  EXPECT_THAT(Print(MArray(MInteger()), {1, 2, 3}), IsOkAndHolds("1 2 3"));
-}
-
-TEST(MArrayTest, TypicalReadCaseWorks) {
-  EXPECT_THAT(Read(MArray<MInteger>().OfLength(6), "1 2 3 4 5 6"),
-              IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
-  EXPECT_THAT(
-      Read(MArray<MString>().OfLength(5), "Hello, World! Welcome to Moriarty!"),
-      IsOkAndHolds(
-          ElementsAre("Hello,", "World!", "Welcome", "to", "Moriarty!")));
-}
-
-TEST(MArrayTest, ReadingTheWrongLengthOfMArrayShouldFail) {
-  EXPECT_THROW(
-      { Read(MArray(MInteger()).OfLength(6), "1 2 3 4").IgnoreError(); },
-      std::runtime_error);
-}
-
-TEST(MArrayTest, SimpleGenerateCaseWorks) {
-  EXPECT_THAT(Generate(MArray(MInteger(Between(1, 10))).OfLength(5, 50)),
-              IsOkAndHolds(AllOf(SizeIs(AllOf(Ge(5), Le(50))),
-                                 Each(AllOf(Ge(1), Le(10))))));
-}
-
-TEST(MArrayTest, NestedMArrayWorks) {
-  EXPECT_THAT(
-      Generate(NestedMArray(MArray(MInteger(Between(1, 10))).OfLength(3))
-                   .OfLength(5)),
-      IsOkAndHolds(AllOf(SizeIs(5),
-                         Each(AllOf(SizeIs(3), Each(AllOf(Ge(1), Le(10))))))));
-  {
-    // Silly deeply nested case
-    MArray A = NestedMArray(
-                   NestedMArray(
-                       NestedMArray(
-                           NestedMArray(
-                               MArray(MInteger(Between(1, 100))).OfLength(1, 3))
-                               .OfLength(2, 4))
-                           .OfLength(3, 5))
-                       .OfLength(4, 6))
-                   .OfLength(5, 7);
-
-    MORIARTY_ASSERT_OK_AND_ASSIGN(auto a, Generate(A));
-
-    EXPECT_THAT(a, SizeIs(AllOf(Ge(5), Le(7))));
-    EXPECT_THAT(a, Each(SizeIs(AllOf(Ge(4), Le(6)))));
-    EXPECT_THAT(a, Each(Each(SizeIs(AllOf(Ge(3), Le(5))))));
-    EXPECT_THAT(a, Each(Each(Each(SizeIs(AllOf(Ge(2), Le(4)))))));
-    EXPECT_THAT(a, Each(Each(Each(Each(SizeIs(AllOf(Ge(1), Le(3))))))));
-    EXPECT_THAT(a, Each(Each(Each(Each(Each(AllOf(Ge(1), Le(100))))))));
-  }
-}
-
-TEST(MArrayTest, GenerateShouldSuccessfullyComplete) {
-  MORIARTY_EXPECT_OK(Generate(MArray<MInteger>(MInteger()).OfLength(4, 10)));
-  MORIARTY_EXPECT_OK(Generate(MArray(MInteger()).OfLength(4, 10)));
-  MORIARTY_EXPECT_OK(
-      Generate(MArray(MInteger(Between(1, 10))).OfLength(4, 10)));
-}
-
-TEST(MArrayTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
-  auto gen_given_length1 = [](int lo, int hi) {
-    return MArray(MInteger(Between(1, 10))).OfLength(lo, hi);
-  };
-  auto gen_given_length2 = [](int lo1, int hi1, int lo2, int hi2) {
-    return MArray(MInteger(Between(1, 10)))
-        .OfLength(lo1, hi1)
-        .OfLength(lo2, hi2);
-  };
-
-  // All possible valid intersections
-  EXPECT_TRUE(
-      GenerateSameValues(gen_given_length2(0, 30, 1, 10),
-                         gen_given_length1(1, 10)));  // First is superset
-  EXPECT_TRUE(
-      GenerateSameValues(gen_given_length2(1, 10, 0, 30),
-                         gen_given_length1(1, 10)));  // Second is superset
-  EXPECT_TRUE(
-      GenerateSameValues(gen_given_length2(0, 10, 1, 30),
-                         gen_given_length1(1, 10)));  // First on the left
-  EXPECT_TRUE(
-      GenerateSameValues(gen_given_length2(1, 30, 0, 10),
-                         gen_given_length1(1, 10)));  // First on the right
-  EXPECT_TRUE(GenerateSameValues(gen_given_length2(1, 8, 8, 10),
-                                 gen_given_length1(8, 8)));  // Singleton Range
-}
-
-TEST(MArrayTest, InvalidLengthShouldFail) {
-  EXPECT_THROW(
-      { Generate(MArray(MInteger()).OfLength(-1)).IgnoreError(); },
-      std::runtime_error);
-  EXPECT_THROW(
-      {
-        Generate(MArray(MInteger()).OfLength(MInteger(AtMost(10), AtLeast(20))))
-            .IgnoreError();
-      },
-      std::runtime_error);
-}
-
-TEST(MArrayTest, LengthZeroProcudesTheEmptyArray) {
-  EXPECT_THAT(Generate(MArray(MInteger()).OfLength(0)),
-              IsOkAndHolds(IsEmpty()));
-}
-
-TEST(MArrayTest, MergeFromCorrectlyMergesOnLength) {
-  // The alphabet is irrelevant for the tests
-  auto get_arr = []() { return MArray(MInteger(Between(1, 10))); };
-
-  // All possible valid intersection of length
-  EXPECT_TRUE(GenerateSameValues(
-      get_arr().OfLength(0, 30).MergeFrom(get_arr().OfLength(1, 10)),
-      get_arr().OfLength(1, 10)));  // First is a superset
-  EXPECT_TRUE(GenerateSameValues(
-      get_arr().OfLength(0, 30).MergeFrom(get_arr().OfLength(1, 10)),
-      get_arr().OfLength(1, 10)));  // First is a superset
-  EXPECT_TRUE(GenerateSameValues(
-      get_arr().OfLength(1, 10).MergeFrom(get_arr().OfLength(0, 30)),
-      get_arr().OfLength(1, 10)));  // Second is a superset
-  EXPECT_TRUE(GenerateSameValues(
-      get_arr().OfLength(0, 10).MergeFrom(get_arr().OfLength(1, 30)),
-      get_arr().OfLength(1, 10)));  // First on left
-  EXPECT_TRUE(GenerateSameValues(
-      get_arr().OfLength(1, 30).MergeFrom(get_arr().OfLength(0, 10)),
-      get_arr().OfLength(1, 10)));  // First on right
-  EXPECT_TRUE(GenerateSameValues(
-      get_arr().OfLength(1, 8).MergeFrom(get_arr().OfLength(8, 10)),
-      get_arr().OfLength(8)));  // Singleton range
-
-  EXPECT_THROW(
-      {
-        Generate(get_arr().OfLength(1, 6).MergeFrom(get_arr().OfLength(10, 20)))
-            .IgnoreError();
-      },
-      std::runtime_error);
-}
-
-TEST(MArrayTest, MergeFromCorrectlyMergesElementConstraints) {
-  auto int_array = [](int lo, int hi) {
-    return MArray(MInteger(Between(lo, hi))).OfLength(20);
-  };
-
-  EXPECT_TRUE(GenerateSameValues(int_array(1, 10).MergeFrom(int_array(6, 12)),
-                                 int_array(6, 10)));
-
-  EXPECT_THROW(
-      { Generate(int_array(1, 6).MergeFrom(int_array(10, 20))).IgnoreError(); },
-      std::runtime_error);
-}
-
-TEST(MArrayTest, LengthIsSatisfied) {
-  // Includes small and large ranges
-  for (int size = 0; size < 40; size++) {
-    EXPECT_THAT(Generate(MArray(MInteger()).OfLength(size / 2, size)),
-                IsOkAndHolds(SizeIs(AllOf(Ge(size / 2), Le(size)))));
-  }
-  for (int size = 900; size < 940; size++) {
-    EXPECT_THAT(Generate(MArray(MInteger()).OfLength(size / 2, size)),
-                IsOkAndHolds(SizeIs(AllOf(Ge(size / 2), Le(size)))));
-  }
-}
-
-TEST(MArrayTest, SatisfiesConstraintsChecksMArrayContentsProperly) {
-  EXPECT_THAT(MArray(MInteger(Between(1, 10))),
-              IsSatisfiedWith(std::vector<int64_t>({5, 6, 1, 4, 3, 9, 10})));
-
-  EXPECT_THAT(MArray(MInteger(Between(1, 10))),
-              IsNotSatisfiedWith(std::vector<int64_t>({5, 6, 7, 8, 9, 10, 11}),
-                                 "element 6"));
-  EXPECT_THAT(MArray(MInteger(Between(1, 10))),
-              IsNotSatisfiedWith(std::vector<int64_t>({5, 6, 0, 8, 9, 10}),
-                                 "element 2"));
-}
-
-TEST(MArrayTest, SatisfiesConstraintsChecksMArraySizeWhenItIsVariable) {
-  EXPECT_THAT(MArray(MInteger()).OfLength("N"),
-              IsSatisfiedWith(std::vector<int64_t>({10, 20, 30}),
-                              Context().WithValue<MInteger>("N", 3)));
-}
-
-TEST(MArrayTest,
-     SatisfiesConstraintsFailsIfLengthDependsOnAVariableAndIsNotKnown) {
-  // If N is definitely unique, it should pass.
-  EXPECT_THAT(MArray(MInteger()).OfLength(3),
-              IsSatisfiedWith(std::vector<int64_t>({10, 20, 30})));
-  EXPECT_THAT(MArray(MInteger()).OfLength("N"),
-              IsSatisfiedWith(std::vector<int64_t>({10, 20, 30}),
-                              Context().WithVariable("N", MInteger().Is(3))));
-
-  // If there is a unique value, then we might be able to determine the length.
-  EXPECT_THAT(
-      MArray(MInteger()).OfLength("N"),
-      IsSatisfiedWith(std::vector<int64_t>({10, 20, 30}),
-                      Context().WithVariable("N", MInteger(Between(3, 3)))));
-}
-
-TEST(MArrayTest, SatisfiesConstraintsWithNoConstraintsShouldAcceptAnything) {
-  EXPECT_THAT(MArray<MInteger>(), IsSatisfiedWith(std::vector<int64_t>({})));
-  EXPECT_THAT(MArray<MInteger>(), IsSatisfiedWith(std::vector<int64_t>({1})));
-  EXPECT_THAT(MArray<MInteger>(),
-              IsSatisfiedWith(std::vector<int64_t>({1, 2, 3})));
-}
-
-TEST(MArrayTest, SatisfiesConstraintsChecksLengthConstraintsProperly) {
-  auto constraints = []() { return MArray(MInteger(Between(1, 10))); };
-
-  {  // Exact size
-    EXPECT_THAT(constraints().OfLength(7),
-                IsSatisfiedWith(std::vector<int64_t>({1, 2, 3, 4, 5, 6, 7})));
-    EXPECT_THAT(constraints().OfLength(7, 7),
-                IsSatisfiedWith(std::vector<int64_t>({1, 2, 3, 4, 5, 6, 7})));
-    EXPECT_THAT(constraints().OfLength(MInteger(Between(7, 7))),
-                IsSatisfiedWith(std::vector<int64_t>({1, 2, 3, 4, 5, 6, 7})));
-    EXPECT_THAT(constraints().OfLength(0),
-                IsSatisfiedWith(std::vector<int64_t>({})));
-
-    EXPECT_THAT(constraints().OfLength(6),
-                IsNotSatisfiedWith(std::vector<int64_t>({1, 2, 3, 4, 5, 6, 7}),
-                                   "length"));
-    EXPECT_THAT(constraints().OfLength(8),
-                IsNotSatisfiedWith(std::vector<int64_t>({1, 2, 3, 4, 5, 6, 7}),
-                                   "length"));
-
-    EXPECT_THAT(constraints().OfLength(0),
-                IsNotSatisfiedWith(std::vector<int64_t>({1}), "length"));
-    EXPECT_THAT(constraints().OfLength(1),
-                IsNotSatisfiedWith(std::vector<int64_t>(), "length"));
-  }
-
-  {  // Ranges for `OfLength`
-     // Middle
-    EXPECT_THAT(constraints().OfLength(6, 8),
-                IsSatisfiedWith(std::vector<int64_t>({1, 2, 3, 4, 5, 6, 7})));
-    // Low
-    EXPECT_THAT(constraints().OfLength(7, 9),
-                IsSatisfiedWith(std::vector<int64_t>({1, 2, 3, 4, 5, 6, 7})));
-    // High
-    EXPECT_THAT(constraints().OfLength(5, 7),
-                IsSatisfiedWith(std::vector<int64_t>({1, 2, 3, 4, 5, 6, 7})));
-  }
-}
-
-TEST(MArrayTest, SatisfiesConstraintsShouldCheckForDistinctElements) {
-  EXPECT_THAT(
-      MArray(MInteger(Between(1, 5))).WithDistinctElements().OfLength(3),
-      IsSatisfiedWith(std::vector<int64_t>({1, 2, 5})));
-
-  EXPECT_THAT(
-      MArray(MInteger(Between(1, 5))).WithDistinctElements().OfLength(3),
-      IsNotSatisfiedWith(std::vector<int64_t>({1, 2, 2}), "distinct"));
-}
-
-TEST(MArrayTest, AllOverloadsForOfLengthProduceTheSameSequenceOfData) {
-  EXPECT_TRUE(AllGenerateSameValues<MArray<MInteger>>(
-      {MArray(MInteger()).OfLength(5),         //
-       MArray(MInteger()).OfLength("5"),       //
-       MArray(MInteger()).OfLength(5, 5),      //
-       MArray(MInteger()).OfLength(5, "5"),    //
-       MArray(MInteger()).OfLength("5", 5),    //
-       MArray(MInteger()).OfLength("5", "5"),  //
-       MArray(MInteger()).OfLength(MInteger().Is(5))}));
-
-  EXPECT_TRUE(AllGenerateSameValues<MArray<MInteger>>(
-      {MArray(MInteger()).OfLength(MInteger(Between(1, 9))),  //
-       MArray(MInteger()).OfLength(1, 9),                     //
-       MArray(MInteger()).OfLength(1, "9"),                   //
-       MArray(MInteger()).OfLength("1", 9),                   //
-       MArray(MInteger()).OfLength("1", "9")}));
-}
-
 MATCHER(HasDuplicateIntegers,
         negation ? "has no duplicate values" : "has duplicate values") {
   absl::flat_hash_set<int64_t> seen;
@@ -358,138 +87,7 @@ MATCHER(HasDuplicateIntegers,
   return false;
 }
 
-TEST(MArrayTest, WithDistinctElementsReturnsOnlyDistinctValues) {
-  EXPECT_THAT(
-      MArray(MInteger(Between(1, 10))).OfLength(10).WithDistinctElements(),
-      GeneratedValuesAre(UnorderedElementsAre(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)));
-
-  EXPECT_THAT(
-      MArray(MInteger(Between(1, 100))).OfLength(50).WithDistinctElements(),
-      GeneratedValuesAre(Not(HasDuplicateIntegers())));
-}
-
-TEST(MArrayTest, WithDistinctElementsWithNotEnoughDistinctValuesDies) {
-  EXPECT_THROW(
-      {
-        Generate(
-            MArray(MInteger(Between(1, 5))).OfLength(10).WithDistinctElements())
-            .IgnoreError();
-      },
-      std::runtime_error);
-}
-
-TEST(MArrayTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
-  // This is asking for all integers between 1 and 10^4. This should
-  // succeed relatively quickly. Testing if there are enough retries.
-  MORIARTY_EXPECT_OK(Generate(MArray(MInteger(Between(1, "10^4")))
-                                  .OfLength("10^4")
-                                  .WithDistinctElements()));
-}
-
-TEST(MArrayTest, WhitespaceSeparatorShouldAffectPrint) {
-  EXPECT_THAT(
-      Print(MArray(MInteger()).WithSeparator(Whitespace::kNewline), {1, 2, 3}),
-      IsOkAndHolds("1\n2\n3"));  // Note no newline after
-}
-
-TEST(MArrayTest, WhitespaceSeparatorShouldAffectRead) {
-  EXPECT_THAT(
-      Read(MArray(MInteger()).WithSeparator(Whitespace::kNewline).OfLength(6),
-           "1\n2\n3\n4\n5\n6"),
-      IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
-
-  EXPECT_THAT(
-      Read(MArray(MInteger()).WithSeparator(Whitespace::kTab).OfLength(3),
-           "3\t2\t1"),
-      IsOkAndHolds(ElementsAre(3, 2, 1)));
-
-  // Read wrong whitespace between characters.
-  EXPECT_THROW(
-      {
-        Read(MArray(MInteger()).WithSeparator(Whitespace::kNewline).OfLength(6),
-             "1\n2\n3 4\n5\n6")
-            .IgnoreError();
-      },
-      std::runtime_error);
-}
-
-TEST(MArrayTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
-  EXPECT_THAT(Read(MArray(MInteger())
-                       .WithSeparator(Whitespace::kNewline)
-                       .WithSeparator(Whitespace::kNewline)
-                       .OfLength(6),
-                   "1\n2\n3\n4\n5\n6"),
-              IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
-}
-
-TEST(MArrayTest, WhitespaceSeparatorShouldFailWithTwoSeparators) {
-  EXPECT_THAT(
-      [] {
-        MArray(MInteger())
-            .WithSeparator(Whitespace::kNewline)
-            .WithSeparator(Whitespace::kTab);
-      },
-      Throws<std::runtime_error>());
-}
-
-TEST(MArrayTest, ReadShouldBeAbleToDetermineLengthFromAnotherVariable) {
-  EXPECT_THAT(Read(MArray(MInteger()).OfLength("N"), "1 2 3",
-                   Context().WithValue<MInteger>("N", 3)),
-              IsOkAndHolds(ElementsAre(1, 2, 3)));
-
-  EXPECT_THAT(Read(MArray(MInteger()).OfLength("N"), "1 2 3",
-                   Context().WithVariable("N", MInteger(Between(3, 3)))),
-              IsOkAndHolds(ElementsAre(1, 2, 3)));
-
-  EXPECT_THAT(Read(MArray(MInteger()).OfLength("N"), "1 2 3",
-                   Context().WithVariable("N", MInteger().Is(3))),
-              IsOkAndHolds(ElementsAre(1, 2, 3)));
-
-  EXPECT_THAT(Read(MArray(MInteger()).OfLength(3), "1 2 3"),
-              IsOkAndHolds(ElementsAre(1, 2, 3)));
-
-  EXPECT_THAT(
-      Read(MArray(MInteger()).OfLength(MInteger(Between(3, 3))), "1 2 3"),
-      IsOkAndHolds(ElementsAre(1, 2, 3)));
-}
-
-TEST(MArrayTest,
-     ReadShouldFailIfLengthDependsOnAnUnknownVariableOrNonUniqueInteger) {
-  EXPECT_THAT(
-      [&] { Read(MArray(MInteger()).OfLength("N"), "1 2 3").IgnoreError(); },
-      ThrowsVariableNotFound("N"));
-
-  EXPECT_THROW(
-      { Read(MArray(MInteger()).OfLength(2, 3), "1 2 3").IgnoreError(); },
-      std::runtime_error);
-
-  EXPECT_THROW(
-      {
-        Read(MArray(MInteger()).OfLength(MInteger(Between(3, 4))), "1 2 3")
-            .IgnoreError();
-      },
-      std::runtime_error);
-}
-
-TEST(MArrayTest, GetDifficultInstancesContainsLengthCases) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(
-                  MArray(MInteger()).OfLength(MInteger(Between(0, 1000)))),
-              IsOkAndHolds(IsSupersetOf({SizeIs(0), SizeIs(1), SizeIs(1000)})));
-}
-
-TEST(MArrayTest, GetDifficultInstancesNoLengthFails) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MArray(MInteger())),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("no length parameter given")));
-}
-
-// -----------------------------------------------------------------------------
-//  Tests for the non-builder version of MArray's API
-//  These are copies of the above functions, but with the builder version of
-//  MArray replaced with the non-builder version.
-// -----------------------------------------------------------------------------
-
-TEST(MArrayNonBuilderTest, TypicalReadCaseWorks) {
+TEST(MArrayTest, TypicalReadCaseWorks) {
   EXPECT_THAT(Read(MArray<MInteger>(Length(6)), "1 2 3 4 5 6"),
               IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
   EXPECT_THAT(
@@ -498,20 +96,20 @@ TEST(MArrayNonBuilderTest, TypicalReadCaseWorks) {
           ElementsAre("Hello,", "World!", "Welcome", "to", "Moriarty!")));
 }
 
-TEST(MArrayNonBuilderTest, ReadingTheWrongLengthOfMArrayShouldFail) {
+TEST(MArrayTest, ReadingTheWrongLengthOfMArrayShouldFail) {
   EXPECT_THROW(
       { Read(MArray<MInteger>(Length(6)), "1 2 3 4").IgnoreError(); },
       std::runtime_error);
 }
 
-TEST(MArrayNonBuilderTest, SimpleGenerateCaseWorks) {
+TEST(MArrayTest, SimpleGenerateCaseWorks) {
   EXPECT_THAT(Generate(MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
                                         Length(Between(5, 50)))),
               IsOkAndHolds(AllOf(SizeIs(AllOf(Ge(5), Le(50))),
                                  Each(AllOf(Ge(1), Le(10))))));
 }
 
-TEST(MArrayNonBuilderTest, NestedMArrayWorks) {
+TEST(MArrayTest, NestedMArrayWorks) {
   EXPECT_THAT(
       Generate(NestedMArray(
           MArray<MInteger>(Elements<MInteger>(Between(1, 10)), Length(3)),
@@ -541,13 +139,13 @@ TEST(MArrayNonBuilderTest, NestedMArrayWorks) {
   }
 }
 
-TEST(MArrayNonBuilderTest, GenerateShouldSuccessfullyComplete) {
+TEST(MArrayTest, GenerateShouldSuccessfullyComplete) {
   MORIARTY_EXPECT_OK(Generate(MArray<MInteger>(Length(Between(4, 10)))));
   MORIARTY_EXPECT_OK(Generate(MArray<MInteger>(
       Elements<MInteger>(Between(1, 10)), Length(Between(4, 10)))));
 }
 
-TEST(MArrayNonBuilderTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
+TEST(MArrayTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
   auto gen_given_length1 = [](int lo, int hi) {
     return MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
                             Length(Between(lo, hi)));
@@ -575,7 +173,7 @@ TEST(MArrayNonBuilderTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
                                  gen_given_length1(8, 8)));  // Singleton Range
 }
 
-TEST(MArrayNonBuilderTest, InvalidLengthShouldFail) {
+TEST(MArrayTest, InvalidLengthShouldFail) {
   EXPECT_THROW(
       { Generate(MArray<MInteger>(Length(-1))).IgnoreError(); },
       std::runtime_error);
@@ -587,11 +185,11 @@ TEST(MArrayNonBuilderTest, InvalidLengthShouldFail) {
       std::runtime_error);
 }
 
-TEST(MArrayNonBuilderTest, LengthZeroProducesTheEmptyArray) {
+TEST(MArrayTest, LengthZeroProducesTheEmptyArray) {
   EXPECT_THAT(Generate(MArray<MInteger>(Length(0))), IsOkAndHolds(IsEmpty()));
 }
 
-TEST(MArrayNonBuilderTest, MergeFromCorrectlyMergesOnLength) {
+TEST(MArrayTest, MergeFromCorrectlyMergesOnLength) {
   // The alphabet is irrelevant for the tests
   auto get_arr = [](int lo, int hi) {
     return MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
@@ -615,7 +213,7 @@ TEST(MArrayNonBuilderTest, MergeFromCorrectlyMergesOnLength) {
       std::runtime_error);
 }
 
-TEST(MArrayNonBuilderTest, MergeFromCorrectlyMergesElementConstraints) {
+TEST(MArrayTest, MergeFromCorrectlyMergesElementConstraints) {
   auto int_array = [](int lo, int hi) {
     return MArray<MInteger>(Elements<MInteger>(Between(lo, hi)), Length(20));
   };
@@ -628,38 +226,37 @@ TEST(MArrayNonBuilderTest, MergeFromCorrectlyMergesElementConstraints) {
       std::runtime_error);
 }
 
-TEST(MArrayNonBuilderTest, LengthIsSatisfied) {
+TEST(MArrayTest, LengthIsSatisfied) {
   // Includes small and large ranges
   for (int size = 0; size < 40; size++) {
     EXPECT_THAT(Generate(MArray<MInteger>(Length(Between(size / 2, size)))),
                 IsOkAndHolds(SizeIs(AllOf(Ge(size / 2), Le(size)))));
   }
   for (int size = 900; size < 940; size++) {
-    EXPECT_THAT(Generate(MArray(MInteger()).OfLength(size / 2, size)),
+    EXPECT_THAT(Generate(MArray<MInteger>(Length(Between(size / 2, size)))),
                 IsOkAndHolds(SizeIs(AllOf(Ge(size / 2), Le(size)))));
   }
 }
 
-TEST(MArrayNonBuilderTest, SatisfiesConstraintsChecksMArrayContentsProperly) {
+TEST(MArrayTest, SatisfiesConstraintsChecksMArrayContentsProperly) {
   EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 10))),
               IsSatisfiedWith(std::vector<int64_t>({5, 6, 1, 4, 3, 9, 10})));
 
   EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 10))),
               IsNotSatisfiedWith(std::vector<int64_t>({5, 6, 7, 8, 9, 10, 11}),
-                                 "element 6"));
-  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 10))),
-              IsNotSatisfiedWith(std::vector<int64_t>({5, 6, 0, 8, 9, 10}),
-                                 "element 2"));
+                                 "index 6"));
+  EXPECT_THAT(
+      MArray<MInteger>(Elements<MInteger>(Between(1, 10))),
+      IsNotSatisfiedWith(std::vector<int64_t>({5, 6, 0, 8, 9, 10}), "index 2"));
 }
 
-TEST(MArrayNonBuilderTest,
-     SatisfiesConstraintsChecksMArraySizeWhenItIsVariable) {
+TEST(MArrayTest, SatisfiesConstraintsChecksMArraySizeWhenItIsVariable) {
   EXPECT_THAT(MArray<MInteger>(Length("N")),
               IsSatisfiedWith(std::vector<int64_t>({10, 20, 30}),
                               Context().WithValue<MInteger>("N", 3)));
 }
 
-TEST(MArrayNonBuilderTest,
+TEST(MArrayTest,
      SatisfiesConstraintsFailsIfLengthDependsOnAVariableAndIsNotKnown) {
   // If N is definitely unique, it should pass.
   EXPECT_THAT(MArray<MInteger>(Length(3)),
@@ -676,16 +273,14 @@ TEST(MArrayNonBuilderTest,
                       Context().WithVariable("N", MInteger(Between(3, 3)))));
 }
 
-TEST(MArrayNonBuilderTest,
-     SatisfiesConstraintsWithNoConstraintsShouldAcceptAnything) {
+TEST(MArrayTest, SatisfiesConstraintsWithNoConstraintsShouldAcceptAnything) {
   EXPECT_THAT(MArray<MInteger>(), IsSatisfiedWith(std::vector<int64_t>({})));
   EXPECT_THAT(MArray<MInteger>(), IsSatisfiedWith(std::vector<int64_t>({1})));
   EXPECT_THAT(MArray<MInteger>(),
               IsSatisfiedWith(std::vector<int64_t>({1, 2, 3})));
 }
 
-TEST(MArrayNonBuilderTest,
-     SatisfiesConstraintsChecksLengthConstraintsProperly) {
+TEST(MArrayTest, SatisfiesConstraintsChecksLengthConstraintsProperly) {
   auto constraints = [](Length length_constraint) {
     return MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
                             std::move(length_constraint));
@@ -725,7 +320,7 @@ TEST(MArrayNonBuilderTest,
   }
 }
 
-TEST(MArrayNonBuilderTest, SatisfiesConstraintsShouldCheckForDistinctElements) {
+TEST(MArrayTest, SatisfiesConstraintsShouldCheckForDistinctElements) {
   EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 5)),
                                DistinctElements(), Length(3)),
               IsSatisfiedWith(std::vector<int64_t>({1, 2, 5})));
@@ -735,7 +330,7 @@ TEST(MArrayNonBuilderTest, SatisfiesConstraintsShouldCheckForDistinctElements) {
               IsNotSatisfiedWith(std::vector<int64_t>({1, 2, 2}), "distinct"));
 }
 
-TEST(MArrayNonBuilderTest, WithDistinctElementsReturnsOnlyDistinctValues) {
+TEST(MArrayTest, WithDistinctElementsReturnsOnlyDistinctValues) {
   EXPECT_THAT(
       MArray<MInteger>(Elements<MInteger>(Between(1, 10)), Length(10),
                        DistinctElements()),
@@ -746,8 +341,7 @@ TEST(MArrayNonBuilderTest, WithDistinctElementsReturnsOnlyDistinctValues) {
               GeneratedValuesAre(Not(HasDuplicateIntegers())));
 }
 
-TEST(MArrayNonBuilderTest,
-     WithDistinctElementsWithNotEnoughDistinctValuesFails) {
+TEST(MArrayTest, WithDistinctElementsWithNotEnoughDistinctValuesFails) {
   EXPECT_THROW(
       {
         Generate(MArray<MInteger>(Elements<MInteger>(Between(1, 5)), Length(10),
@@ -757,7 +351,7 @@ TEST(MArrayNonBuilderTest,
       std::runtime_error);
 }
 
-TEST(MArrayNonBuilderTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
+TEST(MArrayTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
   // This is asking for all integers between 1 and 10^4. This should
   // succeed relatively quickly. Testing if there are enough retries.
   MORIARTY_EXPECT_OK(
@@ -765,13 +359,13 @@ TEST(MArrayNonBuilderTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
                                 Length("10^4"), DistinctElements())));
 }
 
-TEST(MArrayNonBuilderTest, WhitespaceSeparatorShouldAffectPrint) {
+TEST(MArrayTest, WhitespaceSeparatorShouldAffectPrint) {
   EXPECT_THAT(
       Print(MArray<MInteger>(IOSeparator(Whitespace::kNewline)), {1, 2, 3}),
       IsOkAndHolds("1\n2\n3"));  // Note no newline after
 }
 
-TEST(MArrayNonBuilderTest, WhitespaceSeparatorShouldAffectRead) {
+TEST(MArrayTest, WhitespaceSeparatorShouldAffectRead) {
   EXPECT_THAT(
       Read(MArray<MInteger>(IOSeparator(Whitespace::kNewline), Length(6)),
            "1\n2\n3\n4\n5\n6"),
@@ -791,7 +385,7 @@ TEST(MArrayNonBuilderTest, WhitespaceSeparatorShouldAffectRead) {
       std::runtime_error);
 }
 
-TEST(MArrayNonBuilderTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
+TEST(MArrayTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
   EXPECT_THAT(
       Read(MArray<MInteger>(IOSeparator(Whitespace::kNewline),
                             IOSeparator(Whitespace::kNewline), Length(6)),
@@ -799,28 +393,26 @@ TEST(MArrayNonBuilderTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
       IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
 }
 
-TEST(MArrayNonBuilderTest, WhitespaceSeparatorShouldFailWithTwoSeparators) {
+TEST(MArrayTest, WhitespaceSeparatorShouldFailWithTwoSeparators) {
   EXPECT_THAT(
       [] {
-        MArray(MInteger())
-            .WithSeparator(Whitespace::kNewline)
-            .WithSeparator(Whitespace::kTab);
+        MArray<MInteger>(IOSeparator(Whitespace::kNewline),
+                         IOSeparator(Whitespace::kTab));
       },
       Throws<std::runtime_error>());
 }
 
-TEST(MArrayNonBuilderTest,
-     ReadShouldBeAbleToDetermineLengthFromAnotherVariable) {
+TEST(MArrayTest, ReadShouldBeAbleToDetermineLengthFromAnotherVariable) {
   EXPECT_THAT(Read(MArray<MInteger>(Length("N")), "1 2 3",
                    Context().WithValue<MInteger>("N", 3)),
               IsOkAndHolds(ElementsAre(1, 2, 3)));
 
-  EXPECT_THAT(Read(MArray<MInteger>().OfLength("N"), "1 2 3",
+  EXPECT_THAT(Read(MArray<MInteger>(Length("N")), "1 2 3",
                    Context().WithVariable("N", MInteger(Between(3, 3)))),
               IsOkAndHolds(ElementsAre(1, 2, 3)));
 
-  EXPECT_THAT(Read(MArray<MInteger>().OfLength("N"), "1 2 3",
-                   Context().WithVariable("N", MInteger().Is(3))),
+  EXPECT_THAT(Read(MArray<MInteger>(Length("N")), "1 2 3",
+                   Context().WithVariable("N", MInteger(Exactly<int64_t>(3)))),
               IsOkAndHolds(ElementsAre(1, 2, 3)));
 
   EXPECT_THAT(Read(MArray<MInteger>(Length(3)), "1 2 3"),
@@ -830,7 +422,7 @@ TEST(MArrayNonBuilderTest,
               IsOkAndHolds(ElementsAre(1, 2, 3)));
 }
 
-TEST(MArrayNonBuilderTest,
+TEST(MArrayTest,
      ReadShouldFailIfLengthDependsOnAnUnknownVariableOrNonUniqueInteger) {
   EXPECT_THAT(
       [&] { Read(MArray<MInteger>(Length("N")), "1 2 3").IgnoreError(); },
@@ -845,22 +437,22 @@ TEST(MArrayNonBuilderTest,
       std::runtime_error);
 }
 
-TEST(MArrayNonBuilderTest, GetDifficultInstancesContainsLengthCases) {
+TEST(MArrayTest, GetDifficultInstancesContainsLengthCases) {
   EXPECT_THAT(GenerateDifficultInstancesValues(
                   MArray<MInteger>(Length(Between(0, 1000)))),
               IsOkAndHolds(IsSupersetOf({SizeIs(0), SizeIs(1), SizeIs(1000)})));
 }
 
-TEST(MArrayNonBuilderTest, GetDifficultInstancesNoLengthFails) {
+TEST(MArrayTest, GetDifficultInstancesNoLengthFails) {
   EXPECT_THAT(GenerateDifficultInstancesValues(MArray<MInteger>()),
               StatusIs(absl::StatusCode::kFailedPrecondition,
                        HasSubstr("no length parameter given")));
 }
 
-TEST(MArrayNonBuilderTest, ExactlyConstraintWorks) {
-  EXPECT_THAT(
-      Generate(MArray<MInteger>(Exactly(std::vector<int64_t>{1, 2, 3}))),
-      IsOkAndHolds(ElementsAre(1, 2, 3)));
+TEST(MArrayTest, ExactlyConstraintWorks) {
+  Exactly<std::vector<int64_t>> x = Exactly(std::vector<int64_t>{1, 2, 3});
+  EXPECT_THAT(Generate(MArray<MInteger>(x)),
+              IsOkAndHolds(ElementsAre(1, 2, 3)));
 }
 
 }  // namespace

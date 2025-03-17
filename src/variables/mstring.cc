@@ -48,10 +48,8 @@ MString& MString::AddConstraint(Exactly<std::string> constraint) {
 }
 
 MString& MString::AddConstraint(Length constraint) {
-  if (length_)
-    length_->MergeFrom(constraint.GetConstraints());
-  else
-    length_ = constraint.GetConstraints();
+  if (!length_) length_ = MInteger();
+  length_->MergeFrom(constraint.GetConstraints());
   NewAddConstraint(std::move(constraint));
   return *this;
 }
@@ -116,6 +114,9 @@ absl::StatusOr<std::vector<MString>> MString::GetDifficultInstancesImpl(
 }
 
 std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
+  if (one_of_.HasBeenConstrained())
+    return one_of_.SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
+
   if (simple_patterns_.empty() && !alphabet_.HasBeenConstrained()) {
     throw std::runtime_error(
         "Cannot generate a string with an empty alphabet and no simple "

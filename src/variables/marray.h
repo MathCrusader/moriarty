@@ -35,15 +35,14 @@
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
-#include "src/errors.h"
 #include "src/io_config.h"
 #include "src/librarian/locked_optional.h"
 #include "src/librarian/mvariable.h"
+#include "src/librarian/one_of_handler.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
@@ -80,18 +79,35 @@ class MArray : public librarian::MVariable<
   // Create an MArray with this set of constraints on each element.
   explicit MArray(MElementType element_constraints);
 
+  // ---------------------------------------------------------------------------
+  //  Constrain the value to a specific set of values
+
   // The array must have exactly this value.
-  MArray& AddConstraint(const Exactly<vector_value_type>& constraint);
-  // The array's elements must satisfy these constraints.
-  MArray& AddConstraint(const Elements<MElementType>& constraint);
+  MArray& AddConstraint(Exactly<vector_value_type> constraint);
+  // The array must be one of these values.
+  MArray& AddConstraint(OneOf<vector_value_type> constraint);
+
+  // ---------------------------------------------------------------------------
+  //  Constrain the length of the array
+
   // The array must have this length.
-  MArray& AddConstraint(const Length& constraint);
-  // The array's elements must be distinct.
-  MArray& AddConstraint(const DistinctElements& constraint);
-  // The array's elements must be separated by this whitespace.
-  MArray& AddConstraint(const IOSeparator& constraint);
+  MArray& AddConstraint(Length constraint);
   // The array should be approximately this size.
-  MArray& AddConstraint(const SizeCategory& constraint);
+  MArray& AddConstraint(SizeCategory constraint);
+
+  // ---------------------------------------------------------------------------
+  //  Constrain the elements of the array
+
+  // The array's elements must satisfy these constraints.
+  MArray& AddConstraint(Elements<MElementType> constraint);
+  // The array's elements must be distinct.
+  MArray& AddConstraint(DistinctElements constraint);
+
+  // ---------------------------------------------------------------------------
+  //  Constrain the array's I/O
+
+  // The array's elements must be separated by this whitespace (default = space)
+  MArray& AddConstraint(IOSeparator constraint);
 
   // Typename()
   //
@@ -99,42 +115,8 @@ class MArray : public librarian::MVariable<
   // "MArray<MInteger>"). This is mostly used for debugging/error messages.
   [[nodiscard]] std::string Typename() const override;
 
-  // Of()
-  //
-  // Add extra constraints to the elements of the array.
-  MArray& Of(MElementType variable);
-
-  // OfLength()
-  //
-  // Sets the constraints for the length of this array. If two parameters are
-  // provided, the length is in the closed range [`min_length`, `max_length`].
-  //
-  // For example:
-  // `OfLength(5, 10)` is equivalent to `OfLength(MInteger().Between(5, 10))`.
-  // `OfLength("3 * N")` is equivalent to `OfLength(MInteger().Is("3 * N"))`.
-  MArray& OfLength(const MInteger& length);
-  MArray& OfLength(int64_t length);
-  MArray& OfLength(std::string_view length_expression);
-  MArray& OfLength(int64_t min_length, int64_t max_length);
-  MArray& OfLength(int64_t min_length, std::string_view max_length_expression);
-  MArray& OfLength(std::string_view min_length_expression, int64_t max_length);
-  MArray& OfLength(std::string_view min_length_expression,
-                   std::string_view max_length_expression);
-
-  // WithDistinctElements()
-  //
-  // States that this array must contain only distinct elements. By default,
-  // this restriction is off, and does not guarantee duplicate entries will
-  // occur.
-  MArray& WithDistinctElements();
-
-  // WithSeparator()
-  //
-  // Sets the whitespace separator to be used between different array entries
-  // when reading/writing. Default = kSpace.
-  MArray& WithSeparator(Whitespace separator);
-
  private:
+  librarian::OneOfHandler<vector_value_type> one_of_;
   MElementType element_constraints_;
   std::optional<MInteger> length_;
   bool distinct_elements_ = false;
@@ -210,51 +192,60 @@ MArray<MArray<MElementType>> NestedMArray(MArray<MElementType> elements,
 // -----------------------------------------------------------------------------
 //  Template Implementation Below
 
-template <typename MElementType>
-MArray<MElementType>::MArray(MElementType element_constraints)
-    : MArray<MElementType>(
-          Elements<MElementType>(std::move(element_constraints))) {}
+template <typename T>
+MArray<T>::MArray(T element_constraints)
+    : MArray<T>(Elements<T>(std::move(element_constraints))) {}
 
-template <typename MElementType>
+template <typename T>
 template <typename... Constraints>
   requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
-MArray<MElementType>::MArray(Constraints&&... constraints) {
+MArray<T>::MArray(Constraints&&... constraints) {
   static_assert(
-      std::derived_from<MElementType,
-                        librarian::MVariable<
-                            MElementType, typename MElementType::value_type>>,
+      std::derived_from<T, librarian::MVariable<T, typename T::value_type>>,
       "The T used in MArray<T> must be a Moriarty variable. For example, "
       "MArray<MInteger> or MArray<MCustomType>.");
   (AddConstraint(std::forward<Constraints>(constraints)), ...);
 }
 
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::AddConstraint(
-    const Exactly<vector_value_type>& constraint) {
-  return this->Is(constraint.GetValue());
+template <typename T>
+MArray<T>& MArray<T>::AddConstraint(Exactly<vector_value_type> constraint) {
+  one_of_.ConstrainOptions(
+      std::vector<vector_value_type>{constraint.GetValue()});
+  this->NewAddConstraint(std::move(constraint));
+  return *this;
 }
 
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::AddConstraint(
-    const Elements<MElementType>& constraint) {
-  return Of(constraint.GetConstraints());
+template <typename T>
+MArray<T>& MArray<T>::AddConstraint(OneOf<vector_value_type> constraint) {
+  one_of_.ConstrainOptions(constraint.GetOptions());
+  this->NewAddConstraint(std::move(constraint));
+  return *this;
 }
 
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::AddConstraint(
-    const Length& constraint) {
-  return OfLength(constraint.GetConstraints());
+template <typename T>
+MArray<T>& MArray<T>::AddConstraint(Elements<T> constraint) {
+  element_constraints_.MergeFrom(constraint.GetConstraints());
+  this->NewAddConstraint(std::move(constraint));
+  return *this;
 }
 
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::AddConstraint(
-    const DistinctElements& constraint) {
-  return WithDistinctElements();
+template <typename T>
+MArray<T>& MArray<T>::AddConstraint(Length constraint) {
+  if (!length_) length_ = MInteger();
+  length_->MergeFrom(constraint.GetConstraints());
+  this->NewAddConstraint(std::move(constraint));
+  return *this;
 }
 
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::AddConstraint(
-    const IOSeparator& constraint) {
+template <typename T>
+MArray<T>& MArray<T>::AddConstraint(DistinctElements constraint) {
+  distinct_elements_ = true;
+  this->NewAddConstraint(std::move(constraint));
+  return *this;
+}
+
+template <typename T>
+MArray<T>& MArray<T>::AddConstraint(IOSeparator constraint) {
   if (!separator_.Set(constraint.GetSeparator())) {
     throw std::runtime_error(
         "Attempting to set multiple I/O separators for the same MArray.");
@@ -263,97 +254,28 @@ MArray<MElementType>& MArray<MElementType>::AddConstraint(
   return *this;
 }
 
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::AddConstraint(
-    const SizeCategory& constraint) {
+template <typename T>
+MArray<T>& MArray<T>::AddConstraint(SizeCategory constraint) {
   return AddConstraint(Length(constraint));
 }
 
-template <typename MElementType>
-std::string MArray<MElementType>::Typename() const {
+template <typename T>
+std::string MArray<T>::Typename() const {
   return absl::StrCat("MArray<", element_constraints_.Typename(), ">");
-}
-
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::Of(MElementType variable) {
-  element_constraints_.MergeFrom(std::move(variable));
-  return *this;
-}
-
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::OfLength(const MInteger& length) {
-  if (length_)
-    length_->MergeFrom(length);
-  else
-    length_ = length;
-  return *this;
-}
-
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::OfLength(int64_t length) {
-  return OfLength(length, length);
-}
-
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::OfLength(
-    std::string_view length_expression) {
-  return OfLength(length_expression, length_expression);
-}
-
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::OfLength(int64_t min_length,
-                                                     int64_t max_length) {
-  return OfLength(MInteger(Between(min_length, max_length)));
-}
-
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::OfLength(
-    int64_t min_length, std::string_view max_length_expression) {
-  return OfLength(MInteger(Between(min_length, max_length_expression)));
-}
-
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::OfLength(
-    std::string_view min_length_expression, int64_t max_length) {
-  return OfLength(MInteger(Between(min_length_expression, max_length)));
-}
-
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::OfLength(
-    std::string_view min_length_expression,
-    std::string_view max_length_expression) {
-  return OfLength(
-      MInteger(Between(min_length_expression, max_length_expression)));
-}
-
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::WithDistinctElements() {
-  distinct_elements_ = true;
-  return *this;
-}
-
-template <typename MElementType>
-MArray<MElementType>& MArray<MElementType>::WithSeparator(
-    Whitespace separator) {
-  if (!separator_.Set(separator)) {
-    throw std::runtime_error(
-        "Attempting to set multiple I/O separators for the same MArray.");
-  }
-  return *this;
 }
 
 template <typename MElementType>
 absl::Status MArray<MElementType>::MergeFromImpl(
     const MArray<MElementType>& other) {
-  Of(other.element_constraints_);
-  if (other.length_) OfLength(*other.length_);
-
   return absl::OkStatus();
 }
 
 template <typename MElementType>
 auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
     -> vector_value_type {
+  if (one_of_.HasBeenConstrained())
+    return one_of_.SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
+
   if (!length_) {
     throw std::runtime_error(
         "Attempting to generate an array with no length parameter given.");
@@ -476,30 +398,6 @@ MArray<MoriartyElementType>::ReadImpl(librarian::ReaderContext ctx) const {
 template <typename MoriartyElementType>
 absl::Status MArray<MoriartyElementType>::IsSatisfiedWithImpl(
     librarian::AnalysisContext ctx, const vector_value_type& value) const {
-  if (length_) {
-    MORIARTY_RETURN_IF_ERROR(CheckConstraint(
-        length_->IsSatisfiedWith(ctx, value.size()), "invalid MArray length"));
-  }
-
-  for (int i = 0; i < value.size(); i++) {
-    MORIARTY_RETURN_IF_ERROR(
-        CheckConstraint(element_constraints_.IsSatisfiedWith(ctx, value[i]),
-                        absl::Substitute("invalid element $0 (0-based)", i)));
-  }
-
-  if (distinct_elements_) {
-    absl::flat_hash_set<element_value_type> seen;
-    int idx = 0;
-    for (const element_value_type& x : value) {
-      auto [it, inserted] = seen.insert(x);
-      MORIARTY_RETURN_IF_ERROR(CheckConstraint(
-          inserted, absl::Substitute("elements are not distinct. Element at "
-                                     "index $0 appears multiple times.",
-                                     idx)));
-      idx++;
-    }
-  }
-
   return absl::OkStatus();
 }
 template <typename MoriartyElementType>
@@ -512,12 +410,12 @@ MArray<MoriartyElementType>::GetDifficultInstancesImpl(
         "length parameter given.");
   }
   std::vector<MArray<MoriartyElementType>> cases;
-  MORIARTY_ASSIGN_OR_RETURN(std::vector<MInteger> lengthCases,
+  MORIARTY_ASSIGN_OR_RETURN(std::vector<MInteger> length_cases,
                             length_->GetDifficultInstances(ctx));
 
-  cases.reserve(lengthCases.size());
-  for (const auto& c : lengthCases) {
-    cases.push_back(MArray().OfLength(c));
+  cases.reserve(length_cases.size());
+  for (const auto& c : length_cases) {
+    cases.push_back(MArray(Length(c)));
   }
   // TODO(hivini): Add cases for sort and the difficult instances of the
   // variable it holds.
