@@ -29,49 +29,58 @@ namespace librarian {
 static constexpr int kMaxDebugStringLength = 50;
 
 template <std::integral IntLike>
-std::string DebugString(IntLike x, int max_len = kMaxDebugStringLength);
+std::string DebugString(IntLike x, int max_len = kMaxDebugStringLength,
+                        bool include_backticks = true);
 
 template <typename T>
 std::string DebugString(const std::vector<T>& x,
-                        int max_len = kMaxDebugStringLength);
+                        int max_len = kMaxDebugStringLength,
+                        bool include_backticks = true);
 
 template <typename... Ts>
 std::string DebugString(const std::tuple<Ts...>& x,
-                        int max_len = kMaxDebugStringLength);
+                        int max_len = kMaxDebugStringLength,
+                        bool include_backticks = true);
 
 std::string DebugString(const std::string& x,
-                        int max_len = kMaxDebugStringLength);
+                        int max_len = kMaxDebugStringLength,
+                        bool include_backticks = true);
 
-std::string ShortenDebugString(const std::string& x, int max_len);
+std::string ShortenDebugString(const std::string& x, int max_len,
+                               bool include_backticks);
 
 // ----------------------------------------------------------------------------
 
 template <std::integral IntLike>
-std::string DebugString(IntLike x, int max_len) {
-  return ShortenDebugString(std::to_string(x), max_len);
+std::string DebugString(IntLike x, int max_len, bool include_backticks) {
+  return ShortenDebugString(std::to_string(x), max_len, include_backticks);
 }
 
 template <typename T>
-std::string DebugString(const std::vector<T>& x, int max_len) {
+std::string DebugString(const std::vector<T>& x, int max_len,
+                        bool include_backticks) {
   std::string res = "[";
   for (bool first = true; const auto& elem : x) {
     if (!first) res += ",";
     first = false;
-    res += DebugString(elem);
+    res += DebugString(elem, max_len, false);
   }
-  return ShortenDebugString(res + "]", max_len);
+  return ShortenDebugString(res + "]", max_len, include_backticks);
 }
 
 template <typename... Ts>
-std::string DebugString(const std::tuple<Ts...>& x, int max_len) {
+std::string DebugString(const std::tuple<Ts...>& x, int max_len,
+                        bool include_backticks) {
   std::string res = "<";
   std::apply(
-      [&res](const auto&... elems) {
+      [&](const auto&... elems) {
         bool first = true;
-        ((res += (first ? "" : ",") + DebugString(elems), first = false), ...);
+        ((res += (first ? "" : ",") + DebugString(elems, max_len, false),
+          first = false),
+         ...);
       },
       x);
-  return ShortenDebugString(res + ">", max_len);
+  return ShortenDebugString(res + ">", max_len, include_backticks);
 }
 
 }  // namespace librarian

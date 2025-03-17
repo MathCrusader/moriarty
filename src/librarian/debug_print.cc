@@ -19,16 +19,22 @@
 namespace moriarty {
 namespace librarian {
 
-std::string DebugString(const std::string& x, int max_len) {
-  return ShortenDebugString(x, max_len);
+std::string DebugString(const std::string& x, int max_len,
+                        bool include_backticks) {
+  return ShortenDebugString(x, max_len, include_backticks);
 }
 
-std::string ShortenDebugString(const std::string& x, int max_len) {
-  if (x.length() <= max_len) return std::format("`{}`", x);
-  int left_half = (max_len - 3 + 1) / 2;
-  int right_half = (max_len - 3) / 2;
-  return std::format("`{}...{}`", x.substr(0, left_half),
-                     x.substr(x.length() - right_half));
+std::string ShortenDebugString(const std::string& x, int max_len,
+                               bool include_backticks) {
+  auto do_it = [&]() {
+    if (x.length() <= max_len) return std::format("{}", x);
+    int left_half = (max_len - 3 + 1) / 2;
+    int right_half = (max_len - 3) / 2;
+    return std::format("{}...{}", x.substr(0, left_half),
+                       x.substr(x.length() - right_half));
+  };
+  if (include_backticks) return std::format("`{}`", do_it());
+  return do_it();
 }
 
 }  // namespace librarian

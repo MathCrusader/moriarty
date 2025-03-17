@@ -518,16 +518,6 @@ class MEmptyClass : public MVariable<MEmptyClass, EmptyClass> {
   }
 };
 
-TEST(MVariableTest, ToStringByDefaultIncludesTypename) {
-  EXPECT_THAT(MEmptyClass().ToString(), HasSubstr("MEmptyClass"));
-}
-
-TEST(MVariableTest, ToStringShouldIncludeOneOfOptions) {
-  EXPECT_THAT(MEmptyClass().Is(EmptyClass()).ToString(), HasSubstr("Is"));
-  EXPECT_THAT(MEmptyClass().IsOneOf({EmptyClass(), EmptyClass()}).ToString(),
-              HasSubstr("Is"));
-}
-
 TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToRead) {
   EXPECT_THROW(
       { Read(MEmptyClass(), "1234").IgnoreError(); }, std::runtime_error);

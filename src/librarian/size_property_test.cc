@@ -18,10 +18,10 @@
 #include <limits>
 #include <optional>
 
-#include "gmock/gmock.h"
-#include "gtest/gtest.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "src/internal/range.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -30,10 +30,11 @@ namespace moriarty {
 namespace librarian {
 namespace {
 
+using ::moriarty::StatusIs;
 using ::testing::Optional;
 using ::testing::Range;
+using ::testing::Throws;
 using ::testing::Values;
-using ::moriarty::StatusIs;
 
 class SizePropertyTest : public testing::TestWithParam<int64_t> {};
 
@@ -47,45 +48,36 @@ absl::StatusOr<moriarty::Range::ExtremeValues> ExtractExtremes(
 }
 
 TEST_P(SizePropertyTest, MinimumShouldBeExtremal) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues extremes,
-      ExtractExtremes(GetMinRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues extremes,
+                                ExtractExtremes(GetMinRange(GetParam())));
 
   EXPECT_EQ(extremes.min, 1);
   EXPECT_EQ(extremes.max, 1);
 }
 
 TEST_P(SizePropertyTest, MaximumShouldBeExtremal) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues extremes,
-      ExtractExtremes(GetMaxRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues extremes,
+                                ExtractExtremes(GetMaxRange(GetParam())));
 
   EXPECT_EQ(extremes.min, GetParam());
   EXPECT_EQ(extremes.max, GetParam());
 }
 
 TEST_P(SizePropertyTest, AllSizesShouldBeOrdered) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues min,
-      ExtractExtremes(GetMinRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues tiny,
-      ExtractExtremes(GetTinyRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues small,
-      ExtractExtremes(GetSmallRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues medium,
-      ExtractExtremes(GetMediumRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues large,
-      ExtractExtremes(GetLargeRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues huge,
-      ExtractExtremes(GetHugeRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues max,
-      ExtractExtremes(GetMaxRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues min,
+                                ExtractExtremes(GetMinRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues tiny,
+                                ExtractExtremes(GetTinyRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues small,
+                                ExtractExtremes(GetSmallRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues medium,
+                                ExtractExtremes(GetMediumRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues large,
+                                ExtractExtremes(GetLargeRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues huge,
+                                ExtractExtremes(GetHugeRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues max,
+                                ExtractExtremes(GetMaxRange(GetParam())));
 
   // Left endpoints are ordered.
   EXPECT_LE(min.min, tiny.min);
@@ -105,27 +97,20 @@ TEST_P(SizePropertyTest, AllSizesShouldBeOrdered) {
 }
 
 TEST_P(SizePropertyTest, AllSizesShouldBeBetweenOneAndN) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues min,
-      ExtractExtremes(GetMinRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues tiny,
-      ExtractExtremes(GetTinyRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues small,
-      ExtractExtremes(GetSmallRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues medium,
-      ExtractExtremes(GetMediumRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues large,
-      ExtractExtremes(GetLargeRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues huge,
-      ExtractExtremes(GetHugeRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      moriarty::Range::ExtremeValues max,
-      ExtractExtremes(GetMaxRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues min,
+                                ExtractExtremes(GetMinRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues tiny,
+                                ExtractExtremes(GetTinyRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues small,
+                                ExtractExtremes(GetSmallRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues medium,
+                                ExtractExtremes(GetMediumRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues large,
+                                ExtractExtremes(GetLargeRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues huge,
+                                ExtractExtremes(GetHugeRange(GetParam())));
+  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues max,
+                                ExtractExtremes(GetMaxRange(GetParam())));
 
   // Left endpoints are >= 1.
   EXPECT_GE(min.min, 1);
@@ -309,6 +294,43 @@ TEST(SizePropertyTest, FromStringHappyPathShouldWork) {
   EXPECT_EQ(CommonSizeFromString("any"), CommonSize::kAny);
 
   EXPECT_EQ(CommonSizeFromString("words"), CommonSize::kUnknown);
+}
+
+TEST(SizeHandlerTest, HasBeenConstrainedShouldWork) {
+  librarian::SizeHandler handler;
+  EXPECT_FALSE(handler.HasBeenConstrained());
+  handler.ConstrainSize(CommonSize::kSmall);
+  EXPECT_TRUE(handler.HasBeenConstrained());
+}
+
+TEST(SizeHandlerTest, ConstrainSizeShouldMergeCorrectly) {
+  librarian::SizeHandler handler;
+  handler.ConstrainSize(CommonSize::kSmall);
+  EXPECT_EQ(handler.GetConstrainedSize(), CommonSize::kSmall);
+
+  handler.ConstrainSize(CommonSize::kTiny);
+  EXPECT_EQ(handler.GetConstrainedSize(), CommonSize::kTiny);
+}
+
+TEST(SizeHandlerTest, ConstrainSizeShouldThrowOnInvalidMerge) {
+  librarian::SizeHandler handler;
+  handler.ConstrainSize(CommonSize::kSmall);
+  EXPECT_THAT([&]() { handler.ConstrainSize(CommonSize::kHuge); },
+              Throws<std::runtime_error>());
+}
+
+TEST(SizeHandlerTest, IsSatisfiedWithShouldWork) {
+  librarian::SizeHandler handler;
+  EXPECT_TRUE(handler.IsSatisfiedWith(CommonSize::kSmall));
+
+  handler.ConstrainSize(CommonSize::kSmall);
+  EXPECT_TRUE(handler.IsSatisfiedWith(CommonSize::kSmall));
+  EXPECT_FALSE(handler.IsSatisfiedWith(CommonSize::kHuge));
+}
+
+TEST(SizeHandlerTest, GetConstrainedSizeShouldGiveAnyByDefault) {
+  librarian::SizeHandler handler;
+  EXPECT_EQ(handler.GetConstrainedSize(), CommonSize::kAny);
 }
 
 }  // namespace

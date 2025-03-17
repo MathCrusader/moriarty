@@ -50,16 +50,9 @@
 
 namespace moriarty {
 
-namespace {
-
-std::string IntToStr(int64_t value) { return std::to_string(value); }
-
-}  // namespace
-
 MInteger& MInteger::AddConstraint(Exactly<int64_t> constraint) {
   bounds_.Mutable().Intersect(
       Range(constraint.GetValue(), constraint.GetValue()));
-  constraint.SetPrinter(IntToStr);
   NewAddConstraint(std::move(constraint));
   return *this;
 }
@@ -78,7 +71,6 @@ MInteger& MInteger::AddConstraint(Exactly<std::string> constraint) {
 
 MInteger& MInteger::AddConstraint(OneOf<int64_t> constraint) {
   one_of_int_.Mutable().ConstrainOptions(constraint.GetOptions());
-  constraint.SetPrinter(IntToStr);
   NewAddConstraint(std::move(constraint));
   return *this;
 }
@@ -120,16 +112,8 @@ MInteger& MInteger::AddConstraint(AtLeast constraint) {
 }
 
 MInteger& MInteger::AddConstraint(SizeCategory constraint) {
-  std::optional<CommonSize> size =
-      librarian::MergeSizes(approx_size_, constraint.GetCommonSize());
-  if (size) {
-    approx_size_ = *size;
-  } else {
-    DeclareSelfAsInvalid(UnsatisfiedConstraintError(
-        absl::Substitute("Invalid size. Unable to be both $0 and $1.",
-                         librarian::ToString(constraint.GetCommonSize()),
-                         librarian::ToString(approx_size_))));
-  }
+  size_handler_.Mutable().ConstrainSize(constraint.GetCommonSize());
+  NewAddConstraint(std::move(constraint));
   return *this;
 }
 
@@ -262,7 +246,7 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
     return ctx.RandomElement(options);
   }
 
-  if (approx_size_ == CommonSize::kAny)
+  if (size_handler_->GetConstrainedSize() == CommonSize::kAny)
     return ctx.RandomInteger(extremes->min, extremes->max);
 
   // TODO(darcybest): Make this work for larger ranges.
@@ -272,8 +256,8 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
   }
 
   // Note: `max - min + 1` does not overflow because of the check above.
-  Range range =
-      librarian::GetRange(approx_size_, extremes->max - extremes->min + 1);
+  Range range = librarian::GetRange(size_handler_->GetConstrainedSize(),
+                                    extremes->max - extremes->min + 1);
 
   absl::StatusOr<std::optional<Range::ExtremeValues>> rng_extremes =
       range.Extremes();
@@ -300,14 +284,6 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
 }
 
 absl::Status MInteger::MergeFromImpl(const MInteger& other) {
-  std::optional<CommonSize> merged_size =
-      librarian::MergeSizes(approx_size_, other.approx_size_);
-  if (!merged_size.has_value()) {
-    return absl::InvalidArgumentError(
-        "Attempting to merge MIntegers with different size properties.");
-  }
-  approx_size_ = *merged_size;
-
   return absl::OkStatus();
 }
 

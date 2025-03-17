@@ -17,6 +17,7 @@
 #ifndef MORIARTY_SRC_VARIABLES_CONSTRAINTS_SIZE_CONSTRAINTS_H_
 #define MORIARTY_SRC_VARIABLES_CONSTRAINTS_SIZE_CONSTRAINTS_H_
 
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -67,8 +68,23 @@ class SizeCategory : public MConstraint {
   // Returns the underlying size.
   [[nodiscard]] CommonSize GetCommonSize() const;
 
+  // Determines if the container's elements satisfy all constraints.
+  template <typename T>
+  [[nodiscard]] bool IsSatisfiedWith(const T& value) const {
+    return true;
+  }
+
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
+
+  // Returns a string explaining why the value does not satisfy the constraints.
+  // It is assumed that IsSatisfiedWith() returned false.
+  template <typename T>
+  [[nodiscard]] std::string Explanation(const T& value) const {
+    throw std::runtime_error(
+        "SizeCategory::Explanation should never be called since "
+        "IsSatisfiedWith() == true always.");
+  }
 
  private:
   CommonSize size_;

@@ -33,9 +33,6 @@ namespace {
 using testing::ElementsAre;
 using testing::Throws;
 
-std::string IntToStr(int64_t value) { return std::to_string(value); }
-std::string StrToStr(const std::string& value) { return value; }
-
 TEST(BaseConstraintsTest, ExactlyForVariousIntegerTypesWorks) {
   static_assert(std::is_same_v<decltype(Exactly(123)), Exactly<int64_t>>);
   static_assert(std::is_same_v<decltype(Exactly(static_cast<int32_t>(123))),
@@ -118,8 +115,8 @@ TEST(BaseConstraintsTest, ExactlyForOtherTypesWorks) {
 }
 
 TEST(BaseConstraintsTest, ExactlyToStringWorks) {
-  EXPECT_EQ(Exactly(123).SetPrinter(IntToStr).ToString(), "is exactly 123");
-  EXPECT_EQ(Exactly("abc").SetPrinter(StrToStr).ToString(), "is exactly abc");
+  EXPECT_EQ(Exactly(123).ToString(), "is exactly `123`");
+  EXPECT_EQ(Exactly("abc").ToString(), "is exactly `abc`");
 }
 
 TEST(BaseConstraintsTest, ExactlyWithTooLargeOfIntegersShouldThrow) {
@@ -139,9 +136,8 @@ TEST(BaseConstraintsTest, ExactlyIsSatisfiedWithShouldWork) {
 }
 
 TEST(BaseConstraintsTest, ExactlyExplanationShouldWork) {
-  EXPECT_EQ(Exactly(123).SetPrinter(IntToStr).Explanation(11),
-            "`11` is not exactly `123`");
-  EXPECT_EQ(Exactly("abc").SetPrinter(StrToStr).Explanation("hello"),
+  EXPECT_EQ(Exactly(123).Explanation(11), "`11` is not exactly `123`");
+  EXPECT_EQ(Exactly("abc").Explanation("hello"),
             "`hello` is not exactly `abc`");
 }
 
@@ -239,13 +235,8 @@ TEST(BaseConstraintsTest, OneOfForOtherTypesWorks) {
 }
 
 TEST(BaseConstraintsTest, OneOfToStringWorks) {
-  auto int_to_string = [](const auto& v) { return std::to_string(v); };
-  auto str_to_string = [](const auto& v) { return v; };
-
-  EXPECT_EQ(OneOf({123, 456}).SetPrinter(int_to_string).ToString(),
-            "is one of {`123`, `456`}");
-  EXPECT_EQ(OneOf({"abc", "def"}).SetPrinter(str_to_string).ToString(),
-            "is one of {`abc`, `def`}");
+  EXPECT_EQ(OneOf({123, 456}).ToString(), "is one of {`123`, `456`}");
+  EXPECT_EQ(OneOf({"abc", "def"}).ToString(), "is one of {`abc`, `def`}");
 }
 
 TEST(BaseConstraintsTest, OneOfWithTooLargeOfIntegersShouldThrow) {
@@ -273,9 +264,9 @@ TEST(BaseConstraintsTest, OneOfIsSatisfiedWithShouldWork) {
 }
 
 TEST(BaseConstraintsTest, OneOfExplanationShouldWork) {
-  EXPECT_EQ(OneOf({123, 456}).SetPrinter(IntToStr).Explanation(11),
+  EXPECT_EQ(OneOf({123, 456}).Explanation(11),
             "`11` is not one of {`123`, `456`}");
-  EXPECT_EQ(OneOf({"abc", "def"}).SetPrinter(StrToStr).Explanation("hello"),
+  EXPECT_EQ(OneOf({"abc", "def"}).Explanation("hello"),
             "`hello` is not one of {`abc`, `def`}");
 }
 

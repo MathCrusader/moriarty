@@ -59,14 +59,14 @@ TEST(SizeConstraintsTest, FromStringShouldWork) {
 }
 
 TEST(SizeConstraintsTest, ToStringShouldWork) {
-  EXPECT_EQ(SizeCategory::Any().ToString(), "SizeCategory(any)");
-  EXPECT_EQ(SizeCategory::Min().ToString(), "SizeCategory(min)");
-  EXPECT_EQ(SizeCategory::Tiny().ToString(), "SizeCategory(tiny)");
-  EXPECT_EQ(SizeCategory::Small().ToString(), "SizeCategory(small)");
-  EXPECT_EQ(SizeCategory::Medium().ToString(), "SizeCategory(medium)");
-  EXPECT_EQ(SizeCategory::Large().ToString(), "SizeCategory(large)");
-  EXPECT_EQ(SizeCategory::Huge().ToString(), "SizeCategory(huge)");
-  EXPECT_EQ(SizeCategory::Max().ToString(), "SizeCategory(max)");
+  EXPECT_EQ(SizeCategory::Any().ToString(), "has approximate size any");
+  EXPECT_EQ(SizeCategory::Min().ToString(), "has approximate size min");
+  EXPECT_EQ(SizeCategory::Tiny().ToString(), "has approximate size tiny");
+  EXPECT_EQ(SizeCategory::Small().ToString(), "has approximate size small");
+  EXPECT_EQ(SizeCategory::Medium().ToString(), "has approximate size medium");
+  EXPECT_EQ(SizeCategory::Large().ToString(), "has approximate size large");
+  EXPECT_EQ(SizeCategory::Huge().ToString(), "has approximate size huge");
+  EXPECT_EQ(SizeCategory::Max().ToString(), "has approximate size max");
 }
 
 }  // namespace

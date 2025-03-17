@@ -81,7 +81,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
  protected:
   // Only derived classes should make copies of me directly to avoid accidental
   // slicing. Call derived class's constructors instead.
-  MVariable() : constraints_("FIXME: Set a name for this variable.") {
+  MVariable() {
     static_assert(std::default_initializable<VariableType>,
                   "Moriarty needs to be able to construct default versions of "
                   "your MVariable using its default constructor.");

@@ -52,10 +52,7 @@ concept ConstraintHasCustomApplyToFn =
 template <typename VariableType, typename ValueType>
 class ConstraintHandler {
  public:
-  // to_string_prefix will be prepended to the string representation of the
-  // constraints.
-  explicit ConstraintHandler(std::string to_string_prefix)
-      : to_string_prefix_(std::move(to_string_prefix)) {}
+  explicit ConstraintHandler() = default;
 
   // AddConstraint()
   //
@@ -136,7 +133,6 @@ class ConstraintHandler {
   };
 
   std::vector<CowPtr<ConstraintHusk>> constraints_;
-  std::string to_string_prefix_;
 };
 
 // -----------------------------------------------------------------------------

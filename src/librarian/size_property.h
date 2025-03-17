@@ -128,6 +128,41 @@ namespace librarian {
 // Returns kUnknown if the string is not a valid CommonSize.
 [[nodiscard]] CommonSize CommonSizeFromString(std::string_view size);
 
+// SizeHandler
+//
+// A class to handle size constraints. This class is used to constrain the size
+// of a range. The size is constrained by merging the new size with the existing
+// size using `MergeSizes()`. If no valid size remains after merging, an
+// exception is thrown.
+class SizeHandler {
+ public:
+  // HasBeenConstrained()
+  //
+  // Returns true if any size constraints have been added.
+  [[nodiscard]] bool HasBeenConstrained() const;
+
+  // ConstrainSize()
+  //
+  // Adds a size constraint. This will merge the new size with the existing
+  // constraint using `MergeSizes()`. Throws an exception if no valid size
+  // remains after merging.
+  void ConstrainSize(CommonSize size);
+
+  // IsSatisfiedWith()
+  //
+  // Determines if the given size satisfies the current constraint.
+  [[nodiscard]] bool IsSatisfiedWith(CommonSize size) const;
+
+  // GetConstrainedSize()
+  //
+  // Returns the current constrained size. Throws an exception if no size has
+  // been constrained yet.
+  [[nodiscard]] CommonSize GetConstrainedSize() const;
+
+ private:
+  std::optional<CommonSize> size_;
+};
+
 }  // namespace librarian
 }  // namespace moriarty
 

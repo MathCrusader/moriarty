@@ -91,7 +91,7 @@ MString& MString::AddConstraint(SimplePattern constraint) {
 }
 
 MString& MString::AddConstraint(SizeCategory constraint) {
-  return AddConstraint(Length(constraint));
+  return AddConstraint(Length(std::move(constraint)));
 }
 
 absl::Status MString::MergeFromImpl(const MString& other) {

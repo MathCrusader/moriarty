@@ -108,9 +108,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   librarian::CowPtr<Range> bounds_;
   librarian::CowPtr<librarian::OneOfHandler<int64_t>> one_of_int_;
   librarian::CowPtr<librarian::OneOfHandler<std::string>> one_of_expr_;
-
-  // What approximate size should the int64_t be when it is generated.
-  CommonSize approx_size_ = CommonSize::kAny;
+  librarian::CowPtr<librarian::SizeHandler> size_handler_;
 
   // Computes and returns the minimum and maximum of `bounds_`. Returns
   // `kInvalidArgumentError` if the range is empty. The `ResolverContext`

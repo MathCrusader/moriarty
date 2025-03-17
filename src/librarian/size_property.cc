@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <format>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -186,6 +187,32 @@ CommonSize CommonSizeFromString(std::string_view size) {
   if (size == "tiny") return CommonSize::kTiny;
   if (size == "huge") return CommonSize::kHuge;
   return CommonSize::kUnknown;
+}
+
+bool SizeHandler::HasBeenConstrained() const { return size_.has_value(); }
+
+void SizeHandler::ConstrainSize(CommonSize size) {
+  if (!size_) {
+    size_ = size;
+  } else {
+    auto merged_size = MergeSizes(*size_, size);
+    if (!merged_size) {
+      throw std::runtime_error(
+          std::format("A variable cannot be both {} and {}", ToString(*size_),
+                      ToString(size)));
+    }
+    size_ = *merged_size;
+  }
+}
+
+bool SizeHandler::IsSatisfiedWith(CommonSize size) const {
+  if (!size_) return true;
+  auto merged_size = MergeSizes(*size_, size);
+  return merged_size.has_value();
+}
+
+CommonSize SizeHandler::GetConstrainedSize() const {
+  return size_.value_or(CommonSize::kAny);
 }
 
 }  // namespace librarian

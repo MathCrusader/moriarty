@@ -29,6 +29,7 @@ cc_library(
     name = "base_constraints",
     hdrs = ["base_constraints.h"],
     deps = [
+        "//src/librarian:debug_print",
     ],
 )
 
@@ -72,7 +73,6 @@ cc_library(
     deps = [
         ":base_constraints",
         "//src/librarian:size_property",
-        "@abseil-cpp//absl/strings",
     ],
 )
 

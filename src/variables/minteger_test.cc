@@ -59,6 +59,7 @@ using ::testing::HasSubstr;
 using ::testing::IsSupersetOf;
 using ::testing::Le;
 using ::testing::Optional;
+using ::testing::Throws;
 using ::testing::UnorderedElementsAre;
 
 TEST(MIntegerTest, TypenameIsCorrect) {
@@ -428,30 +429,26 @@ TEST(MIntegerTest, WithSizeBehavesWithMergeFrom) {
     EXPECT_TRUE(GenerateSameValues(any, large));
   }
 
-  EXPECT_THAT(tiny.TryMergeFrom(large),
-              StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("size")));
+  EXPECT_THAT([&] { return small.MergeFrom(large); },
+              Throws<std::runtime_error>());
 }
 
-TEST(MIntegerTest, InvalidSizeCombinationsFailGeneration) {
+TEST(MIntegerTest, InvalidSizeCombinationsShouldThrow) {
   EXPECT_THAT(
-      Generate(MInteger(SizeCategory::Small(), SizeCategory::Large())),
-      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("size")));
-
-  EXPECT_THAT(MInteger(SizeCategory::Small(), SizeCategory::Large()),
-              IsNotSatisfiedWith(123, "size"));
-
+      [] { return MInteger(SizeCategory::Small(), SizeCategory::Large()); },
+      Throws<std::runtime_error>());
   EXPECT_THAT(
-      MInteger(SizeCategory::Small(), SizeCategory::Large())
-          .TryMergeFrom(MInteger(SizeCategory::Tiny())),
-      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("size")));
-
+      [] { return MInteger(SizeCategory::Small(), SizeCategory::Max()); },
+      Throws<std::runtime_error>());
   EXPECT_THAT(
-      Print(MInteger(SizeCategory::Small(), SizeCategory::Large()), -1),
-      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("size")));
-
+      [] {
+        return MInteger(SizeCategory::Small(), SizeCategory::Tiny())
+            .MergeFrom(MInteger(SizeCategory::Huge()));
+      },
+      Throws<std::runtime_error>());
   EXPECT_THAT(
-      Read(MInteger(SizeCategory::Small(), SizeCategory::Large()), "-1"),
-      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("size")));
+      [] { return MInteger(SizeCategory::Tiny(), SizeCategory::Medium()); },
+      Throws<std::runtime_error>());
 }
 
 TEST(MIntegerTest, InvalidExpressionsShouldFail) {

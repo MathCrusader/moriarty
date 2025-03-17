@@ -16,10 +16,10 @@
 
 #include "src/variables/constraints/size_constraints.h"
 
+#include <format>
 #include <string>
 #include <string_view>
 
-#include "absl/strings/substitute.h"
 #include "src/librarian/size_property.h"
 
 namespace moriarty {
@@ -43,7 +43,7 @@ SizeCategory SizeCategory::Max() { return SizeCategory(CommonSize::kMax); }
 CommonSize SizeCategory::GetCommonSize() const { return size_; }
 
 std::string SizeCategory::ToString() const {
-  return absl::Substitute("SizeCategory($0)", librarian::ToString(size_));
+  return std::format("has approximate size {}", librarian::ToString(size_));
 }
 
 }  // namespace moriarty

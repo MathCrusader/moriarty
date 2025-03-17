@@ -64,54 +64,33 @@ TEST(ConstraintHandlerTest, EmptyHandlerShouldBeSatisfiedWithEverything) {
   AnalysisContext ctx("X", variables, values);
 
   {
-    ConstraintHandler<MInteger, int> handler("");
+    ConstraintHandler<MInteger, int> handler;
     EXPECT_TRUE(handler.IsSatisfiedWith(ctx, 5));
     EXPECT_TRUE(handler.IsSatisfiedWith(ctx, 0));
   }
   {
-    ConstraintHandler<MString, std::string> handler("");
+    ConstraintHandler<MString, std::string> handler;
     EXPECT_TRUE(handler.IsSatisfiedWith(ctx, "hello"));
     EXPECT_TRUE(handler.IsSatisfiedWith(ctx, ""));
-  }
-}
-
-TEST(ConstraintHandlerTest, ToStringShouldBePrefixed) {
-  moriarty_internal::VariableSet variables;
-  moriarty_internal::ValueSet values;
-  AnalysisContext ctx("X", variables, values);
-
-  {
-    ConstraintHandler<MInteger, int> handler("prefix");
-    EXPECT_THAT(handler.ToString(), StartsWith("prefix"));
-  }
-  {
-    ConstraintHandler<MInteger, int> handler("prefix");
-    handler.AddConstraint(Even());
-    EXPECT_THAT(handler.ToString(), StartsWith("prefix"));
   }
 }
 
 TEST(ConstraintHandlerTest, ToStringShouldWork) {
   // These tests are a bit fragile...
   {
-    ConstraintHandler<MInteger, int> handler("prefix");
-    EXPECT_EQ(handler.ToString(), "prefix (with 0 constraints)\n");
+    ConstraintHandler<MInteger, int> handler;
+    EXPECT_EQ(handler.ToString(), "has no constraints");
   }
   {
-    ConstraintHandler<MInteger, int> handler("prefix");
+    ConstraintHandler<MInteger, int> handler;
     handler.AddConstraint(Even());
-    EXPECT_EQ(handler.ToString(), R"(prefix (with 1 constraint)
- * is even
-)");
+    EXPECT_EQ(handler.ToString(), "is even");
   }
   {
-    ConstraintHandler<MInteger, int> handler("prefix");
+    ConstraintHandler<MInteger, int> handler;
     handler.AddConstraint(Even());
     handler.AddConstraint(Positive());
-    EXPECT_EQ(handler.ToString(), R"(prefix (with 2 constraints)
- * is even
- * is positive
-)");
+    EXPECT_EQ(handler.ToString(), "is even, is positive");
   }
 }
 
@@ -121,12 +100,12 @@ TEST(ConstraintHandlerTest, ExplanationShouldBeEmptyForSatisfiedConstraints) {
   AnalysisContext ctx("X", variables, values);
 
   {
-    ConstraintHandler<MInteger, int> handler("");
+    ConstraintHandler<MInteger, int> handler;
     EXPECT_TRUE(handler.IsSatisfiedWith(ctx, 5));
     EXPECT_THAT(handler.Explanation(ctx, 5), IsEmpty());
   }
   {
-    ConstraintHandler<MString, std::string> handler("");
+    ConstraintHandler<MString, std::string> handler;
     EXPECT_TRUE(handler.IsSatisfiedWith(ctx, "hello"));
     EXPECT_THAT(handler.Explanation(ctx, "hello"), IsEmpty());
   }
@@ -137,7 +116,7 @@ TEST(ConstraintHandlerTest, ExplanationShouldContainRelevantMessages) {
   moriarty_internal::ValueSet values;
   AnalysisContext ctx("X", variables, values);
 
-  ConstraintHandler<MInteger, int> handler("");
+  ConstraintHandler<MInteger, int> handler;
   handler.AddConstraint(Even());
   handler.AddConstraint(Positive());
 
@@ -156,7 +135,7 @@ TEST(ConstraintHandlerTest, IsSatisfiedWithShouldReturnIfAnyFail) {
   moriarty_internal::ValueSet values;
   AnalysisContext ctx("X", variables, values);
 
-  ConstraintHandler<MInteger, int> handler("");
+  ConstraintHandler<MInteger, int> handler;
   handler.AddConstraint(Even());
   handler.AddConstraint(Positive());
 
