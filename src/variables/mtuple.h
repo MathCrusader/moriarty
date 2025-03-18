@@ -28,7 +28,6 @@
 #include <vector>
 
 #include "absl/algorithm/container.h"
-#include "absl/status/status.h"
 #include "absl/strings/str_join.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -106,10 +105,6 @@ class MTuple : public librarian::MVariable<
   // ---------------------------------------------------------------------------
   //  MVariable overrides
   tuple_value_type GenerateImpl(librarian::ResolverContext ctx) const override;
-  absl::Status IsSatisfiedWithImpl(
-      librarian::AnalysisContext ctx,
-      const tuple_value_type& value) const override;
-  absl::Status MergeFromImpl(const MTuple& other) override;
   tuple_value_type ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const tuple_value_type& value) const override;
@@ -200,14 +195,14 @@ MTuple<T...>& MTuple<T...>::AddConstraint(
     Exactly<tuple_value_type> constraint) {
   one_of_.ConstrainOptions(
       std::vector<tuple_value_type>{constraint.GetValue()});
-  this->NewAddConstraint(std::move(constraint));
+  this->InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
 template <typename... T>
 MTuple<T...>& MTuple<T...>::AddConstraint(OneOf<tuple_value_type> constraint) {
   one_of_.ConstrainOptions(constraint.GetOptions());
-  this->NewAddConstraint(std::move(constraint));
+  this->InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
@@ -217,7 +212,7 @@ MTuple<T...>& MTuple<T...>::AddConstraint(IOSeparator constraint) {
     throw std::runtime_error(
         "Attempting to set multiple I/O separators for the same MTuple.");
   }
-  this->NewAddConstraint(std::move(constraint));
+  this->InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
@@ -231,13 +226,8 @@ MTuple<T...>& MTuple<T...>::AddConstraint(Element<I, MElementType> constraint) {
       "constraint");
 
   std::get<I>(elements_).MergeFrom(constraint.GetConstraints());
-  this->NewAddConstraint(ElementConstraintWrapper(std::move(constraint)));
+  this->InternalAddConstraint(ElementConstraintWrapper(std::move(constraint)));
   return *this;
-}
-
-template <typename... T>
-absl::Status MTuple<T...>::MergeFromImpl(const MTuple<T...>& other) {
-  return absl::OkStatus();
 }
 
 template <typename... T>
@@ -280,12 +270,6 @@ void MTuple<T...>::PrintImpl(librarian::PrinterContext ctx,
   [&]<size_t... I>(std::index_sequence<I...>) {
     (print_one.template operator()<I>(), ...);
   }(std::index_sequence_for<T...>{});
-}
-
-template <typename... T>
-absl::Status MTuple<T...>::IsSatisfiedWithImpl(
-    librarian::AnalysisContext ctx, const tuple_value_type& value) const {
-  return absl::OkStatus();
 }
 
 template <typename... T>

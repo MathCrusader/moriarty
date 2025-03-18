@@ -149,16 +149,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Returns status on failure. See `MergeFrom()` for builder-like version.
   absl::Status TryMergeFrom(const VariableType& other);
 
-  // AddConstraint() // FIXME: Change to AddConstraint
-  //
-  // Adds a constraint to this variable. (E.g., Positive(), Even(), Length(5)).
-  // The constraint `c` must be associated with the corresponding MVariable.
-  template <typename Constraint>
-  VariableType& NewAddConstraint(Constraint c) {
-    constraints_.AddConstraint(std::move(c));
-    return UnderlyingVariableType();
-  }
-
   // AddCustomConstraint()
   //
   // Adds a constraint that is fully user-defined. This version of
@@ -276,99 +266,31 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // ---------------------------------------------------------------------------
   //  Functions that need to be overridden by all `MVariable`s.
 
-  // GenerateImpl() [virtual]
-  //
-  // Users should not call this directly. Call `Random(MVariable)` in the
-  // specific Moriarty component (Generator, Importer, etc).
-  //
-  // Returns a random value based on all current constraints on this
-  // MVariable.
-  //
-  // This function may be called several times and should not update the
-  // variable's internal state.
-  //
-  // TODO(darcybest): Consider if this function could/should be `const`.
-  // Librarians are strongly encouraged to treat this function as if it were
-  // const so you are future compatible.
-  //
-  // GenerateImpl() will only be called if Is()/IsOneOf() have not been
-  // called.
   virtual ValueType GenerateImpl(ResolverContext ctx) const = 0;
-
-  // IsSatisfiedWithImpl() [virtual]
-  //
-  // Users should not call this directly. Call `IsSatisfiedWith()` instead.
-  //
-  // Determines if `value` satisfies all of the constraints specified by
-  // this variable.
-  //
-  // FIXME: Fix this comment.
-  // This function should return an `UnsatisfiedConstraintError()`. Almost
-  // every other status returned will be treated as an internal error. The
-  // exceptions are `VariableNotFound` and `ValueNotFound`, which will be
-  // converted into an `UnsatisfiedConstraintError` before returning to the
-  // user. You may find the `CheckConstraint()` helpers useful.
-  virtual absl::Status IsSatisfiedWithImpl(AnalysisContext ctx,
-                                           const ValueType& value) const = 0;
-
-  // MergeFromImpl() [virtual]
-  //
-  // Users should not call this directly. Call `MergeFrom()` instead.
-  //
-  // Merges my current constraints with the constraints of the `other`
-  // variable. The merge should act as an intersection of the two
-  // constraints. If one says 1 <= x <= 10 and the other says 5 <= x <= 20,
-  // then then merged version should have 5 <= x <= 10.
-  virtual absl::Status MergeFromImpl(const VariableType& other) = 0;
-
-  // ReadImpl() [virtual/optional]
-  //
-  // Users should not call this directly. Call `Read()` instead.
-  //
-  // Reads a value from `ctx` using any formatting provided to this
-  // variable.
+  virtual std::optional<ValueType> GetUniqueValueImpl(
+      AnalysisContext ctx) const;
   virtual ValueType ReadImpl(ReaderContext ctx) const;
-
-  // PrintImpl() [virtual/optional]
-  //
-  // Users should not call this directly. Call `Print()` instead.
-  //
-  // Print `value` into `ctx` using any configuration provided by your
-  // VariableType (whitespace separators, etc).
   virtual void PrintImpl(PrinterContext ctx, const ValueType& value) const;
-
-  // GetDependenciesImpl() [virtual/optional]
-  //
-  // Users should not call this directly. Call `GetDependencies()` instead.
-  //
-  // Returns a list of the variable names that this variable depends on.
-  //
-  // Default: No dependencies.
-  virtual std::vector<std::string> GetDependenciesImpl() const;
-
-  // ListEdgeCasesImpl() [virtual/optional]
-  //
-  // Users should not call this directly. Call `ListEdgeCases()`
-  // instead.
-  //
-  // Returns a list of complicated instances to merge from.
-  // TODO(hivini): Improve comment with examples.
   virtual std::vector<VariableType> ListEdgeCasesImpl(
       AnalysisContext ctx) const;
 
-  // GetUniqueValueImpl() [virtual/optional]
+  // To be removed
+  virtual std::vector<std::string> GetDependenciesImpl() const;
+  virtual absl::Status IsSatisfiedWithImpl(AnalysisContext ctx,
+                                           const ValueType& value) const {
+    return absl::UnimplementedError("IsSatisfiedWith");
+  }
+  virtual absl::Status MergeFromImpl(const VariableType& other) {
+    return absl::UnimplementedError("MergeFrom");
+  }
+
+  // InternalAddConstraint()
   //
-  // Users should not call this directly. Call `GetUniqueValue()` instead.
-  //
-  // Determines if there is exactly one value that this variable can be
-  // assigned to. If so, return that value. If there is not a unique value
-  // (or it is too hard to determine that there is a unique value), returns
-  // `std::nullopt`. Returning `std::nullopt` does not guarantee there is
-  // not a unique value, just that it is too hard to determine it.
-  //
-  // By default, this returns `std::nullopt`.
-  virtual std::optional<ValueType> GetUniqueValueImpl(
-      AnalysisContext ctx) const;
+  // Adds a constraint to this variable. (E.g., Positive(), Even(), Length(5)).
+  // The constraint `c` must be associated with the corresponding MVariable.
+  // Librarians must use this to register constraints with the variable.
+  template <typename Constraint>
+  VariableType& InternalAddConstraint(Constraint c);
 
   // DeclareSelfAsInvalid() [Helper for Librarians]
   //
@@ -544,7 +466,11 @@ absl::Status MVariable<V, G>::TryMergeFrom(const V& other) {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
 
   if (other.is_one_of_) IsOneOf(*other.is_one_of_);
-  MORIARTY_RETURN_IF_ERROR(MergeFromImpl(other));
+
+  if (auto status = MergeFromImpl(other);
+      !status.ok() && !absl::IsUnimplemented(status)) {
+    return status;
+  }
 
   other.constraints_.ApplyAllTo(UnderlyingVariableType());
 
@@ -574,7 +500,7 @@ V& MVariable<V, G>::AddCustomConstraint(CustomConstraint<G> constraint) {
                                   std::make_move_iterator(deps.end()));
   // Sort the dependencies so the order of the generation is consistent.
   absl::c_sort(custom_constraints_deps_);
-  return NewAddConstraint(CustomConstraintWrapper(std::move(constraint)));
+  return InternalAddConstraint(CustomConstraintWrapper(std::move(constraint)));
 }
 
 template <typename V, typename G>
@@ -618,6 +544,13 @@ template <typename V, typename G>
 std::optional<G> MVariable<V, G>::GetUniqueValueImpl(
     AnalysisContext ctx) const {
   return std::nullopt;  // By default, return no unique value.
+}
+
+template <typename V, typename G>
+template <typename Constraint>
+V& MVariable<V, G>::InternalAddConstraint(Constraint c) {
+  constraints_.AddConstraint(std::move(c));
+  return UnderlyingVariableType();
 }
 
 template <typename V, typename G>
@@ -690,8 +623,10 @@ absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
   }
 
   // FIXME: Determine semantics of which errors are propagated.
-  absl::Status status = IsSatisfiedWithImpl(ctx, value);
-  if (!status.ok()) return status;
+  if (auto status = IsSatisfiedWithImpl(ctx, value);
+      !status.ok() && !absl::IsUnimplemented(status)) {
+    return status;
+  }
 
   return absl::OkStatus();
 }

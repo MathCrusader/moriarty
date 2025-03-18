@@ -32,7 +32,6 @@
 
 #include "absl/algorithm/container.h"
 #include "absl/container/flat_hash_set.h"
-#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -147,10 +146,6 @@ class MArray : public librarian::MVariable<
   // ---------------------------------------------------------------------------
   //  MVariable overrides
   vector_value_type GenerateImpl(librarian::ResolverContext ctx) const override;
-  absl::Status IsSatisfiedWithImpl(
-      librarian::AnalysisContext ctx,
-      const vector_value_type& value) const override;
-  absl::Status MergeFromImpl(const MArray<MElementType>& other) override;
   vector_value_type ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const vector_value_type& value) const override;
@@ -209,21 +204,21 @@ template <typename T>
 MArray<T>& MArray<T>::AddConstraint(Exactly<vector_value_type> constraint) {
   one_of_.ConstrainOptions(
       std::vector<vector_value_type>{constraint.GetValue()});
-  this->NewAddConstraint(std::move(constraint));
+  this->InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
 template <typename T>
 MArray<T>& MArray<T>::AddConstraint(OneOf<vector_value_type> constraint) {
   one_of_.ConstrainOptions(constraint.GetOptions());
-  this->NewAddConstraint(std::move(constraint));
+  this->InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
 template <typename T>
 MArray<T>& MArray<T>::AddConstraint(Elements<T> constraint) {
   element_constraints_.MergeFrom(constraint.GetConstraints());
-  this->NewAddConstraint(std::move(constraint));
+  this->InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
@@ -231,14 +226,14 @@ template <typename T>
 MArray<T>& MArray<T>::AddConstraint(Length constraint) {
   if (!length_) length_ = MInteger();
   length_->MergeFrom(constraint.GetConstraints());
-  this->NewAddConstraint(std::move(constraint));
+  this->InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
 template <typename T>
 MArray<T>& MArray<T>::AddConstraint(DistinctElements constraint) {
   distinct_elements_ = true;
-  this->NewAddConstraint(std::move(constraint));
+  this->InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
@@ -248,7 +243,7 @@ MArray<T>& MArray<T>::AddConstraint(IOSeparator constraint) {
     throw std::runtime_error(
         "Attempting to set multiple I/O separators for the same MArray.");
   }
-  this->NewAddConstraint(std::move(constraint));
+  this->InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
@@ -260,12 +255,6 @@ MArray<T>& MArray<T>::AddConstraint(SizeCategory constraint) {
 template <typename T>
 std::string MArray<T>::Typename() const {
   return absl::StrCat("MArray<", element_constraints_.Typename(), ">");
-}
-
-template <typename MElementType>
-absl::Status MArray<MElementType>::MergeFromImpl(
-    const MArray<MElementType>& other) {
-  return absl::OkStatus();
 }
 
 template <typename MElementType>
@@ -393,11 +382,6 @@ MArray<MoriartyElementType>::ReadImpl(librarian::ReaderContext ctx) const {
   return res;
 }
 
-template <typename MoriartyElementType>
-absl::Status MArray<MoriartyElementType>::IsSatisfiedWithImpl(
-    librarian::AnalysisContext ctx, const vector_value_type& value) const {
-  return absl::OkStatus();
-}
 template <typename MoriartyElementType>
 std::vector<MArray<MoriartyElementType>>
 MArray<MoriartyElementType>::ListEdgeCasesImpl(

@@ -42,14 +42,14 @@ namespace moriarty {
 
 MString& MString::AddConstraint(Exactly<std::string> constraint) {
   one_of_.ConstrainOptions(std::vector{constraint.GetValue()});
-  NewAddConstraint(std::move(constraint));
+  InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
 MString& MString::AddConstraint(Length constraint) {
   if (!length_) length_ = MInteger();
   length_->MergeFrom(constraint.GetConstraints());
-  NewAddConstraint(std::move(constraint));
+  InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
@@ -62,33 +62,24 @@ MString& MString::AddConstraint(Alphabet constraint) {
 
   alphabet_.ConstrainOptions(options);
 
-  NewAddConstraint(std::move(constraint));
+  InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
 MString& MString::AddConstraint(DistinctCharacters constraint) {
   distinct_characters_ = true;
-  NewAddConstraint(std::move(constraint));
+  InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
 MString& MString::AddConstraint(SimplePattern constraint) {
   simple_patterns_.push_back(constraint.GetCompiledPattern());
-  NewAddConstraint(std::move(constraint));
+  InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
 MString& MString::AddConstraint(SizeCategory constraint) {
   return AddConstraint(Length(constraint));
-}
-
-absl::Status MString::MergeFromImpl(const MString& other) {
-  return absl::OkStatus();
-}
-
-absl::Status MString::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
-                                          const std::string& value) const {
-  return absl::OkStatus();
 }
 
 std::vector<MString> MString::ListEdgeCasesImpl(

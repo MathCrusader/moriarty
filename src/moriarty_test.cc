@@ -268,7 +268,7 @@ TEST(MoriartyDeathTest, ExportAskingForVariableOfTheWrongTypeShouldCrash) {
 TEST(MoriartyTest, GeneralConstraintsSetValueAreConsideredInGenerators) {
   moriarty::Moriarty M;
   M.SetSeed("abcde0123456789");
-  M.AddVariable("N", MInteger().Is(5));
+  M.AddVariable("N", MInteger(Exactly(5)));
 
   EXPECT_NO_THROW({
     M.GenerateTestCases(

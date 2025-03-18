@@ -510,13 +510,6 @@ class MEmptyClass : public MVariable<MEmptyClass, EmptyClass> {
   EmptyClass GenerateImpl(ResolverContext) const override {
     throw std::runtime_error("Unimplemented: GenerateImpl");
   }
-  absl::Status IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
-                                   const EmptyClass& c) const override {
-    return absl::UnimplementedError("IsSatisfiedWith");
-  }
-  absl::Status MergeFromImpl(const MEmptyClass& c) override {
-    return absl::UnimplementedError("MergeFromImpl");
-  }
 };
 
 TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToRead) {

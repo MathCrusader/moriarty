@@ -52,13 +52,13 @@ namespace moriarty {
 MInteger& MInteger::AddConstraint(Exactly<int64_t> constraint) {
   bounds_.Mutable().Intersect(
       Range(constraint.GetValue(), constraint.GetValue()));
-  NewAddConstraint(std::move(constraint));
+  InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
 MInteger& MInteger::AddConstraint(ExactlyIntegerExpression constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(RangeConstraint(
+  InternalAddConstraint(RangeConstraint(
       std::make_unique<ExactlyIntegerExpression>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
   return *this;
@@ -70,13 +70,13 @@ MInteger& MInteger::AddConstraint(Exactly<std::string> constraint) {
 
 MInteger& MInteger::AddConstraint(OneOf<int64_t> constraint) {
   one_of_int_.Mutable().ConstrainOptions(constraint.GetOptions());
-  NewAddConstraint(std::move(constraint));
+  InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
 MInteger& MInteger::AddConstraint(OneOfIntegerExpression constraint) {
   one_of_expr_.Mutable().ConstrainOptions(constraint.GetOptions());
-  NewAddConstraint(RangeConstraint(
+  InternalAddConstraint(RangeConstraint(
       std::make_unique<OneOfIntegerExpression>(std::move(constraint)),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
   return *this;
@@ -88,7 +88,7 @@ MInteger& MInteger::AddConstraint(OneOf<std::string> constraint) {
 
 MInteger& MInteger::AddConstraint(Between constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(RangeConstraint(
+  InternalAddConstraint(RangeConstraint(
       std::make_unique<Between>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
   return *this;
@@ -96,7 +96,7 @@ MInteger& MInteger::AddConstraint(Between constraint) {
 
 MInteger& MInteger::AddConstraint(AtMost constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(RangeConstraint(
+  InternalAddConstraint(RangeConstraint(
       std::make_unique<AtMost>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
   return *this;
@@ -104,7 +104,7 @@ MInteger& MInteger::AddConstraint(AtMost constraint) {
 
 MInteger& MInteger::AddConstraint(AtLeast constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  NewAddConstraint(RangeConstraint(
+  InternalAddConstraint(RangeConstraint(
       std::make_unique<AtLeast>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
   return *this;
@@ -112,7 +112,7 @@ MInteger& MInteger::AddConstraint(AtLeast constraint) {
 
 MInteger& MInteger::AddConstraint(SizeCategory constraint) {
   size_handler_.Mutable().ConstrainSize(constraint.GetCommonSize());
-  NewAddConstraint(std::move(constraint));
+  InternalAddConstraint(std::move(constraint));
   return *this;
 }
 
@@ -266,10 +266,6 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
   return ctx.RandomInteger(extremes->min, extremes->max);
 }
 
-absl::Status MInteger::MergeFromImpl(const MInteger& other) {
-  return absl::OkStatus();
-}
-
 int64_t MInteger::ReadImpl(librarian::ReaderContext ctx) const {
   std::string token = ctx.ReadToken();
   std::stringstream is(token);
@@ -285,13 +281,6 @@ int64_t MInteger::ReadImpl(librarian::ReaderContext ctx) const {
 void MInteger::PrintImpl(librarian::PrinterContext ctx,
                          const int64_t& value) const {
   ctx.PrintToken(std::to_string(value));
-}
-
-absl::Status MInteger::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
-                                           const int64_t& value) const {
-  // In the new ConstraintWrapper world, they do all the checking. TODO:
-  // Remove this.
-  return absl::OkStatus();
 }
 
 std::vector<MInteger> MInteger::ListEdgeCasesImpl(

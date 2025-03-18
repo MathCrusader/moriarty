@@ -24,7 +24,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
@@ -105,9 +104,6 @@ class MString : public librarian::MVariable<MString, std::string> {
   // ---------------------------------------------------------------------------
   //  MVariable overrides
   std::string GenerateImpl(librarian::ResolverContext ctx) const override;
-  absl::Status IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
-                                   const std::string& value) const override;
-  absl::Status MergeFromImpl(const MString& other) override;
   std::string ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const std::string& value) const override;

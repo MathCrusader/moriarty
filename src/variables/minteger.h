@@ -28,7 +28,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -145,9 +144,6 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // ---------------------------------------------------------------------------
   //  MVariable overrides
   int64_t GenerateImpl(librarian::ResolverContext ctx) const override;
-  absl::Status IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
-                                   const int64_t& value) const override;
-  absl::Status MergeFromImpl(const MInteger& other) override;
   int64_t ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const int64_t& value) const override;
