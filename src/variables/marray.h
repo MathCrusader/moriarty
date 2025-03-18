@@ -106,7 +106,7 @@ class MArray : public librarian::MVariable<
   // ---------------------------------------------------------------------------
   //  Constrain the array's I/O
 
-  // The array's elements must be separated by this whitespace (default = space)
+  // The array's elements are separated by this whitespace (default = space)
   MArray& AddConstraint(IOSeparator constraint);
 
   // Typename()

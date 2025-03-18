@@ -20,6 +20,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <format>
 #include <iterator>
 #include <string>
 #include <tuple>
@@ -27,10 +28,8 @@
 #include <vector>
 
 #include "absl/algorithm/container.h"
-#include "absl/log/check.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_join.h"
-#include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
@@ -97,16 +96,6 @@ class MTuple : public librarian::MVariable<
   librarian::LockedOptional<Whitespace> separator_ =
       librarian::LockedOptional<Whitespace>{Whitespace::kSpace};
 
-  template <std::size_t I>
-  void GenerateSingleElement(librarian::ResolverContext ctx,
-                             tuple_value_type& result) const;
-  template <std::size_t I>
-  void TryReadAndSet(librarian::ReaderContext ctx,
-                     tuple_value_type& read_values) const;
-  template <std::size_t I>
-  void PrintElementWithLeadingSeparator(librarian::PrinterContext ctx,
-                                        const tuple_value_type& value) const;
-
   // ---------------------------------------------------------------------------
   //  MVariable overrides
   tuple_value_type GenerateImpl(librarian::ResolverContext ctx) const override;
@@ -119,31 +108,6 @@ class MTuple : public librarian::MVariable<
                  const tuple_value_type& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;
   // ---------------------------------------------------------------------------
-
-  // ---------------------------------------------------------------------------
-  //  MVariable overrides, indices versions
-  //  * For tuple, a version of each function is needed that has an
-  //    integer_sequence. This is just simply a list of {0, 1, ...} of the
-  //    appropriate size so parameter packs can be used, and be run at compile
-  //    time.
-  template <std::size_t... I>
-  tuple_value_type GenerateImpl(librarian::ResolverContext ctx,
-                                std::index_sequence<I...>) const;
-  template <std::size_t... I>
-  absl::Status IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
-                                   const tuple_value_type& value,
-                                   std::index_sequence<I...>) const;
-  template <std::size_t... I>
-  absl::Status MergeFromImpl(const MTuple& other, std::index_sequence<I...>);
-  template <std::size_t... I>
-  tuple_value_type ReadImpl(librarian::ReaderContext ctx,
-                            std::index_sequence<I...>) const;
-  template <std::size_t... I>
-  void PrintImpl(librarian::PrinterContext ctx, const tuple_value_type& value,
-                 std::index_sequence<I...>) const;
-  template <std::size_t... I>
-  std::vector<std::string> GetDependenciesImpl(std::index_sequence<I...>) const;
-  // ---------------------------------------------------------------------------
 };
 
 // Class template argument deduction (CTAD). Allows for `Array(MInteger())`
@@ -155,42 +119,43 @@ MTuple(MElementTypes...) -> MTuple<MElementTypes...>;
 // -----------------------------------------------------------------------------
 //  Template Implementation Below
 
-template <typename... MElementTypes>
-MTuple<MElementTypes...>::MTuple() {
+template <typename... T>
+MTuple<T...>::MTuple() {
   static_assert(
-      (std::derived_from<
-           MElementTypes,
-           librarian::MVariable<MElementTypes,
-                                typename MElementTypes::value_type>> &&
+      (std::derived_from<T, librarian::MVariable<T, typename T::value_type>> &&
        ...),
       "The T1, T2, etc used in MTuple<T1, T2> must be a Moriarty variable. "
       "For example, MTuple<MInteger, MString>.");
 }
 
-template <typename... MElementTypes>
-MTuple<MElementTypes...>::MTuple(MElementTypes... values)
-    : elements_(values...) {
+template <typename... T>
+MTuple<T...>::MTuple(T... values) : elements_(values...) {
   static_assert(
-      (std::derived_from<
-           MElementTypes,
-           librarian::MVariable<MElementTypes,
-                                typename MElementTypes::value_type>> &&
+      (std::derived_from<T, librarian::MVariable<T, typename T::value_type>> &&
        ...),
       "The T1, T2, etc used in MTuple<T1, T2> must be a Moriarty variable. "
       "For example, MTuple<MInteger, MString>.");
 }
 
-template <typename... MElementTypes>
-std::string MTuple<MElementTypes...>::Typename() const {
+namespace moriarty_internal {
+
+template <size_t I>
+std::string TupleSubVariable() {
+  return std::format("<{}>", I);
+}
+
+}  // namespace moriarty_internal
+
+template <typename... T>
+std::string MTuple<T...>::Typename() const {
   std::tuple typenames = std::apply(
       [](auto&&... elem) { return std::make_tuple(elem.Typename()...); },
       elements_);
-  return absl::Substitute("MTuple<$0>", absl::StrJoin(typenames, ", "));
+  return std::format("MTuple<{}>", absl::StrJoin(typenames, ", "));
 }
 
-template <typename... MElementTypes>
-MTuple<MElementTypes...>& MTuple<MElementTypes...>::WithSeparator(
-    Whitespace separator) {
+template <typename... T>
+MTuple<T...>& MTuple<T...>::WithSeparator(Whitespace separator) {
   if (!separator_.Set(separator)) {
     throw std::runtime_error(
         "Attempting to set multiple I/O separators for the same MTuple.");
@@ -198,139 +163,96 @@ MTuple<MElementTypes...>& MTuple<MElementTypes...>::WithSeparator(
   return *this;
 }
 
-template <typename... MElementTypes>
-template <int index, typename T>
-MTuple<MElementTypes...>& MTuple<MElementTypes...>::Of(T variable) {
-  static_assert(std::same_as<T, typename std::tuple_element_t<
-                                    index, std::tuple<MElementTypes...>>>,
-                "Parameter passed to MTuple::Of<> is the wrong type.");
+template <typename... T>
+template <int index, typename U>
+MTuple<T...>& MTuple<T...>::Of(U variable) {
+  static_assert(
+      std::same_as<U, typename std::tuple_element_t<index, std::tuple<T...>>>,
+      "Parameter passed to MTuple::Of<> is the wrong type.");
   std::get<index>(elements_).MergeFrom(std::move(variable));
   return *this;
 }
 
-template <typename... MElementTypes>
-absl::Status MTuple<MElementTypes...>::MergeFromImpl(
-    const MTuple<MElementTypes...>& other) {
-  absl::Status result;
-  return this->MergeFromImpl(other,
-                             std::index_sequence_for<MElementTypes...>());
+template <typename... T>
+absl::Status MTuple<T...>::MergeFromImpl(const MTuple<T...>& other) {
+  auto merge_one = [&]<std::size_t I>() {
+    std::get<I>(elements_).MergeFrom(std::get<I>(other.elements_));
+  };
+  if (other.separator_.IsSet()) separator_.Set(other.separator_.Get());
+
+  [&]<size_t... I>(std::index_sequence<I...>) {
+    (merge_one.template operator()<I>(), ...);
+  }(std::index_sequence_for<T...>{});
+
+  return absl::OkStatus();
 }
 
-template <typename... MElementTypes>
-template <std::size_t... I>
-absl::Status MTuple<MElementTypes...>::MergeFromImpl(
-    const MTuple<MElementTypes...>& other, std::index_sequence<I...>) {
-  absl::Status result;
-  (result.Update(
-       std::get<I>(elements_).TryMergeFrom(std::get<I>(other.elements_))),
-   ...);
-  return result;
+template <typename... T>
+MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
+    librarian::ResolverContext ctx) const {
+  auto generate_one = [&]<std::size_t I>() {
+    return std::get<I>(elements_).Generate(
+        ctx.ForSubVariable(moriarty_internal::TupleSubVariable<I>()));
+  };
+
+  return [&]<size_t... I>(std::index_sequence<I...>) {
+    return tuple_value_type { generate_one.template operator()<I>()... };
+  }(std::index_sequence_for<T...>{});
 }
 
-template <typename... MElementTypes>
-MTuple<MElementTypes...>::tuple_value_type
-MTuple<MElementTypes...>::GenerateImpl(librarian::ResolverContext ctx) const {
-  return this->GenerateImpl(ctx, std::index_sequence_for<MElementTypes...>());
-}
-
-template <typename... MElementTypes>
-template <std::size_t... I>
-MTuple<MElementTypes...>::tuple_value_type
-MTuple<MElementTypes...>::GenerateImpl(librarian::ResolverContext ctx,
-                                       std::index_sequence<I...>) const {
-  tuple_value_type result;
-  (GenerateSingleElement<I>(ctx, result), ...);
-  return result;
-}
-
-template <typename... MElementTypes>
-template <std::size_t I>
-void MTuple<MElementTypes...>::GenerateSingleElement(
-    librarian::ResolverContext ctx, tuple_value_type& result) const {
-  std::get<I>(result) = std::get<I>(elements_).Generate(
-      ctx.ForSubVariable("<" + std::to_string(I) + ">"));
-}
-
-template <typename... MElementTypes>
-std::vector<std::string> MTuple<MElementTypes...>::GetDependenciesImpl() const {
-  return GetDependenciesImpl(std::index_sequence_for<MElementTypes...>());
-}
-
-template <typename... MElementTypes>
-template <std::size_t... I>
-std::vector<std::string> MTuple<MElementTypes...>::GetDependenciesImpl(
-    std::index_sequence<I...>) const {
+template <typename... T>
+std::vector<std::string> MTuple<T...>::GetDependenciesImpl() const {
   std::vector<std::string> dependencies;
-  (absl::c_move(std::get<I>(elements_).GetDependencies(),
-                std::back_inserter(dependencies)),
-   ...);
+  std::apply(
+      [&](const auto&... elems) {
+        ((absl::c_move(elems.GetDependencies(),
+                       std::back_inserter(dependencies))),
+         ...);
+      },
+      elements_);
   return dependencies;
 }
 
-template <typename... MElementTypes>
-void MTuple<MElementTypes...>::PrintImpl(librarian::PrinterContext ctx,
-                                         const tuple_value_type& value) const {
-  PrintImpl(ctx, value, std::index_sequence_for<MElementTypes...>());
+template <typename... T>
+void MTuple<T...>::PrintImpl(librarian::PrinterContext ctx,
+                             const tuple_value_type& value) const {
+  auto print_one = [&]<std::size_t I>() {
+    if (I > 0) ctx.PrintWhitespace(separator_.Get());
+    std::get<I>(elements_).Print(ctx, std::get<I>(value));
+  };
+
+  [&]<size_t... I>(std::index_sequence<I...>) {
+    (print_one.template operator()<I>(), ...);
+  }(std::index_sequence_for<T...>{});
 }
 
-template <typename... MElementTypes>
-template <std::size_t I>
-void MTuple<MElementTypes...>::PrintElementWithLeadingSeparator(
-    librarian::PrinterContext ctx, const tuple_value_type& value) const {
-  if (I > 0) ctx.PrintWhitespace(separator_.Get());
-  std::get<I>(elements_).Print(ctx, std::get<I>(value));
-}
-
-template <typename... MElementTypes>
-template <std::size_t... I>
-void MTuple<MElementTypes...>::PrintImpl(librarian::PrinterContext ctx,
-                                         const tuple_value_type& value,
-                                         std::index_sequence<I...>) const {
-  (PrintElementWithLeadingSeparator<I>(ctx, value), ...);
-}
-
-template <typename... MElementTypes>
-absl::Status MTuple<MElementTypes...>::IsSatisfiedWithImpl(
+template <typename... T>
+absl::Status MTuple<T...>::IsSatisfiedWithImpl(
     librarian::AnalysisContext ctx, const tuple_value_type& value) const {
-  return IsSatisfiedWithImpl(ctx, value,
-                             std::index_sequence_for<MElementTypes...>());
-}
-
-template <typename... MElementTypes>
-template <std::size_t... I>
-absl::Status MTuple<MElementTypes...>::IsSatisfiedWithImpl(
-    librarian::AnalysisContext ctx, const tuple_value_type& value,
-    std::index_sequence<I...>) const {
-  // TODO(b/208295758): This should be shortcircuited.
   absl::Status status;
-  (status.Update(
-       std::get<I>(elements_).IsSatisfiedWith(ctx, std::get<I>(value))),
-   ...);
+  auto check_one = [&]<std::size_t I>() {
+    if (!status.ok()) return;
+    status = std::get<I>(elements_).IsSatisfiedWith(ctx, std::get<I>(value));
+  };
+
+  [&]<size_t... I>(std::index_sequence<I...>) {
+    (check_one.template operator()<I>(), ...);
+  }(std::index_sequence_for<T...>{});
 
   return status;
 }
 
-template <typename... MElementTypes>
-MTuple<MElementTypes...>::tuple_value_type MTuple<MElementTypes...>::ReadImpl(
+template <typename... T>
+MTuple<T...>::tuple_value_type MTuple<T...>::ReadImpl(
     librarian::ReaderContext ctx) const {
-  return ReadImpl(ctx, std::index_sequence_for<MElementTypes...>());
-}
+  auto read_one = [&]<std::size_t I>() {
+    if (I > 0) ctx.ReadWhitespace(separator_.Get());
+    return std::get<I>(elements_).Read(ctx);
+  };
 
-template <typename... MElementTypes>
-template <std::size_t... I>
-MTuple<MElementTypes...>::tuple_value_type MTuple<MElementTypes...>::ReadImpl(
-    librarian::ReaderContext ctx, std::index_sequence<I...>) const {
-  tuple_value_type result;
-  (TryReadAndSet<I>(ctx, result), ...);
-  return result;
-}
-
-template <typename... MElementTypes>
-template <std::size_t I>
-void MTuple<MElementTypes...>::TryReadAndSet(
-    librarian::ReaderContext ctx, tuple_value_type& read_values) const {
-  if (I > 0) ctx.ReadWhitespace(separator_.Get());
-  std::get<I>(read_values) = std::get<I>(elements_).Read(ctx);
+  return [&]<size_t... I>(std::index_sequence<I...>) {
+    return tuple_value_type { read_one.template operator()<I>()... };
+  }(std::index_sequence_for<T...>{});
 }
 
 }  // namespace moriarty

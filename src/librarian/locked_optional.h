@@ -32,6 +32,8 @@ class LockedOptional {
   explicit LockedOptional(T default_value)
       : default_value_(std::move(default_value)) {}
 
+  [[nodiscard]] bool IsSet() const { return value_.has_value(); }
+
   // Sets the value to be the given value. If the value is already set and is
   // not equal to the current value, returns false and the underlying value does
   // not change. Otherwise, returns true.
