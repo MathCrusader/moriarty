@@ -47,7 +47,7 @@
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
 #include "src/librarian/constraint_handler.h"
-#include "src/util/status_macro/status_macros.h"
+#include "src/librarian/conversions.h"
 #include "src/variables/constraints/custom_constraint.h"
 
 namespace moriarty {
@@ -203,9 +203,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // are. This should only be used in generic code.
   absl::Status MergeFromAnonymous(
       const moriarty_internal::AbstractVariable& other) {
-    MORIARTY_ASSIGN_OR_RETURN(
-        VariableType typed_other,
-        moriarty_internal::ConvertTo<VariableType>(&other, "MergeFrom"));
+    const VariableType& typed_other = ConvertTo<VariableType>(other);
     MergeFrom(typed_other);
     return absl::OkStatus();
   }

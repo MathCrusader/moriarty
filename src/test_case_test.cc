@@ -21,7 +21,6 @@
 #include <tuple>
 #include <utility>
 
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -39,12 +38,12 @@ namespace moriarty {
 namespace {
 
 using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 using ::moriarty::moriarty_internal::GenerateAllValues;
 using ::moriarty::moriarty_internal::RandomEngine;
 using ::moriarty::moriarty_internal::ValueSet;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::TestType;
+using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsVariableNotFound;
 
 template <typename T>
@@ -82,8 +81,8 @@ TEST(TestCaseTest, SetValueWithSpecificValueAndGetVariableWorkInGeneralCase) {
 TEST(TestCaseTest, GetVariableWithWrongTypeShouldFail) {
   TestCase T;
   T.ConstrainVariable("A", MTestType());
-  EXPECT_THAT(GetVariable<MInteger>(T, "A"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT([&] { GetVariable<MInteger>(T, "A").IgnoreError(); },
+              ThrowsMVariableTypeMismatch("MTestType", "MInteger"));
 }
 
 TEST(TestCaseTest, GetVariableWithWrongNameShouldNotFind) {

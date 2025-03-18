@@ -20,12 +20,9 @@
 
 #include <memory>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/substitute.h"
 
 namespace moriarty::librarian {
 class AnalysisContext;    // Forward declaring AnalysisContext
@@ -144,37 +141,7 @@ class AbstractVariable {
   virtual std::vector<std::string> GetDependencies() const = 0;
 };
 
-// ConvertTo<>
-//
-//  Converts an AbstractVariable to some derived variable type. Returns
-//  kInvalidArgument if it is not convertible.
-template <typename Type>
-absl::StatusOr<Type> ConvertTo(AbstractVariable* var, std::string_view name) {
-  Type* typed_var = dynamic_cast<Type*>(var);
-  if (typed_var == nullptr)
-    return absl::InvalidArgumentError(
-        absl::Substitute("Unable to convert `$0` from $1 to $2", name,
-                         var->Typename(), Type().Typename()));
-  return *typed_var;
-}
-
-// ConvertTo<>
-//
-//  Converts an AbstractVariable to some derived variable type. Returns
-//  kInvalidArgument if it is not convertible.
-template <typename Type>
-absl::StatusOr<Type> ConvertTo(const AbstractVariable* var,
-                               std::string_view name) {
-  const Type* typed_var = dynamic_cast<const Type*>(var);
-  if (typed_var == nullptr)
-    return absl::InvalidArgumentError(
-        absl::Substitute("Unable to convert `$0` from $1 to $2", name,
-                         var->Typename(), Type().Typename()));
-  return *typed_var;
-}
-
 }  // namespace moriarty_internal
-
 }  // namespace moriarty
 
 #endif  // MORIARTY_SRC_INTERNAL_ABSTRACT_VARIABLE_H_

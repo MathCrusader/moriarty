@@ -130,6 +130,26 @@ class VariableNotFound : public std::logic_error {
   std::string variable_name_;
 };
 
+// MVariableTypeMismatch
+//
+// Thrown when the user attempts to cast an MVariable to one of the wrong type.
+class MVariableTypeMismatch : public std::logic_error {
+ public:
+  explicit MVariableTypeMismatch(std::string_view converting_from,
+                                 std::string_view converting_to)
+      : std::logic_error(std::format("Cannot convert {} to {}", converting_from,
+                                     converting_to)),
+        from_(converting_from),
+        to_(converting_to) {}
+
+  const std::string& ConvertingFrom() const { return from_; }
+  const std::string& ConvertingTo() const { return to_; }
+
+ private:
+  std::string from_;
+  std::string to_;
+};
+
 }  // namespace moriarty
 
 #endif  // MORIARTY_SRC_ERRORS_H_

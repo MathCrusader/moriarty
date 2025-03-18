@@ -31,6 +31,7 @@
 #include "absl/status/statusor.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
+#include "src/librarian/conversions.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -115,7 +116,7 @@ template <typename T>
 absl::StatusOr<T> VariableSet::GetVariable(std::string_view name) const {
   const AbstractVariable* var = GetAbstractVariableOrNull(name);
   if (var == nullptr) throw VariableNotFound(name);
-  return ConvertTo<T>(var, name);
+  return librarian::ConvertTo<T>(*var);
 }
 
 }  // namespace moriarty_internal

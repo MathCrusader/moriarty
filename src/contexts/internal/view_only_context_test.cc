@@ -16,8 +16,6 @@
 
 #include "src/contexts/internal/view_only_context.h"
 
-#include <stdexcept>
-
 #include "gtest/gtest.h"
 #include "src/internal/value_set.h"
 #include "src/util/test_status_macro/status_testutil.h"
@@ -30,6 +28,7 @@ namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
+using moriarty_testing::ThrowsMVariableTypeMismatch;
 using moriarty_testing::ThrowsValueNotFound;
 using moriarty_testing::ThrowsVariableNotFound;
 using testing::Not;
@@ -44,8 +43,8 @@ TEST(ViewOnlyContextTest, GetVariableShouldWork) {
   EXPECT_NO_THROW({ (void)ctx.GetVariable<MInteger>("X"); });
   EXPECT_THAT([&] { (void)ctx.GetVariable<MInteger>("Y"); },
               ThrowsVariableNotFound("Y"));
-  EXPECT_THROW(
-      { (void)ctx.GetVariable<MString>("X"); }, std::runtime_error);  // Type
+  EXPECT_THAT([&] { (void)ctx.GetVariable<MString>("X"); },
+              ThrowsMVariableTypeMismatch("MInteger", "MString"));
 }
 
 TEST(ViewOnlyContextTest, GetAnonymousVariableShouldWork) {

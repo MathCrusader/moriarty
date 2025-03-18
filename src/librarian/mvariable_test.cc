@@ -45,7 +45,7 @@ namespace librarian {
 namespace {
 
 using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
+using ::moriarty::moriarty_internal::AbstractVariable;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
@@ -56,11 +56,11 @@ using ::moriarty_testing::MTestType;
 using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::moriarty_testing::TestType;
+using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsValueNotFound;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Contains;
-using ::testing::HasSubstr;
 using ::testing::Optional;
 using ::testing::SizeIs;
 using ::testing::Truly;
@@ -117,16 +117,14 @@ TEST(MVariableTest, MergeFromWithWrongTypeShouldFail) {
   MTestType var1;
   moriarty::MInteger var2;
 
-  EXPECT_THAT(var1.MergeFromAnonymous(var2),
-              StatusIs(absl::StatusCode::kInvalidArgument,
-                       HasSubstr("Unable to convert")));
+  EXPECT_THAT([&] { (void)var1.MergeFromAnonymous(var2); },
+              ThrowsMVariableTypeMismatch("MInteger", "MTestType"));
   EXPECT_FALSE(var1.WasMerged());
 }
 
 TEST(MVariableTest, MergeFromUsingAbstractVariablesShouldRespectIsAndIsOneOf) {
   auto merge_from = [](MTestType& a, const MTestType& b) {
-    ABSL_CHECK_OK(
-        static_cast<moriarty_internal::AbstractVariable*>(&a)->MergeFrom(b));
+    ABSL_CHECK_OK(static_cast<AbstractVariable*>(&a)->MergeFrom(b));
   };
 
   {
@@ -235,13 +233,13 @@ TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
   moriarty_internal::GenerationConfig generation_config;
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_A,
+  MORIARTY_ASSERT_OK_AND_ASSIGN(AbstractVariable * var_A,
                                 variables.GetAbstractVariable("A"));
   ResolverContext ctxA("A", variables, values, engine, generation_config);
   MORIARTY_ASSERT_OK(
       var_A->AssignValue(ctxA));  // By assigning A, we assigned N.
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_B,
+  MORIARTY_ASSERT_OK_AND_ASSIGN(AbstractVariable * var_B,
                                 variables.GetAbstractVariable("B"));
   ResolverContext ctxB("B", variables, values, engine, generation_config);
   MORIARTY_ASSERT_OK(
@@ -554,7 +552,7 @@ TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {
   std::stringstream ss;
 
   PrinterContext ctx("x", ss, variables, values);
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var,
+  MORIARTY_ASSERT_OK_AND_ASSIGN(AbstractVariable * var,
                                 variables.GetAbstractVariable("x"));
   MORIARTY_ASSERT_OK(var->PrintValue(ctx));
   EXPECT_EQ(ss.str(), "12345");
@@ -605,7 +603,7 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
   moriarty_internal::GenerationConfig generation_config;
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_A,
+  MORIARTY_ASSERT_OK_AND_ASSIGN(AbstractVariable * var_A,
                                 variables.GetAbstractVariable("A"));
   ResolverContext ctxA("A", variables, values, engine, generation_config);
   MORIARTY_ASSERT_OK(
@@ -614,7 +612,7 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
 
   // Attempt to re-assign N.
   ResolverContext ctxN("N", variables, values, engine, generation_config);
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty_internal::AbstractVariable * var_N,
+  MORIARTY_ASSERT_OK_AND_ASSIGN(AbstractVariable * var_N,
                                 variables.GetAbstractVariable("N"));
   MORIARTY_ASSERT_OK(var_N->AssignValue(ctxN));
 

@@ -38,6 +38,14 @@ cc_library(
 )
 
 cc_library(
+    name = "conversions",
+    hdrs = ["conversions.h"],
+    deps = [
+        "//src:errors",
+    ],
+)
+
+cc_library(
     name = "cow_ptr",
     hdrs = [
         "cow_ptr.h",
@@ -62,6 +70,7 @@ cc_library(
     ],
     deps = [
         ":constraint_handler",
+        ":conversions",
         "//src:errors",
         "//src/contexts/librarian:analysis_context",
         "//src/contexts/librarian:assignment_context",

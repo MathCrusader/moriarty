@@ -178,6 +178,7 @@ cc_library(
     deps = [
         ":abstract_variable",
         "//src:errors",
+        "//src/librarian:conversions",
         "//src/util/status_macro:status_macros",
         "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/status",
