@@ -27,9 +27,6 @@
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/substitute.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 
@@ -72,8 +69,7 @@ class ValueSet {
   //  * If the value cannot be converted to T, returns kFailedPrecondition.
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
-  absl::StatusOr<typename T::value_type> Get(
-      std::string_view variable_name) const;
+  [[nodiscard]] T::value_type Get(std::string_view variable_name) const;
 
   // UnsafeGet()
   //
@@ -81,12 +77,12 @@ class ValueSet {
   // used when the value type is unknown.
   //
   // Throws moriarty::ValueNotFound if the variable has not been set.
-  std::any UnsafeGet(std::string_view variable_name) const;
+  [[nodiscard]] std::any UnsafeGet(std::string_view variable_name) const;
 
   // Contains()
   //
   // Determines if `variable_name` is in this ValueSet.
-  bool Contains(std::string_view variable_name) const;
+  [[nodiscard]] bool Contains(std::string_view variable_name) const;
 
   // Erase()
   //
@@ -106,7 +102,7 @@ class ValueSet {
   // In the future, we may want to consider each MVariable type to have its own
   // `ApproximateSize()`. I don't want to put this directly into MVariable yet
   // since we are not sure if this is a long term solution.
-  int64_t GetApproximateSize() const { return approximate_size_; }
+  [[nodiscard]] int64_t GetApproximateSize() const { return approximate_size_; }
 
  private:
   absl::flat_hash_map<std::string, std::any> values_;
@@ -127,16 +123,15 @@ class ValueSet {
 
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
-absl::StatusOr<typename T::value_type> ValueSet::Get(
-    std::string_view variable_name) const {
+T::value_type ValueSet::Get(std::string_view variable_name) const {
   auto it = values_.find(variable_name);
   if (it == values_.end()) throw ValueNotFound(variable_name);
 
   using TV = typename T::value_type;
   const TV* val = std::any_cast<const TV>(&it->second);
-  if (val == nullptr)
-    return absl::FailedPreconditionError(
-        absl::Substitute("Unable to cast $0", variable_name));
+  if (val == nullptr) {
+    throw moriarty::ValueTypeMismatch(variable_name, T().Typename());
+  }
 
   return *val;
 }

@@ -16,7 +16,6 @@
 
 #include <vector>
 
-#include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/context.h"
@@ -34,6 +33,7 @@ namespace moriarty {
 using ::moriarty::CombinatorialCoverage;
 using ::moriarty::moriarty_internal::GenerateTestCase;
 using ::moriarty::moriarty_internal::ValueSet;
+using ::moriarty_testing::MTestType;
 
 namespace {
 
@@ -53,15 +53,12 @@ int MapValueToTestCaseNumber(int val) {
 std::vector<CoveringArrayTestCase> CasesToCoveringArray(
     std::vector<moriarty_internal::ValueSet> cases) {
   std::vector<CoveringArrayTestCase> cov_array;
-  for (moriarty_internal::ValueSet& valset : cases) {
+  for (moriarty_internal::ValueSet& values : cases) {
     CoveringArrayTestCase catc;
-    std::vector<int> dims;
 
-    dims.push_back(MapValueToTestCaseNumber(
-        valset.Get<moriarty_testing::MTestType>("X").value().value));
-    dims.push_back(MapValueToTestCaseNumber(
-        valset.Get<moriarty_testing::MTestType>("Y").value().value));
-    catc.test_case = dims;
+    catc.test_case = {
+        MapValueToTestCaseNumber(values.Get<MTestType>("X").value),
+        MapValueToTestCaseNumber(values.Get<MTestType>("Y").value)};
     cov_array.push_back(catc);
   }
   return cov_array;
@@ -70,8 +67,8 @@ std::vector<CoveringArrayTestCase> CasesToCoveringArray(
 TEST(CombinatorialCoverage, GenerateShouldCreateCasesFromCoveringArray) {
   moriarty_internal::ValueSet values;
   moriarty_internal::VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("X", moriarty_testing::MTestType()));
-  MORIARTY_ASSERT_OK(variables.AddVariable("Y", moriarty_testing::MTestType()));
+  MORIARTY_ASSERT_OK(variables.AddVariable("X", MTestType()));
+  MORIARTY_ASSERT_OK(variables.AddVariable("Y", MTestType()));
 
   moriarty_internal::RandomEngine rng({1, 2, 3, 4}, "v0.1");
   GenerateContext ctx(variables, values, rng);

@@ -27,8 +27,11 @@
 namespace moriarty {
 namespace {
 
+using ::moriarty::ValueTypeMismatch;
 using ::moriarty_testing::IsUnsatisfiedConstraint;
+using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsValueNotFound;
+using ::moriarty_testing::ThrowsValueTypeMismatch;
 using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::Not;
 
@@ -170,6 +173,74 @@ TEST(ErrorsTest, ThrowsValueNotFoundMatcherShouldWorkCorrectly) {
           throw std::runtime_error("words");
         },
         ThrowsValueNotFound("X"));
+  }
+}
+
+TEST(ErrorsTest, ThrowsMVariableTypeMismatchMatcherShouldWorkCorrectly) {
+  {  // Happy path
+    EXPECT_THAT([] { throw MVariableTypeMismatch("x", "y"); },
+                ThrowsMVariableTypeMismatch("x", "y"));
+  }
+  {  // Wrong name
+    EXPECT_THAT([] { throw MVariableTypeMismatch("x", "y"); },
+                Not(ThrowsMVariableTypeMismatch("x", "zy")));
+    EXPECT_THAT([] { throw MVariableTypeMismatch("x", "y"); },
+                Not(ThrowsMVariableTypeMismatch("zx", "y")));
+  }
+  {  // Wrong exception
+    EXPECT_THAT([] { throw std::runtime_error("words"); },
+                Not(ThrowsMVariableTypeMismatch("words", "words")));
+  }
+  {  // No exception
+    EXPECT_THAT([] {}, Not(ThrowsMVariableTypeMismatch("X", "Y")));
+  }
+  {  // Multiple throws (::testing::ThrowsMessage gets these wrong)
+    EXPECT_THAT(
+        [] {
+          throw std::runtime_error("words");
+          throw MVariableTypeMismatch("X", "Y");
+        },
+        Not(ThrowsMVariableTypeMismatch("X", "Y")));
+    EXPECT_THAT(
+        [] {
+          throw MVariableTypeMismatch("X", "Y");
+          throw std::runtime_error("words");
+        },
+        ThrowsMVariableTypeMismatch("X", "Y"));
+  }
+}
+
+TEST(ErrorsTest, ThrowsValueTypeMismatchMatcherShouldWorkCorrectly) {
+  {  // Happy path
+    EXPECT_THAT([] { throw ValueTypeMismatch("x", "y"); },
+                ThrowsValueTypeMismatch("x", "y"));
+  }
+  {  // Wrong name
+    EXPECT_THAT([] { throw ValueTypeMismatch("x", "y"); },
+                Not(ThrowsValueTypeMismatch("x", "zy")));
+    EXPECT_THAT([] { throw ValueTypeMismatch("x", "y"); },
+                Not(ThrowsValueTypeMismatch("zx", "y")));
+  }
+  {  // Wrong exception
+    EXPECT_THAT([] { throw std::runtime_error("words"); },
+                Not(ThrowsValueTypeMismatch("words", "words")));
+  }
+  {  // No exception
+    EXPECT_THAT([] {}, Not(ThrowsValueTypeMismatch("X", "Y")));
+  }
+  {  // Multiple throws (::testing::ThrowsMessage gets these wrong)
+    EXPECT_THAT(
+        [] {
+          throw std::runtime_error("words");
+          throw ValueTypeMismatch("X", "Y");
+        },
+        Not(ThrowsValueTypeMismatch("X", "Y")));
+    EXPECT_THAT(
+        [] {
+          throw ValueTypeMismatch("X", "Y");
+          throw std::runtime_error("words");
+        },
+        ThrowsValueTypeMismatch("X", "Y"));
   }
 }
 

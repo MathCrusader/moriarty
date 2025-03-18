@@ -38,7 +38,9 @@ namespace {
 using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::ThrowsValueNotFound;
+using ::moriarty_testing::ThrowsValueTypeMismatch;
 using ::testing::AllOf;
+using ::testing::AnyOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Ge;
@@ -254,15 +256,16 @@ TEST(MoriartyDeathTest, ExportAskingForVariableOfTheWrongTypeShouldCrash) {
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 2));
 
-  // Exporter requests for MInteger, but R and S are ints...
-  EXPECT_THROW(
-      {
+  // Exporter requests for MString, but R and S are MIntegers.
+  EXPECT_THAT(
+      [&] {
         M.ExportTestCases(
             [](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
               ExportTwoStringsToVector(ctx, "R", "S", cases);
             });
       },
-      std::runtime_error);
+      AnyOf(ThrowsValueTypeMismatch("R", "MString"),
+            ThrowsValueTypeMismatch("S", "MString")));
 }
 
 TEST(MoriartyTest, GeneralConstraintsSetValueAreConsideredInGenerators) {

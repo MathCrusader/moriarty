@@ -73,8 +73,8 @@ TEST(GenerationBootstrapTest,
       ValueSet values,
       GenerateAllValues(VariableSet(), known_values, {rng, std::nullopt}));
 
-  EXPECT_THAT(values.Get<MInteger>("A"), IsOkAndHolds(5));
-  EXPECT_THAT(values.Get<MInteger>("B"), IsOkAndHolds(10));
+  EXPECT_EQ(values.Get<MInteger>("A"), 5);
+  EXPECT_EQ(values.Get<MInteger>("B"), 10);
 }
 
 TEST(
@@ -90,8 +90,8 @@ TEST(
       ValueSet values,
       GenerateAllValues(variables, known_values, {rng, std::nullopt}));
 
-  EXPECT_THAT(values.Get<MInteger>("A"), IsOkAndHolds(AllOf(Ge(123), Le(456))));
-  EXPECT_THAT(values.Get<MInteger>("B"), IsOkAndHolds(10));
+  EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(123), Le(456)));
+  EXPECT_EQ(values.Get<MInteger>("B"), 10);
 }
 
 TEST(GenerationBootstrapTest, GenerateAllValuesGivesValuesToVariables) {
@@ -104,8 +104,8 @@ TEST(GenerationBootstrapTest, GenerateAllValuesGivesValuesToVariables) {
       ValueSet values,
       GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
 
-  EXPECT_THAT(values.Get<MInteger>("A"), IsOkAndHolds(AllOf(Ge(123), Le(456))));
-  EXPECT_THAT(values.Get<MInteger>("B"), IsOkAndHolds(AllOf(Ge(777), Le(888))));
+  EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(123), Le(456)));
+  EXPECT_THAT(values.Get<MInteger>("B"), AllOf(Ge(777), Le(888)));
 }
 
 TEST(GenerationBootstrapTest, GenerateAllValuesRespectsKnownValues) {
@@ -119,7 +119,7 @@ TEST(GenerationBootstrapTest, GenerateAllValuesRespectsKnownValues) {
       ValueSet values,
       GenerateAllValues(variables, known_values, {rng, std::nullopt}));
 
-  EXPECT_THAT(values.Get<MInteger>("A"), IsOkAndHolds(314));
+  EXPECT_EQ(values.Get<MInteger>("A"), 314);
 }
 
 TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentVariablesSucceeds) {
@@ -133,9 +133,9 @@ TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentVariablesSucceeds) {
       ValueSet values,
       GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
 
-  EXPECT_THAT(values.Get<MInteger>("N"), IsOkAndHolds(AllOf(Ge(50), Le(100))));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t N, values.Get<MInteger>("N"));
-  EXPECT_THAT(values.Get<MInteger>("A"), IsOkAndHolds(AllOf(Ge(N), Le(3 * N))));
+  EXPECT_THAT(values.Get<MInteger>("N"), AllOf(Ge(50), Le(100)));
+  int64_t N = values.Get<MInteger>("N");
+  EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(N), Le(3 * N)));
 }
 
 TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentValuesSucceeds) {
@@ -152,10 +152,9 @@ TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentValuesSucceeds) {
       ValueSet values,
       GenerateAllValues(variables, known_values, {rng, std::nullopt}));
 
-  EXPECT_THAT(values.Get<MInteger>("A"),
-              IsOkAndHolds(AllOf(Ge(53), Le(3 * 53))));
-  EXPECT_THAT(values.Get<MInteger>("C"), IsOkAndHolds(53));
-  EXPECT_THAT(values.Get<MInteger>("B"), IsOkAndHolds(2 * 53));
+  EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(53), Le(3 * 53)));
+  EXPECT_EQ(values.Get<MInteger>("C"), 53);
+  EXPECT_EQ(values.Get<MInteger>("B"), 2 * 53);
 }
 
 TEST(GenerationBootstrapTest,
@@ -181,8 +180,8 @@ TEST(GenerationBootstrapTest, GenerateAllValuesShouldRespectIsAndIsOneOf) {
       ValueSet values,
       GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
 
-  EXPECT_THAT(values.Get<MInteger>("A"), IsOkAndHolds(15));
-  EXPECT_THAT(values.Get<MInteger>("B"), IsOkAndHolds(AnyOf(111, 222, 333)));
+  EXPECT_THAT(values.Get<MInteger>("A"), 15);
+  EXPECT_THAT(values.Get<MInteger>("B"), AnyOf(111, 222, 333));
 }
 
 TEST(GenerationBootstrapTest,
@@ -199,8 +198,7 @@ TEST(GenerationBootstrapTest,
       ValueSet values,
       GenerateAllValues(variables, ValueSet(), {rng, generation_limit}));
 
-  EXPECT_THAT(values.Get<MString>("S"),
-              IsOkAndHolds(SizeIs(AllOf(Ge(50), Le(100)))));
+  EXPECT_THAT(values.Get<MString>("S"), SizeIs(AllOf(Ge(50), Le(100))));
 }
 
 TEST(GenerationBootstrapTest,
@@ -234,10 +232,11 @@ TEST(GenerationBootstrapTest,
     MORIARTY_ASSERT_OK_AND_ASSIGN(
         ValueSet values,
         GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t A, values.Get<MInteger>("A"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t B, values.Get<MInteger>("B"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t C, values.Get<MInteger>("C"));
-    results.push_back({A, B, C});
+    results.push_back({
+        values.Get<MInteger>("A"),
+        values.Get<MInteger>("B"),
+        values.Get<MInteger>("C"),
+    });
   } while (absl::c_next_permutation(names));
 
   ASSERT_THAT(results, SizeIs(6));
@@ -266,14 +265,16 @@ TEST(GenerationBootstrapTest,
     MORIARTY_ASSERT_OK_AND_ASSIGN(
         ValueSet values,
         GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t A, values.Get<MInteger>("A"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t B, values.Get<MInteger>("B"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t C, values.Get<MInteger>("C"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t D, values.Get<MInteger>("D"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t E, values.Get<MInteger>("E"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t F, values.Get<MInteger>("F"));
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t G, values.Get<MInteger>("G"));
-    results.push_back({A, B, C, D, E, F, G});
+
+    results.push_back({
+        values.Get<MInteger>("A"),
+        values.Get<MInteger>("B"),
+        values.Get<MInteger>("C"),
+        values.Get<MInteger>("D"),
+        values.Get<MInteger>("E"),
+        values.Get<MInteger>("F"),
+        values.Get<MInteger>("G"),
+    });
   } while (absl::c_next_permutation(names));
 
   ASSERT_THAT(results, SizeIs(5040));

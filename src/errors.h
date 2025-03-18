@@ -150,6 +150,28 @@ class MVariableTypeMismatch : public std::logic_error {
   std::string to_;
 };
 
+// ValueTypeMismatch
+//
+// Thrown when the user attempts to cast a value that has been stored using the
+// wrong MVariable type. E.g., attempting to read an std::string using MInteger.
+class ValueTypeMismatch : public std::logic_error {
+ public:
+  explicit ValueTypeMismatch(std::string_view variable_name,
+                             std::string_view incompatible_type)
+      : std::logic_error(
+            std::format("Cannot convert the value of `{}` into {}::value_type",
+                        variable_name, incompatible_type)),
+        name_(variable_name),
+        type_(incompatible_type) {}
+
+  const std::string& Name() const { return name_; }
+  const std::string& Type() const { return type_; }
+
+ private:
+  std::string name_;
+  std::string type_;
+};
+
 }  // namespace moriarty
 
 #endif  // MORIARTY_SRC_ERRORS_H_

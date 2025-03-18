@@ -394,9 +394,7 @@ absl::StatusOr<std::vector<typename T::value_type>> GenerateN(T variable, int N,
         moriarty::moriarty_internal::ValueSet values,
         moriarty::moriarty_internal::GenerateAllValues(
             *manager.GetVariables(), *manager.GetValues(), {rng}));
-    MORIARTY_ASSIGN_OR_RETURN(typename T::value_type value,
-                              values.Get<T>(var_name));
-    res.push_back(std::move(value));
+    res.push_back(values.Get<T>(var_name));
   }
   return res;
 }

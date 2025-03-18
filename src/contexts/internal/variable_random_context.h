@@ -123,20 +123,15 @@ T::value_type VariableRandomContext::Random(T m) {
   if (!set_values.ok())
     throw std::runtime_error(set_values.status().ToString());
 
-  auto result = set_values->Get<T>(name);
-  if (!result.ok()) throw std::runtime_error(result.status().ToString());
-  return *result;
+  return set_values->Get<T>(name);
 }
 
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
 T::value_type VariableRandomContext::RandomValue(
     std::string_view variable_name) {
-  if (values_.get().Contains(variable_name)) {
-    auto value = values_.get().Get<T>(variable_name);
-    if (!value.ok()) throw std::runtime_error(value.status().ToString());
-    return *value;
-  }
+  if (values_.get().Contains(variable_name))
+    return values_.get().Get<T>(variable_name);
 
   return Random<T>(variables_.get().GetVariable<T>(variable_name));
 }
@@ -145,11 +140,8 @@ template <typename T>
   requires std::derived_from<T, AbstractVariable>
 T::value_type VariableRandomContext::RandomValue(std::string_view variable_name,
                                                  T extra_constraints) {
-  if (values_.get().Contains(variable_name)) {
-    auto value = values_.get().Get<T>(variable_name);
-    if (!value.ok()) throw std::runtime_error(value.status().ToString());
-    return *value;
-  }
+  if (values_.get().Contains(variable_name))
+    return values_.get().Get<T>(variable_name);
 
   T variable = variables_.get().GetVariable<T>(variable_name);
   variable.MergeFrom(std::move(extra_constraints));

@@ -241,10 +241,10 @@ TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
   ResolverContext ctxB("B", variables, values, engine, generation_config);
   MORIARTY_ASSERT_OK(
       var_B->AssignValue(ctxB));  // Should use the already generated N.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(int N, values.Get<MInteger>("N"));
+  int N = values.Get<MInteger>("N");
 
-  EXPECT_THAT(values.Get<MInteger>("A"), IsOkAndHolds(N));
-  EXPECT_THAT(values.Get<MInteger>("B"), IsOkAndHolds(N));
+  EXPECT_EQ(values.Get<MInteger>("A"), N);
+  EXPECT_EQ(values.Get<MInteger>("B"), N);
 }
 
 TEST(MVariableTest, CyclicDependenciesShouldFail) {
@@ -603,7 +603,7 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
   ResolverContext ctxA("A", variables, values, engine, generation_config);
   MORIARTY_ASSERT_OK(
       var_A->AssignValue(ctxA));  // By assigning A, we assigned N.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(int N, values.Get<MInteger>("N"));
+  int N = values.Get<MInteger>("N");
 
   // Attempt to re-assign N.
   ResolverContext ctxN("N", variables, values, engine, generation_config);
@@ -611,7 +611,7 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
   MORIARTY_ASSERT_OK(var_N->AssignValue(ctxN));
 
   // Should not have changed.
-  EXPECT_THAT(values.Get<MInteger>("N"), IsOkAndHolds(N));
+  EXPECT_EQ(values.Get<MInteger>("N"), N);
 }
 
 }  // namespace

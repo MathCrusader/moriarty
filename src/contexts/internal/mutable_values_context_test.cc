@@ -19,7 +19,6 @@
 
 #include "gtest/gtest.h"
 #include "src/internal/value_set.h"
-#include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
@@ -30,7 +29,7 @@ TEST(MutableValuesContextTest, SettingAValueShouldWork) {
   ValueSet values;
   MutableValuesContext ctx(values);
   ctx.SetValue<MInteger>("X", 10);
-  EXPECT_THAT(values.Get<MInteger>("X"), IsOkAndHolds(10));
+  EXPECT_EQ(values.Get<MInteger>("X"), 10);
 }
 
 TEST(MutableValuesContextTest, OverwritingAValueShouldWork) {
@@ -38,7 +37,7 @@ TEST(MutableValuesContextTest, OverwritingAValueShouldWork) {
   MutableValuesContext ctx(values);
   ctx.SetValue<MInteger>("X", 10);
   ctx.SetValue<MInteger>("X", 20);
-  EXPECT_THAT(values.Get<MInteger>("X"), IsOkAndHolds(20));
+  EXPECT_EQ(values.Get<MInteger>("X"), 20);
 }
 
 TEST(MutableValuesContextTest, ErasingAValueShouldWork) {
@@ -63,7 +62,7 @@ TEST(MutableValuesContextTest, ErasingAValueShouldNotImpactOtherVariables) {
   ctx.SetValue<MInteger>("X2", 20);
   ctx.EraseValue("X1");
   EXPECT_FALSE(values.Contains("X1"));
-  EXPECT_THAT(values.Get<MInteger>("X2"), IsOkAndHolds(20));
+  EXPECT_EQ(values.Get<MInteger>("X2"), 20);
 }
 
 }  // namespace

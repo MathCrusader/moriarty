@@ -110,7 +110,7 @@ MATCHER_P(ThrowsVariableNotFound, expected_variable_name,
   } catch (const moriarty::VariableNotFound& e) {
     if (e.VariableName() != expected_variable_name) {
       *result_listener
-          << "threw the expected exception, but the wrong variable name. `"
+          << "threw the expected exception type, but the wrong variable name. `"
           << e.VariableName() << "`";
       return false;
     }
@@ -140,7 +140,7 @@ MATCHER_P(ThrowsValueNotFound, expected_variable_name,
   } catch (const moriarty::ValueNotFound& e) {
     if (e.VariableName() != expected_variable_name) {
       *result_listener
-          << "threw the expected exception, but the wrong variable name. `"
+          << "threw the expected exception type, but the wrong variable name. `"
           << e.VariableName() << "`";
       return false;
     }
@@ -169,8 +169,40 @@ MATCHER_P2(ThrowsMVariableTypeMismatch, from_type, to_type,
     return false;
   } catch (const moriarty::MVariableTypeMismatch& e) {
     if (e.ConvertingFrom() != from_type || e.ConvertingTo() != to_type) {
-      *result_listener << "threw the expected exception, but is converting "
-                       << e.ConvertingFrom() << " to " << e.ConvertingTo();
+      *result_listener
+          << "threw the expected exception type, but is converting "
+          << e.ConvertingFrom() << " to " << e.ConvertingTo();
+      return false;
+    }
+    *result_listener << "threw the expected exception";
+    return true;
+  } catch (...) {
+    // Call the built-in explainer to get a better message.
+    return ::testing::ExplainMatchResult(
+        ::testing::Throws<moriarty::MVariableTypeMismatch>(), function,
+        result_listener);
+  }
+}
+
+MATCHER_P2(
+    ThrowsValueTypeMismatch, name, type,
+    std::format("{} a function that throws a ValueTypeMismatch "
+                "exception when trying to convert the variable named {} to {}",
+                (negation ? "is not" : "is"), name, type)) {
+  // This first line is to get a better compile error message when arg is not of
+  // the expected type.
+  std::function<void()> fn = arg;
+
+  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  try {
+    function();
+    *result_listener << "did not throw";
+    return false;
+  } catch (const moriarty::ValueTypeMismatch& e) {
+    if (e.Name() != name || e.Type() != type) {
+      *result_listener
+          << "threw the expected exception type, but is converting " << e.Name()
+          << " to " << e.Type();
       return false;
     }
     *result_listener << "threw the expected exception";

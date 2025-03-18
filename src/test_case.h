@@ -20,7 +20,6 @@
 
 #include <any>
 #include <concepts>
-#include <stdexcept>
 #include <string_view>
 #include <utility>
 
@@ -137,9 +136,7 @@ class ConcreteTestCase {
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
   T::value_type GetValue(std::string_view variable_name) const {
-    auto value = values_.Get<T>(variable_name);
-    if (!value.ok()) throw std::runtime_error(value.status().ToString());
-    return *value;
+    return values_.Get<T>(variable_name);
   }
 
   // This is a dangerous function that should only be used if you know what

@@ -53,8 +53,7 @@ T GetVariable(const TestCase& test_case, std::string_view name) {
 }
 
 template <typename T>
-absl::StatusOr<typename T::value_type> GetValue(const TestCase& test_case,
-                                                std::string_view name) {
+T::value_type GetValue(const TestCase& test_case, std::string_view name) {
   auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
   return values.Get<T>(name);
 }
@@ -74,7 +73,7 @@ TEST(TestCaseTest, ConstrainVariableAndGetVariableWorkInGeneralCase) {
 TEST(TestCaseTest, SetValueWithSpecificValueAndGetVariableWorkInGeneralCase) {
   TestCase T;
   T.SetValue<MTestType>("A", TestType());
-  EXPECT_THAT(GetValue<MTestType>(T, "A"), IsOkAndHolds(TestType()));
+  EXPECT_EQ(GetValue<MTestType>(T, "A"), TestType());
 }
 
 TEST(TestCaseTest, GetVariableWithWrongTypeShouldFail) {
@@ -130,10 +129,11 @@ TEST(TestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
 
     RandomEngine rng({1, 2, 3}, "v0.1");
     MORIARTY_ASSIGN_OR_RETURN(ValueSet value_set, AssignAllValues(T));
-    MORIARTY_ASSIGN_OR_RETURN(TestType a, value_set.Get<MTestType>("A"));
-    MORIARTY_ASSIGN_OR_RETURN(TestType b, value_set.Get<MTestType>("B"));
-    MORIARTY_ASSIGN_OR_RETURN(TestType c, value_set.Get<MTestType>("C"));
-    return std::tuple<TestType, TestType, TestType>({a, b, c});
+    return std::tuple<TestType, TestType, TestType>({
+        value_set.Get<MTestType>("A"),
+        value_set.Get<MTestType>("B"),
+        value_set.Get<MTestType>("C"),
+    });
   };
 
   NameVariablePair a = {"A",
@@ -157,8 +157,8 @@ TEST(TestCaseTest, AssignAllValuesShouldRespectSpecificValuesSet) {
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
 
-  EXPECT_THAT(value_set.Get<MTestType>("A"), IsOkAndHolds(TestType(789)));
-  EXPECT_THAT(value_set.Get<MTestType>("B"), IsOkAndHolds(TestType(654)));
+  EXPECT_EQ(value_set.Get<MTestType>("A"), TestType(789));
+  EXPECT_EQ(value_set.Get<MTestType>("B"), TestType(654));
 }
 
 }  // namespace

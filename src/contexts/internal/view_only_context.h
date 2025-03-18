@@ -20,7 +20,6 @@
 #include <functional>
 #include <memory>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -152,9 +151,7 @@ T ViewOnlyContext::GetVariable(std::string_view variable_name) const {
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
 T::value_type ViewOnlyContext::GetValue(std::string_view variable_name) const {
-  auto value = values_.get().Get<T>(variable_name);
-  if (!value.ok()) throw std::runtime_error(value.status().ToString());
-  return *value;
+  return values_.get().Get<T>(variable_name);
 }
 
 template <typename T>
