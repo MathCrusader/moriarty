@@ -475,18 +475,17 @@ TEST(MVariableTest,
 }
 
 // TODO(hivini): Test that by default, nothing is returned from
-// GetDifficultInstances.
+// ListEdgeCases.
 
-TEST(MVariableTest, GetDifficultInstancesPassesTheInstancesThrough) {
+TEST(MVariableTest, ListEdgeCasesPassesTheInstancesThrough) {
   AnalysisContext ctx("test", {}, {});
-  EXPECT_THAT(MTestType().GetDifficultInstances(ctx), IsOkAndHolds(SizeIs(2)));
+  EXPECT_THAT(MTestType().ListEdgeCases(ctx), SizeIs(2));
 }
 
-TEST(MVariableTest, GetDifficultInstanceReturnsMergedInstance) {
+TEST(MVariableTest, ListEdgeCasesReturnsMergedInstance) {
   MTestType original = MTestType();
   AnalysisContext ctx("test", {}, {});
-  MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<MTestType> difficult_instances,
-                                original.GetDifficultInstances(ctx));
+  std::vector<MTestType> difficult_instances = original.ListEdgeCases(ctx);
 
   EXPECT_THAT(difficult_instances, SizeIs(2));
   EXPECT_TRUE(difficult_instances[0].WasMerged());

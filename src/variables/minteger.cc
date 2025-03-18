@@ -294,7 +294,7 @@ absl::Status MInteger::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
   return absl::OkStatus();
 }
 
-absl::StatusOr<std::vector<MInteger>> MInteger::GetDifficultInstancesImpl(
+std::vector<MInteger> MInteger::ListEdgeCasesImpl(
     librarian::AnalysisContext ctx) const {
   absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
 

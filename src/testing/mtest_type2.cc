@@ -128,7 +128,7 @@ TestType2 MTestType2::GenerateImpl(
   return kGeneratedValue * multiplier + addition;
 }
 
-absl::StatusOr<std::vector<MTestType2>> MTestType2::GetDifficultInstancesImpl(
+std::vector<MTestType2> MTestType2::ListEdgeCasesImpl(
     moriarty::librarian::AnalysisContext ctx) const {
   return std::vector<MTestType2>({MTestType2().Is(2), MTestType2().Is(3)});
 }

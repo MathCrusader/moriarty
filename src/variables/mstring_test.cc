@@ -34,8 +34,8 @@ namespace {
 
 using ::moriarty::IsOkAndHolds;
 using ::moriarty_testing::Generate;
-using ::moriarty_testing::GenerateDifficultInstancesValues;
 using ::moriarty_testing::GeneratedValuesAre;
+using ::moriarty_testing::GenerateEdgeCases;
 using ::moriarty_testing::GenerateSameValues;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
@@ -49,6 +49,7 @@ using ::testing::Le;
 using ::testing::MatchesRegex;
 using ::testing::Not;
 using ::testing::SizeIs;
+using ::testing::Throws;
 
 TEST(MStringTest, TypenameIsCorrect) {
   EXPECT_EQ(MString().Typename(), "MString");
@@ -382,16 +383,14 @@ TEST(MStringTest, SimplePatternShouldRespectAlphabets) {
               GeneratedValuesAre("b"));
 }
 
-TEST(MStringTest, GetDifficultInstancesContainsLengthCases) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(
-                  MString(Length(Between(0, 10)), Alphabet("a"))),
-              IsOkAndHolds(IsSupersetOf({"", "a", "aaaaaaaaaa"})));
+TEST(MStringTest, ListEdgeCasesContainsLengthCases) {
+  EXPECT_THAT(GenerateEdgeCases(MString(Length(Between(0, 10)), Alphabet("a"))),
+              IsSupersetOf({"", "a", "aaaaaaaaaa"}));
 }
 
-TEST(MStringTest, GetDifficultInstancesNoLengthFails) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MString()),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("no length parameter given")));
+TEST(MStringTest, ListEdgeCasesNoLengthFails) {
+  EXPECT_THAT([] { GenerateEdgeCases(MString()); },
+              Throws<std::runtime_error>());
 }
 
 // FIXME: Decide how we want to test ToString.

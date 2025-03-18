@@ -43,7 +43,7 @@ InitializeCasesInfo InitializeCases(GenerateContext ctx) {
   for (const auto& [name, var_ptr] : ctx.GetAllVariables()) {
     moriarty::librarian::AnalysisContext analysis_ctx(name, ctx);
     std::vector<VarPtr> difficult_vars =
-        *var_ptr->GetDifficultAbstractVariables(analysis_ctx);
+        var_ptr->ListAnonymousEdgeCases(analysis_ctx);
     info.dimension_sizes.push_back(difficult_vars.size());
     info.cases.push_back(std::move(difficult_vars));
     info.variable_names.push_back(name);

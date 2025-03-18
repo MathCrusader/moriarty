@@ -42,8 +42,8 @@ using ::moriarty::IsOkAndHolds;
 using ::moriarty::StatusIs;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
-using ::moriarty_testing::GenerateDifficultInstancesValues;
 using ::moriarty_testing::GeneratedValuesAre;
+using ::moriarty_testing::GenerateEdgeCases;
 using ::moriarty_testing::GenerateSameValues;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
@@ -437,16 +437,14 @@ TEST(MArrayTest,
       std::runtime_error);
 }
 
-TEST(MArrayTest, GetDifficultInstancesContainsLengthCases) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(
-                  MArray<MInteger>(Length(Between(0, 1000)))),
-              IsOkAndHolds(IsSupersetOf({SizeIs(0), SizeIs(1), SizeIs(1000)})));
+TEST(MArrayTest, ListEdgeCasesContainsLengthCases) {
+  EXPECT_THAT(GenerateEdgeCases(MArray<MInteger>(Length(Between(0, 1000)))),
+              IsSupersetOf({SizeIs(0), SizeIs(1), SizeIs(1000)}));
 }
 
-TEST(MArrayTest, GetDifficultInstancesNoLengthFails) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MArray<MInteger>()),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("no length parameter given")));
+TEST(MArrayTest, ListEdgeCasesNoLengthFails) {
+  EXPECT_THAT([] { GenerateEdgeCases(MArray<MInteger>()); },
+              Throws<std::runtime_error>());
 }
 
 TEST(MArrayTest, ExactlyConstraintWorks) {

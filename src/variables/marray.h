@@ -157,7 +157,7 @@ class MArray : public librarian::MVariable<
   void PrintImpl(librarian::PrinterContext ctx,
                  const vector_value_type& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;
-  absl::StatusOr<std::vector<MArray<MElementType>>> GetDifficultInstancesImpl(
+  std::vector<MArray<MElementType>> ListEdgeCasesImpl(
       librarian::AnalysisContext ctx) const override;
   // ---------------------------------------------------------------------------
 };
@@ -401,17 +401,16 @@ absl::Status MArray<MoriartyElementType>::IsSatisfiedWithImpl(
   return absl::OkStatus();
 }
 template <typename MoriartyElementType>
-absl::StatusOr<std::vector<MArray<MoriartyElementType>>>
-MArray<MoriartyElementType>::GetDifficultInstancesImpl(
+std::vector<MArray<MoriartyElementType>>
+MArray<MoriartyElementType>::ListEdgeCasesImpl(
     librarian::AnalysisContext ctx) const {
   if (!length_) {
-    return absl::FailedPreconditionError(
+    throw std::runtime_error(
         "Attempting to get difficult instances of an Array with no "
         "length parameter given.");
   }
   std::vector<MArray<MoriartyElementType>> cases;
-  MORIARTY_ASSIGN_OR_RETURN(std::vector<MInteger> length_cases,
-                            length_->GetDifficultInstances(ctx));
+  std::vector<MInteger> length_cases = length_->ListEdgeCases(ctx);
 
   cases.reserve(length_cases.size());
   for (const auto& c : length_cases) {

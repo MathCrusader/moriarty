@@ -40,8 +40,8 @@ namespace {
 using ::moriarty::IsOkAndHolds;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
-using ::moriarty_testing::GenerateDifficultInstancesValues;
 using ::moriarty_testing::GeneratedValuesAre;
+using ::moriarty_testing::GenerateEdgeCases;
 using ::moriarty_testing::GenerateSameValues;
 using ::moriarty_testing::GetUniqueValue;
 using ::moriarty_testing::IsNotSatisfiedWith;
@@ -107,27 +107,25 @@ TEST(MIntegerTest, GenerateShouldSuccessfullyComplete) {
   MORIARTY_EXPECT_OK(Generate(variable));
 }
 
-TEST(MIntegerTest, GetDifficultInstancesIncludesManyInterestingValues) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MInteger()),
-              IsOkAndHolds(IsSupersetOf(
-                  {0LL, 1LL, 2LL, -1LL, 1LL << 32, (1LL << 62) - 1})));
+TEST(MIntegerTest, ListEdgeCasesIncludesManyInterestingValues) {
+  EXPECT_THAT(GenerateEdgeCases(MInteger()),
+              IsSupersetOf({0LL, 1LL, 2LL, -1LL, 1LL << 32, (1LL << 62) - 1}));
 }
 
-TEST(MIntegerTest, GetDifficultInstancesIncludesIntMinAndMaxByDefault) {
-  EXPECT_THAT(
-      GenerateDifficultInstancesValues(MInteger()),
-      IsOkAndHolds(IsSupersetOf({std::numeric_limits<int64_t>::min(),
-                                 std::numeric_limits<int64_t>::max()})));
+TEST(MIntegerTest, ListEdgeCasesIncludesIntMinAndMaxByDefault) {
+  EXPECT_THAT(GenerateEdgeCases(MInteger()),
+              IsSupersetOf({std::numeric_limits<int64_t>::min(),
+                            std::numeric_limits<int64_t>::max()}));
 }
 
-TEST(MIntegerTest, GetDifficultInstancesIncludesMinAndMaxValues) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MInteger(Between(123, 234))),
-              IsOkAndHolds(IsSupersetOf({123, 234})));
+TEST(MIntegerTest, ListEdgeCasesIncludesMinAndMaxValues) {
+  EXPECT_THAT(GenerateEdgeCases(MInteger(Between(123, 234))),
+              IsSupersetOf({123, 234}));
 }
 
-TEST(MIntegerTest, GetDifficultInstancesValuesAreNotRepeated) {
-  EXPECT_THAT(GenerateDifficultInstancesValues(MInteger(Between(-1, 1))),
-              IsOkAndHolds(UnorderedElementsAre(-1, 0, 1)));
+TEST(MIntegerTest, ListEdgeCasesValuesAreNotRepeated) {
+  EXPECT_THAT(GenerateEdgeCases(MInteger(Between(-1, 1))),
+              UnorderedElementsAre(-1, 0, 1));
 }
 
 TEST(MIntegerTest, BetweenShouldRestrictTheRangeProperly) {

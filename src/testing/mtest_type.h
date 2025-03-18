@@ -107,7 +107,7 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   absl::Status IsSatisfiedWithImpl(moriarty::librarian::AnalysisContext ctx,
                                    const TestType& value) const override;
 
-  absl::StatusOr<std::vector<MTestType>> GetDifficultInstancesImpl(
+  std::vector<MTestType> ListEdgeCasesImpl(
       moriarty::librarian::AnalysisContext ctx) const override;
 
  private:

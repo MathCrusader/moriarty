@@ -184,13 +184,13 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::string_view constraint_name, std::vector<std::string> deps,
       std::function<bool(const ValueType&, AnalysisContext ctx)> checker);
 
-  // GetDifficultCases()
+  // ListEdgeCases()
   //
   // Returns a list of MVariables that where merged with your variable. This
   // should give common difficult cases. Some examples of this type of cases
   // include common pitfalls for your data type (edge cases, queries of death,
   // etc).
-  [[nodiscard]] absl::StatusOr<std::vector<VariableType>> GetDifficultInstances(
+  [[nodiscard]] std::vector<VariableType> ListEdgeCases(
       AnalysisContext ctx) const;
 
   // Print()
@@ -343,14 +343,14 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Default: No dependencies.
   virtual std::vector<std::string> GetDependenciesImpl() const;
 
-  // GetDifficultInstancesImpl() [virtual/optional]
+  // ListEdgeCasesImpl() [virtual/optional]
   //
-  // Users should not call this directly. Call `GetDifficultInstances()`
+  // Users should not call this directly. Call `ListEdgeCases()`
   // instead.
   //
   // Returns a list of complicated instances to merge from.
   // TODO(hivini): Improve comment with examples.
-  virtual absl::StatusOr<std::vector<VariableType>> GetDifficultInstancesImpl(
+  virtual std::vector<VariableType> ListEdgeCasesImpl(
       AnalysisContext ctx) const;
 
   // GetUniqueValueImpl() [virtual/optional]
@@ -463,13 +463,12 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // variable to determine formatting, etc.
   absl::Status PrintValue(librarian::PrinterContext ctx) const override;
 
-  // GetDifficultAbstractVariables()
+  // ListAnonymousEdgeCases()
   //
   // Returns the list of difficult abstract variables defined by the
   // implementation of this abstract variable.
-  absl::StatusOr<
-      std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>>
-  GetDifficultAbstractVariables(AnalysisContext ctx) const override;
+  std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
+  ListAnonymousEdgeCases(AnalysisContext ctx) const override;
 };
 
 // -----------------------------------------------------------------------------
@@ -560,16 +559,13 @@ V& MVariable<V, G>::AddCustomConstraint(
 }
 
 template <typename V, typename G>
-absl::StatusOr<std::vector<V>> MVariable<V, G>::GetDifficultInstances(
-    AnalysisContext ctx) const {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-  MORIARTY_ASSIGN_OR_RETURN(std::vector<V> instances,
-                            this->GetDifficultInstancesImpl(ctx));
+std::vector<V> MVariable<V, G>::ListEdgeCases(AnalysisContext ctx) const {
+  std::vector<V> instances = ListEdgeCasesImpl(ctx);
   for (V& instance : instances) {
     // TODO(hivini): When merging with a fixed value variable that has the same
     // value a difficult instance, this does not return an error. Determine if
     // this matters or not.
-    MORIARTY_RETURN_IF_ERROR(instance.TryMergeFrom(UnderlyingVariableType()));
+    instance.MergeFrom(UnderlyingVariableType());
   }
   return instances;
 }
@@ -595,8 +591,7 @@ std::vector<std::string> MVariable<V, G>::GetDependenciesImpl() const {
 }
 
 template <typename V, typename G>
-absl::StatusOr<std::vector<V>> MVariable<V, G>::GetDifficultInstancesImpl(
-    AnalysisContext ctx) const {
+std::vector<V> MVariable<V, G>::ListEdgeCasesImpl(AnalysisContext ctx) const {
   return std::vector<V>();  // By default, return an empty list.
 }
 
@@ -799,12 +794,9 @@ std::vector<std::string> MVariable<V, G>::GetDependencies() const {
 }
 
 template <typename V, typename G>
-absl::StatusOr<
-    std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>>
-MVariable<V, G>::GetDifficultAbstractVariables(AnalysisContext ctx) const {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-  MORIARTY_ASSIGN_OR_RETURN(std::vector<V> instances,
-                            this->GetDifficultInstances(ctx));
+std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
+MVariable<V, G>::ListAnonymousEdgeCases(AnalysisContext ctx) const {
+  std::vector<V> instances = ListEdgeCases(ctx);
   std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>> new_vec;
   new_vec.reserve(instances.size());
   for (V& instance : instances) {

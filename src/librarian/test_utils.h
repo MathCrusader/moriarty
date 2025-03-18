@@ -219,15 +219,14 @@ template <typename T>
 std::optional<typename T::value_type> GetUniqueValue(T variable,
                                                      Context context = {});
 
-// GenerateDifficultInstancesValues() [For tests only]
+// GenerateEdgeCases() [For tests only]
 //
 // Generates values for all the merged `variable` instances obtained from
-// `MVariable::GetDifficultInstances` for the specific type provided.
+// `MVariable::ListEdgeCases` for the specific type provided.
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<std::vector<typename T::value_type>>
-GenerateDifficultInstancesValues(T variable);
+std::vector<typename T::value_type> GenerateEdgeCases(T variable);
 
 // Read() [For tests only]
 //
@@ -538,16 +537,14 @@ testing::AssertionResult AllGenerateSameValues(std::vector<T> vars) {
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<std::vector<typename T::value_type>>
-GenerateDifficultInstancesValues(T variable) {
+std::vector<typename T::value_type> GenerateEdgeCases(T variable) {
   moriarty::librarian::AnalysisContext ctx("test", {}, {});
-  MORIARTY_ASSIGN_OR_RETURN(std::vector<T> instances,
-                            variable.GetDifficultInstances(ctx));
+  std::vector<T> instances = variable.ListEdgeCases(ctx);
 
   std::vector<typename T::value_type> values;
   for (T difficult_variable : instances) {
-    MORIARTY_ASSIGN_OR_RETURN(typename T::value_type val,
-                              Generate(std::move(difficult_variable)));
+    // TODO: Hides a StatusOr<>
+    typename T::value_type val = *Generate(std::move(difficult_variable));
     values.push_back(std::move(val));
   }
   return values;

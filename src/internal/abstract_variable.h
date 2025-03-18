@@ -132,23 +132,17 @@ class AbstractVariable {
   virtual absl::Status ValueSatisfiesConstraints(
       librarian::AnalysisContext ctx) const = 0;
 
-  // GetDifficultAbstractVariables() [pure virtual]
+  // ListAnonymousEdgeCases() [pure virtual]
   //
-  // Returns a list of smart points to the difficult instances of this abstract
-  // variable.
-  virtual absl::StatusOr<
-      std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>>
-  GetDifficultAbstractVariables(librarian::AnalysisContext ctx) const = 0;
+  // Returns a list of pointers to the edge cases of this variable.
+  virtual std::vector<std::unique_ptr<AbstractVariable>> ListAnonymousEdgeCases(
+      librarian::AnalysisContext ctx) const = 0;
 
   // GetDependencies() [pure virtual]
   //
   // Returns a list of variable names that this variable depends on.
   virtual std::vector<std::string> GetDependencies() const = 0;
 };
-
-}  // namespace moriarty_internal
-
-namespace moriarty_internal {
 
 // ConvertTo<>
 //

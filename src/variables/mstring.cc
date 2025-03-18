@@ -92,17 +92,16 @@ absl::Status MString::IsSatisfiedWithImpl(librarian::AnalysisContext ctx,
   return absl::OkStatus();
 }
 
-absl::StatusOr<std::vector<MString>> MString::GetDifficultInstancesImpl(
+std::vector<MString> MString::ListEdgeCasesImpl(
     librarian::AnalysisContext ctx) const {
   if (!length_) {
-    return absl::FailedPreconditionError(
+    throw std::runtime_error(
         "Attempting to get difficult instances of a string with no "
         "length parameter given.");
   }
-  std::vector<MString> values = {};
-  MORIARTY_ASSIGN_OR_RETURN(std::vector<MInteger> lengthCases,
-                            length_->GetDifficultInstances(ctx));
+  std::vector<MInteger> lengthCases = length_->ListEdgeCases(ctx);
 
+  std::vector<MString> values;
   values.reserve(lengthCases.size());
   for (const auto& c : lengthCases) {
     values.push_back(MString(Length(c)));

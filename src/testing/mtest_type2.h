@@ -108,7 +108,7 @@ class MTestType2
   absl::Status IsSatisfiedWithImpl(moriarty::librarian::AnalysisContext ctx,
                                    const TestType2& value) const override;
 
-  absl::StatusOr<std::vector<MTestType2>> GetDifficultInstancesImpl(
+  std::vector<MTestType2> ListEdgeCasesImpl(
       moriarty::librarian::AnalysisContext ctx) const override;
 
  private:

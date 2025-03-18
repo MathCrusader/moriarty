@@ -152,7 +152,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   void PrintImpl(librarian::PrinterContext ctx,
                  const int64_t& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;
-  absl::StatusOr<std::vector<MInteger>> GetDifficultInstancesImpl(
+  std::vector<MInteger> ListEdgeCasesImpl(
       librarian::AnalysisContext ctx) const override;
   std::optional<int64_t> GetUniqueValueImpl(
       librarian::AnalysisContext ctx) const override;
