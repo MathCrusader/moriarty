@@ -75,11 +75,14 @@ TEST(MVariableTest, GenerateShouldProduceAValue) {
 }
 
 TEST(MVariableTest, GenerateShouldObserveIs) {
-  EXPECT_THAT(Generate(MTestType().Is(10)), IsOkAndHolds(10));
+  EXPECT_THAT(Generate(MTestType().AddConstraint(Exactly<TestType>(10))),
+              IsOkAndHolds(10));
 }
 
 TEST(MVariableTest, GenerateShouldObserveIsOneOf) {
-  EXPECT_THAT(GenerateN(MTestType().IsOneOf({50, 60, 70, 80, 90, 100}), 100),
+  EXPECT_THAT(GenerateN(MTestType().AddConstraint(
+                            OneOf<TestType>({50, 60, 70, 80, 90, 100})),
+                        100),
               IsOkAndHolds(AllOf(Contains(50), Contains(60), Contains(70),
                                  Contains(80), Contains(90), Contains(100))));
 }
@@ -98,10 +101,10 @@ TEST(MVariableTest, MergeFromShouldWork) {
 }
 
 TEST(MVariableTest, MergeFromShouldRespectOneOf) {
-  MTestType var1 =
-      MTestType().IsOneOf({TestType(11), TestType(22), TestType(33)});
-  MTestType var2 =
-      MTestType().IsOneOf({TestType(22), TestType(33), TestType(44)});
+  MTestType var1 = MTestType().AddConstraint(
+      OneOf<TestType>({TestType(11), TestType(22), TestType(33)}));
+  MTestType var2 = MTestType().AddConstraint(
+      OneOf<TestType>({TestType(22), TestType(33), TestType(44)}));
 
   ASSERT_THAT(var1, GeneratedValuesAre(
                         AnyOf(TestType(11), TestType(22), TestType(33))));
@@ -127,7 +130,7 @@ TEST(MVariableTest, MergeFromUsingAbstractVariablesShouldRespectIsAndIsOneOf) {
   };
 
   {
-    MTestType var1 = MTestType().Is(10);
+    MTestType var1 = MTestType().AddConstraint(Exactly<TestType>(10));
     MTestType var2;
 
     merge_from(var1, var2);
@@ -137,7 +140,7 @@ TEST(MVariableTest, MergeFromUsingAbstractVariablesShouldRespectIsAndIsOneOf) {
 
   {
     MTestType var1;
-    MTestType var2 = MTestType().Is(20);
+    MTestType var2 = MTestType().AddConstraint(Exactly<TestType>(20));
 
     merge_from(var1, var2);
     EXPECT_THAT(Generate(var1), IsOkAndHolds(20));
@@ -145,17 +148,17 @@ TEST(MVariableTest, MergeFromUsingAbstractVariablesShouldRespectIsAndIsOneOf) {
   }
 
   {
-    MTestType var1 = MTestType().Is(10);
-    MTestType var2 = MTestType().Is(20);
+    MTestType var1 = MTestType().AddConstraint(Exactly<TestType>(10));
+    MTestType var2 = MTestType().AddConstraint(Exactly<TestType>(20));
 
-    merge_from(var1, var2);
-    EXPECT_THROW({ Generate(var1).IgnoreError(); }, std::runtime_error);
-    EXPECT_TRUE(var1.WasMerged());  // Was merged, but bad options.
+    // Can't be both 10 and 20.
+    EXPECT_THROW({ merge_from(var1, var2); }, std::runtime_error);
   }
 
   {
-    MTestType var1 = MTestType().Is(10);
-    MTestType var2 = MTestType().IsOneOf({40, 30, 20, 10});
+    MTestType var1 = MTestType().AddConstraint(Exactly<TestType>(10));
+    MTestType var2 =
+        MTestType().AddConstraint(OneOf<TestType>({40, 30, 20, 10}));
 
     merge_from(var1, var2);
     EXPECT_THAT(Generate(var1), IsOkAndHolds(10));
@@ -163,8 +166,10 @@ TEST(MVariableTest, MergeFromUsingAbstractVariablesShouldRespectIsAndIsOneOf) {
   }
 
   {
-    MTestType var1 = MTestType().IsOneOf({300, 17, 10, -1234});
-    MTestType var2 = MTestType().IsOneOf({40, 30, 20, 10});
+    MTestType var1 =
+        MTestType().AddConstraint(OneOf<TestType>({300, 17, 10, -1234}));
+    MTestType var2 =
+        MTestType().AddConstraint(OneOf<TestType>({40, 30, 20, 10}));
 
     merge_from(var1, var2);
     EXPECT_THAT(Generate(var1), IsOkAndHolds(10));
@@ -343,21 +348,25 @@ TEST(MVariableTest, SatisfiesConstraintsCanValidateSubvariablesIfNeeded) {
 TEST(MVariableTest, SatisfiesConstraintsShouldAcknowledgeIsAndIsOneOf) {
   // In the simplist case, everything will work since it is checking it is a
   // multiple of 1.
-  EXPECT_THAT(MTestType().IsOneOf({2, 3, 5, 7}), IsSatisfiedWith(5));
-  EXPECT_THAT(MTestType().IsOneOf({2, 4, 8}), IsNotSatisfiedWith(5, "IsOneOf"));
+  EXPECT_THAT(MTestType().AddConstraint(OneOf<TestType>({2, 3, 5, 7})),
+              IsSatisfiedWith(5));
+  EXPECT_THAT(MTestType().AddConstraint(OneOf<TestType>({2, 4, 8})),
+              IsNotSatisfiedWith(5, "one of"));
 
   // 8 is in the list and a multiple of 4.
-  EXPECT_THAT(
-      MTestType().IsOneOf({2, 4, 8}).SetMultiplier(MInteger(Between(4, 4))),
-      IsSatisfiedWith(8));
+  EXPECT_THAT(MTestType()
+                  .AddConstraint(OneOf<TestType>({2, 4, 8}))
+                  .SetMultiplier(MInteger(Between(4, 4))),
+              IsSatisfiedWith(8));
 }
 
 TEST(MVariableTest,
      SatisfiesConstraintsShouldFailIfIsOneOfSucceedsButLowerFails) {
   // 2 is in the one-of list, but not a multiple of 4.
-  EXPECT_THAT(
-      MTestType().IsOneOf({2, 4, 8}).SetMultiplier(MInteger(Between(4, 4))),
-      IsNotSatisfiedWith(2, "not a multiple of any valid multiplier"));
+  EXPECT_THAT(MTestType()
+                  .AddConstraint(OneOf<TestType>({2, 4, 8}))
+                  .SetMultiplier(MInteger(Between(4, 4))),
+              IsNotSatisfiedWith(2, "not a multiple of any valid multiplier"));
 }
 
 TEST(MVariableTest, SatisfiesConstraintsShouldCheckCustomConstraints) {
@@ -405,7 +414,7 @@ TEST(MVariableTest, SatisfiesConstraintsShouldCheckMultipleCustomConstraints) {
 TEST(MVariableTest, CustomConstraintWithDependentVariables) {
   EXPECT_THAT(
       Generate(MTestType()
-                   .SetMultiplier(MInteger().Is(2))
+                   .SetMultiplier(MInteger(Exactly(2)))
                    .AddCustomConstraint(
                        "Custom1", {"A"},
                        [](AnalysisContext ctx, const TestType& value) -> bool {
@@ -413,7 +422,7 @@ TEST(MVariableTest, CustomConstraintWithDependentVariables) {
                          return A.value == value;
                        }),
                Context().WithVariable(
-                   "A", MTestType().SetMultiplier(MInteger().Is(2)))),
+                   "A", MTestType().SetMultiplier(MInteger(Exactly(2))))),
       IsOkAndHolds(MTestType::kGeneratedValue * 2));
 }
 
@@ -422,15 +431,15 @@ TEST(MVariableTest, CustomConstraintInvalidFailsToGenerate) {
       {
         Generate(
             MTestType()
-                .SetMultiplier(MInteger().Is(1))
+                .SetMultiplier(MInteger(Exactly(1)))
                 .AddCustomConstraint(
                     "Custom1", {"A"},
                     [](AnalysisContext ctx, const TestType& value) -> bool {
                       TestType A = ctx.GetValue<MTestType>("A");
                       return A.value == value;
                     }),
-            Context().WithVariable("A",
-                                   MTestType().SetMultiplier(MInteger().Is(2))))
+            Context().WithVariable(
+                "A", MTestType().SetMultiplier(MInteger(Exactly(2)))))
             .IgnoreError();
       },
       std::runtime_error);
@@ -440,7 +449,7 @@ TEST(MVariableTest, CustomConstraintsWithInvalidDependentVariableCrashes) {
   EXPECT_THROW(
       {
         Generate(MTestType()
-                     .SetMultiplier(MInteger().Is(1))
+                     .SetMultiplier(MInteger(Exactly(1)))
                      .AddCustomConstraint("Custom1", {},
                                           [](AnalysisContext ctx,
                                              const TestType& value) -> bool {
@@ -463,15 +472,15 @@ TEST(MVariableTest,
       {
         Generate(
             MTestType()
-                .SetMultiplier(MInteger().Is(1))
+                .SetMultiplier(MInteger(Exactly(1)))
                 .AddCustomConstraint(
                     "Custom1", {},
                     [](AnalysisContext ctx, const TestType& value) -> bool {
                       TestType A = ctx.GetValue<MTestType>("A");
                       return A.value == value;
                     }),
-            Context().WithVariable("L",
-                                   MTestType().SetMultiplier(MInteger().Is(2))))
+            Context().WithVariable(
+                "L", MTestType().SetMultiplier(MInteger(Exactly(2)))))
             .IgnoreError();
       },
       std::runtime_error);
@@ -552,8 +561,9 @@ TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {
 }
 
 TEST(MVariableTest, GetUniqueValueShouldReturnUniqueValueViaIsMethod) {
-  EXPECT_THAT(GetUniqueValue(MInteger().Is(123)), Optional(123));
-  EXPECT_THAT(GetUniqueValue(MTestType().Is(2 * MTestType::kGeneratedValue)),
+  EXPECT_THAT(GetUniqueValue(MInteger(Exactly(123))), Optional(123));
+  EXPECT_THAT(GetUniqueValue(MTestType().AddConstraint(
+                  Exactly<TestType>(2 * MTestType::kGeneratedValue))),
               Optional(2 * MTestType::kGeneratedValue));
 }
 
@@ -563,10 +573,10 @@ TEST(MVariableTest, GetUniqueValueShouldReturnNulloptByDefault) {
 }
 
 TEST(MVariableTest, GetUniqueValueWithMultipleOptionsShouldReturnNullopt) {
-  EXPECT_EQ(GetUniqueValue(MInteger().IsOneOf({123, 456})), std::nullopt);
+  EXPECT_EQ(GetUniqueValue(MInteger(OneOf({123, 456}))), std::nullopt);
   EXPECT_EQ(
-      GetUniqueValue(MTestType().IsOneOf(
-          {MTestType::kGeneratedValue, MTestType::kGeneratedValueSmallSize})),
+      GetUniqueValue(MTestType().AddConstraint(OneOf<TestType>(
+          {MTestType::kGeneratedValue, MTestType::kGeneratedValueSmallSize}))),
       std::nullopt);
 }
 

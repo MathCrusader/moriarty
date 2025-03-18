@@ -173,9 +173,9 @@ TEST(GenerationBootstrapTest,
 TEST(GenerationBootstrapTest, GenerateAllValuesShouldRespectIsAndIsOneOf) {
   RandomEngine rng({1, 2, 3}, "");
   VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger().Is(15)));
+  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Exactly(15))));
   MORIARTY_ASSERT_OK(
-      variables.AddVariable("B", MInteger().IsOneOf({111, 222, 333})));
+      variables.AddVariable("B", MInteger(OneOf({111, 222, 333}))));
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(
       ValueSet values,

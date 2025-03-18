@@ -165,7 +165,7 @@ class Context {
 // Example:
 //   EXPECT_THAT(Generate(MInteger()), IsOkAndHolds(5));
 //   EXPECT_THAT(Generate(MString().OfLength(10)), IsOkAndHolds(SizeIs(10)));
-//   EXPECT_THAT(Generate(MInteger().Is("3 * N + 1"),
+//   EXPECT_THAT(Generate(MInteger(Exactly("3 * N + 1")),
 //                        Context().WithValue("N", 3)),
 //               IsOkAndHolds(10));
 

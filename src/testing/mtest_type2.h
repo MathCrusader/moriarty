@@ -26,12 +26,13 @@
 #include <vector>
 
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/librarian/mvariable.h"
+#include "src/librarian/one_of_handler.h"
+#include "src/variables/constraints/base_constraints.h"
 #include "src/variables/minteger.h"
 
 // This is identical to mtest_type.h, just with different constants (e.g.,
@@ -85,6 +86,9 @@ class MTestType2
   static constexpr int64_t kCorner1 = 99991;
   static constexpr int64_t kCorner2 = 99992;
 
+  MTestType2& AddConstraint(moriarty::Exactly<TestType2> constraint);
+  MTestType2& AddConstraint(moriarty::OneOf<TestType2> constraint);
+
   std::string Typename() const override { return "MTestType2"; };
 
   TestType2 ReadImpl(moriarty::librarian::ReaderContext ctx) const override;
@@ -112,6 +116,7 @@ class MTestType2
       moriarty::librarian::AnalysisContext ctx) const override;
 
  private:
+  moriarty::librarian::OneOfHandler<TestType2> one_of_;
   moriarty::MInteger multiplier_ = moriarty::MInteger(moriarty::Between(1, 1));
   std::optional<std::string> adder_variable_name_;
 
@@ -124,6 +129,12 @@ class MTestType2
       moriarty::librarian::ResolverContext ctx) const override;
 
   std::vector<std::string> GetDependenciesImpl() const override;
+
+  std::optional<TestType2> GetUniqueValueImpl(
+      moriarty::librarian::AnalysisContext ctx) const override {
+    if (one_of_.HasBeenConstrained()) return one_of_.GetUniqueValue();
+    return std::nullopt;
+  }
 };
 
 }  // namespace moriarty_testing

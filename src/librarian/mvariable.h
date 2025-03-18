@@ -107,28 +107,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Returns a string representation of the constraints this MVariable has.
   [[nodiscard]] std::string ToString() const;
 
-  // Is()
-  //
-  // Declares that this variable must be exactly `value`. For example,
-  //
-  //   M.AddVariable("N", MInteger().Is(5));
-  //
-  // states that this variable must be 5. Logically equivalent to
-  // `IsOneOf({value});`
-  VariableType& Is(ValueType value);
-
-  // IsOneOf()
-  //
-  // Declares that this variable must be exactly one of the elements in
-  // `values`. For example,
-  //
-  //   M.AddVariable("N", MInteger().IsOneOf({5, 10, 15}));
-  //   M.AddVariable("S", MString().IsOneOf({"POSSIBLE", "IMPOSSIBLE"});
-  //
-  // states that the variable "N" must be either 5, 10, or 15, and that the
-  // variable "S" must be either the string "POSSIBLE" or "IMPOSSIBLE".
-  VariableType& IsOneOf(std::vector<ValueType> values);
-
   // MergeFrom()
   //
   // Merges my current constraints with the constraints of the `other` variable.
@@ -431,28 +409,6 @@ std::string MVariable<V, G>::ToString() const {
 }
 
 template <typename V, typename G>
-V& MVariable<V, G>::Is(G value) {
-  return IsOneOf({std::move(value)});
-}
-
-template <typename V, typename G>
-V& MVariable<V, G>::IsOneOf(std::vector<G> values) {
-  std::sort(values.begin(), values.end());
-
-  if (!is_one_of_) {
-    is_one_of_ = std::move(values);
-    return UnderlyingVariableType();
-  }
-
-  is_one_of_->erase(
-      std::set_intersection(std::begin(values), std::end(values),
-                            std::begin(*is_one_of_), std::end(*is_one_of_),
-                            std::begin(*is_one_of_)),
-      std::end(*is_one_of_));
-  return UnderlyingVariableType();
-}
-
-template <typename V, typename G>
 V& MVariable<V, G>::MergeFrom(const V& other) {
   moriarty_internal::TryFunctionOrCrash(
       [this, &other]() { return this->TryMergeFrom(other); }, "MergeFrom");
@@ -464,8 +420,6 @@ absl::Status MVariable<V, G>::TryMergeFrom(const V& other) {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
   if (!other.overall_status_.ok()) overall_status_ = other.overall_status_;
   MORIARTY_RETURN_IF_ERROR(overall_status_);
-
-  if (other.is_one_of_) IsOneOf(*other.is_one_of_);
 
   if (auto status = MergeFromImpl(other);
       !status.ok() && !absl::IsUnimplemented(status)) {
@@ -570,9 +524,6 @@ G MVariable<V, G>::Generate(ResolverContext ctx) const {
   if (auto value = ctx.GetValueIfKnown<V>(name); value.has_value())
     return *value;
 
-  if (is_one_of_ && is_one_of_->empty())
-    throw std::runtime_error("Is/IsOneOf used, but no viable value found.");
-
   ctx.MarkStartGeneration(name);
   using Policy =
       moriarty_internal::GenerationConfig::RetryRecommendation::Policy;
@@ -611,11 +562,6 @@ template <typename V, typename G>
 absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
                                               const G& value) const {
   MORIARTY_RETURN_IF_ERROR(overall_status_);
-  if (is_one_of_) {
-    MORIARTY_RETURN_IF_ERROR(CheckConstraint(
-        absl::c_binary_search(*is_one_of_, value),
-        "`value` must be one of the options in Is() and IsOneOf()"));
-  }
 
   if (!constraints_.IsSatisfiedWith(ctx, value)) {
     std::string reason = constraints_.Explanation(ctx, value);

@@ -15,8 +15,6 @@
 
 #include "src/internal/variable_set.h"
 
-#include <vector>
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/test_utils.h"
@@ -24,6 +22,7 @@
 #include "src/testing/mtest_type2.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
+#include "src/variables/constraints/base_constraints.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -33,12 +32,15 @@ using ::moriarty::IsOkAndHolds;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::MTestType2;
+using ::moriarty_testing::TestType;
 using ::moriarty_testing::ThrowsVariableNotFound;
 
 TEST(VariableSetTest, GetVariableCanRetrieveFromAddVariable) {
   VariableSet v;
-  MORIARTY_ASSERT_OK(v.AddVariable("A", MTestType().Is(111111)));
-  MORIARTY_ASSERT_OK(v.AddVariable("B", MTestType().Is(222222)));
+  MORIARTY_ASSERT_OK(
+      v.AddVariable("A", MTestType().AddConstraint(Exactly<TestType>(111111))));
+  MORIARTY_ASSERT_OK(
+      v.AddVariable("B", MTestType().AddConstraint(Exactly<TestType>(222222))));
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(MTestType A, v.GetVariable<MTestType>("A"));
   EXPECT_THAT(Generate(A), IsOkAndHolds(111111));
@@ -49,8 +51,10 @@ TEST(VariableSetTest, GetVariableCanRetrieveFromAddVariable) {
 
 TEST(VariableSetTest, AddOrMergeVariableSetsProperlyWhenNotMerging) {
   VariableSet v;
-  MORIARTY_ASSERT_OK(v.AddOrMergeVariable("A", MTestType().Is(111111)));
-  MORIARTY_ASSERT_OK(v.AddOrMergeVariable("B", MTestType().Is(222222)));
+  MORIARTY_ASSERT_OK(v.AddOrMergeVariable(
+      "A", MTestType().AddConstraint(Exactly<TestType>(111111))));
+  MORIARTY_ASSERT_OK(v.AddOrMergeVariable(
+      "B", MTestType().AddConstraint(Exactly<TestType>(222222))));
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(MTestType A, v.GetVariable<MTestType>("A"));
   EXPECT_THAT(Generate(A), IsOkAndHolds(111111));
@@ -61,8 +65,10 @@ TEST(VariableSetTest, AddOrMergeVariableSetsProperlyWhenNotMerging) {
 
 TEST(VariableSetTest, AddOrMergeVariableSetsProperlyWhenMerging) {
   VariableSet v;
-  MORIARTY_ASSERT_OK(v.AddOrMergeVariable("A", MTestType().IsOneOf({11, 22})));
-  MORIARTY_ASSERT_OK(v.AddOrMergeVariable("A", MTestType().IsOneOf({22, 33})));
+  MORIARTY_ASSERT_OK(v.AddOrMergeVariable(
+      "A", MTestType().AddConstraint(OneOf<TestType>({11, 22}))));
+  MORIARTY_ASSERT_OK(v.AddOrMergeVariable(
+      "A", MTestType().AddConstraint(OneOf<TestType>({22, 33}))));
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(MTestType A, v.GetVariable<MTestType>("A"));
   EXPECT_THAT(Generate(A), IsOkAndHolds(22));

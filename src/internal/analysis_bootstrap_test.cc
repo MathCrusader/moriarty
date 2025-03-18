@@ -20,6 +20,7 @@
 #include "src/testing/mtest_type.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
+#include "src/variables/constraints/base_constraints.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -44,8 +45,10 @@ TEST(AnalysisBootstrapTest,
 
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MTestType().IsOneOf(options)));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MTestType().IsOneOf(options)));
+  MORIARTY_ASSERT_OK(
+      variables.AddVariable("A", MTestType().AddConstraint(OneOf(options))));
+  MORIARTY_ASSERT_OK(
+      variables.AddVariable("B", MTestType().AddConstraint(OneOf(options))));
 
   values.Set<MTestType>("A", options[4]);
   values.Set<MTestType>("B", options[53]);
@@ -60,8 +63,10 @@ TEST(AnalysisBootstrapTest,
 
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MTestType().IsOneOf(options)));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MTestType().IsOneOf(options)));
+  MORIARTY_ASSERT_OK(
+      variables.AddVariable("A", MTestType().AddConstraint(OneOf(options))));
+  MORIARTY_ASSERT_OK(
+      variables.AddVariable("B", MTestType().AddConstraint(OneOf(options))));
 
   values.Set<MTestType>("A", options[4]);
   values.Set<MTestType>("B", TestType(100000));  // Not in the list!
@@ -77,8 +82,10 @@ TEST(AnalysisBootstrapTest,
 
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MTestType().IsOneOf(options)));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MTestType().IsOneOf(options)));
+  MORIARTY_ASSERT_OK(
+      variables.AddVariable("A", MTestType().AddConstraint(OneOf(options))));
+  MORIARTY_ASSERT_OK(
+      variables.AddVariable("B", MTestType().AddConstraint(OneOf(options))));
 
   values.Set<MTestType>("A", options[4]);
 
@@ -96,8 +103,10 @@ TEST(AnalysisBootstrapTest,
 
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MTestType().IsOneOf(options)));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MTestType().IsOneOf(options)));
+  MORIARTY_ASSERT_OK(
+      variables.AddVariable("A", MTestType().AddConstraint(OneOf(options))));
+  MORIARTY_ASSERT_OK(
+      variables.AddVariable("B", MTestType().AddConstraint(OneOf(options))));
 
   values.Set<MTestType>("A", options[30]);
   values.Set<MTestType>("B", options[40]);

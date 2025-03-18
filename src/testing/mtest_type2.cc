@@ -24,7 +24,6 @@
 #include <vector>
 
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -36,6 +35,16 @@
 // LINT.IfChange
 
 namespace moriarty_testing {
+
+MTestType2& MTestType2::AddConstraint(moriarty::Exactly<TestType2> constraint) {
+  one_of_.ConstrainOptions(std::vector{constraint.GetValue()});
+  return InternalAddConstraint(std::move(constraint));
+}
+
+MTestType2& MTestType2::AddConstraint(moriarty::OneOf<TestType2> constraint) {
+  one_of_.ConstrainOptions(constraint.GetOptions());
+  return InternalAddConstraint(std::move(constraint));
+}
 
 TestType2 MTestType2::ReadImpl(moriarty::librarian::ReaderContext ctx) const {
   std::string token = ctx.ReadToken();
@@ -119,6 +128,9 @@ std::vector<std::string> MTestType2::GetDependenciesImpl() const {
 // available for use if we wanted to.
 TestType2 MTestType2::GenerateImpl(
     moriarty::librarian::ResolverContext ctx) const {
+  if (one_of_.HasBeenConstrained())
+    return one_of_.SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
+
   TestType2 addition = 0;
   if (adder_variable_name_) {
     addition = ctx.GenerateVariable<MTestType2>(*adder_variable_name_);
@@ -130,7 +142,9 @@ TestType2 MTestType2::GenerateImpl(
 
 std::vector<MTestType2> MTestType2::ListEdgeCasesImpl(
     moriarty::librarian::AnalysisContext ctx) const {
-  return std::vector<MTestType2>({MTestType2().Is(2), MTestType2().Is(3)});
+  return std::vector<MTestType2>(
+      {MTestType2().AddConstraint(moriarty::Exactly<TestType2>(2)),
+       MTestType2().AddConstraint(moriarty::Exactly<TestType2>(3))});
 }
 
 }  // namespace moriarty_testing

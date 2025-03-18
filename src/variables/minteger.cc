@@ -328,7 +328,7 @@ std::vector<MInteger> MInteger::ListEdgeCasesImpl(
   std::vector<MInteger> instances;
   instances.reserve(values.size());
   for (const auto& v : values) {
-    instances.push_back(MInteger().Is(v));
+    instances.push_back(MInteger(Exactly(v)));
   }
 
   return instances;
