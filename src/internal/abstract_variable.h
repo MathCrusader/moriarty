@@ -101,7 +101,7 @@ class AbstractVariable {
   //
   // Reads a value from `ctx` using the constraints of this variable to
   // determine formatting, etc. Stores the value in `values_ctx`.
-  virtual absl::Status ReadValue(
+  virtual void ReadValue(
       librarian::ReaderContext ctx,
       moriarty_internal::MutableValuesContext values_ctx) const = 0;
 
@@ -109,15 +109,15 @@ class AbstractVariable {
   //
   // Prints the value of this variable to `ctx` using the constraints on this
   // variable to determine formatting, etc.
-  virtual absl::Status PrintValue(librarian::PrinterContext ctx) const = 0;
+  virtual void PrintValue(librarian::PrinterContext ctx) const = 0;
 
-  // MergeFrom() [pure virtual]
+  // MergeFromAnonymous() [pure virtual]
   //
   // Merges my current constraints with the constraints of the `other` variable.
   // The merge should act as an intersection of the two constraints. If one says
   // 1 <= x <= 10 and the other says 5 <= x <= 20, then then merged version
   // should have 5 <= x <= 10.
-  virtual absl::Status MergeFrom(const AbstractVariable& other) = 0;
+  virtual void MergeFromAnonymous(const AbstractVariable& other) = 0;
 
   // ValueSatisfiesConstraints() [pure virtual]
   //

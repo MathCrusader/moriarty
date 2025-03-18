@@ -201,11 +201,10 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Same as `MergeFrom`, but you do not know the type of the variable you
   // are. This should only be used in generic code.
-  absl::Status MergeFromAnonymous(
-      const moriarty_internal::AbstractVariable& other) {
+  void MergeFromAnonymous(
+      const moriarty_internal::AbstractVariable& other) override {
     const VariableType& typed_other = ConvertTo<VariableType>(other);
     MergeFrom(typed_other);
-    return absl::OkStatus();
   }
 
   // FIXME: Make this the implementation of ToString()
@@ -263,12 +262,10 @@ class MVariable : public moriarty_internal::AbstractVariable {
   absl::Status AssignValue(ResolverContext ctx) const override;
   absl::Status AssignUniqueValue(AssignmentContext ctx) const override;
   absl::Status ValueSatisfiesConstraints(AnalysisContext ctx) const override;
-  absl::Status MergeFrom(
-      const moriarty_internal::AbstractVariable& other) override;
-  absl::Status ReadValue(
+  void ReadValue(
       ReaderContext ctx,
       moriarty_internal::MutableValuesContext values_ctx) const override;
-  absl::Status PrintValue(librarian::PrinterContext ctx) const override;
+  void PrintValue(librarian::PrinterContext ctx) const override;
   std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
   ListAnonymousEdgeCases(AnalysisContext ctx) const override;
   // ---------------------------------------------------------------------------
@@ -467,19 +464,6 @@ std::string MVariable<V, G>::Explanation(AnalysisContext ctx,
   return std::string(status.message());
 }
 
-template <typename V, typename G>
-absl::Status MVariable<V, G>::MergeFrom(
-    const moriarty_internal::AbstractVariable& other) {
-  const V* const other_derived_class = dynamic_cast<const V* const>(&other);
-
-  if (other_derived_class == nullptr)
-    return absl::InvalidArgumentError(
-        "In MergeFrom: Cannot convert variable to this variable type.");
-
-  MergeFrom(*other_derived_class);
-  return absl::OkStatus();
-}
-
 // -----------------------------------------------------------------------------
 //  Template implementation for private functions not part of Extended API.
 
@@ -541,17 +525,15 @@ absl::Status MVariable<V, G>::ValueSatisfiesConstraints(
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::ReadValue(
+void MVariable<V, G>::ReadValue(
     ReaderContext ctx,
     moriarty_internal::MutableValuesContext values_ctx) const {
   values_ctx.SetValue<V>(ctx.GetVariableName(), Read(ctx));
-  return absl::OkStatus();
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::PrintValue(PrinterContext ctx) const {
+void MVariable<V, G>::PrintValue(PrinterContext ctx) const {
   Print(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
-  return absl::OkStatus();
 }
 
 template <typename V, typename G>
@@ -597,8 +579,8 @@ absl::Status SatisfiesConstraints(
 
 template <typename... T>
   requires std::constructible_from<librarian::PrinterContext, T...>
-absl::Status PrintValue(const AbstractVariable& variable, T... args) {
-  return variable.PrintValue(librarian::PrinterContext(args...));
+void PrintValue(const AbstractVariable& variable, T... args) {
+  variable.PrintValue(librarian::PrinterContext(args...));
 }
 
 }  // namespace moriarty::moriarty_internal

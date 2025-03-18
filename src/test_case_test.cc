@@ -47,8 +47,7 @@ using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsVariableNotFound;
 
 template <typename T>
-absl::StatusOr<T> GetVariable(const TestCase& test_case,
-                              std::string_view name) {
+T GetVariable(const TestCase& test_case, std::string_view name) {
   auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
   return variables.GetVariable<T>(name);
 }
@@ -69,7 +68,7 @@ absl::StatusOr<ValueSet> AssignAllValues(const TestCase& test_case) {
 TEST(TestCaseTest, ConstrainVariableAndGetVariableWorkInGeneralCase) {
   TestCase T;
   T.ConstrainVariable("A", MTestType());
-  MORIARTY_EXPECT_OK(GetVariable<MTestType>(T, "A"));
+  GetVariable<MTestType>(T, "A");  // No crash = good.
 }
 
 TEST(TestCaseTest, SetValueWithSpecificValueAndGetVariableWorkInGeneralCase) {
@@ -81,14 +80,14 @@ TEST(TestCaseTest, SetValueWithSpecificValueAndGetVariableWorkInGeneralCase) {
 TEST(TestCaseTest, GetVariableWithWrongTypeShouldFail) {
   TestCase T;
   T.ConstrainVariable("A", MTestType());
-  EXPECT_THAT([&] { GetVariable<MInteger>(T, "A").IgnoreError(); },
+  EXPECT_THAT([&] { GetVariable<MInteger>(T, "A"); },
               ThrowsMVariableTypeMismatch("MTestType", "MInteger"));
 }
 
 TEST(TestCaseTest, GetVariableWithWrongNameShouldNotFind) {
   TestCase T;
   T.ConstrainVariable("A", MTestType());
-  EXPECT_THAT([&] { GetVariable<MTestType>(T, "xxx").IgnoreError(); },
+  EXPECT_THAT([&] { GetVariable<MTestType>(T, "xxx"); },
               ThrowsVariableNotFound("xxx"));
 }
 

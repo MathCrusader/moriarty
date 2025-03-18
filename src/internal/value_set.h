@@ -81,7 +81,7 @@ class ValueSet {
   // used when the value type is unknown.
   //
   // Throws moriarty::ValueNotFound if the variable has not been set.
-  absl::StatusOr<std::any> UnsafeGet(std::string_view variable_name) const;
+  std::any UnsafeGet(std::string_view variable_name) const;
 
   // Contains()
   //

@@ -42,44 +42,44 @@ TEST(VariableSetTest, GetVariableCanRetrieveFromAddVariable) {
   MORIARTY_ASSERT_OK(
       v.AddVariable("B", MTestType().AddConstraint(Exactly<TestType>(222222))));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(MTestType A, v.GetVariable<MTestType>("A"));
+  MTestType A = v.GetVariable<MTestType>("A");
   EXPECT_THAT(Generate(A), IsOkAndHolds(111111));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(MTestType B, v.GetVariable<MTestType>("B"));
+  MTestType B = v.GetVariable<MTestType>("B");
   EXPECT_THAT(Generate(B), IsOkAndHolds(222222));
 }
 
 TEST(VariableSetTest, AddOrMergeVariableSetsProperlyWhenNotMerging) {
   VariableSet v;
-  MORIARTY_ASSERT_OK(v.AddOrMergeVariable(
-      "A", MTestType().AddConstraint(Exactly<TestType>(111111))));
-  MORIARTY_ASSERT_OK(v.AddOrMergeVariable(
-      "B", MTestType().AddConstraint(Exactly<TestType>(222222))));
+  v.AddOrMergeVariable("A",
+                       MTestType().AddConstraint(Exactly<TestType>(111111)));
+  v.AddOrMergeVariable("B",
+                       MTestType().AddConstraint(Exactly<TestType>(222222)));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(MTestType A, v.GetVariable<MTestType>("A"));
+  MTestType A = v.GetVariable<MTestType>("A");
   EXPECT_THAT(Generate(A), IsOkAndHolds(111111));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(MTestType B, v.GetVariable<MTestType>("B"));
+  MTestType B = v.GetVariable<MTestType>("B");
   EXPECT_THAT(Generate(B), IsOkAndHolds(222222));
 }
 
 TEST(VariableSetTest, AddOrMergeVariableSetsProperlyWhenMerging) {
   VariableSet v;
-  MORIARTY_ASSERT_OK(v.AddOrMergeVariable(
-      "A", MTestType().AddConstraint(OneOf<TestType>({11, 22}))));
-  MORIARTY_ASSERT_OK(v.AddOrMergeVariable(
-      "A", MTestType().AddConstraint(OneOf<TestType>({22, 33}))));
+  v.AddOrMergeVariable("A",
+                       MTestType().AddConstraint(OneOf<TestType>({11, 22})));
+  v.AddOrMergeVariable("A",
+                       MTestType().AddConstraint(OneOf<TestType>({22, 33})));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(MTestType A, v.GetVariable<MTestType>("A"));
+  MTestType A = v.GetVariable<MTestType>("A");
   EXPECT_THAT(Generate(A), IsOkAndHolds(22));
 }
 
 TEST(VariableSetTest, GetVariableOnNonExistentVariableFails) {
   VariableSet v;
 
-  EXPECT_THAT([&] { v.GetAbstractVariable("unknown1").IgnoreError(); },
+  EXPECT_THAT([&] { v.GetAbstractVariable("unknown1"); },
               ThrowsVariableNotFound("unknown1"));
-  EXPECT_THAT([&] { v.GetVariable<MTestType>("unknown2").IgnoreError(); },
+  EXPECT_THAT([&] { v.GetVariable<MTestType>("unknown2"); },
               ThrowsVariableNotFound("unknown2"));
 }
 
@@ -90,8 +90,8 @@ TEST(VariableSetTest, GetAnonymousVariableShouldWork) {
   MORIARTY_ASSERT_OK(variables.AddVariable("C", MTestType2()));
   MORIARTY_ASSERT_OK(variables.AddVariable("D", MTestType2()));
 
-  EXPECT_THAT(variables.GetAbstractVariable("A"), IsOk());
-  EXPECT_THAT([&] { variables.GetAbstractVariable("X").IgnoreError(); },
+  variables.GetAbstractVariable("A");  // No crash = good.
+  EXPECT_THAT([&] { variables.GetAbstractVariable("X"); },
               ThrowsVariableNotFound("X"));
 }
 

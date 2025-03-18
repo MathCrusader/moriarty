@@ -129,8 +129,7 @@ ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
   auto [extra_constraints, values] = UnsafeExtractTestCaseInternals(test_case);
 
   for (auto& [name, constraints] : extra_constraints.GetAllVariables()) {
-    auto status = variables.AddOrMergeVariable(name, *constraints);
-    if (!status.ok()) throw std::runtime_error(status.ToString());
+    variables.AddOrMergeVariable(name, *constraints);
   }
 
   auto generated_values = GenerateAllValues(variables, values, options);
@@ -153,16 +152,14 @@ absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
 
   // First do a quick assignment of all known values.
   for (std::string_view name : variable_names) {
-    MORIARTY_ASSIGN_OR_RETURN(AbstractVariable * var,
-                              variables.GetAbstractVariable(name));
+    AbstractVariable* var = variables.GetAbstractVariable(name);
     librarian::AssignmentContext ctx(name, variables, known_values);
     MORIARTY_RETURN_IF_ERROR(var->AssignUniqueValue(ctx));
   }
 
   // Now do a deep generation.
   for (std::string_view name : variable_names) {
-    MORIARTY_ASSIGN_OR_RETURN(AbstractVariable * var,
-                              variables.GetAbstractVariable(name));
+    AbstractVariable* var = variables.GetAbstractVariable(name);
     librarian::ResolverContext ctx(name, variables, known_values,
                                    options.random_engine, generation_config);
     MORIARTY_RETURN_IF_ERROR(var->AssignValue(ctx));
@@ -172,8 +169,7 @@ absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
   // AssignUniqueValues(). Let's check for those now...
   // TODO(darcybest): Determine if there's a better way of doing this...
   for (std::string_view name : variable_names) {
-    MORIARTY_ASSIGN_OR_RETURN(AbstractVariable * var,
-                              variables.GetAbstractVariable(name));
+    AbstractVariable* var = variables.GetAbstractVariable(name);
     librarian::AnalysisContext ctx(name, variables, known_values);
     MORIARTY_RETURN_IF_ERROR(var->ValueSatisfiesConstraints(ctx));
   }

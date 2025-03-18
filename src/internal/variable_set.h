@@ -28,7 +28,6 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/conversions.h"
@@ -56,8 +55,8 @@ class VariableSet {
 
   // Adds an AbstractVariable to the collection, if it doesn't exist, or merges
   // it into the existing variable if it does.
-  absl::Status AddOrMergeVariable(std::string_view name,
-                                  const AbstractVariable& variable);
+  void AddOrMergeVariable(std::string_view name,
+                          const AbstractVariable& variable);
 
   // GetAbstractVariable()
   //
@@ -66,8 +65,7 @@ class VariableSet {
   //
   // Throws:
   //  * moriarty::VariableNotFound if the variable does not exist.
-  absl::StatusOr<const AbstractVariable*> GetAbstractVariable(
-      std::string_view name) const;
+  const AbstractVariable* GetAbstractVariable(std::string_view name) const;
 
   // GetAbstractVariable()
   //
@@ -76,7 +74,7 @@ class VariableSet {
   //
   // Throws:
   //  * moriarty::VariableNotFound if the variable does not exist.
-  absl::StatusOr<AbstractVariable*> GetAbstractVariable(std::string_view name);
+  AbstractVariable* GetAbstractVariable(std::string_view name);
 
   // GetVariable<>()
   //
@@ -89,7 +87,7 @@ class VariableSet {
   //  * kInvalidArgument if it is not convertible to `T`
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
-  absl::StatusOr<T> GetVariable(std::string_view name) const;
+  T GetVariable(std::string_view name) const;
 
   // GetAllVariables()
   //
@@ -113,7 +111,7 @@ class VariableSet {
 
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
-absl::StatusOr<T> VariableSet::GetVariable(std::string_view name) const {
+T VariableSet::GetVariable(std::string_view name) const {
   const AbstractVariable* var = GetAbstractVariableOrNull(name);
   if (var == nullptr) throw VariableNotFound(name);
   return librarian::ConvertTo<T>(*var);

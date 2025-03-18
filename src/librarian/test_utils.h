@@ -433,9 +433,8 @@ absl::StatusOr<typename T::value_type> Read(T variable, std::istream& is,
   context.WithVariable(var_name, variable);
   moriarty_testing_internal::ContextManager manager(&context);
 
-  MORIARTY_ASSIGN_OR_RETURN(
-      moriarty::moriarty_internal::AbstractVariable * var,
-      manager.GetVariables()->GetAbstractVariable(var_name));
+  moriarty::moriarty_internal::AbstractVariable* var =
+      manager.GetVariables()->GetAbstractVariable(var_name);
 
   moriarty::librarian::ReaderContext reader_context(
       var_name, is, moriarty::WhitespaceStrictness::kPrecise,
@@ -443,7 +442,7 @@ absl::StatusOr<typename T::value_type> Read(T variable, std::istream& is,
   moriarty::moriarty_internal::MutableValuesContext values_context(
       *manager.GetValues());
 
-  MORIARTY_RETURN_IF_ERROR(var->ReadValue(reader_context, values_context));
+  var->ReadValue(reader_context, values_context);
   return manager.GetValues()->Get<T>(var_name);
 }
 
@@ -469,13 +468,12 @@ absl::StatusOr<std::string> Print(T variable, typename T::value_type value,
 
   std::ostringstream ss;
 
-  MORIARTY_ASSIGN_OR_RETURN(
-      moriarty::moriarty_internal::AbstractVariable * var,
-      manager.GetVariables()->GetAbstractVariable(var_name));
+  moriarty::moriarty_internal::AbstractVariable* var =
+      manager.GetVariables()->GetAbstractVariable(var_name);
 
   moriarty::librarian::PrinterContext printer_context(
       var_name, ss, *manager.GetVariables(), *manager.GetValues());
-  MORIARTY_RETURN_IF_ERROR(var->PrintValue(printer_context));
+  var->PrintValue(printer_context);
   return ss.str();
 }
 

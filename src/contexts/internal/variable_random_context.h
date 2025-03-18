@@ -138,9 +138,7 @@ T::value_type VariableRandomContext::RandomValue(
     return *value;
   }
 
-  auto variable = variables_.get().GetVariable<T>(variable_name);
-  if (!variable.ok()) throw std::runtime_error(variable.status().ToString());
-  return Random<T>(*variable);
+  return Random<T>(variables_.get().GetVariable<T>(variable_name));
 }
 
 template <typename T>
@@ -153,10 +151,9 @@ T::value_type VariableRandomContext::RandomValue(std::string_view variable_name,
     return *value;
   }
 
-  auto variable = variables_.get().GetVariable<T>(variable_name);
-  if (!variable.ok()) throw std::runtime_error(variable.status().ToString());
-  variable->MergeFrom(extra_constraints);
-  return Random<T>(*variable);
+  T variable = variables_.get().GetVariable<T>(variable_name);
+  variable.MergeFrom(std::move(extra_constraints));
+  return Random<T>(std::move(variable));
 }
 
 template <typename T>

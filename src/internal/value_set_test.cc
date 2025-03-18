@@ -14,7 +14,6 @@
 
 #include "src/internal/value_set.h"
 
-#include <any>
 #include <cstdint>
 #include <string>
 
@@ -86,30 +85,25 @@ TEST(ValueSetTest, SimpleUnsafeGetWorks) {
   ValueSet value_set;
   value_set.Set<MInteger>("x", 5);
 
-  EXPECT_THAT(value_set.UnsafeGet("x"), IsOkAndHolds(AnyWith<int64_t>(5)));
+  EXPECT_THAT(value_set.UnsafeGet("x"), AnyWith<int64_t>(5));
 }
 
 TEST(ValueSetTest, UnsafeGetOverwritingTheSameVariableShouldReplaceTheValue) {
   ValueSet value_set;
 
   value_set.Set<MInteger>("x", 5);
-  absl::StatusOr<std::any> value = value_set.UnsafeGet("x");
-  MORIARTY_EXPECT_OK(value);
-  EXPECT_EQ(std::any_cast<int64_t>(value.value()), 5);
+  EXPECT_THAT(value_set.UnsafeGet("x"), AnyWith<int64_t>(5));
+
   value_set.Set<MString>("x", "hi");
-  value = value_set.UnsafeGet("x");
-  MORIARTY_EXPECT_OK(value);
-  EXPECT_EQ(std::any_cast<std::string>(value.value()), "hi");
+  EXPECT_THAT(value_set.UnsafeGet("x"), AnyWith<std::string>("hi"));
 }
 
 TEST(ValueSetTest, UnsafeGetRequestingANonExistentVariableFails) {
   ValueSet value_set;
-  EXPECT_THAT([&] { value_set.UnsafeGet("x").IgnoreError(); },
-              ThrowsValueNotFound("x"));
+  EXPECT_THAT([&] { value_set.UnsafeGet("x"); }, ThrowsValueNotFound("x"));
 
   value_set.Set<MInteger>("x", 5);
-  EXPECT_THAT([&] { value_set.UnsafeGet("y").IgnoreError(); },
-              ThrowsValueNotFound("y"));
+  EXPECT_THAT([&] { value_set.UnsafeGet("y"); }, ThrowsValueNotFound("y"));
 }
 
 TEST(ValueSetTest, ContainsShouldWork) {

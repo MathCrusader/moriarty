@@ -21,7 +21,6 @@
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/status/statusor.h"
 #include "src/errors.h"
 
 namespace moriarty {
@@ -48,8 +47,7 @@ void ValueSet::UnsafeSet(std::string_view variable_name, std::any value) {
   if (inserted) approximate_size_++;
 }
 
-absl::StatusOr<std::any> ValueSet::UnsafeGet(
-    std::string_view variable_name) const {
+std::any ValueSet::UnsafeGet(std::string_view variable_name) const {
   auto it = values_.find(variable_name);
   if (it == values_.end()) throw ValueNotFound(variable_name);
   return it->second;

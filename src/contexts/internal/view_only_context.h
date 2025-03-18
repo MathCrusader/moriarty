@@ -146,9 +146,7 @@ namespace moriarty_internal {
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
 T ViewOnlyContext::GetVariable(std::string_view variable_name) const {
-  auto variable = variables_.get().GetVariable<T>(variable_name);
-  if (!variable.ok()) throw std::runtime_error(variable.status().ToString());
-  return *variable;
+  return variables_.get().GetVariable<T>(variable_name);
 }
 
 template <typename T>

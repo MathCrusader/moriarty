@@ -1,7 +1,6 @@
 #include "src/contexts/internal/view_only_context.h"
 
 #include <functional>
-#include <stdexcept>
 #include <string>
 
 #include "src/internal/value_set.h"
@@ -17,9 +16,7 @@ ViewOnlyContext::ViewOnlyContext(
 
 const AbstractVariable& ViewOnlyContext::GetAnonymousVariable(
     std::string_view variable_name) const {
-  auto var = variables_.get().GetAbstractVariable(variable_name);
-  if (!var.ok()) throw std::runtime_error(std::string(var.status().message()));
-  return *(var.value());
+  return *variables_.get().GetAbstractVariable(variable_name);
 }
 
 const absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>&

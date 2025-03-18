@@ -23,7 +23,6 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "gmock/gmock.h"
@@ -124,7 +123,7 @@ TEST(MVariableTest, MergeFromWithWrongTypeShouldFail) {
 
 TEST(MVariableTest, MergeFromUsingAbstractVariablesShouldRespectIsAndIsOneOf) {
   auto merge_from = [](MTestType& a, const MTestType& b) {
-    ABSL_CHECK_OK(static_cast<AbstractVariable*>(&a)->MergeFrom(b));
+    static_cast<AbstractVariable*>(&a)->MergeFromAnonymous(b);
   };
 
   {
@@ -233,14 +232,12 @@ TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
   moriarty_internal::GenerationConfig generation_config;
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(AbstractVariable * var_A,
-                                variables.GetAbstractVariable("A"));
+  AbstractVariable* var_A = variables.GetAbstractVariable("A");
   ResolverContext ctxA("A", variables, values, engine, generation_config);
   MORIARTY_ASSERT_OK(
       var_A->AssignValue(ctxA));  // By assigning A, we assigned N.
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(AbstractVariable * var_B,
-                                variables.GetAbstractVariable("B"));
+  AbstractVariable* var_B = variables.GetAbstractVariable("B");
   ResolverContext ctxB("B", variables, values, engine, generation_config);
   MORIARTY_ASSERT_OK(
       var_B->AssignValue(ctxB));  // Should use the already generated N.
@@ -552,9 +549,8 @@ TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {
   std::stringstream ss;
 
   PrinterContext ctx("x", ss, variables, values);
-  MORIARTY_ASSERT_OK_AND_ASSIGN(AbstractVariable * var,
-                                variables.GetAbstractVariable("x"));
-  MORIARTY_ASSERT_OK(var->PrintValue(ctx));
+  AbstractVariable* var = variables.GetAbstractVariable("x");
+  var->PrintValue(ctx);
   EXPECT_EQ(ss.str(), "12345");
 }
 
@@ -603,8 +599,7 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
   moriarty_internal::GenerationConfig generation_config;
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(AbstractVariable * var_A,
-                                variables.GetAbstractVariable("A"));
+  AbstractVariable* var_A = variables.GetAbstractVariable("A");
   ResolverContext ctxA("A", variables, values, engine, generation_config);
   MORIARTY_ASSERT_OK(
       var_A->AssignValue(ctxA));  // By assigning A, we assigned N.
@@ -612,8 +607,7 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
 
   // Attempt to re-assign N.
   ResolverContext ctxN("N", variables, values, engine, generation_config);
-  MORIARTY_ASSERT_OK_AND_ASSIGN(AbstractVariable * var_N,
-                                variables.GetAbstractVariable("N"));
+  AbstractVariable* var_N = variables.GetAbstractVariable("N");
   MORIARTY_ASSERT_OK(var_N->AssignValue(ctxN));
 
   // Should not have changed.

@@ -76,12 +76,11 @@ template <typename T>
   requires std::derived_from<T, AbstractVariable>
 T::value_type VariableIStreamContext::ReadVariable(
     std::string_view variable_name) {
-  auto variable = variables_.get().GetVariable<T>(variable_name);
-  if (!variable.ok()) throw std::runtime_error(variable.status().ToString());
+  T variable = variables_.get().GetVariable<T>(variable_name);
 
   librarian::ReaderContext ctx(variable_name, is_, whitespace_strictness_,
                                variables_, values_);
-  return variable->Read(ctx);
+  return variable.Read(ctx);
 }
 
 template <typename T>

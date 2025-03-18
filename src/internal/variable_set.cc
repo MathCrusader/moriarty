@@ -22,7 +22,6 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
@@ -46,15 +45,14 @@ void VariableSet::Swap(VariableSet& other) {
   std::swap(variables_, other.variables_);
 }
 
-absl::StatusOr<const AbstractVariable*> VariableSet::GetAbstractVariable(
+const AbstractVariable* VariableSet::GetAbstractVariable(
     std::string_view name) const {
   const AbstractVariable* var = GetAbstractVariableOrNull(name);
   if (var == nullptr) throw VariableNotFound(name);
   return var;
 }
 
-absl::StatusOr<AbstractVariable*> VariableSet::GetAbstractVariable(
-    std::string_view name) {
+AbstractVariable* VariableSet::GetAbstractVariable(std::string_view name) {
   AbstractVariable* var = GetAbstractVariableOrNull(name);
   if (var == nullptr) throw VariableNotFound(name);
   return var;
@@ -90,15 +88,14 @@ absl::Status VariableSet::AddVariable(std::string_view name,
   return absl::OkStatus();
 }
 
-absl::Status VariableSet::AddOrMergeVariable(std::string_view name,
-                                             const AbstractVariable& variable) {
+void VariableSet::AddOrMergeVariable(std::string_view name,
+                                     const AbstractVariable& variable) {
   auto [it, inserted] = variables_.try_emplace(name, nullptr);
   if (inserted) {
     it->second = std::unique_ptr<AbstractVariable>(variable.Clone());
-    return absl::OkStatus();
   }
 
-  return it->second->MergeFrom(variable);
+  it->second->MergeFromAnonymous(variable);
 }
 
 }  // namespace moriarty_internal

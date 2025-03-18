@@ -24,7 +24,6 @@
 #include <string_view>
 #include <utility>
 
-#include "absl/log/absl_check.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -175,8 +174,7 @@ template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
 TestCase& TestCase::ConstrainVariable(std::string_view variable_name,
                                       T constraints) {
-  ABSL_CHECK_OK(
-      variables_.AddOrMergeVariable(variable_name, std::move(constraints)));
+  variables_.AddOrMergeVariable(variable_name, std::move(constraints));
   return *this;
 }
 

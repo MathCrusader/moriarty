@@ -27,8 +27,7 @@ void VariableOStreamContext::PrintVariable(std::string_view variable_name) {
   if (!variable.ok()) throw std::runtime_error(variable.status().ToString());
 
   librarian::PrinterContext ctx(variable_name, os_, variables_, values_);
-  auto status = (*variable)->PrintValue(ctx);
-  if (!status.ok()) throw std::runtime_error(status.ToString());
+  (*variable)->PrintValue(ctx);
 }
 
 void VariableOStreamContext::PrintVariableFrom(
@@ -39,8 +38,7 @@ void VariableOStreamContext::PrintVariableFrom(
 
   ValueSet values = UnsafeExtractConcreteTestCaseInternals(test_case);
   librarian::PrinterContext ctx(variable_name, os_, variables_, values);
-  auto status = (*variable)->PrintValue(ctx);
-  if (!status.ok()) throw std::runtime_error(status.ToString());
+  (*variable)->PrintValue(ctx);
 }
 
 }  // namespace moriarty_internal

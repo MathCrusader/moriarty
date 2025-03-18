@@ -20,7 +20,6 @@
 #include <string_view>
 #include <utility>
 
-#include "absl/log/absl_check.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -30,7 +29,7 @@ namespace moriarty {
 TestCase& TestCase::ConstrainAnonymousVariable(
     std::string_view variable_name,
     const moriarty_internal::AbstractVariable& constraints) {
-  ABSL_CHECK_OK(variables_.AddOrMergeVariable(variable_name, constraints));
+  variables_.AddOrMergeVariable(variable_name, constraints);
   return *this;
 }
 
