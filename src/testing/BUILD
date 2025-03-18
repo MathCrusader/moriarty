@@ -77,23 +77,6 @@ cc_library(
 )
 
 cc_library(
-    name = "random_test_util",
-    testonly = True,
-    hdrs = [
-        "random_test_util.h",
-    ],
-    deps = [
-        "//src/util/test_status_macro:status_testutil",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@googletest//:gtest",
-    ],
-)
-
-cc_library(
     name = "status_test_util",
     testonly = True,
     hdrs = [
