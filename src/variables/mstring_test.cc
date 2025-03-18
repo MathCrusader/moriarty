@@ -43,7 +43,6 @@ using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::testing::AllOf;
 using ::testing::Ge;
-using ::testing::HasSubstr;
 using ::testing::IsSupersetOf;
 using ::testing::Le;
 using ::testing::MatchesRegex;

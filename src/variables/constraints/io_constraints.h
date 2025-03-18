@@ -17,6 +17,7 @@
 #ifndef MORIARTY_SRC_VARIABLES_CONSTRAINTS_IO_CONSTRAINTS_H_
 #define MORIARTY_SRC_VARIABLES_CONSTRAINTS_IO_CONSTRAINTS_H_
 
+#include <stdexcept>
 #include <string>
 
 #include "src/io_config.h"
@@ -34,8 +35,17 @@ class IOSeparator : public MConstraint {
   // Returns the separator to use between elements of a container.
   [[nodiscard]] Whitespace GetSeparator() const;
 
+  // IOConstraints are always satisfied
+  [[nodiscard]] bool IsSatisfiedWith(const auto& value) const { return true; }
+
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
+
+  // Returns a string explaining why the value does not satisfy the constraints.
+  // It is assumed that IsSatisfiedWith() returned false.
+  [[nodiscard]] std::string Explanation(const auto& value) const {
+    throw std::runtime_error("IOSeparator is always satisfied");
+  }
 
  private:
   Whitespace separator_;

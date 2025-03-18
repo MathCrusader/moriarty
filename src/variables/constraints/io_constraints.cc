@@ -16,6 +16,7 @@
 
 #include "src/variables/constraints/io_constraints.h"
 
+#include <stdexcept>
 #include <string>
 
 #include "src/io_config.h"
@@ -35,6 +36,7 @@ std::string IOSeparator::ToString() const {
     case Whitespace::kNewline:
       return "IOSeparator(Newline)";
   }
+  throw std::runtime_error("Invalid/Unknown IOSeparator");
 }
 
 }  // namespace moriarty

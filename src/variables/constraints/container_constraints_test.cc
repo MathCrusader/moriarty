@@ -154,6 +154,58 @@ TEST(ContainerConstraintsTest, ElementsIsSatisfiedWithWorks) {
   }
 }
 
+TEST(ContainerConstraintsTest, ElementConstraintsAreCorrect) {
+  EXPECT_THAT((Element<0, MInteger>(Between(1, 10)).GetConstraints()),
+              GeneratedValuesAre(AllOf(Ge(1), Le(10))));
+  EXPECT_THAT(
+      GenerateLots(
+          Element<1, MInteger>(AtLeast("X"), AtMost(15)).GetConstraints(),
+          Context().WithValue<MInteger>("X", 3)),
+      IsOkAndHolds(Each(AllOf(Ge(3), Le(15)))));
+}
+
+TEST(ContainerConstraintsTest, ElementToStringWorks) {
+  EXPECT_EQ((Element<50, MInteger>(Between(1, 10)).ToString()),
+            "tuple index 50 is between 1 and 10");
+  EXPECT_EQ((Element<0, MString>(Length(Between(1, 10))).ToString()),
+            "tuple index 0 has length that is between 1 and 10");
+}
+
+TEST(ContainerConstraintsTest, ElementExplanationWorks) {
+  moriarty_internal::VariableSet variables;
+  moriarty_internal::ValueSet values;
+  librarian::AnalysisContext ctx("N", variables, values);
+
+  EXPECT_EQ((Element<0, MInteger>(Between(1, 10)).Explanation(ctx, -1)),
+            "tuple index 0 (which is `-1`) is not between 1 and 10");
+  EXPECT_EQ(
+      (Element<12, MString>(Length(Between(1, 3))).Explanation(ctx, "hello")),
+      "tuple index 12 (which is `hello`) has length (which is `5`) that is not "
+      "between 1 and 3");
+}
+
+TEST(ContainerConstraintsTest, ElementIsSatisfiedWithWorks) {
+  moriarty_internal::VariableSet variables;
+  moriarty_internal::ValueSet values;
+  values.Set<MInteger>("X", 10);
+  librarian::AnalysisContext ctx("N", variables, values);
+
+  {
+    EXPECT_TRUE((Element<0, MString>(Length(Between(1, 10)))
+                     .IsSatisfiedWith(ctx, "123")));
+    EXPECT_TRUE((Element<0, MString>(Length(Between(1, 10)))
+                     .IsSatisfiedWith(ctx, "hello")));
+    EXPECT_TRUE((Element<0, MString>(Length(Between(1, "X")))
+                     .IsSatisfiedWith(ctx, "moto")));
+  }
+  {
+    EXPECT_FALSE((Element<0, MString>(Length(Between(1, 4)))
+                      .IsSatisfiedWith(ctx, "hello")));
+    EXPECT_FALSE((Element<0, MString>(Length(Between(2, "X")))
+                      .IsSatisfiedWith(ctx, "m")));
+  }
+}
+
 TEST(ContainerConstraintsTest, DistinctElementsToStringWorks) {
   EXPECT_EQ(DistinctElements().ToString(), "has distinct elements");
 }

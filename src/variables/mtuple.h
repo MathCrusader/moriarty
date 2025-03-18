@@ -37,6 +37,10 @@
 #include "src/io_config.h"
 #include "src/librarian/locked_optional.h"
 #include "src/librarian/mvariable.h"
+#include "src/librarian/one_of_handler.h"
+#include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/container_constraints.h"
+#include "src/variables/constraints/io_constraints.h"
 
 namespace moriarty {
 
@@ -61,7 +65,21 @@ class MTuple : public librarian::MVariable<
  public:
   using tuple_value_type = std::tuple<typename MElementTypes::value_type...>;
 
-  MTuple();
+  // Create an MTuple from a set of constraints. Logically equivalent to
+  // calling AddConstraint() for each constraint.
+  //
+  // E.g.,
+  //     MTuple<MInteger, MInteger>(
+  //          Element<0, MInteger>(Between(1, 10)),
+  //          Element<1, MString>(Length(15)));
+  template <typename... Constraints>
+    requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
+  explicit MTuple(Constraints&&... constraints);
+
+  // Create an MTuple by specifying the MVariables directly.
+  //
+  // E.g.,
+  //     MTuple(MInteger(Between(1, 10)), String(Length(15)));
   explicit MTuple(MElementTypes... values);
 
   // Typename()
@@ -71,27 +89,16 @@ class MTuple : public librarian::MVariable<
   // debugging/error messages.
   [[nodiscard]] std::string Typename() const override;
 
-  // Of()
-  //
-  // Sets the argument matching `index` in the tuple.
-  //
-  // Example:
-  //   Of<0>(MInteger().Between(1, 10));
-  //
-  // TODO(b/208296530): We should be taking the name as a parameter instead of
-  // the index as a template argument.
-  // TODO(b/208296530): `Of()` is a pretty bad name... We should change it to
-  // something more meaningful.
-  template <int index, typename T>
-  MTuple& Of(T variable);
+  MTuple& AddConstraint(Exactly<tuple_value_type> constraint);
+  MTuple& AddConstraint(OneOf<tuple_value_type> constraint);
 
-  // WithSeparator()
-  //
-  // Sets the whitespace separator to be used between different elements
-  // when reading/writing. Default = kSpace.
-  MTuple& WithSeparator(Whitespace separator);
+  MTuple& AddConstraint(IOSeparator constraint);
+
+  template <size_t I, typename MElementType>
+  MTuple& AddConstraint(Element<I, MElementType> constraint);
 
  private:
+  librarian::OneOfHandler<tuple_value_type> one_of_;
   std::tuple<MElementTypes...> elements_;
   librarian::LockedOptional<Whitespace> separator_ =
       librarian::LockedOptional<Whitespace>{Whitespace::kSpace};
@@ -108,6 +115,27 @@ class MTuple : public librarian::MVariable<
                  const tuple_value_type& value) const override;
   std::vector<std::string> GetDependenciesImpl() const override;
   // ---------------------------------------------------------------------------
+
+  template <size_t I, typename MElementType>
+  struct ElementConstraintWrapper {
+   public:
+    explicit ElementConstraintWrapper(Element<I, MElementType> constraint)
+        : constraint_(std::move(constraint)) {};
+
+    bool IsSatisfiedWith(librarian::AnalysisContext ctx,
+                         const tuple_value_type& value) const {
+      return constraint_.IsSatisfiedWith(ctx, std::get<I>(value));
+    }
+    std::string Explanation(librarian::AnalysisContext ctx,
+                            const tuple_value_type& value) const {
+      return constraint_.Explanation(ctx, std::get<I>(value));
+    }
+    std::string ToString() const { return constraint_.ToString(); }
+    void ApplyTo(MTuple& other) const { other.AddConstraint(constraint_); }
+
+   private:
+    Element<I, MElementType> constraint_;
+  };
 };
 
 // Class template argument deduction (CTAD). Allows for `Array(MInteger())`
@@ -120,21 +148,34 @@ MTuple(MElementTypes...) -> MTuple<MElementTypes...>;
 //  Template Implementation Below
 
 template <typename... T>
-MTuple<T...>::MTuple() {
+MTuple<T...>::MTuple(T... values) {
   static_assert(
       (std::derived_from<T, librarian::MVariable<T, typename T::value_type>> &&
        ...),
-      "The T1, T2, etc used in MTuple<T1, T2> must be a Moriarty variable. "
-      "For example, MTuple<MInteger, MString>.");
+      "MTuple<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
+      "MString).");
+
+  auto apply_one = [&]<std::size_t I>() {
+    this->AddConstraint(
+        Element<I, typename std::tuple_element_t<I, std::tuple<T...>>>(
+            std::get<I>(std::tuple{values...})));
+  };
+
+  [&]<size_t... I>(std::index_sequence<I...>) {
+    (apply_one.template operator()<I>(), ...);
+  }(std::index_sequence_for<T...>{});
 }
 
 template <typename... T>
-MTuple<T...>::MTuple(T... values) : elements_(values...) {
+template <typename... Constraints>
+  requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
+MTuple<T...>::MTuple(Constraints&&... constraints) {
   static_assert(
       (std::derived_from<T, librarian::MVariable<T, typename T::value_type>> &&
        ...),
-      "The T1, T2, etc used in MTuple<T1, T2> must be a Moriarty variable. "
-      "For example, MTuple<MInteger, MString>.");
+      "MTuple<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
+      "MString).");
+  (AddConstraint(std::forward<Constraints>(constraints)), ...);
 }
 
 namespace moriarty_internal {
@@ -155,41 +196,56 @@ std::string MTuple<T...>::Typename() const {
 }
 
 template <typename... T>
-MTuple<T...>& MTuple<T...>::WithSeparator(Whitespace separator) {
-  if (!separator_.Set(separator)) {
-    throw std::runtime_error(
-        "Attempting to set multiple I/O separators for the same MTuple.");
-  }
+MTuple<T...>& MTuple<T...>::AddConstraint(
+    Exactly<tuple_value_type> constraint) {
+  one_of_.ConstrainOptions(
+      std::vector<tuple_value_type>{constraint.GetValue()});
+  this->NewAddConstraint(std::move(constraint));
   return *this;
 }
 
 template <typename... T>
-template <int index, typename U>
-MTuple<T...>& MTuple<T...>::Of(U variable) {
+MTuple<T...>& MTuple<T...>::AddConstraint(OneOf<tuple_value_type> constraint) {
+  one_of_.ConstrainOptions(constraint.GetOptions());
+  this->NewAddConstraint(std::move(constraint));
+  return *this;
+}
+
+template <typename... T>
+MTuple<T...>& MTuple<T...>::AddConstraint(IOSeparator constraint) {
+  if (!separator_.Set(constraint.GetSeparator())) {
+    throw std::runtime_error(
+        "Attempting to set multiple I/O separators for the same MTuple.");
+  }
+  this->NewAddConstraint(std::move(constraint));
+  return *this;
+}
+
+template <typename... T>
+template <size_t I, typename MElementType>
+MTuple<T...>& MTuple<T...>::AddConstraint(Element<I, MElementType> constraint) {
   static_assert(
-      std::same_as<U, typename std::tuple_element_t<index, std::tuple<T...>>>,
-      "Parameter passed to MTuple::Of<> is the wrong type.");
-  std::get<index>(elements_).MergeFrom(std::move(variable));
+      std::same_as<MElementType,
+                   typename std::tuple_element_t<I, std::tuple<T...>>>,
+      "Element I in the tuple does not match the type passed in the "
+      "constraint");
+
+  std::get<I>(elements_).MergeFrom(constraint.GetConstraints());
+  this->NewAddConstraint(ElementConstraintWrapper(std::move(constraint)));
   return *this;
 }
 
 template <typename... T>
 absl::Status MTuple<T...>::MergeFromImpl(const MTuple<T...>& other) {
-  auto merge_one = [&]<std::size_t I>() {
-    std::get<I>(elements_).MergeFrom(std::get<I>(other.elements_));
-  };
-  if (other.separator_.IsSet()) separator_.Set(other.separator_.Get());
-
-  [&]<size_t... I>(std::index_sequence<I...>) {
-    (merge_one.template operator()<I>(), ...);
-  }(std::index_sequence_for<T...>{});
-
   return absl::OkStatus();
 }
 
 template <typename... T>
 MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
     librarian::ResolverContext ctx) const {
+  if (one_of_.HasBeenConstrained())
+    return one_of_.SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
+
   auto generate_one = [&]<std::size_t I>() {
     return std::get<I>(elements_).Generate(
         ctx.ForSubVariable(moriarty_internal::TupleSubVariable<I>()));
@@ -229,17 +285,7 @@ void MTuple<T...>::PrintImpl(librarian::PrinterContext ctx,
 template <typename... T>
 absl::Status MTuple<T...>::IsSatisfiedWithImpl(
     librarian::AnalysisContext ctx, const tuple_value_type& value) const {
-  absl::Status status;
-  auto check_one = [&]<std::size_t I>() {
-    if (!status.ok()) return;
-    status = std::get<I>(elements_).IsSatisfiedWith(ctx, std::get<I>(value));
-  };
-
-  [&]<size_t... I>(std::index_sequence<I...>) {
-    (check_one.template operator()<I>(), ...);
-  }(std::index_sequence_for<T...>{});
-
-  return status;
+  return absl::OkStatus();
 }
 
 template <typename... T>

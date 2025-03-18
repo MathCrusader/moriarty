@@ -24,6 +24,9 @@
 #include "src/librarian/mvariable.h"
 #include "src/librarian/test_utils.h"
 #include "src/util/test_status_macro/status_testutil.h"
+#include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/container_constraints.h"
+#include "src/variables/constraints/io_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"
@@ -33,12 +36,14 @@ namespace {
 
 using ::moriarty::IsOkAndHolds;
 using ::moriarty_testing::Generate;
+using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GenerateSameValues;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
 using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::testing::AllOf;
+using ::testing::AnyOf;
 using ::testing::FieldsAre;
 using ::testing::Ge;
 using ::testing::Le;
@@ -48,8 +53,8 @@ TEST(MTupleTest, TypenameIsCorrect) {
   EXPECT_EQ(MTuple(MInteger()).Typename(), "MTuple<MInteger>");
   EXPECT_EQ(MTuple(MInteger(), MInteger()).Typename(),
             "MTuple<MInteger, MInteger>");
-  EXPECT_EQ(MTuple(MInteger(), MInteger(), MInteger()).Typename(),
-            "MTuple<MInteger, MInteger, MInteger>");
+  EXPECT_EQ(MTuple(MInteger(), MString(), MInteger()).Typename(),
+            "MTuple<MInteger, MString, MInteger>");
   EXPECT_EQ(MTuple(MInteger(), MTuple(MInteger(), MInteger())).Typename(),
             "MTuple<MInteger, MTuple<MInteger, MInteger>>");
 }
@@ -64,53 +69,52 @@ TEST(MTupleTest, PrintShouldSucceed) {
 }
 
 TEST(MTupleTest, PrintWithProperSeparatorShouldSucceed) {
-  EXPECT_THAT(Print(MTuple(MInteger(), MInteger(), MInteger())
-                        .WithSeparator(Whitespace::kNewline),
+  EXPECT_THAT(Print(MTuple<MInteger, MInteger, MInteger>(
+                        IOSeparator(Whitespace::kNewline)),
                     {1, 22, 333}),
               IsOkAndHolds("1\n22\n333"));
-  EXPECT_THAT(Print(MTuple(MInteger(), MString(), MInteger())
-                        .WithSeparator(Whitespace::kTab),
-                    {1, "twotwo", 333}),
-              IsOkAndHolds("1\ttwotwo\t333"));
+  EXPECT_THAT(
+      Print(MTuple<MInteger, MString, MInteger>(IOSeparator(Whitespace::kTab)),
+            {1, "twotwo", 333}),
+      IsOkAndHolds("1\ttwotwo\t333"));
 }
 
 TEST(MTupleTest, TypicalReadCaseWorks) {
-  EXPECT_THAT(Read(MTuple(MInteger(), MInteger(), MInteger()), "1 22 333"),
+  EXPECT_THAT(Read(MTuple<MInteger, MInteger, MInteger>(), "1 22 333"),
               IsOkAndHolds(FieldsAre(1, 22, 333)));
-  EXPECT_THAT(Read(MTuple(MInteger(), MString(), MInteger()), "1 twotwo 333"),
+  EXPECT_THAT(Read(MTuple<MInteger, MString, MInteger>(), "1 twotwo 333"),
               IsOkAndHolds(FieldsAre(1, "twotwo", 333)));
 }
 
 TEST(MTupleTest, ReadWithProperSeparatorShouldSucceed) {
-  EXPECT_THAT(Read(MTuple(MInteger(), MInteger(), MInteger())
-                       .WithSeparator(Whitespace::kNewline),
+  EXPECT_THAT(Read(MTuple<MInteger, MInteger, MInteger>(
+                       IOSeparator(Whitespace::kNewline)),
                    "1\n22\n333"),
               IsOkAndHolds(FieldsAre(1, 22, 333)));
-  EXPECT_THAT(Read(MTuple(MInteger(), MString(), MInteger())
-                       .WithSeparator(Whitespace::kTab),
-                   "1\ttwotwo\t333"),
-              IsOkAndHolds(FieldsAre(1, "twotwo", 333)));
+  EXPECT_THAT(
+      Read(MTuple<MInteger, MString, MInteger>(IOSeparator(Whitespace::kTab)),
+           "1\ttwotwo\t333"),
+      IsOkAndHolds(FieldsAre(1, "twotwo", 333)));
 }
 
 TEST(MTupleTest, ReadWithIncorrectSeparatorShouldFail) {
   EXPECT_THROW(
       {
-        Read(MTuple(MInteger(), MInteger(), MInteger()), "1\t22\t333")
+        Read(MTuple<MInteger, MInteger, MInteger>(), "1\t22\t333")
             .IgnoreError();
       },
       std::runtime_error);
   EXPECT_THROW(
       {
-        Read(MTuple(MInteger(), MInteger(), MInteger())
-                 .WithSeparator(Whitespace::kNewline),
+        Read(MTuple<MInteger, MInteger, MInteger>(
+                 IOSeparator(Whitespace::kNewline)),
              "1 22 333")
             .IgnoreError();
       },
       std::runtime_error);
   EXPECT_THROW(
       {
-        Read(MTuple(MInteger(), MString(), MInteger())
-                 .WithSeparator(Whitespace::kTab),
+        Read(MTuple<MInteger, MString, MInteger>(IOSeparator(Whitespace::kTab)),
              "1\ttwotwo 333")
             .IgnoreError();
       },
@@ -121,15 +125,12 @@ TEST(MTupleTest, ReadingTheWrongTypeShouldFail) {
   // MString where MInteger should be
   EXPECT_THROW(
       {
-        Read(MTuple(MInteger(), MInteger(), MInteger()), "1 two 3")
-            .IgnoreError();
+        Read(MTuple<MInteger, MInteger, MInteger>(), "1 two 3").IgnoreError();
       },
       std::runtime_error);
   // Not enough input
   EXPECT_THROW(
-      {
-        Read(MTuple(MInteger(), MInteger(), MInteger()), "1 22").IgnoreError();
-      },
+      { Read(MTuple<MInteger, MInteger, MInteger>(), "1 22").IgnoreError(); },
       std::runtime_error);
 }
 
@@ -194,7 +195,8 @@ TEST(MTupleTest, OfShouldMergeIndependentArguments) {
     MTuple b = MTuple(MInteger(Between(5, 10)), MInteger(Between(20, 30)));
     MInteger restrict_a = MInteger(Between(5, 15));
 
-    EXPECT_TRUE(GenerateSameValues(a.Of<0>(restrict_a), b));
+    EXPECT_TRUE(GenerateSameValues(
+        a.AddConstraint(Element<0, MInteger>(restrict_a)), b));
   }
 
   {
@@ -206,7 +208,10 @@ TEST(MTupleTest, OfShouldMergeIndependentArguments) {
                MTuple(MInteger(Between(22, 30)), MInteger(Between(40, 50))));
     MInteger restrict_a = MInteger(Between(22, 40));
 
-    EXPECT_TRUE(GenerateSameValues(a.Of<1>(MTuple(restrict_a, MInteger())), b));
+    EXPECT_TRUE(GenerateSameValues(
+        a.AddConstraint(Element<1, MTuple<MInteger, MInteger>>(
+            MTuple(restrict_a, MInteger()))),
+        b));
   }
 }
 
@@ -272,20 +277,51 @@ TEST(MTupleTest, SatisfiesConstraintsWorksForInvalid) {
 }
 
 TEST(MTupleTest, MultipleIOSeparatorsShouldThrow) {
-  EXPECT_THAT(
-      [] {
-        MTuple(MInteger(), MInteger())
-            .WithSeparator(Whitespace::kNewline)
-            .WithSeparator(Whitespace::kTab);
-      },
-      Throws<std::runtime_error>());
-  EXPECT_THAT(
-      [] {
-        MTuple(MInteger(), MInteger())
-            .WithSeparator(Whitespace::kTab)
-            .WithSeparator(Whitespace::kSpace);
-      },
-      Throws<std::runtime_error>());
+  // These lambdas are out-of-line because EXPECT_THAT macro doesn't like the
+  // <,>.
+  auto a = []() {
+    return MTuple<MInteger, MInteger>(IOSeparator(Whitespace::kNewline),
+                                      IOSeparator(Whitespace::kTab));
+  };
+  auto b = []() {
+    return MTuple<MInteger, MInteger>(IOSeparator(Whitespace::kNewline),
+                                      IOSeparator(Whitespace::kSpace));
+  };
+
+  EXPECT_THAT(a, Throws<std::runtime_error>());
+  EXPECT_THAT(b, Throws<std::runtime_error>());
+}
+
+TEST(MTupleTest, ExactlyAndOneOfShouldGenerateAndValidate) {
+  using tup = std::tuple<int64_t, int64_t>;
+  {
+    EXPECT_THAT((MTuple<MInteger, MInteger>(Exactly(tup{11, 22}))),
+                GeneratedValuesAre(FieldsAre(11, 22)));
+
+    EXPECT_THAT((MTuple<MInteger, MInteger>(OneOf({tup{11, 22}}))),
+                GeneratedValuesAre(FieldsAre(11, 22)));
+
+    EXPECT_THAT(
+        (MTuple<MInteger, MInteger>(OneOf({tup{11, 22}, tup{33, 44}}))),
+        GeneratedValuesAre(AnyOf(FieldsAre(11, 22), FieldsAre(33, 44))));
+  }
+  {
+    EXPECT_THAT((MTuple<MInteger, MInteger>(Exactly(tup{11, 22}))),
+                IsSatisfiedWith(tup{11, 22}));
+    EXPECT_THAT((MTuple<MInteger, MInteger>(OneOf({tup{11, 22}}))),
+                IsSatisfiedWith(tup{11, 22}));
+    EXPECT_THAT(
+        (MTuple<MInteger, MInteger>(OneOf({tup{11, 22}, tup{33, 44}}))),
+        AllOf(IsSatisfiedWith(tup{11, 22}), IsSatisfiedWith(tup{33, 44})));
+  }
+  {
+    EXPECT_THAT((MTuple<MInteger, MInteger>(Exactly(tup{11, 22}))),
+                IsNotSatisfiedWith(tup{33, 44}, "exactly"));
+    EXPECT_THAT((MTuple<MInteger, MInteger>(OneOf({tup{11, 22}}))),
+                IsNotSatisfiedWith(tup{11, 33}, "one of"));
+    EXPECT_THAT((MTuple<MInteger, MInteger>(OneOf({tup{11, 22}, tup{33, 44}}))),
+                IsNotSatisfiedWith(tup{11, 44}, "one of"));
+  }
 }
 
 }  // namespace

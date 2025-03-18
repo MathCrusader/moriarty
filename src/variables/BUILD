@@ -129,6 +129,7 @@ cc_library(
         "//src/librarian:locked_optional",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",
+        "//src/variables/constraints:io_constraints",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/log:check",
         "@abseil-cpp//absl/status",

@@ -33,7 +33,6 @@
 #include "absl/algorithm/container.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -43,7 +42,6 @@
 #include "src/librarian/locked_optional.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/one_of_handler.h"
-#include "src/util/status_macro/status_macros.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/io_constraints.h"
@@ -250,7 +248,7 @@ MArray<T>& MArray<T>::AddConstraint(IOSeparator constraint) {
     throw std::runtime_error(
         "Attempting to set multiple I/O separators for the same MArray.");
   }
-
+  this->NewAddConstraint(std::move(constraint));
   return *this;
 }
 

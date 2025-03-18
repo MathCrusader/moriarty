@@ -21,7 +21,6 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
-#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/mvariable.h"
@@ -39,7 +38,6 @@ namespace moriarty {
 namespace {
 
 using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
@@ -54,7 +52,6 @@ using ::testing::AllOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
 using ::testing::Ge;
-using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::IsSupersetOf;
 using ::testing::Le;

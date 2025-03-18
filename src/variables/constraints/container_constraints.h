@@ -73,17 +73,16 @@ class Length : public MConstraint {
   MInteger length_;
 };
 
-// Constraints that elements of a container must satisfy.
+// Constraints that all elements of a container must satisfy.
 template <typename MElementType>
 class Elements : public MConstraint {
  public:
   // The elements of the container must satisfy all of these constraints.
   // E.g., Elements<MInteger>(Between(1, 10), Prime())
-  template <typename... MElementTypeConstraints>
-    requires(
-        std::constructible_from<MElementType, MElementTypeConstraints...> &&
-        sizeof...(MElementTypeConstraints) > 0)
-  explicit Elements(MElementTypeConstraints&&... element_constraints);
+  template <typename... Constraints>
+    requires(std::constructible_from<MElementType, Constraints...> &&
+             sizeof...(Constraints) > 0)
+  explicit Elements(Constraints&&... element_constraints);
 
   // Returns the constraints on the elements.
   [[nodiscard]] MElementType GetConstraints() const;
@@ -101,6 +100,39 @@ class Elements : public MConstraint {
   [[nodiscard]] std::string Explanation(
       librarian::AnalysisContext ctx,
       const std::vector<typename MElementType::value_type>& value) const;
+
+ private:
+  MElementType element_constraints_;
+};
+
+// Constraints that the I-th element of a container (probably a tuple) must
+// satisfy.
+template <size_t I, typename MElementType>
+class Element : public MConstraint {
+ public:
+  // The I-th element of the container must satisfy all of these constraints.
+  // E.g., Element<2, MInteger>(Between(1, 10), Prime())
+  template <typename... Constraints>
+    requires(std::constructible_from<MElementType, Constraints...> &&
+             sizeof...(Constraints) > 0)
+  explicit Element(Constraints&&... element_constraints);
+
+  // Returns the constraints on the elements.
+  [[nodiscard]] MElementType GetConstraints() const;
+
+  // Determines if an object satisfy all constraints.
+  [[nodiscard]] bool IsSatisfiedWith(
+      librarian::AnalysisContext ctx,
+      const MElementType::value_type& value) const;
+
+  // Returns a string representation of this constraint.
+  [[nodiscard]] std::string ToString() const;
+
+  // Returns a string explaining why the value does not satisfy the constraints.
+  // It is assumed that IsSatisfiedWith() returned false.
+  [[nodiscard]] std::string Explanation(
+      librarian::AnalysisContext ctx,
+      const MElementType::value_type& value) const;
 
  private:
   MElementType element_constraints_;
@@ -157,13 +189,11 @@ std::string Length::Explanation(librarian::AnalysisContext ctx,
 
 // ====== Elements ======
 template <typename MElementType>
-template <typename... MElementTypeConstraints>
-  requires(std::constructible_from<MElementType, MElementTypeConstraints...> &&
-           sizeof...(MElementTypeConstraints) > 0)
-Elements<MElementType>::Elements(
-    MElementTypeConstraints&&... element_constraints)
-    : element_constraints_(
-          std::forward<MElementTypeConstraints>(element_constraints)...) {}
+template <typename... Constraints>
+  requires(std::constructible_from<MElementType, Constraints...> &&
+           sizeof...(Constraints) > 0)
+Elements<MElementType>::Elements(Constraints&&... element_constraints)
+    : element_constraints_(std::forward<Constraints>(element_constraints)...) {}
 
 template <typename MElementType>
 MElementType Elements<MElementType>::GetConstraints() const {
@@ -199,6 +229,40 @@ std::string Elements<MElementType>::Explanation(
   }
   throw std::invalid_argument(
       "Elements<>()::Explanation called when all elements ok.");
+}
+
+// ====== Element<I> ======
+template <size_t I, typename MElementType>
+template <typename... Constraints>
+  requires(std::constructible_from<MElementType, Constraints...> &&
+           sizeof...(Constraints) > 0)
+Element<I, MElementType>::Element(Constraints&&... element_constraints)
+    : element_constraints_(std::forward<Constraints>(element_constraints)...) {}
+
+template <size_t I, typename MElementType>
+MElementType Element<I, MElementType>::GetConstraints() const {
+  return element_constraints_;
+}
+
+template <size_t I, typename MElementType>
+bool Element<I, MElementType>::IsSatisfiedWith(
+    librarian::AnalysisContext ctx,
+    const MElementType::value_type& value) const {
+  return element_constraints_.IsSatisfiedWith(ctx, value).ok();
+}
+
+template <size_t I, typename MElementType>
+std::string Element<I, MElementType>::ToString() const {
+  return std::format("tuple index {} {}", I, element_constraints_.ToString());
+}
+
+template <size_t I, typename MElementType>
+std::string Element<I, MElementType>::Explanation(
+    librarian::AnalysisContext ctx,
+    const MElementType::value_type& value) const {
+  return std::format("tuple index {} (which is {}) {}", I,
+                     librarian::DebugString(value),
+                     element_constraints_.Explanation(ctx, value));
 }
 
 // ====== DistinctElements ======
