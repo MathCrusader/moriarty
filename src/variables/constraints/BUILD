@@ -56,6 +56,16 @@ cc_library(
 )
 
 cc_library(
+    name = "custom_constraint",
+    hdrs = ["custom_constraint.h"],
+    deps = [
+        ":base_constraints",
+        "//src/contexts/librarian:analysis_context",
+        "//src/librarian:debug_print",
+    ],
+)
+
+cc_library(
     name = "io_constraints",
     srcs = ["io_constraints.cc"],
     hdrs = ["io_constraints.h"],
@@ -105,6 +115,18 @@ cc_test(
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
         "//src/variables:mstring",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "custom_constraint_test",
+    srcs = ["custom_constraint_test.cc"],
+    deps = [
+        ":custom_constraint",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
+        "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
 )

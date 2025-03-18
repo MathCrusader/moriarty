@@ -52,6 +52,12 @@ std::string DebugString(const std::string& x,
                         int max_len = kMaxDebugStringLength,
                         bool include_backticks = true);
 
+// Needed for test types.
+template <typename T>
+  requires(!std::integral<T> && std::convertible_to<T, int>)
+std::string DebugString(const T& x, int max_len = kMaxDebugStringLength,
+                        bool include_backticks = true);
+
 std::string ShortenDebugString(const std::string& x, int max_len,
                                bool include_backticks);
 
@@ -87,6 +93,12 @@ std::string DebugString(const std::tuple<Ts...>& x, int max_len,
       },
       x);
   return ShortenDebugString(res + ">", max_len, include_backticks);
+}
+
+template <typename T>
+  requires(!std::integral<T> && std::convertible_to<T, int>)
+std::string DebugString(const T& x, int max_len, bool include_backticks) {
+  return DebugString(int(x), max_len, include_backticks);
 }
 
 }  // namespace librarian

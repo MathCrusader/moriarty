@@ -408,7 +408,7 @@ TEST(MVariableTest, CustomConstraintWithDependentVariables) {
                    .SetMultiplier(MInteger().Is(2))
                    .AddCustomConstraint(
                        "Custom1", {"A"},
-                       [](const TestType value, AnalysisContext ctx) -> bool {
+                       [](AnalysisContext ctx, const TestType& value) -> bool {
                          TestType A = ctx.GetValue<MTestType>("A");
                          return A.value == value;
                        }),
@@ -420,16 +420,17 @@ TEST(MVariableTest, CustomConstraintWithDependentVariables) {
 TEST(MVariableTest, CustomConstraintInvalidFailsToGenerate) {
   EXPECT_THROW(
       {
-        Generate(MTestType()
-                     .SetMultiplier(MInteger().Is(1))
-                     .AddCustomConstraint(
-                         "Custom1", {"A"},
-                         [](const TestType value, AnalysisContext ctx) -> bool {
-                           TestType A = ctx.GetValue<MTestType>("A");
-                           return A.value == value;
-                         }),
-                 Context().WithVariable(
-                     "A", MTestType().SetMultiplier(MInteger().Is(2))))
+        Generate(
+            MTestType()
+                .SetMultiplier(MInteger().Is(1))
+                .AddCustomConstraint(
+                    "Custom1", {"A"},
+                    [](AnalysisContext ctx, const TestType& value) -> bool {
+                      TestType A = ctx.GetValue<MTestType>("A");
+                      return A.value == value;
+                    }),
+            Context().WithVariable("A",
+                                   MTestType().SetMultiplier(MInteger().Is(2))))
             .IgnoreError();
       },
       std::runtime_error);
@@ -440,12 +441,13 @@ TEST(MVariableTest, CustomConstraintsWithInvalidDependentVariableCrashes) {
       {
         Generate(MTestType()
                      .SetMultiplier(MInteger().Is(1))
-                     .AddCustomConstraint(
-                         "Custom1", {},
-                         [](const TestType value, AnalysisContext ctx) -> bool {
-                           TestType A = ctx.GetValue<MTestType>("A");
-                           return A.value == value;
-                         }))
+                     .AddCustomConstraint("Custom1", {},
+                                          [](AnalysisContext ctx,
+                                             const TestType& value) -> bool {
+                                            TestType A =
+                                                ctx.GetValue<MTestType>("A");
+                                            return A.value == value;
+                                          }))
             .IgnoreError();
       },
       std::runtime_error);
@@ -459,16 +461,17 @@ TEST(MVariableTest,
   // guaranteed to since the user didn't specify it as a constraint.
   EXPECT_THROW(
       {
-        Generate(MTestType()
-                     .SetMultiplier(MInteger().Is(1))
-                     .AddCustomConstraint(
-                         "Custom1", {},
-                         [](const TestType value, AnalysisContext ctx) -> bool {
-                           TestType A = ctx.GetValue<MTestType>("A");
-                           return A.value == value;
-                         }),
-                 Context().WithVariable(
-                     "L", MTestType().SetMultiplier(MInteger().Is(2))))
+        Generate(
+            MTestType()
+                .SetMultiplier(MInteger().Is(1))
+                .AddCustomConstraint(
+                    "Custom1", {},
+                    [](AnalysisContext ctx, const TestType& value) -> bool {
+                      TestType A = ctx.GetValue<MTestType>("A");
+                      return A.value == value;
+                    }),
+            Context().WithVariable("L",
+                                   MTestType().SetMultiplier(MInteger().Is(2))))
             .IgnoreError();
       },
       std::runtime_error);
@@ -580,9 +583,9 @@ TEST(MVariableTest, GenerateShouldRetryIfNeeded) {
   // retries aren't there, this will fail frequently.
   EXPECT_THAT(
       MInteger(Between(0, 999))
-          .AddCustomConstraint("3 mod 7", [](int x) { return x % 7 == 3; })
+          .AddCustomConstraint("3 mod 7", [](int64_t x) { return x % 7 == 3; })
           .AddCustomConstraint("3rd digit is even.",
-                               [](int x) { return (x / 100) % 2 == 0; }),
+                               [](int64_t x) { return (x / 100) % 2 == 0; }),
       GeneratedValuesAre(
           AllOf(Truly([](int x) { return x % 7 == 3; }),
                 Truly([](int x) { return (x / 100) % 2 == 0; }))));

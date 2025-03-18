@@ -22,7 +22,6 @@
 #include <concepts>
 #include <exception>
 #include <format>
-#include <functional>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -38,7 +37,6 @@
 #include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
-#include "absl/strings/substitute.h"
 #include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/internal/view_only_context.h"
 #include "src/contexts/librarian/analysis_context.h"
@@ -52,6 +50,7 @@
 #include "src/internal/status_utils.h"
 #include "src/librarian/constraint_handler.h"
 #include "src/util/status_macro/status_macros.h"
+#include "src/variables/constraints/custom_constraint.h"
 
 namespace moriarty {
 namespace librarian {
@@ -162,26 +161,27 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // AddCustomConstraint()
   //
-  // Adds a constraint to this variable. `checker` must take exactly one
-  // parameter of type `ValueType`. `checker` should return true if the value
-  // satisfies this constraint.
+  // Adds a constraint that is fully user-defined. This version of
+  // `AddCustomConstraint` is agnostic of other variables. (E.g., prime,
+  // positive, etc).
   VariableType& AddCustomConstraint(
-      std::string_view constraint_name,
-      std::function<bool(const ValueType&)> checker);
+      std::string_view name, std::function<bool(const ValueType&)> checker);
 
   // AddCustomConstraint()
-  // FIXME: Fix comments
   //
-  // Adds a constraint to this variable. `checker` must take exactly two
-  // parameters of type `ValueType` and `ConstraintValues`. `checker` should
-  // return true if the value satisfies this constraint.
-  //
-  // `deps` is a list of variables that this constraint depends on. If a
-  // variable's name is in this list, you may use ConstraintValues::GetValue<>()
-  // to access that variable's value.
+  // Adds a constraint that is fully user-defined. This version of
+  // `AddCustomConstraint` depends on the value of other variables. (E.g., at
+  // least X, larger than the average of the elements in A, etc).
   VariableType& AddCustomConstraint(
-      std::string_view constraint_name, std::vector<std::string> deps,
-      std::function<bool(const ValueType&, AnalysisContext ctx)> checker);
+      std::string_view name, std::vector<std::string> dependencies,
+      std::function<bool(librarian::AnalysisContext, const ValueType&)>
+          checker);
+
+  // AddCustomConstraint()
+  //
+  // Adds a constraint that is fully user-defined. See other overloads of
+  // `AddCustomConstraint` for simple construction.
+  VariableType& AddCustomConstraint(CustomConstraint<ValueType> constraint);
 
   // ListEdgeCases()
   //
@@ -194,27 +194,27 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // Print()
   //
-  // Prints `value` into `ctx` using any formatting provided to this variable
-  // (as I/O constraints).
+  // Prints `value` into `ctx` using any formatting provided to this
+  // variable (as I/O constraints).
   void Print(PrinterContext ctx, const ValueType& value) const {
     PrintImpl(ctx, value);
   }
 
   // Read()
   //
-  // Reads a value from `ctx` using any formatting provided to this variable (as
-  // I/O constraints).
+  // Reads a value from `ctx` using any formatting provided to this variable
+  // (as I/O constraints).
   [[nodiscard]] ValueType Read(ReaderContext ctx) const {
     return ReadImpl(ctx);
   }
 
   // GetUniqueValue()
   //
-  // Determines if there is exactly one value that this variable can be assigned
-  // to. If so, return that value. If there is not a unique value (or it is too
-  // hard to determine that there is a unique value), returns `std::nullopt`.
-  // Returning `std::nullopt` does not guarantee there is not a unique value,
-  // just that it is too hard to determine it.
+  // Determines if there is exactly one value that this variable can be
+  // assigned to. If so, return that value. If there is not a unique value
+  // (or it is too hard to determine that there is a unique value), returns
+  // `std::nullopt`. Returning `std::nullopt` does not guarantee there is
+  // not a unique value, just that it is too hard to determine it.
   [[nodiscard]] std::optional<ValueType> GetUniqueValue(
       AnalysisContext ctx) const {
     try {
@@ -232,8 +232,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
       return GetUniqueValueImpl(ctx);
     } catch (const VariableNotFound& e) {
-      // Explicitly re-throw an unknown variable. If it's unknown, we will never
-      // be able to do anything with it.
+      // Explicitly re-throw an unknown variable. If it's unknown, we will
+      // never be able to do anything with it.
       throw;
     } catch (...) {  // FIXME: Only catch Moriarty errors.
       return std::nullopt;
@@ -249,14 +249,15 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // GetDependencies()
   //
-  // Returns the list of names of the variables that this variable depends on,
-  // this includes direct dependencies and the recursive child dependencies.
+  // Returns the list of names of the variables that this variable depends
+  // on, this includes direct dependencies and the recursive child
+  // dependencies.
   [[nodiscard]] std::vector<std::string> GetDependencies() const override;
 
   // MergeFromAnonymous()
   //
-  // Same as `MergeFrom`, but you do not know the type of the variable you are.
-  // This should only be used in generic code.
+  // Same as `MergeFrom`, but you do not know the type of the variable you
+  // are. This should only be used in generic code.
   absl::Status MergeFromAnonymous(
       const moriarty_internal::AbstractVariable& other) {
     MORIARTY_ASSIGN_OR_RETURN(
@@ -280,7 +281,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Users should not call this directly. Call `Random(MVariable)` in the
   // specific Moriarty component (Generator, Importer, etc).
   //
-  // Returns a random value based on all current constraints on this MVariable.
+  // Returns a random value based on all current constraints on this
+  // MVariable.
   //
   // This function may be called several times and should not update the
   // variable's internal state.
@@ -289,20 +291,21 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Librarians are strongly encouraged to treat this function as if it were
   // const so you are future compatible.
   //
-  // GenerateImpl() will only be called if Is()/IsOneOf() have not been called.
+  // GenerateImpl() will only be called if Is()/IsOneOf() have not been
+  // called.
   virtual ValueType GenerateImpl(ResolverContext ctx) const = 0;
 
   // IsSatisfiedWithImpl() [virtual]
   //
   // Users should not call this directly. Call `IsSatisfiedWith()` instead.
   //
-  // Determines if `value` satisfies all of the constraints specified by this
-  // variable.
+  // Determines if `value` satisfies all of the constraints specified by
+  // this variable.
   //
   // FIXME: Fix this comment.
-  // This function should return an `UnsatisfiedConstraintError()`. Almost every
-  // other status returned will be treated as an internal error. The exceptions
-  // are `VariableNotFound` and `ValueNotFound`, which will be
+  // This function should return an `UnsatisfiedConstraintError()`. Almost
+  // every other status returned will be treated as an internal error. The
+  // exceptions are `VariableNotFound` and `ValueNotFound`, which will be
   // converted into an `UnsatisfiedConstraintError` before returning to the
   // user. You may find the `CheckConstraint()` helpers useful.
   virtual absl::Status IsSatisfiedWithImpl(AnalysisContext ctx,
@@ -312,17 +315,18 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Users should not call this directly. Call `MergeFrom()` instead.
   //
-  // Merges my current constraints with the constraints of the `other` variable.
-  // The merge should act as an intersection of the two constraints. If one says
-  // 1 <= x <= 10 and the other says 5 <= x <= 20, then then merged version
-  // should have 5 <= x <= 10.
+  // Merges my current constraints with the constraints of the `other`
+  // variable. The merge should act as an intersection of the two
+  // constraints. If one says 1 <= x <= 10 and the other says 5 <= x <= 20,
+  // then then merged version should have 5 <= x <= 10.
   virtual absl::Status MergeFromImpl(const VariableType& other) = 0;
 
   // ReadImpl() [virtual/optional]
   //
   // Users should not call this directly. Call `Read()` instead.
   //
-  // Reads a value from `ctx` using any formatting provided to this variable.
+  // Reads a value from `ctx` using any formatting provided to this
+  // variable.
   virtual ValueType ReadImpl(ReaderContext ctx) const;
 
   // PrintImpl() [virtual/optional]
@@ -356,11 +360,11 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Users should not call this directly. Call `GetUniqueValue()` instead.
   //
-  // Determines if there is exactly one value that this variable can be assigned
-  // to. If so, return that value. If there is not a unique value (or it is too
-  // hard to determine that there is a unique value), returns `std::nullopt`.
-  // Returning `std::nullopt` does not guarantee there is not a unique value,
-  // just that it is too hard to determine it.
+  // Determines if there is exactly one value that this variable can be
+  // assigned to. If so, return that value. If there is not a unique value
+  // (or it is too hard to determine that there is a unique value), returns
+  // `std::nullopt`. Returning `std::nullopt` does not guarantee there is
+  // not a unique value, just that it is too hard to determine it.
   //
   // By default, this returns `std::nullopt`.
   virtual std::optional<ValueType> GetUniqueValueImpl(
@@ -370,8 +374,9 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Sets the status of this variable to `status`. This must be a non-ok
   // Moriarty Status. Almost surely an `UnsatisfiedConstraintError()`. All
-  // future calls to FooImpl() that return an absl::Status will be intercepted
-  // and return this instead. (E.g., GenerateImpl(), PrintImpl(), etc.)
+  // future calls to FooImpl() that return an absl::Status will be
+  // intercepted and return this instead. (E.g., GenerateImpl(),
+  // PrintImpl(), etc.)
   //
   // FIXME: PrintImpl (and others with Context) ignores this flag.
   void DeclareSelfAsInvalid(absl::Status status);
@@ -383,21 +388,13 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // optional is set and the list is empty, then there are no viable values.
   std::optional<std::vector<ValueType>> is_one_of_;
 
-  // `custom_constraints_deps_` is a list of the needed variables for all the
-  // custom constraints defined for this variable.
+  // `custom_constraints_deps_` is a list of the needed variables for all
+  // the custom constraints defined for this variable.
   std::vector<std::string> custom_constraints_deps_;
 
-  // `custom_constraints_` is a list of constraints, in the form of functions,
-  // to check when `SatisfiesConstraints()` is called.
-  struct CustomConstraint {
-    std::string name;
-    std::function<bool(const ValueType&, AnalysisContext)> checker;
-  };
-  std::vector<CustomConstraint> custom_constraints_;
-
-  // The overall status of this variable. If this is not ok, then all FooImpl()
-  // that return an absl::Status will be intercepted and return this instead.
-  // (E.g., GenerateImpl(), PrintImpl(), etc.)
+  // The overall status of this variable. If this is not ok, then all
+  // FooImpl() that return an absl::Status will be intercepted and return
+  // this instead. (E.g., GenerateImpl(), PrintImpl(), etc.)
   absl::Status overall_status_ = absl::OkStatus();
 
   // Helper function that casts *this to `VariableType`.
@@ -413,9 +410,9 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // AssignValue()
   //
-  // Assigns an explicit value to this variable. The value is set into `ctx` and
-  // `ctx` gives all necessary information to set the value. If `ctx` already
-  // contains a value for this variable, this is a no-op.
+  // Assigns an explicit value to this variable. The value is set into `ctx`
+  // and `ctx` gives all necessary information to set the value. If `ctx`
+  // already contains a value for this variable, this is a no-op.
   absl::Status AssignValue(ResolverContext ctx) const override;
 
   // AssignUniqueValue()
@@ -423,8 +420,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Determines if there is exactly one value that this variable can be
   // assigned to. If so, assigns that value.
   //
-  // If there is not a unique value (or it is too hard to determine that there
-  // is a unique value), this does nothing.
+  // If there is not a unique value (or it is too hard to determine that
+  // there is a unique value), this does nothing.
   //
   // Example: MInteger().Between(7, 7) might be able to determine that its
   // unique value is 7.
@@ -432,8 +429,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // ValueSatisfiesConstraints()
   //
-  // Determines if the value stored in `ctx` satisfies all constraints for this
-  // variable.
+  // Determines if the value stored in `ctx` satisfies all constraints for
+  // this variable.
   //
   // If a variable does not have a value, this will return not ok.
   // If a value does not have a variable, this will return ok.
@@ -442,9 +439,9 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // MergeFrom()
   //
   // Merges my current constraints with the constraints of the `other`
-  // variable. The merge should act as an intersection of the two constraints.
-  // If one says 1 <= x <= 10 and the other says 5 <= x <= 20, then then
-  // merged version should have 5 <= x <= 10.
+  // variable. The merge should act as an intersection of the two
+  // constraints. If one says 1 <= x <= 10 and the other says 5 <= x <= 20,
+  // then then merged version should have 5 <= x <= 10.
   absl::Status MergeFrom(
       const moriarty_internal::AbstractVariable& other) override;
 
@@ -458,8 +455,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // PrintValue()
   //
-  // Prints the value of this variable to `ctx` using the constraints on this
-  // variable to determine formatting, etc.
+  // Prints the value of this variable to `ctx` using the constraints on
+  // this variable to determine formatting, etc.
   absl::Status PrintValue(librarian::PrinterContext ctx) const override;
 
   // ListAnonymousEdgeCases()
@@ -468,6 +465,28 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // implementation of this abstract variable.
   std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
   ListAnonymousEdgeCases(AnalysisContext ctx) const override;
+
+  struct CustomConstraintWrapper {
+   public:
+    explicit CustomConstraintWrapper(CustomConstraint<ValueType> constraint)
+        : constraint_(std::move(constraint)) {};
+
+    bool IsSatisfiedWith(librarian::AnalysisContext ctx,
+                         const ValueType& value) const {
+      return constraint_.IsSatisfiedWith(ctx, value);
+    }
+    std::string Explanation(librarian::AnalysisContext ctx,
+                            const ValueType& value) const {
+      return constraint_.Explanation(value);
+    }
+    std::string ToString() const { return constraint_.ToString(); }
+    void ApplyTo(MVariable& other) const {
+      other.AddCustomConstraint(constraint_);
+    }
+
+   private:
+    CustomConstraint<ValueType> constraint_;
+  };
 };
 
 // -----------------------------------------------------------------------------
@@ -534,27 +553,28 @@ absl::Status MVariable<V, G>::TryMergeFrom(const V& other) {
 }
 
 template <typename V, typename G>
-V& MVariable<V, G>::AddCustomConstraint(std::string_view constraint_name,
+V& MVariable<V, G>::AddCustomConstraint(std::string_view name,
                                         std::function<bool(const G&)> checker) {
-  return AddCustomConstraint(
-      constraint_name, {},
-      [checker](const G& v, AnalysisContext ctx) { return checker(v); });
+  return AddCustomConstraint(CustomConstraint<G>(name, std::move(checker)));
 }
 
 template <typename V, typename G>
 V& MVariable<V, G>::AddCustomConstraint(
-    std::string_view constraint_name, std::vector<std::string> deps,
-    std::function<bool(const G&, AnalysisContext ctx)> checker) {
-  CustomConstraint c;
-  c.name = constraint_name;
-  c.checker = checker;
+    std::string_view name, std::vector<std::string> dependencies,
+    std::function<bool(librarian::AnalysisContext, const G&)> checker) {
+  return AddCustomConstraint(
+      CustomConstraint<G>(name, std::move(dependencies), std::move(checker)));
+}
+
+template <typename V, typename G>
+V& MVariable<V, G>::AddCustomConstraint(CustomConstraint<G> constraint) {
+  std::vector<std::string> deps = constraint.GetDependencies();
   custom_constraints_deps_.insert(custom_constraints_deps_.end(),
                                   std::make_move_iterator(deps.begin()),
                                   std::make_move_iterator(deps.end()));
   // Sort the dependencies so the order of the generation is consistent.
   absl::c_sort(custom_constraints_deps_);
-  custom_constraints_.push_back(c);
-  return UnderlyingVariableType();
+  return NewAddConstraint(CustomConstraintWrapper(std::move(constraint)));
 }
 
 template <typename V, typename G>
@@ -672,13 +692,6 @@ absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
   // FIXME: Determine semantics of which errors are propagated.
   absl::Status status = IsSatisfiedWithImpl(ctx, value);
   if (!status.ok()) return status;
-
-  for (const auto& [checker_name, checker] : custom_constraints_) {
-    MORIARTY_RETURN_IF_ERROR(CheckConstraint(
-        checker(value, ctx),
-        absl::Substitute("Custom constraint '$0' not satisfied.",
-                         checker_name)));
-  }
 
   return absl::OkStatus();
 }
