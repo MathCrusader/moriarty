@@ -303,18 +303,19 @@ TEST(MStringTest, DistinctCharactersRequiresAShortLength) {
 
 TEST(MStringTest, MergingSimplePatternsIntoAnMStringWithoutShouldWork) {
   MString constraints = MString(SimplePattern("[abc]{10, 20}"));
-  MORIARTY_EXPECT_OK(MString().TryMergeFrom(constraints));
+  MString().MergeFrom(constraints);  // No crash = good.
 }
 
 TEST(MStringTest, MergingTwoIdenticalSimplePatternsTogetherShouldWork) {
   MString constraints = MString(SimplePattern("[abc]{10, 20}"));
-  MORIARTY_EXPECT_OK(
-      MString(SimplePattern("[abc]{10, 20}")).TryMergeFrom(constraints));
+
+  MString(SimplePattern("[abc]{10, 20}"))
+      .MergeFrom(constraints);  // No crash = good.
 }
 
 TEST(MStringTest, MergingTwoDifferentSimplePatternsTogetherShouldWork) {
   MString constraints = MString(SimplePattern("[abc]{10, 20}"));
-  MORIARTY_EXPECT_OK(MString(SimplePattern("xxxxx")).TryMergeFrom(constraints));
+  MString(SimplePattern("xxxxx")).MergeFrom(constraints);  // No crash = good.
 }
 
 TEST(MStringTest,

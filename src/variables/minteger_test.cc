@@ -403,12 +403,12 @@ TEST(MIntegerTest, WithSizeBehavesWithMergeFrom) {
 
   {
     EXPECT_FALSE(GenerateSameValues(small, tiny));
-    MORIARTY_EXPECT_OK(small.TryMergeFrom(tiny));
+    small.MergeFrom(tiny);
     EXPECT_TRUE(GenerateSameValues(small, tiny));
   }
   {
     EXPECT_FALSE(GenerateSameValues(any, large));
-    MORIARTY_EXPECT_OK(any.TryMergeFrom(large));
+    any.MergeFrom(large);
     EXPECT_TRUE(GenerateSameValues(any, large));
   }
 

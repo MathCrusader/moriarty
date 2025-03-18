@@ -34,7 +34,6 @@
 #include <vector>
 
 #include "absl/algorithm/container.h"
-#include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "src/contexts/internal/mutable_values_context.h"
@@ -47,7 +46,6 @@
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
-#include "src/internal/status_utils.h"
 #include "src/librarian/constraint_handler.h"
 #include "src/util/status_macro/status_macros.h"
 #include "src/variables/constraints/custom_constraint.h"
@@ -109,23 +107,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // MergeFrom()
   //
-  // Merges my current constraints with the constraints of the `other` variable.
-  // The merge should act as an intersection of the two constraints. If one says
-  // 1 <= x <= 10 and the other says 5 <= x <= 20, then then merged version
-  // should have 5 <= x <= 10.
-  //
-  // Crashes on failure. See `TryMergeFrom()` for non-crashing version.
+  // Adds all constraints currently in `other` to this variable.
   VariableType& MergeFrom(const VariableType& other);
-
-  // TryMergeFrom()
-  //
-  // Merges my current constraints with the constraints of the `other` variable.
-  // The merge should act as an intersection of the two constraints. If one says
-  // 1 <= x <= 10 and the other says 5 <= x <= 20, then then merged version
-  // should have 5 <= x <= 10.
-  //
-  // Returns status on failure. See `MergeFrom()` for builder-like version.
-  absl::Status TryMergeFrom(const VariableType& other);
 
   // AddCustomConstraint()
   //
@@ -153,10 +136,9 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // ListEdgeCases()
   //
-  // Returns a list of MVariables that where merged with your variable. This
-  // should give common difficult cases. Some examples of this type of cases
-  // include common pitfalls for your data type (edge cases, queries of death,
-  // etc).
+  // Returns a list of MVariables that should give common difficult cases. Some
+  // examples of this type of cases include common pitfalls for your data type
+  // (edge cases, queries of death, etc).
   [[nodiscard]] std::vector<VariableType> ListEdgeCases(
       AnalysisContext ctx) const;
 
@@ -182,7 +164,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // assigned to. If so, return that value. If there is not a unique value
   // (or it is too hard to determine that there is a unique value), returns
   // `std::nullopt`. Returning `std::nullopt` does not guarantee there is
-  // not a unique value, just that it is too hard to determine it.
+  // not a unique value.
   [[nodiscard]] std::optional<ValueType> GetUniqueValue(
       AnalysisContext ctx) const {
     try {
@@ -190,13 +172,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::optional<ValueType> known =
           ctx.GetValueIfKnown<VariableType>(ctx.GetVariableName());
       if (known) return *known;
-
-      if (!overall_status_.ok()) return std::nullopt;
-      if (is_one_of_) {
-        // TODO: Check if all constraints are satisfied?
-        if (is_one_of_->size() == 1) return is_one_of_->at(0);
-        return std::nullopt;  // Not sure which one is correct.
-      }
 
       return GetUniqueValueImpl(ctx);
     } catch (const VariableNotFound& e) {
@@ -242,8 +217,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
  protected:
   // ---------------------------------------------------------------------------
-  //  Functions that need to be overridden by all `MVariable`s.
-
+  //  Virtual extension points
   virtual ValueType GenerateImpl(ResolverContext ctx) const = 0;
   virtual std::optional<ValueType> GetUniqueValueImpl(
       AnalysisContext ctx) const;
@@ -251,6 +225,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   virtual void PrintImpl(PrinterContext ctx, const ValueType& value) const;
   virtual std::vector<VariableType> ListEdgeCasesImpl(
       AnalysisContext ctx) const;
+  // ---------------------------------------------------------------------------
 
   // To be removed
   virtual std::vector<std::string> GetDependenciesImpl() const;
@@ -262,121 +237,52 @@ class MVariable : public moriarty_internal::AbstractVariable {
     return absl::UnimplementedError("MergeFrom");
   }
 
-  // InternalAddConstraint()
+  // InternalAddConstraint() [For Librarians]
   //
   // Adds a constraint to this variable. (E.g., Positive(), Even(), Length(5)).
   // The constraint `c` must be associated with the corresponding MVariable.
-  // Librarians must use this to register constraints with the variable.
+  // Librarians must use this to register constraints with the variable. All
+  // calls to AddConstraint() in the MVariable should call this function.
   template <typename Constraint>
   VariableType& InternalAddConstraint(Constraint c);
 
-  // DeclareSelfAsInvalid() [Helper for Librarians]
-  //
-  // Sets the status of this variable to `status`. This must be a non-ok
-  // Moriarty Status. Almost surely an `UnsatisfiedConstraintError()`. All
-  // future calls to FooImpl() that return an absl::Status will be
-  // intercepted and return this instead. (E.g., GenerateImpl(),
-  // PrintImpl(), etc.)
-  //
-  // FIXME: PrintImpl (and others with Context) ignores this flag.
-  void DeclareSelfAsInvalid(absl::Status status);
-
  private:
   ConstraintHandler<VariableType, ValueType> constraints_;
-
-  // `is_one_of_` is a list of values that Generate() should produce. If the
-  // optional is set and the list is empty, then there are no viable values.
-  std::optional<std::vector<ValueType>> is_one_of_;
 
   // `custom_constraints_deps_` is a list of the needed variables for all
   // the custom constraints defined for this variable.
   std::vector<std::string> custom_constraints_deps_;
 
-  // The overall status of this variable. If this is not ok, then all
-  // FooImpl() that return an absl::Status will be intercepted and return
-  // this instead. (E.g., GenerateImpl(), PrintImpl(), etc.)
-  absl::Status overall_status_ = absl::OkStatus();
-
   // Helper function that casts *this to `VariableType`.
   [[nodiscard]] VariableType& UnderlyingVariableType();
   [[nodiscard]] const VariableType& UnderlyingVariableType() const;
+  [[nodiscard]] ValueType GenerateOnce(ResolverContext ctx) const;
 
-  // Clones the object, similar to a copy-constructor.
+  // ---------------------------------------------------------------------------
+  //  AbstractVariable overrides
   [[nodiscard]] std::unique_ptr<moriarty_internal::AbstractVariable> Clone()
       const override;
-
-  // Try to generate exactly once, without any retries.
-  ValueType GenerateOnce(ResolverContext ctx) const;
-
-  // AssignValue()
-  //
-  // Assigns an explicit value to this variable. The value is set into `ctx`
-  // and `ctx` gives all necessary information to set the value. If `ctx`
-  // already contains a value for this variable, this is a no-op.
   absl::Status AssignValue(ResolverContext ctx) const override;
-
-  // AssignUniqueValue()
-  //
-  // Determines if there is exactly one value that this variable can be
-  // assigned to. If so, assigns that value.
-  //
-  // If there is not a unique value (or it is too hard to determine that
-  // there is a unique value), this does nothing.
-  //
-  // Example: MInteger().Between(7, 7) might be able to determine that its
-  // unique value is 7.
   absl::Status AssignUniqueValue(AssignmentContext ctx) const override;
-
-  // ValueSatisfiesConstraints()
-  //
-  // Determines if the value stored in `ctx` satisfies all constraints for
-  // this variable.
-  //
-  // If a variable does not have a value, this will return not ok.
-  // If a value does not have a variable, this will return ok.
   absl::Status ValueSatisfiesConstraints(AnalysisContext ctx) const override;
-
-  // MergeFrom()
-  //
-  // Merges my current constraints with the constraints of the `other`
-  // variable. The merge should act as an intersection of the two
-  // constraints. If one says 1 <= x <= 10 and the other says 5 <= x <= 20,
-  // then then merged version should have 5 <= x <= 10.
   absl::Status MergeFrom(
       const moriarty_internal::AbstractVariable& other) override;
-
-  // ReadValue()
-  //
-  // Reads a value from `ctx` using the constraints of this variable to
-  // determine formatting, etc.
   absl::Status ReadValue(
       ReaderContext ctx,
       moriarty_internal::MutableValuesContext values_ctx) const override;
-
-  // PrintValue()
-  //
-  // Prints the value of this variable to `ctx` using the constraints on
-  // this variable to determine formatting, etc.
   absl::Status PrintValue(librarian::PrinterContext ctx) const override;
-
-  // ListAnonymousEdgeCases()
-  //
-  // Returns the list of difficult abstract variables defined by the
-  // implementation of this abstract variable.
   std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
   ListAnonymousEdgeCases(AnalysisContext ctx) const override;
+  // ---------------------------------------------------------------------------
 
   struct CustomConstraintWrapper {
    public:
     explicit CustomConstraintWrapper(CustomConstraint<ValueType> constraint)
         : constraint_(std::move(constraint)) {};
-
-    bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                         const ValueType& value) const {
+    bool IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const {
       return constraint_.IsSatisfiedWith(ctx, value);
     }
-    std::string Explanation(librarian::AnalysisContext ctx,
-                            const ValueType& value) const {
+    std::string Explanation(AnalysisContext ctx, const ValueType& value) const {
       return constraint_.Explanation(value);
     }
     std::string ToString() const { return constraint_.ToString(); }
@@ -410,26 +316,13 @@ std::string MVariable<V, G>::ToString() const {
 
 template <typename V, typename G>
 V& MVariable<V, G>::MergeFrom(const V& other) {
-  moriarty_internal::TryFunctionOrCrash(
-      [this, &other]() { return this->TryMergeFrom(other); }, "MergeFrom");
-  return UnderlyingVariableType();
-}
-
-template <typename V, typename G>
-absl::Status MVariable<V, G>::TryMergeFrom(const V& other) {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-  if (!other.overall_status_.ok()) overall_status_ = other.overall_status_;
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-
   if (auto status = MergeFromImpl(other);
       !status.ok() && !absl::IsUnimplemented(status)) {
-    return status;
+    throw std::runtime_error(status.ToString());
   }
-
   other.constraints_.ApplyAllTo(UnderlyingVariableType());
 
-  // The merge may have caused a new error to occur.
-  return overall_status_;
+  return UnderlyingVariableType();
 }
 
 template <typename V, typename G>
@@ -507,13 +400,6 @@ V& MVariable<V, G>::InternalAddConstraint(Constraint c) {
   return UnderlyingVariableType();
 }
 
-template <typename V, typename G>
-void MVariable<V, G>::DeclareSelfAsInvalid(absl::Status status) {
-  ABSL_CHECK(!status.ok());
-  ABSL_CHECK(IsMoriartyError(status));
-  overall_status_ = std::move(status);
-}
-
 // -----------------------------------------------------------------------------
 //  Template implementation for the Internal Extended API
 
@@ -561,8 +447,6 @@ G MVariable<V, G>::Generate(ResolverContext ctx) const {
 template <typename V, typename G>
 absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
                                               const G& value) const {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-
   if (!constraints_.IsSatisfiedWith(ctx, value)) {
     std::string reason = constraints_.Explanation(ctx, value);
     return UnsatisfiedConstraintError(reason);
@@ -594,7 +478,8 @@ absl::Status MVariable<V, G>::MergeFrom(
     return absl::InvalidArgumentError(
         "In MergeFrom: Cannot convert variable to this variable type.");
 
-  return TryMergeFrom(*other_derived_class);
+  MergeFrom(*other_derived_class);
+  return absl::OkStatus();
 }
 
 // -----------------------------------------------------------------------------
@@ -619,8 +504,7 @@ std::unique_ptr<moriarty_internal::AbstractVariable> MVariable<V, G>::Clone()
 
 template <typename V, typename G>
 G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
-  G potential_value =
-      is_one_of_ ? ctx.RandomElement(*is_one_of_) : GenerateImpl(ctx);
+  G potential_value = GenerateImpl(ctx);
 
   // Generate dependent variables used in custom constraints.
   for (std::string_view dep : custom_constraints_deps_) ctx.AssignVariable(dep);
@@ -634,8 +518,6 @@ G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
 
 template <typename V, typename G>
 absl::Status MVariable<V, G>::AssignValue(ResolverContext ctx) const {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-
   if (ctx.ValueIsKnown(ctx.GetVariableName())) return absl::OkStatus();
 
   G value = Generate(ctx);
@@ -645,8 +527,6 @@ absl::Status MVariable<V, G>::AssignValue(ResolverContext ctx) const {
 
 template <typename V, typename G>
 absl::Status MVariable<V, G>::AssignUniqueValue(AssignmentContext ctx) const {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
-
   if (ctx.ValueIsKnown(ctx.GetVariableName())) return absl::OkStatus();
 
   std::optional<G> value = GetUniqueValue(ctx);
@@ -659,7 +539,6 @@ absl::Status MVariable<V, G>::AssignUniqueValue(AssignmentContext ctx) const {
 template <typename V, typename G>
 absl::Status MVariable<V, G>::ValueSatisfiesConstraints(
     AnalysisContext ctx) const {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
   return IsSatisfiedWith(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
 
@@ -667,14 +546,12 @@ template <typename V, typename G>
 absl::Status MVariable<V, G>::ReadValue(
     ReaderContext ctx,
     moriarty_internal::MutableValuesContext values_ctx) const {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
   values_ctx.SetValue<V>(ctx.GetVariableName(), Read(ctx));
   return absl::OkStatus();
 }
 
 template <typename V, typename G>
 absl::Status MVariable<V, G>::PrintValue(PrinterContext ctx) const {
-  MORIARTY_RETURN_IF_ERROR(overall_status_);
   Print(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
   return absl::OkStatus();
 }
