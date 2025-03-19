@@ -69,14 +69,13 @@ TEST(MTupleTest, PrintShouldSucceed) {
 }
 
 TEST(MTupleTest, PrintWithProperSeparatorShouldSucceed) {
-  EXPECT_THAT(Print(MTuple<MInteger, MInteger, MInteger>(
-                        IOSeparator(Whitespace::kNewline)),
-                    {1, 22, 333}),
-              IsOkAndHolds("1\n22\n333"));
   EXPECT_THAT(
-      Print(MTuple<MInteger, MString, MInteger>(IOSeparator(Whitespace::kTab)),
-            {1, "twotwo", 333}),
-      IsOkAndHolds("1\ttwotwo\t333"));
+      Print(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
+            {1, 22, 333}),
+      IsOkAndHolds("1\n22\n333"));
+  EXPECT_THAT(Print(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
+                    {1, "twotwo", 333}),
+              IsOkAndHolds("1\ttwotwo\t333"));
 }
 
 TEST(MTupleTest, TypicalReadCaseWorks) {
@@ -87,14 +86,12 @@ TEST(MTupleTest, TypicalReadCaseWorks) {
 }
 
 TEST(MTupleTest, ReadWithProperSeparatorShouldSucceed) {
-  EXPECT_THAT(Read(MTuple<MInteger, MInteger, MInteger>(
-                       IOSeparator(Whitespace::kNewline)),
+  EXPECT_THAT(Read(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
                    "1\n22\n333"),
               IsOkAndHolds(FieldsAre(1, 22, 333)));
-  EXPECT_THAT(
-      Read(MTuple<MInteger, MString, MInteger>(IOSeparator(Whitespace::kTab)),
-           "1\ttwotwo\t333"),
-      IsOkAndHolds(FieldsAre(1, "twotwo", 333)));
+  EXPECT_THAT(Read(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
+                   "1\ttwotwo\t333"),
+              IsOkAndHolds(FieldsAre(1, "twotwo", 333)));
 }
 
 TEST(MTupleTest, ReadWithIncorrectSeparatorShouldFail) {
@@ -106,15 +103,14 @@ TEST(MTupleTest, ReadWithIncorrectSeparatorShouldFail) {
       std::runtime_error);
   EXPECT_THROW(
       {
-        Read(MTuple<MInteger, MInteger, MInteger>(
-                 IOSeparator(Whitespace::kNewline)),
+        Read(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
              "1 22 333")
             .IgnoreError();
       },
       std::runtime_error);
   EXPECT_THROW(
       {
-        Read(MTuple<MInteger, MString, MInteger>(IOSeparator(Whitespace::kTab)),
+        Read(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
              "1\ttwotwo 333")
             .IgnoreError();
       },
@@ -280,12 +276,12 @@ TEST(MTupleTest, MultipleIOSeparatorsShouldThrow) {
   // These lambdas are out-of-line because EXPECT_THAT macro doesn't like the
   // <,>.
   auto a = []() {
-    return MTuple<MInteger, MInteger>(IOSeparator(Whitespace::kNewline),
-                                      IOSeparator(Whitespace::kTab));
+    return MTuple<MInteger, MInteger>(IOSeparator::Newline(),
+                                      IOSeparator::Tab());
   };
   auto b = []() {
-    return MTuple<MInteger, MInteger>(IOSeparator(Whitespace::kNewline),
-                                      IOSeparator(Whitespace::kSpace));
+    return MTuple<MInteger, MInteger>(IOSeparator::Newline(),
+                                      IOSeparator::Space());
   };
 
   EXPECT_THAT(a, Throws<std::runtime_error>());

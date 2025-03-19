@@ -32,6 +32,10 @@ class IOSeparator : public MConstraint {
   // The separator to use between elements of a container.
   explicit IOSeparator(Whitespace separator);
 
+  static IOSeparator Space();
+  static IOSeparator Newline();
+  static IOSeparator Tab();
+
   // Returns the separator to use between elements of a container.
   [[nodiscard]] Whitespace GetSeparator() const;
 

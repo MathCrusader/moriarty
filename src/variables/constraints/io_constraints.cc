@@ -25,6 +25,10 @@ namespace moriarty {
 
 IOSeparator::IOSeparator(Whitespace separator) : separator_(separator) {}
 
+IOSeparator IOSeparator::Space() { return IOSeparator(Whitespace::kSpace); }
+IOSeparator IOSeparator::Newline() { return IOSeparator(Whitespace::kNewline); }
+IOSeparator IOSeparator::Tab() { return IOSeparator(Whitespace::kTab); }
+
 Whitespace IOSeparator::GetSeparator() const { return separator_; }
 
 std::string IOSeparator::ToString() const {

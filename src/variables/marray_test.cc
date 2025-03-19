@@ -357,25 +357,22 @@ TEST(MArrayTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
 }
 
 TEST(MArrayTest, WhitespaceSeparatorShouldAffectPrint) {
-  EXPECT_THAT(
-      Print(MArray<MInteger>(IOSeparator(Whitespace::kNewline)), {1, 2, 3}),
-      IsOkAndHolds("1\n2\n3"));  // Note no newline after
+  EXPECT_THAT(Print(MArray<MInteger>(IOSeparator::Newline()), {1, 2, 3}),
+              IsOkAndHolds("1\n2\n3"));  // Note no newline after
 }
 
 TEST(MArrayTest, WhitespaceSeparatorShouldAffectRead) {
-  EXPECT_THAT(
-      Read(MArray<MInteger>(IOSeparator(Whitespace::kNewline), Length(6)),
-           "1\n2\n3\n4\n5\n6"),
-      IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
+  EXPECT_THAT(Read(MArray<MInteger>(IOSeparator::Newline(), Length(6)),
+                   "1\n2\n3\n4\n5\n6"),
+              IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
 
-  EXPECT_THAT(Read(MArray<MInteger>(IOSeparator(Whitespace::kTab), Length(3)),
-                   "3\t2\t1"),
+  EXPECT_THAT(Read(MArray<MInteger>(IOSeparator::Tab(), Length(3)), "3\t2\t1"),
               IsOkAndHolds(ElementsAre(3, 2, 1)));
 
   // Read wrong whitespace between characters.
   EXPECT_THROW(
       {
-        Read(MArray<MInteger>(IOSeparator(Whitespace::kNewline), Length(6)),
+        Read(MArray<MInteger>(IOSeparator::Newline(), Length(6)),
              "1\n2\n3 4\n5\n6")
             .IgnoreError();
       },
@@ -383,19 +380,15 @@ TEST(MArrayTest, WhitespaceSeparatorShouldAffectRead) {
 }
 
 TEST(MArrayTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
-  EXPECT_THAT(
-      Read(MArray<MInteger>(IOSeparator(Whitespace::kNewline),
-                            IOSeparator(Whitespace::kNewline), Length(6)),
-           "1\n2\n3\n4\n5\n6"),
-      IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
+  EXPECT_THAT(Read(MArray<MInteger>(IOSeparator::Newline(),
+                                    IOSeparator::Newline(), Length(6)),
+                   "1\n2\n3\n4\n5\n6"),
+              IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
 }
 
 TEST(MArrayTest, WhitespaceSeparatorShouldFailWithTwoSeparators) {
   EXPECT_THAT(
-      [] {
-        MArray<MInteger>(IOSeparator(Whitespace::kNewline),
-                         IOSeparator(Whitespace::kTab));
-      },
+      [] { MArray<MInteger>(IOSeparator::Newline(), IOSeparator::Tab()); },
       Throws<std::runtime_error>());
 }
 
