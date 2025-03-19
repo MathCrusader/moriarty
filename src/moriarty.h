@@ -33,15 +33,14 @@
 #include <utility>
 #include <vector>
 
+#include "absl/log/absl_check.h"
 #include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "src/context.h"
 #include "src/internal/abstract_variable.h"
-#include "src/internal/status_utils.h"
 #include "src/internal/value_set.h"
+#include "src/internal/variable_name_utils.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/mvariable.h"
-#include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
 
@@ -79,21 +78,7 @@ class Moriarty {
   // the custom generators produce more than `num_cases`, then those will all
   // still be generated. Setting `num_cases` = 0 means only your custom
   // generators will be run.
-  //
-  // Crashes on failure. See `TrySetNumCases()` for non-crashing version.
   Moriarty& SetNumCases(int num_cases);
-
-  // TrySetNumCases() [optional]
-  //
-  // Sets an aspirational number of test cases to generate. All custom
-  // generators will be called first, then specialized generators (min_, max_,
-  // random_) will be called to increase the number of cases to `num_cases`. If
-  // the custom generators produce more than `num_cases`, then those will all
-  // still be generated. Setting `num_cases` = 0 means only your custom
-  // generators will be run.
-  //
-  // Returns status on failure. See `SetNumCases()` for simpler API version.
-  absl::Status TrySetNumCases(int num_cases);
 
   // SetSeed() [required]
   //
@@ -103,21 +88,7 @@ class Moriarty {
   // In the future, this may also be added as a requirement:
   //  * The first X characters must encode the `name` provided (this helps
   //    ensures a distinct seed is used for every question).
-  //
-  // Crashes on failure. See `TrySetSeed()` for non-crashing version.
   Moriarty& SetSeed(std::string_view seed);
-
-  // TrySetSeed()
-  //
-  // This is the seed used for random generation. The seed must:
-  //  * Be at least 10 characters long.
-  //
-  // In the future, this may also be added as a requirement:
-  //  * The first X characters must encode the `name` provided (this helps
-  //    ensures a distinct seed is used for every question).
-  //
-  // Returns status on failure. See `SetSeed()` for simpler API version.
-  absl::Status TrySetSeed(std::string_view seed);
 
   // AddVariable()
   //
@@ -154,26 +125,6 @@ class Moriarty {
     return *this;
   }
 
-  // TryAddVariable()
-  //
-  // Adds a variable to Moriarty with all global constraints applied to it. For
-  // example:
-  //
-  //  `M.AddVariable("N", MInteger().Between(1, 10));`
-  //
-  // means that *all* instances of N that are generated will be between 1
-  // and 10. Additional local constraints can be added to this in specific
-  // generators, but no generator may violate these constraints placed here.
-  // (For example, if a generator says it wants N to be between 20 and 30, an
-  // error will be thrown since there is no number that is between 1 and 10 AND
-  // 20 and 30.)
-  //
-  // Returns status on failure. See `AddVariable()` for simpler API version.
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
-  absl::Status TryAddVariable(std::string_view name, T variable);
-
   void GenerateTestCases(GenerateFn fn, GenerateOptions options = {});
   void ImportTestCases(ImportFn fn, ImportOptions options = {});
   void ExportTestCases(ExportFn fn, ExportOptions options = {}) const;
@@ -201,10 +152,7 @@ class Moriarty {
 
   // Generates the seed for generator_[index]. Negative numbers are reserved
   // for specialized generators (e.g., min_, max_, random_ generators).
-  absl::StatusOr<std::span<const int64_t>> GetSeedForGenerator(int index);
-
-  // Determines if a variable name is valid.
-  static absl::Status ValidateVariableName(std::string_view name);
+  std::span<const int64_t> GetSeedForGenerator(int index);
 };
 
 // -----------------------------------------------------------------------------
@@ -213,21 +161,10 @@ class Moriarty {
 template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
 Moriarty& Moriarty::AddVariable(std::string_view name, T variable) {
-  moriarty_internal::TryFunctionOrCrash(
-      [&, this]() {
-        return this->TryAddVariable<T>(name, std::move(variable));
-      },
-      "AddVariable");
-  return *this;
-}
-
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
-absl::Status Moriarty::TryAddVariable(std::string_view name, T variable) {
-  MORIARTY_RETURN_IF_ERROR(ValidateVariableName(name));
-  MORIARTY_RETURN_IF_ERROR(variables_.AddVariable(name, std::move(variable)))
+  moriarty_internal::ValidateVariableName(name);
+  ABSL_CHECK_OK(variables_.AddVariable(name, std::move(variable)))
       << "Adding the same variable multiple times";
-  return absl::OkStatus();
+  return *this;
 }
 
 }  // namespace moriarty

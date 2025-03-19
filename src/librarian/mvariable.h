@@ -259,8 +259,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //  AbstractVariable overrides
   [[nodiscard]] std::unique_ptr<moriarty_internal::AbstractVariable> Clone()
       const override;
-  absl::Status AssignValue(ResolverContext ctx) const override;
-  absl::Status AssignUniqueValue(AssignmentContext ctx) const override;
+  void AssignValue(ResolverContext ctx) const override;
+  void AssignUniqueValue(AssignmentContext ctx) const override;
   absl::Status ValueSatisfiesConstraints(AnalysisContext ctx) const override;
   void ReadValue(
       ReaderContext ctx,
@@ -499,23 +499,19 @@ G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::AssignValue(ResolverContext ctx) const {
-  if (ctx.ValueIsKnown(ctx.GetVariableName())) return absl::OkStatus();
+void MVariable<V, G>::AssignValue(ResolverContext ctx) const {
+  if (ctx.ValueIsKnown(ctx.GetVariableName())) return;
 
   G value = Generate(ctx);
   ctx.SetValue<V>(ctx.GetVariableName(), value);
-  return absl::OkStatus();
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::AssignUniqueValue(AssignmentContext ctx) const {
-  if (ctx.ValueIsKnown(ctx.GetVariableName())) return absl::OkStatus();
+void MVariable<V, G>::AssignUniqueValue(AssignmentContext ctx) const {
+  if (ctx.ValueIsKnown(ctx.GetVariableName())) return;
 
   std::optional<G> value = GetUniqueValue(ctx);
-
-  if (!value) return absl::OkStatus();
-  ctx.SetValue<V>(ctx.GetVariableName(), *value);
-  return absl::OkStatus();
+  if (value) ctx.SetValue<V>(ctx.GetVariableName(), *value);
 }
 
 template <typename V, typename G>

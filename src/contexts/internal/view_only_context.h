@@ -23,7 +23,6 @@
 #include <string>
 #include <string_view>
 
-#include "absl/status/statusor.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -158,15 +157,9 @@ template <typename T>
   requires std::derived_from<T, AbstractVariable>
 std::optional<typename T::value_type> ViewOnlyContext::GetValueIfKnown(
     std::string_view variable_name) const {
-  try {
-    // FIXME: Create a MaybeGet() function in ValueSet
-    absl::StatusOr<typename T::value_type> value =
-        values_.get().Get<T>(variable_name);
-    if (value.ok()) return *value;
-  } catch (const ValueNotFound&) {
-    return std::nullopt;
+  if (values_.get().Contains(variable_name)) {
+    return values_.get().Get<T>(variable_name);
   }
-
   return std::nullopt;
 }
 

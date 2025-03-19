@@ -234,13 +234,11 @@ TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
 
   AbstractVariable* var_A = variables.GetAbstractVariable("A");
   ResolverContext ctxA("A", variables, values, engine, generation_config);
-  MORIARTY_ASSERT_OK(
-      var_A->AssignValue(ctxA));  // By assigning A, we assigned N.
+  var_A->AssignValue(ctxA);  // By assigning A, we assigned N.
 
   AbstractVariable* var_B = variables.GetAbstractVariable("B");
   ResolverContext ctxB("B", variables, values, engine, generation_config);
-  MORIARTY_ASSERT_OK(
-      var_B->AssignValue(ctxB));  // Should use the already generated N.
+  var_B->AssignValue(ctxB);  // Should use the already generated N.
   int N = values.Get<MInteger>("N");
 
   EXPECT_EQ(values.Get<MInteger>("A"), N);
@@ -601,14 +599,13 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
 
   AbstractVariable* var_A = variables.GetAbstractVariable("A");
   ResolverContext ctxA("A", variables, values, engine, generation_config);
-  MORIARTY_ASSERT_OK(
-      var_A->AssignValue(ctxA));  // By assigning A, we assigned N.
+  var_A->AssignValue(ctxA);  // By assigning A, we assigned N.
   int N = values.Get<MInteger>("N");
 
   // Attempt to re-assign N.
   ResolverContext ctxN("N", variables, values, engine, generation_config);
   AbstractVariable* var_N = variables.GetAbstractVariable("N");
-  MORIARTY_ASSERT_OK(var_N->AssignValue(ctxN));
+  var_N->AssignValue(ctxN);
 
   // Should not have changed.
   EXPECT_EQ(values.Get<MInteger>("N"), N);

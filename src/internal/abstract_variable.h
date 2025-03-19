@@ -82,7 +82,7 @@ class AbstractVariable {
   //
   // Note that the variable stored in `ctx` with the same name may or may not be
   // identically `this` variable, but it should be assumed to be equivalent.
-  virtual absl::Status AssignValue(librarian::ResolverContext ctx) const = 0;
+  virtual void AssignValue(librarian::ResolverContext ctx) const = 0;
 
   // AssignUniqueValue() [pure virtual]
   //
@@ -92,10 +92,9 @@ class AbstractVariable {
   // If there is not a unique value (or it is too hard to determine that there
   // is a unique value), this does nothing.
   //
-  // Example: MInteger().Between(7, 7) might be able to determine that its
+  // Example: MInteger(Between(7, 7)) might be able to determine that its
   // unique value is 7.
-  virtual absl::Status AssignUniqueValue(
-      librarian::AssignmentContext ctx) const = 0;
+  virtual void AssignUniqueValue(librarian::AssignmentContext ctx) const = 0;
 
   // ReadValue() [pure virtual]
   //

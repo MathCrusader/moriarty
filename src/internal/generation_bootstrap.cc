@@ -151,10 +151,11 @@ absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
                             GetGenerationOrder(deps_map, known_values));
 
   // First do a quick assignment of all known values.
+  // TODO: Do this in reverse and explain why.
   for (std::string_view name : variable_names) {
     AbstractVariable* var = variables.GetAbstractVariable(name);
     librarian::AssignmentContext ctx(name, variables, known_values);
-    MORIARTY_RETURN_IF_ERROR(var->AssignUniqueValue(ctx));
+    var->AssignUniqueValue(ctx);
   }
 
   // Now do a deep generation.
@@ -162,7 +163,7 @@ absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
     AbstractVariable* var = variables.GetAbstractVariable(name);
     librarian::ResolverContext ctx(name, variables, known_values,
                                    options.random_engine, generation_config);
-    MORIARTY_RETURN_IF_ERROR(var->AssignValue(ctx));
+    var->AssignValue(ctx);
   }
 
   // We may have initially generated invalid values during the

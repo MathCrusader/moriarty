@@ -77,6 +77,7 @@ cc_library(
         "//src/internal:generation_bootstrap",
         "//src/internal:status_utils",
         "//src/internal:value_set",
+        "//src/internal:variable_name_utils",
         "//src/internal:variable_set",
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",

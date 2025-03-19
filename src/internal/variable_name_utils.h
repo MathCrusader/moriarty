@@ -24,6 +24,9 @@
 namespace moriarty {
 namespace moriarty_internal {
 
+// Throws an exception if `name` is not a valid variable name.
+void ValidateVariableName(std::string_view name);
+
 struct VariableNameBreakdown {
   std::string base_variable_name;
   std::optional<std::string> subvariable_name;

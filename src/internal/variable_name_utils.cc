@@ -15,9 +15,11 @@
 #include "src/internal/variable_name_utils.h"
 
 #include <optional>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
+#include "absl/strings/ascii.h"
 #include "absl/strings/match.h"
 #include "absl/strings/str_cat.h"
 
@@ -66,6 +68,23 @@ std::optional<std::string_view> SubvariableName(
   }
 
   return variable_name.substr(pos + 1);
+}
+
+void ValidateVariableName(std::string_view name) {
+  if (name.empty()) {
+    throw std::invalid_argument("Variable name cannot be empty");
+  }
+  for (char c : name) {
+    if (!absl::ascii_isalnum(c) && c != '_') {
+      throw std::invalid_argument(
+          "Variable name can only contain 'A-Za-z0-9_'.");
+    }
+  }
+
+  if (!absl::ascii_isalpha(name[0])) {
+    throw std::invalid_argument(
+        "Variable name must start with an alphabetic character");
+  }
 }
 
 }  // namespace moriarty_internal

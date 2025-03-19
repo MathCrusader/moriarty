@@ -16,6 +16,7 @@
 #include "src/moriarty.h"
 
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 #include <utility>
 #include <vector>
@@ -35,6 +36,7 @@
 namespace moriarty {
 namespace {
 
+using ::moriarty::Moriarty;
 using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::ThrowsValueNotFound;
@@ -48,6 +50,7 @@ using ::testing::HasSubstr;
 using ::testing::Le;
 using ::testing::Pair;
 using ::testing::SizeIs;
+using ::testing::ThrowsMessage;
 
 // -----------------------------------------------------------------------------
 //  Import / Export / Generate Helpers
@@ -137,7 +140,7 @@ GenerateFn GenerateTwoVariables(std::string A, int64_t a, std::string B,
 // -----------------------------------------------------------------------------
 
 TEST(MoriartyTest, SetNumCasesWorksForValidInput) {
-  moriarty::Moriarty M;
+  Moriarty M;
 
   // The following will crash if the seed is invalid
   M.SetNumCases(0);
@@ -147,29 +150,35 @@ TEST(MoriartyTest, SetNumCasesWorksForValidInput) {
   // generated once Generators are added to Moriarty.
 }
 
-TEST(MoriartyDeathTest, SetNumCasesWithNegativeInputShouldCrash) {
-  moriarty::Moriarty M;
-  EXPECT_DEATH(M.SetNumCases(-1), "num_cases must be non-negative");
-  EXPECT_DEATH(M.SetNumCases(-100), "num_cases must be non-negative");
+TEST(MoriartyTest, SetNumCasesWithNegativeInputShouldCrash) {
+  Moriarty M;
+  EXPECT_THAT(
+      [] { Moriarty().SetNumCases(-1); },
+      ThrowsMessage<std::invalid_argument>("num_cases must be non-negative"));
+  EXPECT_THAT(
+      [] { Moriarty().SetNumCases(-100); },
+      ThrowsMessage<std::invalid_argument>("num_cases must be non-negative"));
 }
 
 // TODO(b/182810006): Update seed when seed/name requirements are enabled
 TEST(MoriartyTest, SetSeedWorksForValidInput) {
-  moriarty::Moriarty M;
+  Moriarty M;
 
   // The following will crash if the seed is invalid
   M.SetSeed("abcde0123456789");
 }
 
-TEST(MoriartyDeathTest, ShouldSeedWithInvalidInputShouldCrash) {
-  moriarty::Moriarty M;
+TEST(MoriartyTest, ShouldSeedWithInvalidInputShouldCrash) {
+  Moriarty M;
 
-  EXPECT_DEATH(M.SetSeed(""), "seed's length must be at least");
-  EXPECT_DEATH(M.SetSeed("abcde"), "seed's length must be at least");
+  EXPECT_THAT([] { Moriarty().SetSeed(""); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("seed's length")));
+  EXPECT_THAT([] { Moriarty().SetSeed("abcde"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("seed's length")));
 }
 
 TEST(MoriartyTest, AddVariableWorks) {
-  moriarty::Moriarty M;
+  Moriarty M;
 
   M.AddVariable("A", MTestType());
   M.AddVariable("B", MTestType());
@@ -178,15 +187,14 @@ TEST(MoriartyTest, AddVariableWorks) {
 }
 
 TEST(MoriartyDeathTest, AddTwoVariablesWithTheSameNameShouldCrash) {
-  moriarty::Moriarty M;
-
-  EXPECT_DEATH(M.AddVariable("X", MTestType()).AddVariable("X", MTestType()),
-               "already added");
+  EXPECT_DEATH(
+      Moriarty().AddVariable("X", MTestType()).AddVariable("X", MTestType()),
+      "already added");
 }
 
 TEST(MoriartyTest,
      ExportAllTestCasesShouldExportProperlyWithASingleGeneratorMultipleTimes) {
-  moriarty::Moriarty M;
+  Moriarty M;
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(
       [](GenerateContext ctx) -> std::vector<TestCase> {
@@ -204,7 +212,7 @@ TEST(MoriartyTest,
 
 TEST(MoriartyTest,
      ExportAllTestCasesShouldExportCasesProperlyWithMultipleGenerators) {
-  moriarty::Moriarty M;
+  Moriarty M;
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 11));
   M.GenerateTestCases(GenerateTwoVariables("R", 2, "S", 22));
@@ -221,7 +229,7 @@ TEST(MoriartyTest,
 TEST(
     MoriartyTest,
     ExportAllTestCasesShouldExportProperlyWithMultipleGeneratorsMultipleTimes) {
-  moriarty::Moriarty M;
+  Moriarty M;
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 11), {.num_calls = 2});
   M.GenerateTestCases(GenerateTwoVariables("R", 2, "S", 22), {.num_calls = 3});
@@ -236,7 +244,7 @@ TEST(
 }
 
 TEST(MoriartyTest, ExportAskingForNonExistentVariableShouldThrow) {
-  moriarty::Moriarty M;
+  Moriarty M;
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 11));
 
@@ -251,8 +259,8 @@ TEST(MoriartyTest, ExportAskingForNonExistentVariableShouldThrow) {
       ThrowsValueNotFound("N"));
 }
 
-TEST(MoriartyDeathTest, ExportAskingForVariableOfTheWrongTypeShouldCrash) {
-  moriarty::Moriarty M;
+TEST(MoriartyTest, ExportAskingForVariableOfTheWrongTypeShouldCrash) {
+  Moriarty M;
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 2));
 
@@ -269,7 +277,7 @@ TEST(MoriartyDeathTest, ExportAskingForVariableOfTheWrongTypeShouldCrash) {
 }
 
 TEST(MoriartyTest, GeneralConstraintsSetValueAreConsideredInGenerators) {
-  moriarty::Moriarty M;
+  Moriarty M;
   M.SetSeed("abcde0123456789");
   M.AddVariable("N", MInteger(Exactly(5)));
 
@@ -293,7 +301,7 @@ TEST(MoriartyTest, GeneralConstraintsSetValueAreConsideredInGenerators) {
 }
 
 TEST(MoriartyTest, GeneralConstraintsAreConsideredInGenerators) {
-  moriarty::Moriarty M;
+  Moriarty M;
   M.SetSeed("abcde0123456789");
   M.AddVariable("R", MInteger(Between(3, 50)));
   M.GenerateTestCases([](GenerateContext ctx) -> std::vector<TestCase> {
@@ -391,7 +399,7 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
 }
 
 // TEST(MoriartyTest, ApproximateGenerationLimitStopsGenerationEarly) {
-//   moriarty::Moriarty M;
+//   Moriarty M;
 //   M.SetSeed("abcde0123456789");
 //   M.AddGenerator("Generator", TwoIntegerGenerator(1, 11), 50);
 
@@ -411,7 +419,7 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
 // }
 
 // TEST(MoriartyTest, ApproximateGenerationLimitTruncatesTheSizeOfArrays) {
-//   moriarty::Moriarty M;
+//   Moriarty M;
 //   M.SetSeed("abcde0123456789");
 //   M.AddGenerator("Generator", SingleStringGenerator(), 100);
 
@@ -429,35 +437,26 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
 // }
 
 TEST(MoriartyTest, VariableNameValidationShouldWork) {
-  MORIARTY_EXPECT_OK(Moriarty().TryAddVariable("good", MInteger()));
-  MORIARTY_EXPECT_OK(Moriarty().TryAddVariable("a1_b", MInteger()));
-  MORIARTY_EXPECT_OK(Moriarty().TryAddVariable("AbC_3c", MInteger()));
+  Moriarty().AddVariable("good", MInteger());
+  Moriarty().AddVariable("a1_b", MInteger());
+  Moriarty().AddVariable("AbC_3c", MInteger());
 
-  EXPECT_THAT(Moriarty().TryAddVariable("", MInteger()),
-              StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("empty")));
+  EXPECT_THAT([] { Moriarty().AddVariable("", MInteger()); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("empty")));
 
-  // TODO(darcybest): Re-enable these tests once our other user updates their
-  // workflow.
+  EXPECT_THAT([] { Moriarty().AddVariable("1", MInteger()); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("start")));
+  EXPECT_THAT([] { Moriarty().AddVariable("_", MInteger()); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("start")));
 
-  // EXPECT_THAT(Moriarty().TryAddVariable("1", MInteger()),
-  //             StatusIs(absl::StatusCode::kInvalidArgument,
-  //             HasSubstr("start")));
-  // EXPECT_THAT(Moriarty().TryAddVariable("_", MInteger()),
-  //             StatusIs(absl::StatusCode::kInvalidArgument,
-  //             HasSubstr("start")));
-
-  EXPECT_THAT(
-      Moriarty().TryAddVariable(" ", MInteger()),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("A-Za-z0-9_")));
-  EXPECT_THAT(
-      Moriarty().TryAddVariable("$", MInteger()),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("A-Za-z0-9_")));
-  EXPECT_THAT(
-      Moriarty().TryAddVariable("a$", MInteger()),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("A-Za-z0-9_")));
-  EXPECT_THAT(
-      Moriarty().TryAddVariable("a b", MInteger()),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("A-Za-z0-9_")));
+  EXPECT_THAT([] { Moriarty().AddVariable(" ", MInteger()); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("A-Za-z0-9_")));
+  EXPECT_THAT([] { Moriarty().AddVariable("$", MInteger()); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("A-Za-z0-9_")));
+  EXPECT_THAT([] { Moriarty().AddVariable("a$", MInteger()); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("A-Za-z0-9_")));
+  EXPECT_THAT([] { Moriarty().AddVariable("a b", MInteger()); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("A-Za-z0-9_")));
 }
 
 }  // namespace

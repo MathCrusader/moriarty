@@ -95,16 +95,12 @@ class ResolverContext
   template <typename T>
     requires std::derived_from<T, moriarty_internal::AbstractVariable>
   [[nodiscard]] T::value_type GenerateVariable(std::string_view variable_name) {
-    std::optional<typename T::value_type> known =
-        GetValueIfKnown<T>(variable_name);
+    auto known = GetValueIfKnown<T>(variable_name);
     if (known) return *known;
 
-    absl::StatusOr<T> variable = GetVariable<T>(variable_name);
-    if (!variable.ok())
-      throw std::runtime_error(std::string(variable.status().message()));
+    T variable = GetVariable<T>(variable_name);
 
-    typename T::value_type value =
-        variable->Generate(ForVariable(variable_name));
+    auto value = variable.Generate(ForVariable(variable_name));
     SetValue<T>(variable_name, value);
     return value;
   }
@@ -112,8 +108,7 @@ class ResolverContext
   void AssignVariable(std::string_view variable_name) {
     const moriarty_internal::AbstractVariable& variable =
         GetAnonymousVariable(variable_name);
-    auto status = variable.AssignValue(ForVariable(variable_name));
-    if (!status.ok()) throw std::runtime_error(std::string(status.message()));
+    variable.AssignValue(ForVariable(variable_name));
   }
 
  private:
