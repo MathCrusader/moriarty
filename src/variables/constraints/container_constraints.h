@@ -17,6 +17,7 @@
 #ifndef MORIARTY_SRC_VARIABLES_CONSTRAINTS_CONTAINERS_H_
 #define MORIARTY_SRC_VARIABLES_CONSTRAINTS_CONTAINERS_H_
 
+#include <algorithm>
 #include <concepts>
 #include <format>
 #include <stdexcept>
@@ -189,7 +190,7 @@ Length::Length(Constraints&&... constraints)
 template <typename Container>
 bool Length::IsSatisfiedWith(librarian::AnalysisContext ctx,
                              const Container& value) const {
-  return length_.IsSatisfiedWith(ctx, static_cast<int64_t>(value.size())).ok();
+  return length_.IsSatisfiedWith(ctx, static_cast<int64_t>(value.size()));
 }
 
 template <typename Container>
@@ -218,7 +219,7 @@ bool Elements<MElementType>::IsSatisfiedWith(
     librarian::AnalysisContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
   for (const auto& elem : value) {
-    if (!element_constraints_.IsSatisfiedWith(ctx, elem).ok()) return false;
+    if (!element_constraints_.IsSatisfiedWith(ctx, elem)) return false;
   }
   return true;
 }
@@ -232,16 +233,17 @@ template <typename MElementType>
 std::string Elements<MElementType>::UnsatisfiedReason(
     librarian::AnalysisContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
-  for (int idx = -1; const auto& elem : value) {
-    idx++;
-    if (!element_constraints_.IsSatisfiedWith(ctx, elem).ok()) {
-      return std::format("array index {} (which is {}) {}", idx,
-                         librarian::DebugString(elem),
-                         element_constraints_.UnsatisfiedReason(ctx, elem));
-    }
+  auto it = std::ranges::find_if_not(value, [&](const auto& elem) {
+    return element_constraints_.IsSatisfiedWith(ctx, elem);
+  });
+  if (it == value.end()) {
+    throw std::invalid_argument(
+        "Elements<>()::UnsatisfiedReason called when all elements ok.");
   }
-  throw std::invalid_argument(
-      "Elements<>()::UnsatisfiedReason called when all elements ok.");
+
+  return std::format("array index {} (which is {}) {}", it - value.begin(),
+                     librarian::DebugString(*it),
+                     element_constraints_.UnsatisfiedReason(ctx, *it));
 }
 
 template <typename MElementType>
@@ -266,7 +268,7 @@ template <size_t I, typename MElementType>
 bool Element<I, MElementType>::IsSatisfiedWith(
     librarian::AnalysisContext ctx,
     const MElementType::value_type& value) const {
-  return element_constraints_.IsSatisfiedWith(ctx, value).ok();
+  return element_constraints_.IsSatisfiedWith(ctx, value);
 }
 
 template <size_t I, typename MElementType>

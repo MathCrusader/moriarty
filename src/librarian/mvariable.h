@@ -126,8 +126,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // IsSatisfiedWith()
   //
   // Determines if `value` satisfies all constraints on this variable.
-  absl::Status IsSatisfiedWith(AnalysisContext ctx,
-                               const ValueType& value) const;
+  [[nodiscard]] bool IsSatisfiedWith(AnalysisContext ctx,
+                                     const ValueType& value) const;
 
   // UnsatisfiedReason()
   //
@@ -236,7 +236,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   void ReadValue(
       ReaderContext ctx,
       moriarty_internal::MutableValuesContext values_ctx) const override;
-  absl::Status ValueSatisfiesConstraints(AnalysisContext ctx) const override;
+  bool IsSatisfiedWithValue(AnalysisContext ctx) const override;
+  std::string UnsatisfiedWithValueReason(AnalysisContext ctx) const override;
   std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
   ListAnonymousEdgeCases(AnalysisContext ctx) const override;
   // ---------------------------------------------------------------------------
@@ -313,26 +314,27 @@ V& MVariable<V, G>::AddCustomConstraint(CustomConstraint<G> constraint) {
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
-                                              const G& value) const {
-  if (!constraints_.IsSatisfiedWith(ctx, value)) {
-    std::string reason = constraints_.UnsatisfiedReason(ctx, value);
-    return UnsatisfiedConstraintError(reason);
-  }
+bool MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
+                                      const G& value) const {
+  if (!constraints_.IsSatisfiedWith(ctx, value)) return false;
 
-  // FIXME: Determine semantics of which errors are propagated.
+  // FIXME: Remove.
   if (auto status = IsSatisfiedWithImpl(ctx, value);
       !status.ok() && !absl::IsUnimplemented(status)) {
-    return status;
+    return false;
   }
 
-  return absl::OkStatus();
+  return true;
 }
 
 template <typename V, typename G>
 std::string MVariable<V, G>::UnsatisfiedReason(AnalysisContext ctx,
                                                const G& value) const {
-  auto status = IsSatisfiedWith(ctx, value);
+  std::string reason = constraints_.UnsatisfiedReason(ctx, value);
+  if (!reason.empty()) return reason;
+
+  // FIXME: Remove
+  auto status = IsSatisfiedWithImpl(ctx, value);
   if (status.ok()) throw std::invalid_argument("Value satisfies constraints.");
   return std::string(status.message());
 }
@@ -504,9 +506,10 @@ G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
   // validate. Generate them now.
   for (std::string_view dep : dependencies_) ctx.AssignVariable(dep);
 
-  absl::Status satisfies = IsSatisfiedWith(ctx, potential_value);
-  if (!satisfies.ok())
-    throw std::runtime_error(std::string(satisfies.message()));
+  if (!IsSatisfiedWith(ctx, potential_value))
+    throw std::runtime_error(
+        std::format("Generated value does not satisfy constraints: {}",
+                    UnsatisfiedReason(ctx, potential_value)));
 
   return potential_value;
 }
@@ -528,9 +531,14 @@ void MVariable<V, G>::AssignUniqueValue(AssignmentContext ctx) const {
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::ValueSatisfiesConstraints(
-    AnalysisContext ctx) const {
+bool MVariable<V, G>::IsSatisfiedWithValue(AnalysisContext ctx) const {
   return IsSatisfiedWith(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
+}
+
+template <typename V, typename G>
+std::string MVariable<V, G>::UnsatisfiedWithValueReason(
+    AnalysisContext ctx) const {
+  return UnsatisfiedReason(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
 
 template <typename V, typename G>
@@ -605,9 +613,10 @@ template <typename V, typename G>
 }
 
 template <typename V, typename G>
-absl::Status SatisfiesConstraints(
-    const librarian::MVariable<V, G>& variable, std::string_view variable_name,
-    moriarty::moriarty_internal::ViewOnlyContext ctx, const G& value) {
+bool IsSatisfiedWith(const librarian::MVariable<V, G>& variable,
+                     std::string_view variable_name,
+                     moriarty::moriarty_internal::ViewOnlyContext ctx,
+                     const G& value) {
   return variable.IsSatisfiedWith(
       librarian::AnalysisContext(variable_name, ctx), value);
 }

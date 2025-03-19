@@ -100,14 +100,12 @@
 
 #include "absl/algorithm/container.h"
 #include "absl/log/absl_check.h"
-#include "absl/status/status.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/substitute.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/librarian/analysis_context.h"
-#include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_bootstrap.h"
 #include "src/internal/generation_config.h"
@@ -569,16 +567,10 @@ MATCHER_P2(IsSatisfiedWith, value, context, "") {
       absl::Substitute("$0::IsSatisfiedWith", arg.Typename());
   moriarty::librarian::AnalysisContext ctx(var_name, *manager.GetVariables(),
                                            *manager.GetValues());
-  absl::Status satisfies = arg.IsSatisfiedWith(ctx, ValueType(value));
 
-  if (moriarty::IsUnsatisfiedConstraintError(satisfies)) {
-    *result_listener << "value does not satisfy constraints: "
-                     << satisfies.message();
-    return false;
-  }
-
-  if (!satisfies.ok()) {
-    *result_listener << "Non-Moriarty error: " << satisfies.message();
+  if (!arg.IsSatisfiedWith(ctx, ValueType(value))) {
+    std::string reason = arg.UnsatisfiedReason(ctx, ValueType(value));
+    *result_listener << "value does not satisfy constraints: " << reason;
     return false;
   }
 
@@ -604,7 +596,7 @@ MATCHER_P(IsSatisfiedWith, value, "") {
 //  EXPECT_THAT(MInteger().AtMost("N"),
 //              IsNotSatisfiedWith(50, "range", Context().WithValue("N",
 //              10)));
-MATCHER_P3(IsNotSatisfiedWith, value, reason, context, "") {
+MATCHER_P3(IsNotSatisfiedWith, value, expected_reason, context, "") {
   // We cast `value` to the appropriate generated type for the test. So
   // int -> int64_t, char* -> std::string, etc.
   using ValueType = typename std::decay_t<arg_type>::value_type;
@@ -617,29 +609,16 @@ MATCHER_P3(IsNotSatisfiedWith, value, reason, context, "") {
   moriarty::librarian::AnalysisContext ctx(var_name, *manager.GetVariables(),
                                            *manager.GetValues());
 
-  absl::Status satisfies;
-  try {
-    satisfies = arg.IsSatisfiedWith(ctx, ValueType(value));
-  } catch (const std::runtime_error& e) {
-    // FIXME: Determine semantics for this.
-    satisfies = moriarty::UnsatisfiedConstraintError(e.what());
-  }
-
-  if (moriarty::IsUnsatisfiedConstraintError(satisfies)) {
-    if (!testing::Value(satisfies.message(), testing::HasSubstr(reason))) {
+  if (!arg.IsSatisfiedWith(ctx, ValueType(value))) {
+    std::string actual_reason = arg.UnsatisfiedReason(ctx, ValueType(value));
+    if (!testing::Value(actual_reason, testing::HasSubstr(expected_reason))) {
       *result_listener << "value does not satisfy constraints, but not for the "
                           "correct reason. Expected '"
-                       << reason << "', got '" << satisfies.message() << "'";
+                       << expected_reason << "', got '" << actual_reason << "'";
       return false;
     }
-    *result_listener << "value does not satisfy constraints: "
-                     << satisfies.message();
+    *result_listener << "value does not satisfy constraints: " << actual_reason;
     return true;
-  }
-
-  if (!satisfies.ok()) {
-    *result_listener << "non-Moriarty error: " << satisfies.message();
-    return false;
   }
 
   *result_listener << "value satisfies constraints";

@@ -32,7 +32,6 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/test_case.h"
-#include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
 
@@ -78,9 +77,13 @@ absl::Status Moriarty::TryValidateTestCases() {
 
   int case_num = 1;
   for (const moriarty_internal::ValueSet& test_case : assigned_test_cases_) {
-    MORIARTY_RETURN_IF_ERROR(moriarty_internal::AllVariablesSatisfyConstraints(
-        variables_, test_case))
-        << "Case " << case_num << " invalid";
+    std::optional<std::string> failure =
+        moriarty_internal::AllVariablesSatisfyConstraints(variables_,
+                                                          test_case);
+    if (failure.has_value()) {
+      return absl::FailedPreconditionError(
+          std::format("Case {} invalid: {}", case_num, *failure));
+    }
     case_num++;
   }
   return absl::OkStatus();

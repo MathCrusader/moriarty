@@ -23,8 +23,6 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/contexts/librarian/analysis_context.h"
@@ -266,7 +264,7 @@ TEST(MVariableTest, CyclicDependenciesShouldFail) {
       std::runtime_error);
 }
 
-TEST(MVariableTest, SatisfiesConstraintsWorksForValid) {
+TEST(MVariableTest, IsSatisfiedWithWorksForValid) {
   // In the simplist case, everything will work since it is checking it is a
   // multiple of 1.
   EXPECT_THAT(MTestType(), IsSatisfiedWith(5));
@@ -285,7 +283,7 @@ TEST(MVariableTest, SatisfiesConstraintsWorksForValid) {
       IsNotSatisfiedWith(101, "not a multiple of any valid multiplier"));
 }
 
-TEST(MVariableTest, SatisfiesConstraintsNeedsDependentValues) {
+TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
   {  // No value or variable known
     moriarty_internal::VariableSet variables;
     moriarty_internal::ValueSet values;
@@ -293,11 +291,10 @@ TEST(MVariableTest, SatisfiesConstraintsNeedsDependentValues) {
 
     EXPECT_THAT(
         [&] {
-          MTestType()
+          (void)MTestType()
               .SetAdder("t")
               .SetMultiplier(MInteger(Between(3, 3)))
-              .IsSatisfiedWith(ctx, 1)
-              .IgnoreError();
+              .IsSatisfiedWith(ctx, 1);
         },
         ThrowsValueNotFound("t"));
   }
@@ -309,17 +306,16 @@ TEST(MVariableTest, SatisfiesConstraintsNeedsDependentValues) {
 
     EXPECT_THAT(
         [&] {
-          MTestType()
+          (void)MTestType()
               .SetAdder("t")
               .SetMultiplier(MInteger(Between(3, 3)))
-              .IsSatisfiedWith(ctx, 1)
-              .IgnoreError();
+              .IsSatisfiedWith(ctx, 1);
         },
         ThrowsValueNotFound("t"));
   }
 }
 
-TEST(MVariableTest, SatisfiesConstraintsWorksWithDependentValues) {
+TEST(MVariableTest, IsSatisfiedWithWorksWithDependentValues) {
   // x = 107 + 3 * [something].
   //  So, 110 = 107 + 3 * 1 is valid, and 111 is not.
   EXPECT_THAT(
@@ -331,14 +327,14 @@ TEST(MVariableTest, SatisfiesConstraintsWorksWithDependentValues) {
                          Context().WithValue<MTestType>("t", TestType(107))));
 }
 
-TEST(MVariableTest, SatisfiesConstraintsCanValidateSubvariablesIfNeeded) {
+TEST(MVariableTest, IsSatisfiedWithCanValidateSubvariablesIfNeeded) {
   // Must use AtMost/AtLeast since Between will not allow invalid range.
   // (5, 0) is an invalid range. Should fail validation.
   EXPECT_THAT(MTestType().SetMultiplier(MInteger(AtLeast(5), AtMost(0))),
               IsNotSatisfiedWith(1, "not a multiple of any valid multiplier"));
 }
 
-TEST(MVariableTest, SatisfiesConstraintsShouldAcknowledgeIsAndIsOneOf) {
+TEST(MVariableTest, IsSatisfiedWithShouldAcknowledgeIsAndIsOneOf) {
   // In the simplist case, everything will work since it is checking it is a
   // multiple of 1.
   EXPECT_THAT(MTestType().AddConstraint(OneOf<TestType>({2, 3, 5, 7})),
@@ -353,8 +349,7 @@ TEST(MVariableTest, SatisfiesConstraintsShouldAcknowledgeIsAndIsOneOf) {
               IsSatisfiedWith(8));
 }
 
-TEST(MVariableTest,
-     SatisfiesConstraintsShouldFailIfIsOneOfSucceedsButLowerFails) {
+TEST(MVariableTest, IsSatisfiedWithShouldFailIfIsOneOfSucceedsButLowerFails) {
   // 2 is in the one-of list, but not a multiple of 4.
   EXPECT_THAT(MTestType()
                   .AddConstraint(OneOf<TestType>({2, 4, 8}))
@@ -362,7 +357,7 @@ TEST(MVariableTest,
               IsNotSatisfiedWith(2, "not a multiple of any valid multiplier"));
 }
 
-TEST(MVariableTest, SatisfiesConstraintsShouldCheckCustomConstraints) {
+TEST(MVariableTest, IsSatisfiedWithShouldCheckCustomConstraints) {
   auto is_small_prime = [](const TestType& value) -> bool {
     if (value < 2) return false;
     for (int64_t p = 2; p * p <= value; p++)
@@ -377,7 +372,7 @@ TEST(MVariableTest, SatisfiesConstraintsShouldCheckCustomConstraints) {
   EXPECT_THAT(var, IsNotSatisfiedWith(4, "Prime"));
 }
 
-TEST(MVariableTest, SatisfiesConstraintsShouldCheckMultipleCustomConstraints) {
+TEST(MVariableTest, IsSatisfiedWithShouldCheckMultipleCustomConstraints) {
   MTestType var =
       MTestType()
           .AddCustomConstraint("Prime",

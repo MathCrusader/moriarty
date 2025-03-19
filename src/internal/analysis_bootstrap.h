@@ -18,7 +18,9 @@
 #ifndef MORIARTY_SRC_INTERNAL_ANALYSIS_BOOTSTRAP_H_
 #define MORIARTY_SRC_INTERNAL_ANALYSIS_BOOTSTRAP_H_
 
-#include "absl/status/status.h"
+#include <optional>
+#include <string>
+
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 
@@ -28,12 +30,13 @@ namespace moriarty_internal {
 // AllVariablesSatisfyConstraints()
 //
 // Determines if all variable constraints specified here have a corresponding
-// value that satisfies the constraints.
+// value that satisfies the constraints. If ok, returns nullopt. If not ok,
+// returns a string describing the issue.
 //
 // If a variable does not have a value, this will return not ok.
 // If a value does not have a variable, this will return ok.
-absl::Status AllVariablesSatisfyConstraints(const VariableSet& variables,
-                                            const ValueSet& values);
+[[nodiscard]] std::optional<std::string> AllVariablesSatisfyConstraints(
+    const VariableSet& variables, const ValueSet& values);
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

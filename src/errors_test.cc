@@ -17,94 +17,19 @@
 
 #include <stdexcept>
 
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/testing/status_test_util.h"
-#include "src/util/test_status_macro/status_testutil.h"
 
 namespace moriarty {
 namespace {
 
 using ::moriarty::ValueTypeMismatch;
-using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsValueNotFound;
 using ::moriarty_testing::ThrowsValueTypeMismatch;
 using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::Not;
-
-// -----------------------------------------------------------------------------
-//  General Moriarty Error space checks
-
-TEST(StatusTest, IsMoriartyErrorAcceptsAllErrorFunctions) {
-  // EXPECT_TRUE(IsMoriartyError(NonRetryableGenerationError("")));
-  // EXPECT_TRUE(IsMoriartyError(RetryableGenerationError("")));
-  EXPECT_TRUE(IsMoriartyError(UnsatisfiedConstraintError("")));
-}
-
-TEST(StatusTest, IsMoriartyErrorDoesNotAcceptOkStatus) {
-  EXPECT_FALSE(IsMoriartyError(absl::OkStatus()));
-}
-
-TEST(StatusTest, IsMoriartyErrorDoesNotAcceptGenericStatuses) {
-  EXPECT_FALSE(IsMoriartyError(absl::AlreadyExistsError("")));
-  EXPECT_FALSE(IsMoriartyError(absl::FailedPreconditionError("")));
-  EXPECT_FALSE(IsMoriartyError(absl::InvalidArgumentError("")));
-  EXPECT_FALSE(IsMoriartyError(absl::NotFoundError("")));
-  EXPECT_FALSE(IsMoriartyError(absl::UnknownError("")));
-}
-
-TEST(StatusTest, MoriartyErrorsRecognizeAppropriateError) {
-  // EXPECT_TRUE(IsNonRetryableGenerationError(NonRetryableGenerationError("")));
-  // EXPECT_TRUE(IsRetryableGenerationError(RetryableGenerationError("")));
-  EXPECT_TRUE(IsUnsatisfiedConstraintError(UnsatisfiedConstraintError("")));
-}
-
-TEST(StatusTest, MoriartyErrorsDoNotAcceptUnderlyingTypesAlone) {
-  // All "" are irrelevant, just creating empty statuses with a specific code.
-  // EXPECT_FALSE(IsNonRetryableGenerationError(
-  //     absl::Status(NonRetryableGenerationError("").code(), "")));
-  // EXPECT_FALSE(IsRetryableGenerationError(
-  //     absl::Status(RetryableGenerationError("").code(), "")));
-  EXPECT_FALSE(IsUnsatisfiedConstraintError(
-      absl::Status(UnsatisfiedConstraintError("").code(), "")));
-}
-
-TEST(StatusTest, MoriartyErrorsDoNotAcceptOkStatus) {
-  // EXPECT_FALSE(IsNonRetryableGenerationError(absl::OkStatus()));
-  // EXPECT_FALSE(IsRetryableGenerationError(absl::OkStatus()));
-  EXPECT_FALSE(IsUnsatisfiedConstraintError(absl::OkStatus()));
-}
-
-// -----------------------------------------------------------------------------
-//  UnsatisfiedConstraintError
-
-TEST(StatusTest, IsUnsatisfiedConstraintsGoogleTestMatcherWorks) {
-  EXPECT_THAT(UnsatisfiedConstraintError("reason"),
-              IsUnsatisfiedConstraint("reason"));
-  EXPECT_THAT(absl::StatusOr<int>(UnsatisfiedConstraintError("reason")),
-              IsUnsatisfiedConstraint("reason"));
-  EXPECT_THAT(UnsatisfiedConstraintError("long long reason"),
-              IsUnsatisfiedConstraint("reason"));
-
-  EXPECT_THAT(UnsatisfiedConstraintError("some reason"),
-              Not(IsUnsatisfiedConstraint("another reason")));
-  EXPECT_THAT(absl::FailedPreconditionError("reason"),
-              Not(IsUnsatisfiedConstraint("reason")));
-}
-
-TEST(StatusTest, FailedCheckConstraintsReturnsAnUnsatisfiedConstrainError) {
-  EXPECT_TRUE(IsUnsatisfiedConstraintError(
-      CheckConstraint(absl::FailedPreconditionError("message"), "reason")));
-  EXPECT_TRUE(IsUnsatisfiedConstraintError(CheckConstraint(false, "reason")));
-}
-
-TEST(StatusTest, SuccessfulCheckConstraintsReturnsOk) {
-  MORIARTY_EXPECT_OK(CheckConstraint(absl::OkStatus(), "reason"));
-  MORIARTY_EXPECT_OK(CheckConstraint(true, "reason"));
-}
 
 TEST(ErrorsTest, ThrowsVariableNotFoundMatcherShouldWorkCorrectly) {
   {  // Happy path

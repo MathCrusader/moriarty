@@ -81,7 +81,7 @@ TEST(MStringTest, ReadAtEofShouldFail) {
   EXPECT_THROW({ Read(MString(), "").IgnoreError(); }, std::runtime_error);
 }
 
-TEST(MStringTest, SatisfiesConstraintsShouldAcceptAllMStringsForDefault) {
+TEST(MStringTest, IsSatisfiedWithShouldAcceptAllMStringsForDefault) {
   // Default string should accept all strings.
   EXPECT_THAT(MString(), IsSatisfiedWith(""));
   EXPECT_THAT(MString(), IsSatisfiedWith("hello"));
@@ -245,7 +245,7 @@ TEST(MStringTest, DuplicateLettersInAlphabetAreIgnored) {
   EXPECT_LE(std::count(s.begin(), s.end(), 'a'), 60000);
 }
 
-TEST(MStringTest, SatisfiesConstraintsShouldAcceptAllMStringsOfCorrectLength) {
+TEST(MStringTest, IsSatisfiedWithShouldAcceptAllMStringsOfCorrectLength) {
   EXPECT_THAT(MString(Length(5)), IsSatisfiedWith("abcde"));
   EXPECT_THAT(MString(Length(Between(4, 6))), IsSatisfiedWith("abcde"));
   EXPECT_THAT(MString(Length(Between(4, 5))), IsSatisfiedWith("abcde"));
@@ -258,19 +258,19 @@ TEST(MStringTest, SatisfiesConstraintsShouldAcceptAllMStringsOfCorrectLength) {
               IsNotSatisfiedWith("", "length"));
 }
 
-TEST(MStringTest, SatisfiesConstraintsShouldCheckTheAlphabetIfSet) {
+TEST(MStringTest, IsSatisfiedWithShouldCheckTheAlphabetIfSet) {
   EXPECT_THAT(MString(Alphabet("abcdefghij")), IsSatisfiedWith("abcde"));
   EXPECT_THAT(MString(Alphabet("edbca")), IsSatisfiedWith("abcde"));
 
   EXPECT_THAT(MString(Alphabet("abcd")), IsNotSatisfiedWith("abcde", "`abcd`"));
 }
 
-TEST(MStringTest, SatisfiesConstraintsWithInvalidLengthShouldFail) {
+TEST(MStringTest, IsSatisfiedWithWithInvalidLengthShouldFail) {
   EXPECT_THAT(MString(Length(AtLeast(20), AtMost(10))),
               IsNotSatisfiedWith("abcde", "length"));
 }
 
-TEST(MStringTest, SatisfiesConstraintsShouldCheckForDistinctCharacters) {
+TEST(MStringTest, IsSatisfiedWithShouldCheckForDistinctCharacters) {
   EXPECT_THAT(MString(DistinctCharacters()), IsSatisfiedWith("abcdef"));
   EXPECT_THAT(MString(Alphabet("abcdef"), DistinctCharacters()),
               IsSatisfiedWith("cbf"));
@@ -351,7 +351,7 @@ TEST(MStringTest, SimplePatternWorksForGeneration) {
               GeneratedValuesAre(MatchesRegex("[abc]{10,20}")));
 }
 
-TEST(MStringTest, SatisfiesConstraintsShouldCheck) {
+TEST(MStringTest, IsSatisfiedWithShouldCheck) {
   EXPECT_THAT(MString(SimplePattern("[abc]{10, 20}")),
               IsSatisfiedWith("abcabcabca"));
   EXPECT_THAT(MString(SimplePattern("[abc]{10, 20}")),
@@ -367,7 +367,7 @@ TEST(MStringTest, SimplePatternWithWildcardsShouldFailGeneration) {
       std::runtime_error);
 }
 
-TEST(MStringTest, SimplePatternWithWildcardsShouldWorkForSatisfiesConstraints) {
+TEST(MStringTest, SimplePatternWithWildcardsShouldWorkForIsSatisfiedWith) {
   EXPECT_THAT(MString(SimplePattern("a*")), IsSatisfiedWith("aaaaaa"));
   EXPECT_THAT(MString(SimplePattern("a+")), IsSatisfiedWith("aaaaaa"));
 

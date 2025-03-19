@@ -211,7 +211,7 @@ TEST(MTupleTest, OfShouldMergeIndependentArguments) {
   }
 }
 
-TEST(MTupleTest, SatisfiesConstraintsWorksForValid) {
+TEST(MTupleTest, IsSatisfiedWithWorksForValid) {
   {  // Simple
     MTuple constraints =
         MTuple(MInteger(Between(100, 111)), MInteger(Between(200, 222)));
@@ -241,7 +241,7 @@ TEST(MTupleTest, SatisfiesConstraintsWorksForValid) {
   }
 }
 
-TEST(MTupleTest, SatisfiesConstraintsWorksForInvalid) {
+TEST(MTupleTest, IsSatisfiedWithWorksForInvalid) {
   {  // Simple
     MTuple constraints =
         MTuple(MInteger(Between(100, 111)), MInteger(Between(200, 222)));

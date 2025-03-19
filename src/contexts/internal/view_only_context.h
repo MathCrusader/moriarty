@@ -89,18 +89,17 @@ class ViewOnlyContext {
   // set to some value.
   [[nodiscard]] bool ValueIsKnown(std::string_view variable_name) const;
 
-  // SatisfiesConstraints()
+  // IsSatisfiedWith()
   //
-  // Checks if `value` satisfies the constraints in `variable`. Returns a
-  // non-ok status with the reason if not. You may use other known variables in
-  // your constraints. Examples:
+  // Determines if `value` satisfies the constraints in `variable`. You may use
+  // other known variables in your constraints. Examples:
   //
-  //   absl::Status s1 = SatisfiesConstraints(MInteger(AtMost("N")), 25);
-  //   absl::Status s2 = SatisfiesConstraints(MString(Length(5)), "hello");
+  //   bool s1 = IsSatisfiedWith(MInteger(AtMost("N")), 25);
+  //   bool s2 = IsSatisfiedWith(MString(Length(5)), "hello");
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
-  absl::Status SatisfiesConstraints(T variable,
-                                    const T::value_type& value) const;
+  [[nodiscard]] bool IsSatisfiedWith(T variable,
+                                     const T::value_type& value) const;
 
   // GetAllVariables()
   //
@@ -132,10 +131,10 @@ class ViewOnlyContext;  // Forward declaring
 template <typename V, typename G>
 std::optional<G> GetUniqueValue(const librarian::MVariable<V, G>&,
                                 std::string_view, ViewOnlyContext);
-// Forward declaring SatisfiesConstraints
+// Forward declaring IsSatisfiedWith
 template <typename V, typename G>
-absl::Status SatisfiesConstraints(const librarian::MVariable<V, G>&,
-                                  std::string_view, ViewOnlyContext, const G&);
+bool IsSatisfiedWith(const librarian::MVariable<V, G>&, std::string_view,
+                     ViewOnlyContext, const G&);
 }  // namespace moriarty::moriarty_internal
 
 namespace moriarty {
@@ -176,10 +175,10 @@ std::optional<typename T::value_type> ViewOnlyContext::GetUniqueValue(
 
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
-absl::Status ViewOnlyContext::SatisfiesConstraints(
-    T variable, const T::value_type& value) const {
-  return moriarty_internal::SatisfiesConstraints(
-      std::move(variable), "Context::SatisfiesConstraints()", *this, value);
+bool ViewOnlyContext::IsSatisfiedWith(T variable,
+                                      const T::value_type& value) const {
+  return moriarty_internal::IsSatisfiedWith(
+      std::move(variable), "Context::IsSatisfiedWith()", *this, value);
 }
 
 }  // namespace moriarty_internal

@@ -14,6 +14,8 @@
 
 #include "src/internal/analysis_bootstrap.h"
 
+#include <optional>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/value_set.h"
@@ -26,16 +28,17 @@ namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
-using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::TestType;
 using ::moriarty_testing::ThrowsValueNotFound;
+using ::testing::HasSubstr;
+using ::testing::Optional;
 
 TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsSucceedsWithNoVariables) {
   VariableSet variables;
   ValueSet values;
-  MORIARTY_EXPECT_OK(AllVariablesSatisfyConstraints(variables, values));
+  EXPECT_EQ(AllVariablesSatisfyConstraints(variables, values), std::nullopt);
 }
 
 TEST(AnalysisBootstrapTest,
@@ -53,7 +56,7 @@ TEST(AnalysisBootstrapTest,
   values.Set<MTestType>("A", options[4]);
   values.Set<MTestType>("B", options[53]);
 
-  MORIARTY_EXPECT_OK(AllVariablesSatisfyConstraints(variables, values));
+  EXPECT_EQ(AllVariablesSatisfyConstraints(variables, values), std::nullopt);
 }
 
 TEST(AnalysisBootstrapTest,
@@ -72,7 +75,7 @@ TEST(AnalysisBootstrapTest,
   values.Set<MTestType>("B", TestType(100000));  // Not in the list!
 
   EXPECT_THAT(AllVariablesSatisfyConstraints(variables, values),
-              IsUnsatisfiedConstraint("B"));
+              Optional(HasSubstr("B")));
 }
 
 TEST(AnalysisBootstrapTest,
@@ -91,9 +94,8 @@ TEST(AnalysisBootstrapTest,
 
   // FIXME: Determine semantics of satisfies constraints when a value is
   // missing.
-  EXPECT_THAT(
-      [&] { AllVariablesSatisfyConstraints(variables, values).IgnoreError(); },
-      ThrowsValueNotFound("B"));
+  EXPECT_THAT([&] { (void)AllVariablesSatisfyConstraints(variables, values); },
+              ThrowsValueNotFound("B"));
 }
 
 TEST(AnalysisBootstrapTest,
@@ -112,7 +114,7 @@ TEST(AnalysisBootstrapTest,
   values.Set<MTestType>("B", options[40]);
   values.Set<MTestType>("C", options[50]);
 
-  MORIARTY_EXPECT_OK(AllVariablesSatisfyConstraints(variables, values));
+  EXPECT_EQ(AllVariablesSatisfyConstraints(variables, values), std::nullopt);
 }
 
 TEST(AnalysisBootstrapTest,
@@ -129,7 +131,7 @@ TEST(AnalysisBootstrapTest,
   values.Set<MTestType>("A", valA);
   values.Set<MTestType>("B", valB);
 
-  MORIARTY_EXPECT_OK(AllVariablesSatisfyConstraints(variables, values));
+  EXPECT_EQ(AllVariablesSatisfyConstraints(variables, values), std::nullopt);
 }
 
 TEST(AnalysisBootstrapTest,
@@ -139,9 +141,8 @@ TEST(AnalysisBootstrapTest,
 
   MORIARTY_ASSERT_OK(variables.AddVariable("A", MTestType()));
 
-  EXPECT_THAT(
-      [&] { AllVariablesSatisfyConstraints(variables, values).IgnoreError(); },
-      ThrowsValueNotFound("A"));
+  EXPECT_THAT([&] { (void)AllVariablesSatisfyConstraints(variables, values); },
+              ThrowsValueNotFound("A"));
 }
 
 }  // namespace

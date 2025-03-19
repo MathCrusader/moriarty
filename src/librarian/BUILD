@@ -84,12 +84,6 @@ cc_library(
         "//src/internal:variable_name_utils",
         "//src/util/status_macro:status_macros",
         "//src/variables/constraints:custom_constraint",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
     ],
 )
 

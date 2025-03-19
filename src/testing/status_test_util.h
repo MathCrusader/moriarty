@@ -29,7 +29,6 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/substitute.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/errors.h"
@@ -70,29 +69,6 @@ std::function<void()> single_call(Function function) {
 }
 
 }  // namespace moriarty_testing_internal
-
-// googletest matcher checking for a Moriarty UnsatisfiedConstraintError
-MATCHER_P(
-    IsUnsatisfiedConstraint, substr_in_error_message,
-    absl::Substitute("$0 a Moriarty error saying that a value does not satisfy "
-                     "the variable's constraints with an error message "
-                     "including the substring '$1'",
-                     (negation ? "is not" : "is"), substr_in_error_message)) {
-  absl::Status status = moriarty_testing_internal::GetStatus(arg);
-  if (!moriarty::IsUnsatisfiedConstraintError(status)) {
-    *result_listener
-        << "received status that is not an UnsatisfiedConstraintError: "
-        << status;
-    return false;
-  }
-
-  *result_listener << "received UnsatisfiedConstraintError with message: "
-                   << status.message();
-
-  return testing::ExplainMatchResult(
-      testing::HasSubstr(substr_in_error_message), status.message(),
-      result_listener);
-}
 
 MATCHER_P(ThrowsVariableNotFound, expected_variable_name,
           std::format("{} a function that throws a VariableNotFound exception "

@@ -18,84 +18,12 @@
 #ifndef MORIARTY_SRC_ERRORS_H_
 #define MORIARTY_SRC_ERRORS_H_
 
-// Moriarty Error Space
-//
-// Moriarty uses `absl::Status` as its canonical way to pass errors.
-//
-// In several locations throughout Moriarty, it is required that a Moriarty
-// Error is used instead of a generic `absl::Status`. To create a Moriarty
-// Error, you must call an `FooError()` function below. And you can check if a
-// status is a specific  error using `IsFooError`. There are googletest matchers
-// available in testing/status_test_util.h for unit tests (named `IsFoo`).
-//
-// To be clear: a Moriarty status is an `absl::Status` with information
-// injected into it. You should not depend on any message or implementation
-// details of how we are dealing with these. They may (and likely will) change
-// in the future.
-//
-// Types of Errors (this list may grow in the future):
-//
-//  * NonRetryableGenerationError
-//  * RetryableGenerationError
-//  * UnsatisfiedConstraintError
-//
-// Exceptions:
-//  * ValueNotFound
-//  * VariableNotFound
-
 #include <format>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 
-#include "absl/status/status.h"
-
 namespace moriarty {
-
-// IsMoriartyError()
-//
-// Returns true if `status` is not `OkStatus()` and was generated via Moriarty.
-bool IsMoriartyError(const absl::Status& status);
-
-// -----------------------------------------------------------------------------
-//   UnsatisfiedConstraint -- Some constraint on a variable was not satisfied.
-
-// IsUnsatisfiedConstraintError()
-//
-// Returns true if `status` signals that a constraint on some variable was not
-// satisfied.
-bool IsUnsatisfiedConstraintError(const absl::Status& status);
-
-// UnsatisfiedConstraintError()
-//
-// Returns a status that states that this constraint is not satisfied. The
-// `constraint_explanation` will be shown to the user if requested.
-absl::Status UnsatisfiedConstraintError(
-    std::string_view constraint_explanation);
-
-// CheckConstraint()
-//
-// Convenience function basically equivalent to:
-//  if (constraint.ok()) return absl::OkStatus();
-//  return UnsatisfiedConstraintError(
-//                               constraint_explanation + constraint.message());
-//
-// Useful when mixed with MORIARTY_RETURN_IF_ERROR.
-absl::Status CheckConstraint(const absl::Status& constraint,
-                             std::string_view constraint_explanation);
-
-// CheckConstraint()
-//
-// Convenience function basically equivalent to:
-//  if (constraint) return absl::OkStatus();
-//  return UnsatisfiedConstraintError(constraint_explanation);
-//
-// Useful when mixed with MORIARTY_RETURN_IF_ERROR.
-absl::Status CheckConstraint(bool constraint,
-                             std::string_view constraint_explanation);
-
-// -----------------------------------------------------------------------------
-//   Exceptions
 
 // ValueNotFound
 //

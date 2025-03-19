@@ -235,7 +235,7 @@ TEST(MArrayTest, LengthIsSatisfied) {
   }
 }
 
-TEST(MArrayTest, SatisfiesConstraintsChecksMArrayContentsProperly) {
+TEST(MArrayTest, IsSatisfiedWithChecksMArrayContentsProperly) {
   EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 10))),
               IsSatisfiedWith(std::vector<int64_t>({5, 6, 1, 4, 3, 9, 10})));
 
@@ -247,14 +247,13 @@ TEST(MArrayTest, SatisfiesConstraintsChecksMArrayContentsProperly) {
       IsNotSatisfiedWith(std::vector<int64_t>({5, 6, 0, 8, 9, 10}), "index 2"));
 }
 
-TEST(MArrayTest, SatisfiesConstraintsChecksMArraySizeWhenItIsVariable) {
+TEST(MArrayTest, IsSatisfiedWithChecksMArraySizeWhenItIsVariable) {
   EXPECT_THAT(MArray<MInteger>(Length("N")),
               IsSatisfiedWith(std::vector<int64_t>({10, 20, 30}),
                               Context().WithValue<MInteger>("N", 3)));
 }
 
-TEST(MArrayTest,
-     SatisfiesConstraintsFailsIfLengthDependsOnAVariableAndIsNotKnown) {
+TEST(MArrayTest, IsSatisfiedWithFailsIfLengthDependsOnAVariableAndIsNotKnown) {
   // If N is definitely unique, it should pass.
   EXPECT_THAT(MArray<MInteger>(Length(3)),
               IsSatisfiedWith(std::vector<int64_t>({10, 20, 30})));
@@ -270,14 +269,14 @@ TEST(MArrayTest,
                       Context().WithVariable("N", MInteger(Between(3, 3)))));
 }
 
-TEST(MArrayTest, SatisfiesConstraintsWithNoConstraintsShouldAcceptAnything) {
+TEST(MArrayTest, IsSatisfiedWithWithNoConstraintsShouldAcceptAnything) {
   EXPECT_THAT(MArray<MInteger>(), IsSatisfiedWith(std::vector<int64_t>({})));
   EXPECT_THAT(MArray<MInteger>(), IsSatisfiedWith(std::vector<int64_t>({1})));
   EXPECT_THAT(MArray<MInteger>(),
               IsSatisfiedWith(std::vector<int64_t>({1, 2, 3})));
 }
 
-TEST(MArrayTest, SatisfiesConstraintsChecksLengthConstraintsProperly) {
+TEST(MArrayTest, IsSatisfiedWithChecksLengthConstraintsProperly) {
   auto constraints = [](Length length_constraint) {
     return MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
                             std::move(length_constraint));
@@ -317,7 +316,7 @@ TEST(MArrayTest, SatisfiesConstraintsChecksLengthConstraintsProperly) {
   }
 }
 
-TEST(MArrayTest, SatisfiesConstraintsShouldCheckForDistinctElements) {
+TEST(MArrayTest, IsSatisfiedWithShouldCheckForDistinctElements) {
   EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 5)),
                                DistinctElements(), Length(3)),
               IsSatisfiedWith(std::vector<int64_t>({1, 2, 5})));

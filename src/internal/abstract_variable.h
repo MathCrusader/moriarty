@@ -22,8 +22,6 @@
 #include <string>
 #include <vector>
 
-#include "absl/status/status.h"
-
 namespace moriarty::librarian {
 class AnalysisContext;    // Forward declaring AnalysisContext
 class AssignmentContext;  // Forward declaring AssignmentContext
@@ -118,14 +116,23 @@ class AbstractVariable {
   // should have 5 <= x <= 10.
   virtual void MergeFromAnonymous(const AbstractVariable& other) = 0;
 
-  // ValueSatisfiesConstraints() [pure virtual]
+  // IsSatisfiedWithValue() [pure virtual]
+  //
+  // Determines if the value stored in `ctx` satisfies all constraints for this
+  // variable.
+  //
+  // If a variable does not have a value, this will return false.
+  // If a value does not have a variable, this will return true.
+  virtual bool IsSatisfiedWithValue(librarian::AnalysisContext ctx) const = 0;
+
+  // UnsatisfiedWithValueReason() [pure virtual]
   //
   // Determines if the value stored in `ctx` satisfies all constraints for this
   // variable.
   //
   // If a variable does not have a value, this will return not ok.
   // If a value does not have a variable, this will return ok.
-  virtual absl::Status ValueSatisfiesConstraints(
+  virtual std::string UnsatisfiedWithValueReason(
       librarian::AnalysisContext ctx) const = 0;
 
   // ListAnonymousEdgeCases() [pure virtual]

@@ -37,7 +37,6 @@ namespace moriarty {
 namespace {
 
 using ::moriarty::Moriarty;
-using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::ThrowsValueNotFound;
 using ::moriarty_testing::ThrowsValueTypeMismatch;
@@ -376,7 +375,9 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSingleVariableInvalid) {
   Moriarty M;
   M.AddVariable("X", MInteger(Between(1, 3)));
   M.ImportTestCases([](ImportContext ctx) { return ImportIota(ctx, "X", 5); });
-  EXPECT_THAT(M.TryValidateTestCases(), IsUnsatisfiedConstraint("Case 4"));
+  EXPECT_THAT(
+      M.TryValidateTestCases(),
+      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("Case 4")));
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSomeVariableInvalid) {
@@ -385,7 +386,9 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSomeVariableInvalid) {
       .AddVariable("S", MInteger(Between(10, 30)));
   M.ImportTestCases(
       [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); });
-  EXPECT_THAT(M.TryValidateTestCases(), IsUnsatisfiedConstraint("Case 3"));
+  EXPECT_THAT(
+      M.TryValidateTestCases(),
+      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("Case 3")));
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {

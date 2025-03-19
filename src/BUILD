@@ -28,13 +28,8 @@ licenses(["notice"])
 
 cc_library(
     name = "errors",
-    srcs = ["errors.cc"],
     hdrs = ["errors.h"],
     deps = [
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/strings",
-        "@abseil-cpp//absl/strings:cord",
     ],
 )
 

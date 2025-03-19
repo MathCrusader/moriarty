@@ -15,6 +15,7 @@
 
 #include "src/internal/generation_bootstrap.h"
 
+#include <format>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -172,7 +173,11 @@ absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
   for (std::string_view name : variable_names) {
     AbstractVariable* var = variables.GetAbstractVariable(name);
     librarian::AnalysisContext ctx(name, variables, known_values);
-    MORIARTY_RETURN_IF_ERROR(var->ValueSatisfiesConstraints(ctx));
+    if (!var->IsSatisfiedWithValue(ctx)) {
+      return absl::InvalidArgumentError(
+          std::format("Variable {} does not satisfy its constraints: {}", name,
+                      var->UnsatisfiedWithValueReason(ctx)));
+    }
   }
 
   return known_values;

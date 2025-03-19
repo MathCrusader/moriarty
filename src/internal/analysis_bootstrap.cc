@@ -14,23 +14,25 @@
 
 #include "src/internal/analysis_bootstrap.h"
 
-#include "absl/status/status.h"
+#include <format>
+#include <optional>
+
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-absl::Status AllVariablesSatisfyConstraints(const VariableSet& variables,
-                                            const ValueSet& values) {
-  for (const auto& [var_name, var_ptr] : variables.GetAllVariables()) {
-    librarian::AnalysisContext ctx(var_name, variables, values);
-    MORIARTY_RETURN_IF_ERROR(var_ptr->ValueSatisfiesConstraints(ctx))
-        << "'" << var_name << "' does not satisfy constraints";
+std::optional<std::string> AllVariablesSatisfyConstraints(
+    const VariableSet& variables, const ValueSet& values) {
+  for (const auto& [name, var] : variables.GetAllVariables()) {
+    librarian::AnalysisContext ctx(name, variables, values);
+    if (!var->IsSatisfiedWithValue(ctx))
+      return std::format("Variable {} does not satisfy its constraints: {}",
+                         name, var->UnsatisfiedWithValueReason(ctx));
   }
-  return absl::OkStatus();
+  return std::nullopt;
 }
 
 }  // namespace moriarty_internal

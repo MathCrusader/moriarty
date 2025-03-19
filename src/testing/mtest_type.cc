@@ -30,7 +30,6 @@
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
-#include "src/errors.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/minteger.h"
 
@@ -103,19 +102,14 @@ absl::Status MTestType::IsSatisfiedWithImpl(
     bool found_divisor = false;
     for (int div = 1; div * div <= val; div++) {
       if (val % div == 0) {
-        absl::Status status1 = multiplier_.IsSatisfiedWith(ctx, div);
-        if (!status1.ok() && !moriarty::IsUnsatisfiedConstraintError(status1))
-          return status1;
-
-        absl::Status status2 = multiplier_.IsSatisfiedWith(ctx, val / div);
-        if (!status2.ok() && !moriarty::IsUnsatisfiedConstraintError(status2))
-          return status2;
-
-        if (status1.ok() || status2.ok()) found_divisor = true;
+        if (multiplier_.IsSatisfiedWith(ctx, div) ||
+            multiplier_.IsSatisfiedWith(ctx, val / div)) {
+          found_divisor = true;
+        }
       }
     }
     if (!found_divisor)
-      return moriarty::UnsatisfiedConstraintError(
+      return absl::InvalidArgumentError(
           absl::Substitute("$0 is not a multiple of any valid multiplier.",
                            static_cast<int>(val)));
   }

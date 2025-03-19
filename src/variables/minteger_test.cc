@@ -21,7 +21,6 @@
 #include <stdexcept>
 #include <string>
 
-#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/contexts/librarian/analysis_context.h"
@@ -197,7 +196,7 @@ TEST(MIntegerTest, MergeFromCorrectlyMerges) {
       MInteger(Between(1, 8), Between(8, 10))));  // Singleton Range
 }
 
-TEST(MIntegerTest, SatisfiesConstraintsWorksForGoodData) {
+TEST(MIntegerTest, IsSatisfiedWithWorksForGoodData) {
   EXPECT_THAT(MInteger(Between(1, 10)), IsSatisfiedWith(5));   // Middle
   EXPECT_THAT(MInteger(Between(1, 10)), IsSatisfiedWith(1));   // Low
   EXPECT_THAT(MInteger(Between(1, 10)), IsSatisfiedWith(10));  // High
@@ -208,7 +207,7 @@ TEST(MIntegerTest, SatisfiesConstraintsWorksForGoodData) {
   EXPECT_THAT(MInteger(), IsSatisfiedWith(std::numeric_limits<int64_t>::max()));
 }
 
-TEST(MIntegerTest, SatisfiesConstraintsWorksForBadData) {
+TEST(MIntegerTest, IsSatisfiedWithWorksForBadData) {
   EXPECT_THAT(MInteger(Between(1, 10)), IsNotSatisfiedWith(0, "between"));
   EXPECT_THAT(MInteger(Between(1, 10)), IsNotSatisfiedWith(11, "between"));
 
@@ -218,7 +217,7 @@ TEST(MIntegerTest, SatisfiesConstraintsWorksForBadData) {
                     IsNotSatisfiedWith(0, "at most")));
 }
 
-TEST(MIntegerTest, SatisfiesConstraintsWithExpressionsShouldWorkForGoodData) {
+TEST(MIntegerTest, IsSatisfiedWithWithExpressionsShouldWorkForGoodData) {
   EXPECT_THAT(
       MInteger(Between(1, "3 * N + 1")),
       IsSatisfiedWith(5, Context().WithValue<MInteger>("N", 10)));  // Mid
@@ -230,7 +229,7 @@ TEST(MIntegerTest, SatisfiesConstraintsWithExpressionsShouldWorkForGoodData) {
       IsSatisfiedWith(31, Context().WithValue<MInteger>("N", 10)));  // High
 }
 
-TEST(MIntegerTest, SatisfiesConstraintsWithExpressionsShouldWorkForBadData) {
+TEST(MIntegerTest, IsSatisfiedWithWithExpressionsShouldWorkForBadData) {
   EXPECT_THAT(
       MInteger(Between(1, "3 * N + 1")),
       IsNotSatisfiedWith(0, "between", Context().WithValue<MInteger>("N", 10)));
@@ -244,9 +243,7 @@ TEST(MIntegerTest, SatisfiesConstraintsWithExpressionsShouldWorkForBadData) {
   librarian::AnalysisContext ctx("_", variables, values);
   // Could be VariableNotFound as well (impl detail)
   EXPECT_THAT(
-      [&] {
-        MInteger(Between(1, "3 * N + 1")).IsSatisfiedWith(ctx, 2).IgnoreError();
-      },
+      [&] { (void)MInteger(Between(1, "3 * N + 1")).IsSatisfiedWith(ctx, 2); },
       ThrowsVariableNotFound("N"));
 }
 

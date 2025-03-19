@@ -28,7 +28,6 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
@@ -42,7 +41,6 @@ namespace {
 
 using ::moriarty::IsOkAndHolds;
 using ::moriarty::StatusIs;
-using ::moriarty_testing::IsUnsatisfiedConstraint;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::ContainerEq;
@@ -210,8 +208,9 @@ TEST(GenerationBootstrapTest,
   ValueSet known_values;
   known_values.Set<MInteger>("A", 0);
 
-  EXPECT_THAT(GenerateAllValues(variables, known_values, {rng, std::nullopt}),
-              IsUnsatisfiedConstraint("between"));
+  EXPECT_THAT(
+      GenerateAllValues(variables, known_values, {rng, std::nullopt}),
+      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("between")));
 }
 
 TEST(GenerationBootstrapTest,

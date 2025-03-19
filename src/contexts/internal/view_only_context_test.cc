@@ -31,7 +31,6 @@ namespace {
 using moriarty_testing::ThrowsMVariableTypeMismatch;
 using moriarty_testing::ThrowsValueNotFound;
 using moriarty_testing::ThrowsVariableNotFound;
-using testing::Not;
 using testing::SizeIs;
 
 TEST(ViewOnlyContextTest, GetVariableShouldWork) {
@@ -124,17 +123,16 @@ TEST(ViewOnlyContext, ValueIsKnownShouldWork) {
   EXPECT_FALSE(ctx.ValueIsKnown("Y"));
 }
 
-TEST(ViewOnlyContext, SatisfiesConstraintsShouldWork) {
+TEST(ViewOnlyContext, IsSatisfiedWithShouldWork) {
   VariableSet variables;
   MORIARTY_ASSERT_OK(variables.AddVariable("X", MInteger()));
   ValueSet values;
   values.Set<MInteger>("X", 10);
   ViewOnlyContext ctx(variables, values);
 
-  EXPECT_THAT(ctx.SatisfiesConstraints(MInteger(Between(10, 20)), 10), IsOk());
-  EXPECT_THAT(ctx.SatisfiesConstraints(MInteger(Between(10, 20)), 5),
-              Not(IsOk()));
-  EXPECT_THAT(ctx.SatisfiesConstraints(MInteger(Between("X", 10)), 10), IsOk());
+  EXPECT_TRUE(ctx.IsSatisfiedWith(MInteger(Between(10, 20)), 10));
+  EXPECT_FALSE(ctx.IsSatisfiedWith(MInteger(Between(10, 20)), 5));
+  EXPECT_TRUE(ctx.IsSatisfiedWith(MInteger(Between("X", 10)), 10));
 }
 
 TEST(ViewOnlyContext, GetAllVariablesShouldWork) {

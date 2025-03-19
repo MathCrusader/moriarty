@@ -23,8 +23,6 @@
 #include "docs/examples/example_graph.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/resolver_context.h"
-#include "src/errors.h"
-#include "src/util/status_macro/status_macros.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/minteger.h"
 
@@ -93,16 +91,20 @@ ExampleGraph MExampleGraph::GenerateImpl(
 absl::Status MExampleGraph::IsSatisfiedWithImpl(
     moriarty::librarian::AnalysisContext ctx, const ExampleGraph& g) const {
   if (num_nodes_.has_value()) {
-    MORIARTY_RETURN_IF_ERROR(num_nodes_->IsSatisfiedWith(ctx, g.num_nodes));
+    if (!num_nodes_->IsSatisfiedWith(ctx, g.num_nodes)) {
+      return absl::InvalidArgumentError("Number of nodes is invalid");
+    }
   }
 
   if (num_edges_.has_value()) {
-    MORIARTY_RETURN_IF_ERROR(num_edges_->IsSatisfiedWith(ctx, g.edges.size()));
+    if (!num_edges_->IsSatisfiedWith(ctx, g.edges.size())) {
+      return absl::InvalidArgumentError("Number of edges is invalid");
+    }
   }
 
   if (is_connected_) {
     if (!GraphIsConnected(g)) {
-      return moriarty::UnsatisfiedConstraintError("G is not connected");
+      return absl::InvalidArgumentError("G is not connected");
     }
   }
 
