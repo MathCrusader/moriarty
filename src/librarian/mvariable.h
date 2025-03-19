@@ -55,6 +55,10 @@ namespace librarian {
 
 // MVariable<>
 //
+// A class that describes a variable type. An MVariable can be thought of as a
+// bundle of constraints. These constraints can be used to generate, validate,
+// and analyze values of the variable type.
+//
 // All Moriarty variable types (e.g., MInteger, MString, MGraph, etc) should
 // derive from this class using CRTP (curiously recurring template pattern).
 //
@@ -63,11 +67,10 @@ namespace librarian {
 //   by this MVariable.
 //
 // E.g.,
-// class MInteger : public librarian::MVariable<MInteger, int64_t> {}
+//     class MInteger : public MVariable<MInteger, int64_t> {}
 template <typename VariableType, typename ValueType>
 class MVariable : public moriarty_internal::AbstractVariable {
  public:
-  using variable_type = VariableType;
   using value_type = ValueType;
 
   ~MVariable() override = default;
@@ -75,19 +78,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
  protected:
   // Only derived classes should make copies of me directly to avoid accidental
   // slicing. Call derived class's constructors instead.
-  MVariable() {
-    static_assert(std::default_initializable<VariableType>,
-                  "Moriarty needs to be able to construct default versions of "
-                  "your MVariable using its default constructor.");
-    static_assert(std::copyable<VariableType>,
-                  "Moriarty needs to be able to copy your MVariable.");
-    static_assert(
-        std::derived_from<
-            VariableType,
-            MVariable<VariableType, typename VariableType::value_type>>,
-        "The first template argument of MVariable<> must be "
-        "VariableType. E.g., class MFoo : public MVariable<MFoo, Foo> {}");
-  }
+  MVariable();
   MVariable(const MVariable&) = default;
   MVariable(MVariable&&) = default;
   MVariable& operator=(const MVariable&) = default;
@@ -134,29 +125,25 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // `AddCustomConstraint` for simple construction.
   VariableType& AddCustomConstraint(CustomConstraint<ValueType> constraint);
 
-  // ListEdgeCases()
+  // IsSatisfiedWith()
   //
-  // Returns a list of MVariables that should give common difficult cases. Some
-  // examples of this type of cases include common pitfalls for your data type
-  // (edge cases, queries of death, etc).
-  [[nodiscard]] std::vector<VariableType> ListEdgeCases(
-      AnalysisContext ctx) const;
+  // Determines if `value` satisfies all constraints on this variable.
+  absl::Status IsSatisfiedWith(AnalysisContext ctx,
+                               const ValueType& value) const;
 
-  // Print()
+  // Explanation()
   //
-  // Prints `value` into `ctx` using any formatting provided to this
-  // variable (as I/O constraints).
-  void Print(PrinterContext ctx, const ValueType& value) const {
-    PrintImpl(ctx, value);
-  }
+  // Returns a string explaining why `value` does not satisfy the constraints on
+  // this variable.
+  //
+  // Precondition: `IsSatisfiedWith(ctx, value)` is false.
+  [[nodiscard]] std::string Explanation(AnalysisContext ctx,
+                                        const ValueType& value) const;
 
-  // Read()
+  // Generate()
   //
-  // Reads a value from `ctx` using any formatting provided to this variable
-  // (as I/O constraints).
-  [[nodiscard]] ValueType Read(ReaderContext ctx) const {
-    return ReadImpl(ctx);
-  }
+  // Returns a random value that satisfies all constraints on this variable.
+  [[nodiscard]] ValueType Generate(ResolverContext ctx) const;
 
   // GetUniqueValue()
   //
@@ -166,29 +153,27 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // `std::nullopt`. Returning `std::nullopt` does not guarantee there is
   // not a unique value.
   [[nodiscard]] std::optional<ValueType> GetUniqueValue(
-      AnalysisContext ctx) const {
-    try {
-      // FIXME: Placeholder until Context refactor is done.
-      std::optional<ValueType> known =
-          ctx.GetValueIfKnown<VariableType>(ctx.GetVariableName());
-      if (known) return *known;
+      AnalysisContext ctx) const;
 
-      return GetUniqueValueImpl(ctx);
-    } catch (const VariableNotFound& e) {
-      // Explicitly re-throw an unknown variable. If it's unknown, we will
-      // never be able to do anything with it.
-      throw;
-    } catch (...) {  // FIXME: Only catch Moriarty errors.
-      return std::nullopt;
-    }
-  }
+  // Print()
+  //
+  // Prints `value` into `ctx` using any formatting provided to this
+  // variable (as I/O constraints).
+  void Print(PrinterContext ctx, const ValueType& value) const;
 
-  absl::Status IsSatisfiedWith(AnalysisContext ctx,
-                               const ValueType& value) const;
-  [[nodiscard]] std::string Explanation(AnalysisContext ctx,
-                                        const ValueType& value) const;
+  // Read()
+  //
+  // Reads a value from `ctx` using any formatting provided to this variable
+  // (as I/O constraints).
+  [[nodiscard]] ValueType Read(ReaderContext ctx) const;
 
-  [[nodiscard]] ValueType Generate(ResolverContext ctx) const;
+  // ListEdgeCases()
+  //
+  // Returns a list of MVariables that should give common difficult cases. Some
+  // examples of this type of cases include common pitfalls for your data type
+  // (edge cases, queries of death, etc).
+  [[nodiscard]] std::vector<VariableType> ListEdgeCases(
+      AnalysisContext ctx) const;
 
   // GetDependencies()
   //
@@ -202,15 +187,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Same as `MergeFrom`, but you do not know the type of the variable you
   // are. This should only be used in generic code.
   void MergeFromAnonymous(
-      const moriarty_internal::AbstractVariable& other) override {
-    const VariableType& typed_other = ConvertTo<VariableType>(other);
-    MergeFrom(typed_other);
-  }
-
-  // FIXME: Make this the implementation of ToString()
-  friend std::ostream& operator<<(std::ostream& os, const VariableType& var) {
-    return os << var.constraints_.ToString();
-  }
+      const moriarty_internal::AbstractVariable& other) override;
 
  protected:
   // ---------------------------------------------------------------------------
@@ -261,29 +238,22 @@ class MVariable : public moriarty_internal::AbstractVariable {
       const override;
   void AssignValue(ResolverContext ctx) const override;
   void AssignUniqueValue(AssignmentContext ctx) const override;
-  absl::Status ValueSatisfiesConstraints(AnalysisContext ctx) const override;
+  void PrintValue(librarian::PrinterContext ctx) const override;
   void ReadValue(
       ReaderContext ctx,
       moriarty_internal::MutableValuesContext values_ctx) const override;
-  void PrintValue(librarian::PrinterContext ctx) const override;
+  absl::Status ValueSatisfiesConstraints(AnalysisContext ctx) const override;
   std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
   ListAnonymousEdgeCases(AnalysisContext ctx) const override;
   // ---------------------------------------------------------------------------
 
-  struct CustomConstraintWrapper {
+  class CustomConstraintWrapper {
    public:
-    explicit CustomConstraintWrapper(CustomConstraint<ValueType> constraint)
-        : constraint_(std::move(constraint)) {};
-    bool IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const {
-      return constraint_.IsSatisfiedWith(ctx, value);
-    }
-    std::string Explanation(AnalysisContext ctx, const ValueType& value) const {
-      return constraint_.Explanation(value);
-    }
-    std::string ToString() const { return constraint_.ToString(); }
-    void ApplyTo(MVariable& other) const {
-      other.AddCustomConstraint(constraint_);
-    }
+    explicit CustomConstraintWrapper(CustomConstraint<ValueType> constraint);
+    bool IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const;
+    std::string Explanation(AnalysisContext ctx, const ValueType& value) const;
+    std::string ToString() const;
+    void ApplyTo(VariableType& other) const;
 
    private:
     CustomConstraint<ValueType> constraint_;
@@ -299,14 +269,22 @@ class MVariable : public moriarty_internal::AbstractVariable {
 // V = VariableType
 // G = ValueType  (G since it was previously `GeneratedType`).
 
+template <typename V, typename G>
+MVariable<V, G>::MVariable() {
+  // Simple checks to ensure that the template arguments are correct.
+  static_assert(std::default_initializable<VariableType>);
+  static_assert(std::copyable<VariableType>);
+  static_assert(std::derived_from<
+                VariableType,
+                MVariable<VariableType, typename VariableType::value_type>>);
+}
+
 // -----------------------------------------------------------------------------
 //  Template implementation for public functions
 
 template <typename V, typename G>
 std::string MVariable<V, G>::ToString() const {
-  std::stringstream ss;
-  ss << UnderlyingVariableType();
-  return ss.str();
+  return constraints_.ToString();
 }
 
 template <typename V, typename G>
@@ -346,57 +324,29 @@ V& MVariable<V, G>::AddCustomConstraint(CustomConstraint<G> constraint) {
 }
 
 template <typename V, typename G>
-std::vector<V> MVariable<V, G>::ListEdgeCases(AnalysisContext ctx) const {
-  std::vector<V> instances = ListEdgeCasesImpl(ctx);
-  for (V& instance : instances) {
-    // TODO(hivini): When merging with a fixed value variable that has the same
-    // value a difficult instance, this does not return an error. Determine if
-    // this matters or not.
-    instance.MergeFrom(UnderlyingVariableType());
+absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
+                                              const G& value) const {
+  if (!constraints_.IsSatisfiedWith(ctx, value)) {
+    std::string reason = constraints_.Explanation(ctx, value);
+    return UnsatisfiedConstraintError(reason);
   }
-  return instances;
-}
 
-// -----------------------------------------------------------------------------
-//  Protected functions' implementations
+  // FIXME: Determine semantics of which errors are propagated.
+  if (auto status = IsSatisfiedWithImpl(ctx, value);
+      !status.ok() && !absl::IsUnimplemented(status)) {
+    return status;
+  }
 
-template <typename V, typename G>
-G MVariable<V, G>::ReadImpl(ReaderContext ctx) const {
-  throw std::runtime_error(
-      absl::StrCat("Read() not implemented for ", Typename()));
-}
-
-template <typename V, typename G>
-void MVariable<V, G>::PrintImpl(PrinterContext ctx, const G& value) const {
-  throw std::runtime_error(
-      absl::StrCat("Print() not implemented for ", Typename()));
+  return absl::OkStatus();
 }
 
 template <typename V, typename G>
-std::vector<std::string> MVariable<V, G>::GetDependenciesImpl() const {
-  return std::vector<std::string>();  // By default, return an empty list.
+std::string MVariable<V, G>::Explanation(AnalysisContext ctx,
+                                         const G& value) const {
+  auto status = IsSatisfiedWith(ctx, value);
+  if (status.ok()) throw std::invalid_argument("Value satisfies constraints.");
+  return std::string(status.message());
 }
-
-template <typename V, typename G>
-std::vector<V> MVariable<V, G>::ListEdgeCasesImpl(AnalysisContext ctx) const {
-  return std::vector<V>();  // By default, return an empty list.
-}
-
-template <typename V, typename G>
-std::optional<G> MVariable<V, G>::GetUniqueValueImpl(
-    AnalysisContext ctx) const {
-  return std::nullopt;  // By default, return no unique value.
-}
-
-template <typename V, typename G>
-template <typename Constraint>
-V& MVariable<V, G>::InternalAddConstraint(Constraint c) {
-  constraints_.AddConstraint(std::move(c));
-  return UnderlyingVariableType();
-}
-
-// -----------------------------------------------------------------------------
-//  Template implementation for the Internal Extended API
 
 template <typename V, typename G>
 G MVariable<V, G>::Generate(ResolverContext ctx) const {
@@ -440,28 +390,100 @@ G MVariable<V, G>::Generate(ResolverContext ctx) const {
 }
 
 template <typename V, typename G>
-absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
-                                              const G& value) const {
-  if (!constraints_.IsSatisfiedWith(ctx, value)) {
-    std::string reason = constraints_.Explanation(ctx, value);
-    return UnsatisfiedConstraintError(reason);
-  }
+std::optional<G> MVariable<V, G>::GetUniqueValue(AnalysisContext ctx) const {
+  try {
+    // FIXME: Placeholder until Context refactor is done.
+    std::optional<ValueType> known =
+        ctx.GetValueIfKnown<VariableType>(ctx.GetVariableName());
+    if (known) return *known;
 
-  // FIXME: Determine semantics of which errors are propagated.
-  if (auto status = IsSatisfiedWithImpl(ctx, value);
-      !status.ok() && !absl::IsUnimplemented(status)) {
-    return status;
+    return GetUniqueValueImpl(ctx);
+  } catch (const VariableNotFound& e) {
+    // Explicitly re-throw an unknown variable. If it's unknown, we will
+    // never be able to do anything with it.
+    throw;
+  } catch (...) {  // FIXME: Only catch Moriarty errors.
+    return std::nullopt;
   }
-
-  return absl::OkStatus();
 }
 
 template <typename V, typename G>
-std::string MVariable<V, G>::Explanation(AnalysisContext ctx,
-                                         const G& value) const {
-  auto status = IsSatisfiedWith(ctx, value);
-  if (status.ok()) throw std::invalid_argument("Value satisfies constraints.");
-  return std::string(status.message());
+void MVariable<V, G>::Print(PrinterContext ctx, const ValueType& value) const {
+  PrintImpl(ctx, value);
+}
+
+template <typename V, typename G>
+G MVariable<V, G>::Read(ReaderContext ctx) const {
+  return ReadImpl(ctx);
+}
+
+template <typename V, typename G>
+std::vector<V> MVariable<V, G>::ListEdgeCases(AnalysisContext ctx) const {
+  std::vector<V> instances = ListEdgeCasesImpl(ctx);
+  for (V& instance : instances) {
+    // TODO(hivini): When merging with a fixed value variable that has the same
+    // value a difficult instance, this does not return an error. Determine if
+    // this matters or not.
+    instance.MergeFrom(UnderlyingVariableType());
+  }
+  return instances;
+}
+
+template <typename V, typename G>
+std::vector<std::string> MVariable<V, G>::GetDependencies() const {
+  std::vector<std::string> this_deps = GetDependenciesImpl();
+  absl::c_copy(custom_constraints_deps_, std::back_inserter(this_deps));
+  return this_deps;
+}
+
+template <typename V, typename G>
+void MVariable<V, G>::MergeFromAnonymous(
+    const moriarty_internal::AbstractVariable& other) override {
+  const VariableType& typed_other = ConvertTo<VariableType>(other);
+  MergeFrom(typed_other);
+}
+
+template <typename VariableType>
+std::ostream& operator<<(std::ostream& os, const VariableType& var) {
+  return os << var.ToString();
+}
+
+// -----------------------------------------------------------------------------
+//  Protected functions' implementations
+
+template <typename V, typename G>
+G MVariable<V, G>::ReadImpl(ReaderContext ctx) const {
+  throw std::runtime_error(
+      absl::StrCat("Read() not implemented for ", Typename()));
+}
+
+template <typename V, typename G>
+void MVariable<V, G>::PrintImpl(PrinterContext ctx, const G& value) const {
+  throw std::runtime_error(
+      absl::StrCat("Print() not implemented for ", Typename()));
+}
+
+template <typename V, typename G>
+std::vector<std::string> MVariable<V, G>::GetDependenciesImpl() const {
+  return std::vector<std::string>();  // By default, return an empty list.
+}
+
+template <typename V, typename G>
+std::vector<V> MVariable<V, G>::ListEdgeCasesImpl(AnalysisContext ctx) const {
+  return std::vector<V>();  // By default, return an empty list.
+}
+
+template <typename V, typename G>
+std::optional<G> MVariable<V, G>::GetUniqueValueImpl(
+    AnalysisContext ctx) const {
+  return std::nullopt;  // By default, return no unique value.
+}
+
+template <typename V, typename G>
+template <typename Constraint>
+V& MVariable<V, G>::InternalAddConstraint(Constraint c) {
+  constraints_.AddConstraint(std::move(c));
+  return UnderlyingVariableType();
 }
 
 // -----------------------------------------------------------------------------
@@ -533,13 +555,6 @@ void MVariable<V, G>::PrintValue(PrinterContext ctx) const {
 }
 
 template <typename V, typename G>
-std::vector<std::string> MVariable<V, G>::GetDependencies() const {
-  std::vector<std::string> this_deps = GetDependenciesImpl();
-  absl::c_copy(custom_constraints_deps_, std::back_inserter(this_deps));
-  return this_deps;
-}
-
-template <typename V, typename G>
 std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
 MVariable<V, G>::ListAnonymousEdgeCases(AnalysisContext ctx) const {
   std::vector<V> instances = ListEdgeCases(ctx);
@@ -549,6 +564,33 @@ MVariable<V, G>::ListAnonymousEdgeCases(AnalysisContext ctx) const {
     new_vec.push_back(std::make_unique<V>(std::move(instance)));
   }
   return new_vec;
+}
+
+template <typename V, typename G>
+MVariable<V, G>::CustomConstraintWrapper::CustomConstraintWrapper(
+    CustomConstraint<G> constraint)
+    : constraint_(std::move(constraint)) {}
+
+template <typename V, typename G>
+bool MVariable<V, G>::CustomConstraintWrapper::IsSatisfiedWith(
+    AnalysisContext ctx, const ValueType& value) const {
+  return constraint_.IsSatisfiedWith(ctx, value);
+}
+
+template <typename V, typename G>
+std::string MVariable<V, G>::CustomConstraintWrapper::Explanation(
+    AnalysisContext ctx, const ValueType& value) const {
+  return constraint_.Explanation(value);
+}
+
+template <typename V, typename G>
+std::string MVariable<V, G>::CustomConstraintWrapper::ToString() const {
+  return constraint_.ToString();
+}
+
+template <typename V, typename G>
+void MVariable<V, G>::CustomConstraintWrapper::ApplyTo(V& other) const {
+  other.AddCustomConstraint(constraint_);
 }
 
 }  // namespace librarian
