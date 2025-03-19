@@ -219,28 +219,27 @@ TEST(MVariableTest, DependentVariablesInSubvariablesCanChain) {
 }
 
 TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
-  moriarty_internal::VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between("N", "N"))));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MInteger(Between("N", "N"))));
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("N", MInteger(Between(1, 1000000000))));
-
-  moriarty_internal::ValueSet values;
+  Context context = Context()
+                        .WithVariable("A", MInteger(Between("N", "N")))
+                        .WithVariable("B", MInteger(Between("N", "N")))
+                        .WithVariable("N", MInteger(Between(1, 1000000000)));
 
   moriarty_internal::GenerationConfig generation_config;
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
-  AbstractVariable* var_A = variables.GetAbstractVariable("A");
-  ResolverContext ctxA("A", variables, values, engine, generation_config);
+  AbstractVariable* var_A = context.Variables().GetAnonymousVariable("A");
+  ResolverContext ctxA("A", context.Variables(), context.Values(), engine,
+                       generation_config);
   var_A->AssignValue(ctxA);  // By assigning A, we assigned N.
 
-  AbstractVariable* var_B = variables.GetAbstractVariable("B");
-  ResolverContext ctxB("B", variables, values, engine, generation_config);
+  AbstractVariable* var_B = context.Variables().GetAnonymousVariable("B");
+  ResolverContext ctxB("B", context.Variables(), context.Values(), engine,
+                       generation_config);
   var_B->AssignValue(ctxB);  // Should use the already generated N.
-  int N = values.Get<MInteger>("N");
+  int N = context.Values().Get<MInteger>("N");
 
-  EXPECT_EQ(values.Get<MInteger>("A"), N);
-  EXPECT_EQ(values.Get<MInteger>("B"), N);
+  EXPECT_EQ(context.Values().Get<MInteger>("A"), N);
+  EXPECT_EQ(context.Values().Get<MInteger>("B"), N);
 }
 
 TEST(MVariableTest, CyclicDependenciesShouldFail) {
@@ -285,9 +284,9 @@ TEST(MVariableTest, IsSatisfiedWithWorksForValid) {
 
 TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
   {  // No value or variable known
-    moriarty_internal::VariableSet variables;
-    moriarty_internal::ValueSet values;
-    librarian::AnalysisContext ctx("test", variables, values);
+    Context context;
+    librarian::AnalysisContext ctx("test", context.Variables(),
+                                   context.Values());
 
     EXPECT_THAT(
         [&] {
@@ -299,10 +298,9 @@ TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
         ThrowsValueNotFound("t"));
   }
   {  // Variable known, but no value known.
-    moriarty_internal::VariableSet variables;
-    MORIARTY_ASSERT_OK(variables.AddVariable("t", MTestType()));
-    moriarty_internal::ValueSet values;
-    librarian::AnalysisContext ctx("test", variables, values);
+    Context context = Context().WithVariable("t", MTestType());
+    librarian::AnalysisContext ctx("test", context.Variables(),
+                                   context.Values());
 
     EXPECT_THAT(
         [&] {
@@ -533,16 +531,14 @@ TEST(MVariableTest, PrintValueShouldBeSuccessfulInNormalState) {
 }
 
 TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {
-  moriarty_internal::VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("x", MTestType()));
-
-  moriarty_internal::ValueSet values;
-  values.Set<MTestType>("x", TestType(12345));
+  Context context = Context()
+                        .WithVariable("x", MTestType())
+                        .WithValue<MTestType>("x", TestType(12345));
 
   std::stringstream ss;
 
-  PrinterContext ctx("x", ss, variables, values);
-  AbstractVariable* var = variables.GetAbstractVariable("x");
+  PrinterContext ctx("x", ss, context.Variables(), context.Values());
+  AbstractVariable* var = context.Variables().GetAnonymousVariable("x");
   var->PrintValue(ctx);
   EXPECT_EQ(ss.str(), "12345");
 }
@@ -582,28 +578,27 @@ TEST(MVariableTest, GenerateShouldRetryIfNeeded) {
 }
 
 TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
-  moriarty_internal::VariableSet variables;
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("N", MInteger(Between(1, 1000000000))));
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between(1, "N"))));
-
-  moriarty_internal::ValueSet values;
+  Context context = Context()
+                        .WithVariable("N", MInteger(Between(1, 1000000000)))
+                        .WithVariable("A", MInteger(Between(1, "N")));
 
   moriarty_internal::GenerationConfig generation_config;
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
-  AbstractVariable* var_A = variables.GetAbstractVariable("A");
-  ResolverContext ctxA("A", variables, values, engine, generation_config);
+  AbstractVariable* var_A = context.Variables().GetAnonymousVariable("A");
+  ResolverContext ctxA("A", context.Variables(), context.Values(), engine,
+                       generation_config);
   var_A->AssignValue(ctxA);  // By assigning A, we assigned N.
-  int N = values.Get<MInteger>("N");
+  int N = context.Values().Get<MInteger>("N");
 
   // Attempt to re-assign N.
-  ResolverContext ctxN("N", variables, values, engine, generation_config);
-  AbstractVariable* var_N = variables.GetAbstractVariable("N");
+  ResolverContext ctxN("N", context.Variables(), context.Values(), engine,
+                       generation_config);
+  AbstractVariable* var_N = context.Variables().GetAnonymousVariable("N");
   var_N->AssignValue(ctxN);
 
   // Should not have changed.
-  EXPECT_EQ(values.Get<MInteger>("N"), N);
+  EXPECT_EQ(context.Values().Get<MInteger>("N"), N);
 }
 
 }  // namespace

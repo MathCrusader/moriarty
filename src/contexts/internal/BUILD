@@ -184,6 +184,7 @@ cc_test(
     srcs = ["variable_istream_context_test.cc"],
     deps = [
         ":variable_istream_context",
+        "//src/librarian:test_utils",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:marray",
         "//src/variables:minteger",
@@ -197,6 +198,8 @@ cc_test(
     srcs = ["variable_ostream_context_test.cc"],
     deps = [
         ":variable_ostream_context",
+        "//src/librarian:test_utils",
+        "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
@@ -211,6 +214,7 @@ cc_test(
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/librarian:test_utils",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
@@ -222,7 +226,8 @@ cc_test(
     srcs = ["view_only_context_test.cc"],
     deps = [
         ":view_only_context",
-        "//src/util/test_status_macro:status_testutil",
+        "//src/librarian:test_utils",
+        "//src/testing:status_test_util",
         "//src/variables:marray",
         "//src/variables:minteger",
         "//src/variables:mstring",

@@ -57,7 +57,7 @@ absl::StatusOr<absl::flat_hash_map<std::string, std::vector<std::string>>>
 GetDependenciesMap(const VariableSet& variables) {
   absl::flat_hash_map<std::string, std::vector<std::string>> deps_map;
   const absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>&
-      var_map = variables.GetAllVariables();
+      var_map = variables.ListVariables();
 
   for (const auto& [var_name, var_ptr] : var_map)
     deps_map[var_name] = var_ptr->GetDependencies();
@@ -129,7 +129,7 @@ ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
                           const GenerationOptions& options) {
   auto [extra_constraints, values] = UnsafeExtractTestCaseInternals(test_case);
 
-  for (auto& [name, constraints] : extra_constraints.GetAllVariables()) {
+  for (auto& [name, constraints] : extra_constraints.ListVariables()) {
     variables.AddOrMergeVariable(name, *constraints);
   }
 
@@ -154,14 +154,14 @@ absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
   // First do a quick assignment of all known values.
   // TODO: Do this in reverse and explain why.
   for (std::string_view name : variable_names) {
-    AbstractVariable* var = variables.GetAbstractVariable(name);
+    AbstractVariable* var = variables.GetAnonymousVariable(name);
     librarian::AssignmentContext ctx(name, variables, known_values);
     var->AssignUniqueValue(ctx);
   }
 
   // Now do a deep generation.
   for (std::string_view name : variable_names) {
-    AbstractVariable* var = variables.GetAbstractVariable(name);
+    AbstractVariable* var = variables.GetAnonymousVariable(name);
     librarian::ResolverContext ctx(name, variables, known_values,
                                    options.random_engine, generation_config);
     var->AssignValue(ctx);
@@ -171,7 +171,7 @@ absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
   // AssignUniqueValues(). Let's check for those now...
   // TODO(darcybest): Determine if there's a better way of doing this...
   for (std::string_view name : variable_names) {
-    AbstractVariable* var = variables.GetAbstractVariable(name);
+    AbstractVariable* var = variables.GetAnonymousVariable(name);
     librarian::AnalysisContext ctx(name, variables, known_values);
     if (!var->IsSatisfiedWithValue(ctx)) {
       return absl::InvalidArgumentError(

@@ -21,8 +21,6 @@
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/status/status.h"
-#include "absl/strings/substitute.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 
@@ -45,27 +43,27 @@ void VariableSet::Swap(VariableSet& other) {
   std::swap(variables_, other.variables_);
 }
 
-const AbstractVariable* VariableSet::GetAbstractVariable(
+const AbstractVariable* VariableSet::GetAnonymousVariable(
     std::string_view name) const {
-  const AbstractVariable* var = GetAbstractVariableOrNull(name);
+  const AbstractVariable* var = GetAnonymousVariableOrNull(name);
   if (var == nullptr) throw VariableNotFound(name);
   return var;
 }
 
-AbstractVariable* VariableSet::GetAbstractVariable(std::string_view name) {
-  AbstractVariable* var = GetAbstractVariableOrNull(name);
+AbstractVariable* VariableSet::GetAnonymousVariable(std::string_view name) {
+  AbstractVariable* var = GetAnonymousVariableOrNull(name);
   if (var == nullptr) throw VariableNotFound(name);
   return var;
 }
 
-AbstractVariable* VariableSet::GetAbstractVariableOrNull(
+AbstractVariable* VariableSet::GetAnonymousVariableOrNull(
     std::string_view name) {
   auto it = variables_.find(name);
   if (it == variables_.end()) return nullptr;
   return it->second.get();
 }
 
-const AbstractVariable* VariableSet::GetAbstractVariableOrNull(
+const AbstractVariable* VariableSet::GetAnonymousVariableOrNull(
     std::string_view name) const {
   auto it = variables_.find(name);
   if (it == variables_.end()) return nullptr;
@@ -73,19 +71,17 @@ const AbstractVariable* VariableSet::GetAbstractVariableOrNull(
 }
 
 const absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>&
-VariableSet::GetAllVariables() const {
+VariableSet::ListVariables() const {
   return variables_;
 }
 
-absl::Status VariableSet::AddVariable(std::string_view name,
-                                      const AbstractVariable& variable) {
-  auto [it, inserted] = variables_.emplace(name, variable.Clone());
+bool VariableSet::Contains(std::string_view name) const {
+  return variables_.contains(name);
+}
 
-  if (!inserted)
-    return absl::AlreadyExistsError(absl::Substitute(
-        "Variable '$0' already added to to this VariableSet instance", name));
-
-  return absl::OkStatus();
+void VariableSet::SetVariable(std::string_view name,
+                              const AbstractVariable& variable) {
+  variables_[name] = variable.Clone();
 }
 
 void VariableSet::AddOrMergeVariable(std::string_view name,

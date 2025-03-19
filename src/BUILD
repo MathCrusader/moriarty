@@ -150,14 +150,11 @@ cc_test(
     srcs = ["simple_io_test.cc"],
     deps = [
         ":context",
+        ":io_config",
         ":simple_io",
         ":test_case",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
-        "//src/util/test_status_macro:status_testutil",
+        "//src/librarian:test_utils",
         "//src/variables:minteger",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
     ],
 )

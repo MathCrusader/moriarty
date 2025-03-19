@@ -186,9 +186,11 @@ TEST(MoriartyTest, AddVariableWorks) {
 }
 
 TEST(MoriartyDeathTest, AddTwoVariablesWithTheSameNameShouldCrash) {
-  EXPECT_DEATH(
-      Moriarty().AddVariable("X", MTestType()).AddVariable("X", MTestType()),
-      "already added");
+  EXPECT_THAT(
+      [] {
+        Moriarty().AddVariable("X", MTestType()).AddVariable("X", MTestType());
+      },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("`X` multiple times")));
 }
 
 TEST(MoriartyTest,

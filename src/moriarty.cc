@@ -30,6 +30,7 @@
 #include "src/internal/generation_bootstrap.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
+#include "src/internal/variable_name_utils.h"
 #include "src/internal/variable_set.h"
 #include "src/test_case.h"
 
@@ -125,6 +126,18 @@ void Moriarty::GenerateTestCases(GenerateFn fn, GenerateOptions options) {
           test_case, variables_, {rng, std::nullopt}));
     }
   }
+}
+
+Moriarty& Moriarty::AddAnonymousVariable(
+    std::string_view name,
+    const moriarty_internal::AbstractVariable& variable) {
+  moriarty_internal::ValidateVariableName(name);
+  if (variables_.Contains(name)) {
+    throw std::invalid_argument(
+        std::format("Adding the variable `{}` multiple times", name));
+  }
+  variables_.SetVariable(name, variable);
+  return *this;
 }
 
 }  // namespace moriarty

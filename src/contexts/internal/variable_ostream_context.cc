@@ -21,7 +21,7 @@ VariableOStreamContext::VariableOStreamContext(
 
 void VariableOStreamContext::PrintVariable(std::string_view variable_name) {
   const AbstractVariable* variable =
-      variables_.get().GetAbstractVariable(variable_name);
+      variables_.get().GetAnonymousVariable(variable_name);
 
   librarian::PrinterContext ctx(variable_name, os_, variables_, values_);
   variable->PrintValue(ctx);
@@ -30,7 +30,7 @@ void VariableOStreamContext::PrintVariable(std::string_view variable_name) {
 void VariableOStreamContext::PrintVariableFrom(
     std::string_view variable_name, const ConcreteTestCase& test_case) {
   const AbstractVariable* variable =
-      variables_.get().GetAbstractVariable(variable_name);
+      variables_.get().GetAnonymousVariable(variable_name);
 
   ValueSet values = UnsafeExtractConcreteTestCaseInternals(test_case);
   librarian::PrinterContext ctx(variable_name, os_, variables_, values);

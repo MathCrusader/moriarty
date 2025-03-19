@@ -44,9 +44,8 @@ cc_test(
         "//src/internal:combinatorial_coverage_test_util",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/librarian:test_utils",
         "//src/testing:mtest_type",
-        "//src/util/test_status_macro:status_testutil",
-        "@abseil-cpp//absl/status:statusor",
         "@googletest//:gtest_main",
     ],
 )

@@ -101,13 +101,13 @@ class ViewOnlyContext {
   [[nodiscard]] bool IsSatisfiedWith(T variable,
                                      const T::value_type& value) const;
 
-  // GetAllVariables()
+  // ListVariables()
   //
   // Returns all variables in the context. Prefer to not use this function. It
   // may be deprecated in the future.
   [[nodiscard]] const absl::flat_hash_map<std::string,
                                           std::unique_ptr<AbstractVariable>>&
-  GetAllVariables() const;
+  ListVariables() const;
 
  private:
   std::reference_wrapper<const VariableSet> variables_;

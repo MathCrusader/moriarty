@@ -40,7 +40,7 @@ struct InitializeCasesInfo {
 
 InitializeCasesInfo InitializeCases(GenerateContext ctx) {
   InitializeCasesInfo info;
-  for (const auto& [name, var_ptr] : ctx.GetAllVariables()) {
+  for (const auto& [name, var_ptr] : ctx.ListVariables()) {
     moriarty::librarian::AnalysisContext analysis_ctx(name, ctx);
     std::vector<VarPtr> difficult_vars =
         var_ptr->ListAnonymousEdgeCases(analysis_ctx);

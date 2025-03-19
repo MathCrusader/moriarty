@@ -27,7 +27,6 @@
 #include <string_view>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/status/status.h"
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/conversions.h"
@@ -49,32 +48,35 @@ class VariableSet {
   VariableSet(VariableSet&& other) noexcept = default;  // Move
   void Swap(VariableSet& other);
 
-  // Adds a variable to the collection. Fails if the variable already exists.
-  absl::Status AddVariable(std::string_view name,
-                           const AbstractVariable& variable);
+  // Returns true if the variable exists in the collection.
+  [[nodiscard]] bool Contains(std::string_view name) const;
+
+  // Sets the value of a specific variable. Overwrites any existing variable.
+  void SetVariable(std::string_view name, const AbstractVariable& variable);
 
   // Adds an AbstractVariable to the collection, if it doesn't exist, or merges
   // it into the existing variable if it does.
   void AddOrMergeVariable(std::string_view name,
                           const AbstractVariable& variable);
 
-  // GetAbstractVariable()
+  // GetAnonymousVariable()
   //
   // Returns a pointer to the variable. Ownership of this pointer is *not*
   // transferred to the caller.
   //
   // Throws:
   //  * moriarty::VariableNotFound if the variable does not exist.
-  const AbstractVariable* GetAbstractVariable(std::string_view name) const;
+  [[nodiscard]] const AbstractVariable* GetAnonymousVariable(
+      std::string_view name) const;
 
-  // GetAbstractVariable()
+  // GetAnonymousVariable()
   //
   // Returns a pointer to the variable. Ownership of this pointer is *not*
   // transferred to the caller.
   //
   // Throws:
   //  * moriarty::VariableNotFound if the variable does not exist.
-  AbstractVariable* GetAbstractVariable(std::string_view name);
+  [[nodiscard]] AbstractVariable* GetAnonymousVariable(std::string_view name);
 
   // GetVariable<>()
   //
@@ -87,13 +89,14 @@ class VariableSet {
   //  * kInvalidArgument if it is not convertible to `T`
   template <typename T>
     requires std::derived_from<T, AbstractVariable>
-  T GetVariable(std::string_view name) const;
+  [[nodiscard]] T GetVariable(std::string_view name) const;
 
-  // GetAllVariables()
+  // ListVariables()
   //
   // Returns the map of internal variables.
-  const absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>&
-  GetAllVariables() const;
+  [[nodiscard]] const absl::flat_hash_map<std::string,
+                                          std::unique_ptr<AbstractVariable>>&
+  ListVariables() const;
 
  private:
   absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>
@@ -101,9 +104,9 @@ class VariableSet {
 
   // Returns either a pointer to the AbstractVariable or `nullptr` if it doesn't
   // exist.
-  const AbstractVariable* GetAbstractVariableOrNull(
+  const AbstractVariable* GetAnonymousVariableOrNull(
       std::string_view name) const;
-  AbstractVariable* GetAbstractVariableOrNull(std::string_view name);
+  AbstractVariable* GetAnonymousVariableOrNull(std::string_view name);
 };
 
 // -----------------------------------------------------------------------------
@@ -112,7 +115,7 @@ class VariableSet {
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
 T VariableSet::GetVariable(std::string_view name) const {
-  const AbstractVariable* var = GetAbstractVariableOrNull(name);
+  const AbstractVariable* var = GetAnonymousVariableOrNull(name);
   if (var == nullptr) throw VariableNotFound(name);
   return librarian::ConvertTo<T>(*var);
 }

@@ -26,7 +26,7 @@ namespace moriarty_internal {
 
 std::optional<std::string> AllVariablesSatisfyConstraints(
     const VariableSet& variables, const ValueSet& values) {
-  for (const auto& [name, var] : variables.GetAllVariables()) {
+  for (const auto& [name, var] : variables.ListVariables()) {
     librarian::AnalysisContext ctx(name, variables, values);
     if (!var->IsSatisfiedWithValue(ctx))
       return std::format("Variable {} does not satisfy its constraints: {}",

@@ -18,16 +18,16 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/internal/value_set.h"
+#include "src/librarian/test_utils.h"
 #include "src/testing/mtest_type.h"
 #include "src/testing/status_test_util.h"
-#include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/base_constraints.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
+using ::moriarty_testing::Context;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::TestType;
 using ::moriarty_testing::ThrowsValueNotFound;
@@ -36,113 +36,107 @@ using ::testing::Optional;
 
 TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsSucceedsWithNoVariables) {
-  VariableSet variables;
-  ValueSet values;
-  EXPECT_EQ(AllVariablesSatisfyConstraints(variables, values), std::nullopt);
+  Context context;
+  EXPECT_EQ(
+      AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
+      std::nullopt);
 }
 
 TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsSucceedsInNormalCase) {
-  VariableSet variables;
-  ValueSet values;
-
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("A", MTestType().AddConstraint(OneOf(options))));
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("B", MTestType().AddConstraint(OneOf(options))));
+  Context context =
+      Context()
+          .WithVariable("A", MTestType().AddConstraint(OneOf(options)))
+          .WithVariable("B", MTestType().AddConstraint(OneOf(options)))
+          .WithValue<MTestType>("A", options[4])
+          .WithValue<MTestType>("B", options[53]);
 
-  values.Set<MTestType>("A", options[4]);
-  values.Set<MTestType>("B", options[53]);
-
-  EXPECT_EQ(AllVariablesSatisfyConstraints(variables, values), std::nullopt);
+  EXPECT_EQ(
+      AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
+      std::nullopt);
 }
 
 TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsFailIfAtLeastOneValueFails) {
-  VariableSet variables;
-  ValueSet values;
-
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("A", MTestType().AddConstraint(OneOf(options))));
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("B", MTestType().AddConstraint(OneOf(options))));
 
-  values.Set<MTestType>("A", options[4]);
-  values.Set<MTestType>("B", TestType(100000));  // Not in the list!
+  Context context =
+      Context()
+          .WithVariable("A", MTestType().AddConstraint(OneOf(options)))
+          .WithVariable("B", MTestType().AddConstraint(OneOf(options)))
+          .WithValue<MTestType>("A", options[4])
+          .WithValue<MTestType>("B", TestType(100000));  // Not in the list!
 
-  EXPECT_THAT(AllVariablesSatisfyConstraints(variables, values),
-              Optional(HasSubstr("B")));
+  EXPECT_THAT(
+      AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
+      Optional(HasSubstr("B")));
 }
 
 TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsFailIfAnyValueIsMissing) {
-  VariableSet variables;
-  ValueSet values;
-
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("A", MTestType().AddConstraint(OneOf(options))));
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("B", MTestType().AddConstraint(OneOf(options))));
-
-  values.Set<MTestType>("A", options[4]);
+  Context context =
+      Context()
+          .WithVariable("A", MTestType().AddConstraint(OneOf(options)))
+          .WithVariable("B", MTestType().AddConstraint(OneOf(options)))
+          .WithValue<MTestType>("A", options[4]);
 
   // FIXME: Determine semantics of satisfies constraints when a value is
   // missing.
-  EXPECT_THAT([&] { (void)AllVariablesSatisfyConstraints(variables, values); },
-              ThrowsValueNotFound("B"));
+  EXPECT_THAT(
+      [&] {
+        (void)AllVariablesSatisfyConstraints(context.Variables(),
+                                             context.Values());
+      },
+      ThrowsValueNotFound("B"));
 }
 
 TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsSucceedsIfThereAreExtraValues) {
-  VariableSet variables;
-  ValueSet values;
-
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("A", MTestType().AddConstraint(OneOf(options))));
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("B", MTestType().AddConstraint(OneOf(options))));
+  Context context =
+      Context()
+          .WithVariable("A", MTestType().AddConstraint(OneOf(options)))
+          .WithVariable("B", MTestType().AddConstraint(OneOf(options)))
+          .WithValue<MTestType>("A", options[30])
+          .WithValue<MTestType>("B", options[40])
+          .WithValue<MTestType>("C", options[50]);
 
-  values.Set<MTestType>("A", options[30]);
-  values.Set<MTestType>("B", options[40]);
-  values.Set<MTestType>("C", options[50]);
-
-  EXPECT_EQ(AllVariablesSatisfyConstraints(variables, values), std::nullopt);
+  EXPECT_EQ(
+      AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
+      std::nullopt);
 }
 
 TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsWorksForDependentVariables) {
-  VariableSet variables;
-  ValueSet values;
+  // B gets one by default, plus one from A
+  Context context =
+      Context()
+          .WithVariable("A", MTestType())
+          .WithVariable("B", MTestType().SetAdder("A"))
+          .WithValue<MTestType>("A", MTestType::kGeneratedValue)
+          .WithValue<MTestType>("B", 2 * MTestType::kGeneratedValue);
 
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MTestType()));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MTestType().SetAdder("A")));
-
-  TestType valA = MTestType::kGeneratedValue;
-  TestType valB = 2 * MTestType::kGeneratedValue;  // One by default, one for A
-
-  values.Set<MTestType>("A", valA);
-  values.Set<MTestType>("B", valB);
-
-  EXPECT_EQ(AllVariablesSatisfyConstraints(variables, values), std::nullopt);
+  EXPECT_EQ(
+      AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
+      std::nullopt);
 }
 
 TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsFailsIfMissingValues) {
-  VariableSet variables;
-  ValueSet values;
+  Context context = Context().WithVariable("A", MTestType());
 
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MTestType()));
-
-  EXPECT_THAT([&] { (void)AllVariablesSatisfyConstraints(variables, values); },
-              ThrowsValueNotFound("A"));
+  EXPECT_THAT(
+      [&] {
+        (void)AllVariablesSatisfyConstraints(context.Variables(),
+                                             context.Values());
+      },
+      ThrowsValueNotFound("A"));
 }
 
 }  // namespace

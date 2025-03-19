@@ -28,6 +28,7 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/test_utils.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
@@ -41,6 +42,7 @@ namespace {
 
 using ::moriarty::IsOkAndHolds;
 using ::moriarty::StatusIs;
+using ::moriarty_testing::Context;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::ContainerEq;
@@ -79,14 +81,13 @@ TEST(
     GenerationBootstrapTest,
     GenerateAllValuesWithKnownValueThatIsNotInVariablesIncludesThatKnownValue) {
   RandomEngine rng({1, 2, 3}, "");
-  ValueSet known_values;
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between(123, 456))));
-  known_values.Set<MInteger>("B", 10);
+  Context context = Context()
+                        .WithVariable("A", MInteger(Between(123, 456)))
+                        .WithValue<MInteger>("B", 10);
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values,
-      GenerateAllValues(variables, known_values, {rng, std::nullopt}));
+      ValueSet values, GenerateAllValues(context.Variables(), context.Values(),
+                                         {rng, std::nullopt}));
 
   EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(123), Le(456)));
   EXPECT_EQ(values.Get<MInteger>("B"), 10);
@@ -94,13 +95,14 @@ TEST(
 
 TEST(GenerationBootstrapTest, GenerateAllValuesGivesValuesToVariables) {
   RandomEngine rng({1, 2, 3}, "");
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between(123, 456))));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MInteger(Between(777, 888))));
+
+  Context context = Context()
+                        .WithVariable("A", MInteger(Between(123, 456)))
+                        .WithVariable("B", MInteger(Between(777, 888)));
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(
       ValueSet values,
-      GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
+      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt}));
 
   EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(123), Le(456)));
   EXPECT_THAT(values.Get<MInteger>("B"), AllOf(Ge(777), Le(888)));
@@ -108,28 +110,26 @@ TEST(GenerationBootstrapTest, GenerateAllValuesGivesValuesToVariables) {
 
 TEST(GenerationBootstrapTest, GenerateAllValuesRespectsKnownValues) {
   RandomEngine rng({1, 2, 3}, "");
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between(123, 456))));
-  ValueSet known_values;
-  known_values.Set<MInteger>("A", 314);
+  Context context = Context()
+                        .WithVariable("A", MInteger(Between(123, 456)))
+                        .WithValue<MInteger>("A", 314);
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values,
-      GenerateAllValues(variables, known_values, {rng, std::nullopt}));
+      ValueSet values, GenerateAllValues(context.Variables(), context.Values(),
+                                         {rng, std::nullopt}));
 
   EXPECT_EQ(values.Get<MInteger>("A"), 314);
 }
 
 TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentVariablesSucceeds) {
   RandomEngine rng({1, 2, 3}, "");
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("A", MInteger(Between("N", "3 * N"))));
-  MORIARTY_ASSERT_OK(variables.AddVariable("N", MInteger(Between(50, 100))));
+  Context context = Context()
+                        .WithVariable("A", MInteger(Between("N", "3 * N")))
+                        .WithVariable("N", MInteger(Between(50, 100)));
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(
       ValueSet values,
-      GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
+      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt}));
 
   EXPECT_THAT(values.Get<MInteger>("N"), AllOf(Ge(50), Le(100)));
   int64_t N = values.Get<MInteger>("N");
@@ -138,18 +138,15 @@ TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentVariablesSucceeds) {
 
 TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentValuesSucceeds) {
   RandomEngine rng({1, 2, 3}, "");
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("A", MInteger(Between("N", "3 * N"))));
-  MORIARTY_ASSERT_OK(variables.AddVariable("C", MInteger(Exactly("N"))));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MInteger(Exactly("2 * C"))));
-  MORIARTY_ASSERT_OK(variables.AddVariable("N", MInteger()));
-  ValueSet known_values;
-  known_values.Set<MInteger>("N", 53);
+  Context context = Context()
+                        .WithVariable("A", MInteger(Between("N", "3 * N")))
+                        .WithVariable("C", MInteger(Exactly("N")))
+                        .WithVariable("B", MInteger(Exactly("2 * C")))
+                        .WithValue<MInteger>("N", 53);
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values,
-      GenerateAllValues(variables, known_values, {rng, std::nullopt}));
+      ValueSet values, GenerateAllValues(context.Variables(), context.Values(),
+                                         {rng, std::nullopt}));
 
   EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(53), Le(3 * 53)));
   EXPECT_EQ(values.Get<MInteger>("C"), 53);
@@ -159,25 +156,24 @@ TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentValuesSucceeds) {
 TEST(GenerationBootstrapTest,
      GenerateAllValuesWithMissingDependentVariableAndValueFails) {
   RandomEngine rng({1, 2, 3}, "");
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("A", MInteger(Between("N", "3 * N"))));
+  Context context =
+      Context().WithVariable("A", MInteger(Between("N", "3 * N")));
 
-  EXPECT_THAT(GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}),
-              StatusIs(absl::StatusCode::kFailedPrecondition,
-                       HasSubstr("Unknown dependency")));
+  EXPECT_THAT(
+      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt}),
+      StatusIs(absl::StatusCode::kFailedPrecondition,
+               HasSubstr("Unknown dependency")));
 }
 
 TEST(GenerationBootstrapTest, GenerateAllValuesShouldRespectIsAndIsOneOf) {
   RandomEngine rng({1, 2, 3}, "");
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Exactly(15))));
-  MORIARTY_ASSERT_OK(
-      variables.AddVariable("B", MInteger(OneOf({111, 222, 333}))));
+  Context context = Context()
+                        .WithVariable("A", MInteger(Exactly(15)))
+                        .WithVariable("B", MInteger(OneOf({111, 222, 333})));
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(
       ValueSet values,
-      GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
+      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt}));
 
   EXPECT_THAT(values.Get<MInteger>("A"), 15);
   EXPECT_THAT(values.Get<MInteger>("B"), AnyOf(111, 222, 333));
@@ -186,16 +182,15 @@ TEST(GenerationBootstrapTest, GenerateAllValuesShouldRespectIsAndIsOneOf) {
 TEST(GenerationBootstrapTest,
      GenerateAllValuesWithSoftGenerationLimitStopsEarly) {
   RandomEngine rng({1, 2, 3}, "");
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable(
-      "S", MString(Alphabet("abc"), Length(Between(50, 10000)))));
+  Context context = Context().WithVariable(
+      "S", MString(Alphabet("abc"), Length(Between(50, 10000))));
 
   // S could generate a string with a really long length. However, the soft
   // generation limit of 100 should stop a large string being generated.
   int generation_limit = 100;
   MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values,
-      GenerateAllValues(variables, ValueSet(), {rng, generation_limit}));
+      ValueSet values, GenerateAllValues(context.Variables(), ValueSet(),
+                                         {rng, generation_limit}));
 
   EXPECT_THAT(values.Get<MString>("S"), SizeIs(AllOf(Ge(50), Le(100))));
 }
@@ -203,13 +198,13 @@ TEST(GenerationBootstrapTest,
 TEST(GenerationBootstrapTest,
      GenerateAllValuesWithAKnownValueThatIsInvalidShouldFail) {
   RandomEngine rng({1, 2, 3}, "");
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MInteger(Between(123, 456))));
-  ValueSet known_values;
-  known_values.Set<MInteger>("A", 0);
+  Context context = Context()
+                        .WithVariable("A", MInteger(Between(123, 456)))
+                        .WithValue<MInteger>("A", 0);
 
   EXPECT_THAT(
-      GenerateAllValues(variables, known_values, {rng, std::nullopt}),
+      GenerateAllValues(context.Variables(), context.Values(),
+                        {rng, std::nullopt}),
       StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("between")));
 }
 
@@ -226,12 +221,13 @@ TEST(GenerationBootstrapTest,
   std::vector<std::tuple<int64_t, int64_t, int64_t>> results;
   do {
     RandomEngine rng({1, 2, 3}, "");
-    VariableSet variables;
-    for (const std::string& name : names)
-      MORIARTY_ASSERT_OK(variables.AddVariable(name, named_variables[name]));
+    Context context;
+    for (const std::string& name : names) {
+      context.WithVariable(name, named_variables[name]);
+    }
     MORIARTY_ASSERT_OK_AND_ASSIGN(
-        ValueSet values,
-        GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
+        ValueSet values, GenerateAllValues(context.Variables(), ValueSet(),
+                                           {rng, std::nullopt}));
     results.push_back({
         values.Get<MInteger>("A"),
         values.Get<MInteger>("B"),
@@ -259,12 +255,13 @@ TEST(GenerationBootstrapTest,
   std::vector<std::vector<int64_t>> results;
   do {
     RandomEngine rng({1, 2, 3}, "");
-    VariableSet variables;
-    for (const std::string& name : names)
-      MORIARTY_ASSERT_OK(variables.AddVariable(name, named_variables[name]));
+    Context context;
+    for (const std::string& name : names) {
+      context.WithVariable(name, named_variables[name]);
+    }
     MORIARTY_ASSERT_OK_AND_ASSIGN(
-        ValueSet values,
-        GenerateAllValues(variables, ValueSet(), {rng, std::nullopt}));
+        ValueSet values, GenerateAllValues(context.Variables(), ValueSet(),
+                                           {rng, std::nullopt}));
 
     results.push_back({
         values.Get<MInteger>("A"),

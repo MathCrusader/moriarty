@@ -144,14 +144,21 @@ class Context {
     requires std::derived_from<
         T, moriarty::librarian::MVariable<T, typename T::value_type>>
   Context& WithVariable(std::string_view variable_name, T variable) {
-    ABSL_CHECK_OK(variables_.AddVariable(variable_name, variable));
+    variables_.AddOrMergeVariable(variable_name, variable);
     return *this;
   }
 
- private:
-  friend class moriarty_testing_internal::ContextManager;  // Internal Extended
-                                                           // API
+  const moriarty::moriarty_internal::VariableSet& Variables() const {
+    return variables_;
+  }
+  moriarty::moriarty_internal::VariableSet& Variables() { return variables_; }
 
+  const moriarty::moriarty_internal::ValueSet& Values() const {
+    return values_;
+  }
+  moriarty::moriarty_internal::ValueSet& Values() { return values_; }
+
+ private:
   moriarty::moriarty_internal::VariableSet variables_;
   moriarty::moriarty_internal::ValueSet values_;
 };
@@ -330,29 +337,6 @@ MATCHER_P(GeneratedValuesAre, matcher,
   return true;
 }
 
-// -----------------------------------------------------------------------------
-//  ContextManager
-
-namespace moriarty_testing_internal {
-
-class ContextManager {
- public:
-  explicit ContextManager(Context* context) : managed_context_(context) {}
-
-  moriarty::moriarty_internal::VariableSet* GetVariables() {
-    return &managed_context_->variables_;
-  }
-
-  moriarty::moriarty_internal::ValueSet* GetValues() {
-    return &managed_context_->values_;
-  }
-
- private:
-  Context* managed_context_;
-};
-
-}  // namespace moriarty_testing_internal
-
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
@@ -362,12 +346,11 @@ absl::StatusOr<typename T::value_type> Generate(T variable, Context context) {
 
   moriarty::moriarty_internal::RandomEngine rng({3, 4, 5}, "");
   moriarty::moriarty_internal::GenerationConfig generation_config;
-  moriarty_testing_internal::ContextManager manager(&context);
 
   MORIARTY_ASSIGN_OR_RETURN(
       moriarty::moriarty_internal::ValueSet values,
       moriarty::moriarty_internal::GenerateAllValues(
-          *manager.GetVariables(), *manager.GetValues(),
+          context.Variables(), context.Values(),
           {rng, /* soft_generation_limit = */ std::nullopt}));
 
   return values.Get<T>(var_name);
@@ -388,11 +371,10 @@ absl::StatusOr<std::vector<typename T::value_type>> GenerateN(T variable, int N,
   for (int i = 0; i < N; i++) {
     // We need to make a copy so that we don't set values for future `i` values.
     Context context_copy = context;
-    moriarty_testing_internal::ContextManager manager(&context_copy);
     MORIARTY_ASSIGN_OR_RETURN(
         moriarty::moriarty_internal::ValueSet values,
         moriarty::moriarty_internal::GenerateAllValues(
-            *manager.GetVariables(), *manager.GetValues(), {rng}));
+            context_copy.Variables(), context_copy.Values(), {rng}));
     res.push_back(values.Get<T>(var_name));
   }
   return res;
@@ -414,10 +396,9 @@ std::optional<typename T::value_type> GetUniqueValue(T variable,
   std::string var_name =
       absl::Substitute("GetUniqueValue($0)", variable.Typename());
   context.WithVariable(var_name, variable);
-  moriarty_testing_internal::ContextManager manager(&context);
 
-  moriarty::librarian::AnalysisContext ctx(var_name, *manager.GetVariables(),
-                                           *manager.GetValues());
+  moriarty::librarian::AnalysisContext ctx(var_name, context.Variables(),
+                                           context.Values());
   return ctx.GetUniqueValue<T>(var_name);
 }
 
@@ -428,19 +409,18 @@ absl::StatusOr<typename T::value_type> Read(T variable, std::istream& is,
                                             Context context) {
   std::string var_name = absl::Substitute("Read($0)", variable.Typename());
   context.WithVariable(var_name, variable);
-  moriarty_testing_internal::ContextManager manager(&context);
 
   moriarty::moriarty_internal::AbstractVariable* var =
-      manager.GetVariables()->GetAbstractVariable(var_name);
+      context.Variables().GetAnonymousVariable(var_name);
 
   moriarty::librarian::ReaderContext reader_context(
       var_name, is, moriarty::WhitespaceStrictness::kPrecise,
-      *manager.GetVariables(), *manager.GetValues());
+      context.Variables(), context.Values());
   moriarty::moriarty_internal::MutableValuesContext values_context(
-      *manager.GetValues());
+      context.Values());
 
   var->ReadValue(reader_context, values_context);
-  return manager.GetValues()->Get<T>(var_name);
+  return context.Values().Get<T>(var_name);
 }
 
 template <typename T>
@@ -461,15 +441,14 @@ absl::StatusOr<std::string> Print(T variable, typename T::value_type value,
   std::string var_name = absl::Substitute("Print($0)", variable.Typename());
   context.WithVariable(var_name, variable);
   context.WithValue<T>(var_name, value);
-  moriarty_testing_internal::ContextManager manager(&context);
 
   std::ostringstream ss;
 
   moriarty::moriarty_internal::AbstractVariable* var =
-      manager.GetVariables()->GetAbstractVariable(var_name);
+      context.Variables().GetAnonymousVariable(var_name);
 
   moriarty::librarian::PrinterContext printer_context(
-      var_name, ss, *manager.GetVariables(), *manager.GetValues());
+      var_name, ss, context.Variables(), context.Values());
   var->PrintValue(printer_context);
   return ss.str();
 }
@@ -561,12 +540,11 @@ MATCHER_P2(IsSatisfiedWith, value, context, "") {
   using ValueType = typename std::decay_t<arg_type>::value_type;
   // context is const& in MATCHERs, we need a non-const.
   Context context_copy = context;
-  moriarty_testing_internal::ContextManager manager(&context_copy);
 
   std::string var_name =
       absl::Substitute("$0::IsSatisfiedWith", arg.Typename());
-  moriarty::librarian::AnalysisContext ctx(var_name, *manager.GetVariables(),
-                                           *manager.GetValues());
+  moriarty::librarian::AnalysisContext ctx(var_name, context_copy.Variables(),
+                                           context_copy.Values());
 
   if (!arg.IsSatisfiedWith(ctx, ValueType(value))) {
     std::string reason = arg.UnsatisfiedReason(ctx, ValueType(value));
@@ -602,12 +580,11 @@ MATCHER_P3(IsNotSatisfiedWith, value, expected_reason, context, "") {
   using ValueType = typename std::decay_t<arg_type>::value_type;
   // context is const& in MATCHERs, we need a non-const.
   Context context_copy = context;
-  moriarty_testing_internal::ContextManager manager(&context_copy);
 
   std::string var_name =
       absl::Substitute("$0::IsNotSatisfiedWith", arg.Typename());
-  moriarty::librarian::AnalysisContext ctx(var_name, *manager.GetVariables(),
-                                           *manager.GetValues());
+  moriarty::librarian::AnalysisContext ctx(var_name, context_copy.Variables(),
+                                           context_copy.Values());
 
   if (!arg.IsSatisfiedWith(ctx, ValueType(value))) {
     std::string actual_reason = arg.UnsatisfiedReason(ctx, ValueType(value));

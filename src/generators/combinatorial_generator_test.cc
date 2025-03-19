@@ -25,14 +25,15 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/test_utils.h"
 #include "src/testing/mtest_type.h"
-#include "src/util/test_status_macro/status_testutil.h"
 
 namespace moriarty {
 
 using ::moriarty::CombinatorialCoverage;
 using ::moriarty::moriarty_internal::GenerateTestCase;
 using ::moriarty::moriarty_internal::ValueSet;
+using ::moriarty_testing::Context;
 using ::moriarty_testing::MTestType;
 
 namespace {
@@ -65,19 +66,17 @@ std::vector<CoveringArrayTestCase> CasesToCoveringArray(
 }
 
 TEST(CombinatorialCoverage, GenerateShouldCreateCasesFromCoveringArray) {
-  moriarty_internal::ValueSet values;
-  moriarty_internal::VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("X", MTestType()));
-  MORIARTY_ASSERT_OK(variables.AddVariable("Y", MTestType()));
+  Context context =
+      Context().WithVariable("X", MTestType()).WithVariable("Y", MTestType());
 
   moriarty_internal::RandomEngine rng({1, 2, 3, 4}, "v0.1");
-  GenerateContext ctx(variables, values, rng);
+  GenerateContext ctx(context.Variables(), context.Values(), rng);
 
   std::vector<TestCase> test_cases = CombinatorialCoverage(ctx);
   std::vector<ValueSet> generated_cases;
   for (const TestCase& test_case : test_cases) {
     generated_cases.push_back(
-        GenerateTestCase(test_case, variables, {rng, std::nullopt}));
+        GenerateTestCase(test_case, context.Variables(), {rng, std::nullopt}));
   }
 
   EXPECT_THAT(CasesToCoveringArray(generated_cases),

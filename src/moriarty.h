@@ -30,15 +30,12 @@
 #include <span>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
 
-#include "absl/log/absl_check.h"
 #include "absl/status/status.h"
 #include "src/context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
-#include "src/internal/variable_name_utils.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/mvariable.h"
 
@@ -106,24 +103,18 @@ class Moriarty {
   //
   // Variable names must start with a letter (A-Za-z), and then only contain
   // letters, numbers, and underscores (A-Za-z0-9_).
-  //
-  // TODO(darcybest): This currently does not check the first letter criteria
-  // because one of our users has numbers first. All new users should only have
-  // A-Za-z as first letters.
-  //
-  // Crashes on failure. See `TryGetVariable()` for non-crashing version.
   template <typename T>
     requires std::derived_from<T,
                                librarian::MVariable<T, typename T::value_type>>
   Moriarty& AddVariable(std::string_view name, T variable);
 
-  // FIXME: Temporary hack to get things working.
-  Moriarty& AddVariable(std::string_view name,
-                        const moriarty_internal::AbstractVariable& variable) {
-    ABSL_CHECK_OK(variables_.AddVariable(name, variable))
-        << "Adding the same variable multiple times";
-    return *this;
-  }
+  // AddAnonymousVariable()
+  //
+  // Same as AddVariable, but you do not know the type of the variable at
+  // compile-time. It is possible this will be deprecated in the future.
+  Moriarty& AddAnonymousVariable(
+      std::string_view name,
+      const moriarty_internal::AbstractVariable& variable);
 
   void GenerateTestCases(GenerateFn fn, GenerateOptions options = {});
   void ImportTestCases(ImportFn fn, ImportOptions options = {});
@@ -161,10 +152,7 @@ class Moriarty {
 template <typename T>
   requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
 Moriarty& Moriarty::AddVariable(std::string_view name, T variable) {
-  moriarty_internal::ValidateVariableName(name);
-  ABSL_CHECK_OK(variables_.AddVariable(name, std::move(variable)))
-      << "Adding the same variable multiple times";
-  return *this;
+  return AddAnonymousVariable(name, variable);
 }
 
 }  // namespace moriarty

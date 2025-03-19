@@ -16,12 +16,12 @@ ViewOnlyContext::ViewOnlyContext(
 
 const AbstractVariable& ViewOnlyContext::GetAnonymousVariable(
     std::string_view variable_name) const {
-  return *variables_.get().GetAbstractVariable(variable_name);
+  return *variables_.get().GetAnonymousVariable(variable_name);
 }
 
 const absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>&
-ViewOnlyContext::GetAllVariables() const {
-  return variables_.get().GetAllVariables();
+ViewOnlyContext::ListVariables() const {
+  return variables_.get().ListVariables();
 }
 
 bool ViewOnlyContext::ValueIsKnown(std::string_view variable_name) const {

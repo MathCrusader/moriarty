@@ -35,12 +35,21 @@ using ::moriarty_testing::MTestType2;
 using ::moriarty_testing::TestType;
 using ::moriarty_testing::ThrowsVariableNotFound;
 
-TEST(VariableSetTest, GetVariableCanRetrieveFromAddVariable) {
+TEST(VariableSetTest, ContainsShouldWork) {
   VariableSet v;
-  MORIARTY_ASSERT_OK(
-      v.AddVariable("A", MTestType().AddConstraint(Exactly<TestType>(111111))));
-  MORIARTY_ASSERT_OK(
-      v.AddVariable("B", MTestType().AddConstraint(Exactly<TestType>(222222))));
+  v.SetVariable("A", MTestType());
+  v.SetVariable("B", MTestType());
+
+  EXPECT_TRUE(v.Contains("A"));
+  EXPECT_TRUE(v.Contains("B"));
+  EXPECT_FALSE(v.Contains("C"));
+  EXPECT_FALSE(v.Contains("a"));
+}
+
+TEST(VariableSetTest, GetVariableShouldRetrieve) {
+  VariableSet v;
+  v.SetVariable("A", MTestType().AddConstraint(Exactly<TestType>(111111)));
+  v.SetVariable("B", MTestType().AddConstraint(Exactly<TestType>(222222)));
 
   MTestType A = v.GetVariable<MTestType>("A");
   EXPECT_THAT(Generate(A), IsOkAndHolds(111111));
@@ -77,21 +86,21 @@ TEST(VariableSetTest, AddOrMergeVariableSetsProperlyWhenMerging) {
 TEST(VariableSetTest, GetVariableOnNonExistentVariableFails) {
   VariableSet v;
 
-  EXPECT_THAT([&] { v.GetAbstractVariable("unknown1"); },
+  EXPECT_THAT([&] { (void)v.GetAnonymousVariable("unknown1"); },
               ThrowsVariableNotFound("unknown1"));
-  EXPECT_THAT([&] { v.GetVariable<MTestType>("unknown2"); },
+  EXPECT_THAT([&] { (void)v.GetVariable<MTestType>("unknown2"); },
               ThrowsVariableNotFound("unknown2"));
 }
 
 TEST(VariableSetTest, GetAnonymousVariableShouldWork) {
   VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MTestType()));
-  MORIARTY_ASSERT_OK(variables.AddVariable("B", MTestType()));
-  MORIARTY_ASSERT_OK(variables.AddVariable("C", MTestType2()));
-  MORIARTY_ASSERT_OK(variables.AddVariable("D", MTestType2()));
+  variables.SetVariable("A", MTestType());
+  variables.SetVariable("B", MTestType());
+  variables.SetVariable("C", MTestType2());
+  variables.SetVariable("D", MTestType2());
 
-  variables.GetAbstractVariable("A");  // No crash = good.
-  EXPECT_THAT([&] { variables.GetAbstractVariable("X"); },
+  (void)variables.GetAnonymousVariable("A");  // No crash = good.
+  EXPECT_THAT([&] { (void)variables.GetAnonymousVariable("X"); },
               ThrowsVariableNotFound("X"));
 }
 

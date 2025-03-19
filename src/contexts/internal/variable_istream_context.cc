@@ -27,7 +27,7 @@ void VariableIStreamContext::ReadVariableTo(std::string_view variable_name,
       variable_name, is_, whitespace_strictness_, variables_, values);
 
   const AbstractVariable* variable =
-      variables_.get().GetAbstractVariable(variable_name);
+      variables_.get().GetAnonymousVariable(variable_name);
 
   variable->ReadValue(reader_ctx, mutable_values_ctx);
 

@@ -17,8 +17,8 @@
 #include "src/contexts/internal/view_only_context.h"
 
 #include "gtest/gtest.h"
-#include "src/internal/value_set.h"
-#include "src/util/test_status_macro/status_testutil.h"
+#include "src/librarian/test_utils.h"
+#include "src/testing/status_test_util.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/marray.h"
 #include "src/variables/minteger.h"
@@ -28,16 +28,15 @@ namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
+using moriarty_testing::Context;
 using moriarty_testing::ThrowsMVariableTypeMismatch;
 using moriarty_testing::ThrowsValueNotFound;
 using moriarty_testing::ThrowsVariableNotFound;
 using testing::SizeIs;
 
 TEST(ViewOnlyContextTest, GetVariableShouldWork) {
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("X", MInteger()));
-  ValueSet values;
-  ViewOnlyContext ctx(variables, values);
+  Context context = Context().WithVariable("X", MInteger());
+  ViewOnlyContext ctx(context.Variables(), context.Values());
 
   EXPECT_NO_THROW({ (void)ctx.GetVariable<MInteger>("X"); });
   EXPECT_THAT([&] { (void)ctx.GetVariable<MInteger>("Y"); },
@@ -47,10 +46,8 @@ TEST(ViewOnlyContextTest, GetVariableShouldWork) {
 }
 
 TEST(ViewOnlyContextTest, GetAnonymousVariableShouldWork) {
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("X", MInteger()));
-  ValueSet values;
-  ViewOnlyContext ctx(variables, values);
+  Context context = Context().WithVariable("X", MInteger());
+  ViewOnlyContext ctx(context.Variables(), context.Values());
 
   EXPECT_NO_THROW({ (void)ctx.GetAnonymousVariable("X"); });
   EXPECT_THAT([&] { (void)ctx.GetAnonymousVariable("Y"); },
@@ -58,12 +55,11 @@ TEST(ViewOnlyContextTest, GetAnonymousVariableShouldWork) {
 }
 
 TEST(ViewOnlyContextTest, GetValueShouldWork) {
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("X", MInteger()));
-  MORIARTY_ASSERT_OK(variables.AddVariable("Y", MInteger()));
-  ValueSet values;
-  values.Set<MInteger>("X", 10);
-  ViewOnlyContext ctx(variables, values);
+  Context context = Context()
+                        .WithVariable("X", MInteger())
+                        .WithVariable("Y", MInteger())
+                        .WithValue<MInteger>("X", 10);
+  ViewOnlyContext ctx(context.Variables(), context.Values());
 
   EXPECT_EQ(ctx.GetValue<MInteger>("X"), 10);
   EXPECT_THAT([&] { (void)ctx.GetValue<MInteger>("Y"); },
@@ -78,12 +74,11 @@ TEST(ViewOnlyContextTest, GetValueShouldWork) {
 }
 
 TEST(ViewOnlyContextTest, GetValueIfKnownShouldWork) {
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("X", MInteger()));
-  MORIARTY_ASSERT_OK(variables.AddVariable("Y", MInteger()));
-  ValueSet values;
-  values.Set<MInteger>("X", 10);
-  ViewOnlyContext ctx(variables, values);
+  Context context = Context()
+                        .WithVariable("X", MInteger())
+                        .WithVariable("Y", MInteger())
+                        .WithValue<MInteger>("X", 10);
+  ViewOnlyContext ctx(context.Variables(), context.Values());
 
   EXPECT_EQ(ctx.GetValueIfKnown<MInteger>("X"), 10);
   EXPECT_EQ(ctx.GetValueIfKnown<MInteger>("Y"), std::nullopt);
@@ -91,19 +86,16 @@ TEST(ViewOnlyContextTest, GetValueIfKnownShouldWork) {
 }
 
 TEST(ViewOnlyContextTest, GetUniqueShouldWork) {
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("X", MInteger()));
-  MORIARTY_ASSERT_OK(variables.AddVariable("Y", MInteger(Between(20, 20))));
-  MORIARTY_ASSERT_OK(variables.AddVariable("Z", MInteger(Between("X", "X"))));
-  MORIARTY_ASSERT_OK(variables.AddVariable("W", MInteger()));
-
   // TODO: When we implement GetUniqueValue for MArray, we can test that here
   // with `Elements(Exactly(123))`, for example.
-  MORIARTY_ASSERT_OK(variables.AddVariable("A", MArray<MInteger>(Length("X"))));
-
-  ValueSet values;
-  values.Set<MInteger>("X", 10);
-  ViewOnlyContext ctx(variables, values);
+  Context context = Context()
+                        .WithVariable("X", MInteger())
+                        .WithVariable("Y", MInteger(Between(20, 20)))
+                        .WithVariable("Z", MInteger(Between("X", "X")))
+                        .WithVariable("W", MInteger())
+                        .WithVariable("A", MArray<MInteger>(Length("X")))
+                        .WithValue<MInteger>("X", 10);
+  ViewOnlyContext ctx(context.Variables(), context.Values());
 
   EXPECT_EQ(ctx.GetUniqueValue<MInteger>("X"), 10);
   EXPECT_EQ(ctx.GetUniqueValue<MInteger>("Y"), 20);
@@ -113,22 +105,18 @@ TEST(ViewOnlyContextTest, GetUniqueShouldWork) {
 }
 
 TEST(ViewOnlyContext, ValueIsKnownShouldWork) {
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("X", MInteger()));
-  ValueSet values;
-  values.Set<MInteger>("X", 10);
-  ViewOnlyContext ctx(variables, values);
+  Context context =
+      Context().WithVariable("X", MInteger()).WithValue<MInteger>("X", 10);
+  ViewOnlyContext ctx(context.Variables(), context.Values());
 
   EXPECT_TRUE(ctx.ValueIsKnown("X"));
   EXPECT_FALSE(ctx.ValueIsKnown("Y"));
 }
 
 TEST(ViewOnlyContext, IsSatisfiedWithShouldWork) {
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("X", MInteger()));
-  ValueSet values;
-  values.Set<MInteger>("X", 10);
-  ViewOnlyContext ctx(variables, values);
+  Context context =
+      Context().WithVariable("X", MInteger()).WithValue<MInteger>("X", 10);
+  ViewOnlyContext ctx(context.Variables(), context.Values());
 
   EXPECT_TRUE(ctx.IsSatisfiedWith(MInteger(Between(10, 20)), 10));
   EXPECT_FALSE(ctx.IsSatisfiedWith(MInteger(Between(10, 20)), 5));
@@ -136,17 +124,16 @@ TEST(ViewOnlyContext, IsSatisfiedWithShouldWork) {
 }
 
 TEST(ViewOnlyContext, GetAllVariablesShouldWork) {
-  VariableSet variables;
-  MORIARTY_ASSERT_OK(variables.AddVariable("X", MInteger()));
-  MORIARTY_ASSERT_OK(variables.AddVariable("Y", MInteger()));
-  ValueSet values;
-  values.Set<MInteger>("X", 10);
-  ViewOnlyContext ctx(variables, values);
+  Context context = Context()
+                        .WithVariable("X", MInteger())
+                        .WithVariable("Y", MInteger())
+                        .WithValue<MInteger>("X", 10);
+  ViewOnlyContext ctx(context.Variables(), context.Values());
 
-  EXPECT_THAT(ctx.GetAllVariables(), SizeIs(2));
-  EXPECT_EQ(ctx.GetAllVariables().count("X"), 1);
-  EXPECT_EQ(ctx.GetAllVariables().count("Y"), 1);
-  EXPECT_EQ(ctx.GetAllVariables().count("Z"), 0);
+  EXPECT_THAT(ctx.ListVariables(), SizeIs(2));
+  EXPECT_EQ(ctx.ListVariables().count("X"), 1);
+  EXPECT_EQ(ctx.ListVariables().count("Y"), 1);
+  EXPECT_EQ(ctx.ListVariables().count("Z"), 0);
 }
 
 }  // namespace

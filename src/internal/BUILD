@@ -176,11 +176,7 @@ cc_library(
         ":abstract_variable",
         "//src:errors",
         "//src/librarian:conversions",
-        "//src/util/status_macro:status_macros",
         "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -189,11 +185,9 @@ cc_test(
     srcs = ["analysis_bootstrap_test.cc"],
     deps = [
         ":analysis_bootstrap",
-        ":value_set",
-        ":variable_set",
         "//src/librarian:test_utils",
         "//src/testing:mtest_type",
-        "//src/util/test_status_macro:status_testutil",
+        "//src/testing:status_test_util",
         "//src/variables:minteger",
         "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
@@ -373,6 +367,7 @@ cc_test(
         ":random_engine",
         ":value_set",
         ":variable_set",
+        "//src/librarian:test_utils",
         "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
