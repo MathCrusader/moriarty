@@ -20,6 +20,7 @@
 #include <format>
 #include <optional>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -28,12 +29,25 @@
 
 namespace moriarty {
 
+namespace {
+
+std::vector<std::string> ExtractDependencies(const Expression& expr) {
+  auto deps = NeededVariables(expr);
+  if (!deps.ok())
+    throw std::invalid_argument("Cannot get dependencies of expression");
+  return {deps->begin(), deps->end()};
+}
+
+}  // namespace
+
 // -----------------------------------------------------------------------------
 //  ExactlyIntegerExpression
 
 // TODO: These hide absl::StatusOr<>. We should consider alternatives.
 ExactlyIntegerExpression::ExactlyIntegerExpression(IntegerExpression value)
-    : value_(*ParseExpression(value)) {}
+    : value_(*ParseExpression(value)) {
+  dependencies_ = ExtractDependencies(value_);
+}
 
 Range ExactlyIntegerExpression::GetRange() const {
   Range r;
@@ -57,6 +71,10 @@ std::string ExactlyIntegerExpression::Explanation(
   return std::format("is not exactly {}", value_.ToString());
 }
 
+std::vector<std::string> ExactlyIntegerExpression::GetDependencies() const {
+  return dependencies_;
+}
+
 // -----------------------------------------------------------------------------
 //  OneOfIntegerExpression
 
@@ -74,6 +92,8 @@ OneOfIntegerExpression::OneOfIntegerExpression(
           std::format("OneOfIntegerExpression: {}", expr.status().ToString()));
     }
     options_.push_back(*std::move(expr));
+    auto deps = ExtractDependencies(options_.back());
+    dependencies_.insert(dependencies_.end(), deps.begin(), deps.end());
   }
 }
 
@@ -116,6 +136,10 @@ std::string OneOfIntegerExpression::Explanation(
   return std::format("is not one of {}", OptionString(options_));
 }
 
+std::vector<std::string> OneOfIntegerExpression::GetDependencies() const {
+  return dependencies_;
+}
+
 // -----------------------------------------------------------------------------
 //  Between
 
@@ -131,15 +155,22 @@ Between::Between(int64_t minimum, int64_t maximum)
 
 Between::Between(int64_t minimum, IntegerExpression maximum)
     : minimum_(*ParseExpression(std::to_string(minimum))),
-      maximum_(*ParseExpression(maximum)) {}
+      maximum_(*ParseExpression(maximum)) {
+  dependencies_ = ExtractDependencies(maximum_);
+}
 
 Between::Between(IntegerExpression minimum, int64_t maximum)
     : minimum_(*ParseExpression(minimum)),
-      maximum_(*ParseExpression(std::to_string(maximum))) {}
+      maximum_(*ParseExpression(std::to_string(maximum))) {
+  dependencies_ = ExtractDependencies(minimum_);
+}
 
 Between::Between(IntegerExpression minimum, IntegerExpression maximum)
-    : minimum_(*ParseExpression(minimum)),
-      maximum_(*ParseExpression(maximum)) {}
+    : minimum_(*ParseExpression(minimum)), maximum_(*ParseExpression(maximum)) {
+  dependencies_ = ExtractDependencies(minimum_);
+  auto max_deps = ExtractDependencies(maximum_);
+  dependencies_.insert(dependencies_.end(), max_deps.begin(), max_deps.end());
+}
 
 // FIXME: This is a silly way of doing this... We shouldn't reconstruct.
 Range Between::GetRange() const {
@@ -169,6 +200,10 @@ std::string Between::Explanation(LookupVariableFn lookup_variable,
                      maximum_.ToString());
 }
 
+std::vector<std::string> Between::GetDependencies() const {
+  return dependencies_;
+}
+
 // -----------------------------------------------------------------------------
 //  AtMost
 
@@ -176,7 +211,9 @@ AtMost::AtMost(int64_t maximum)
     : maximum_(*ParseExpression(std::to_string(maximum))) {}
 
 AtMost::AtMost(IntegerExpression maximum)
-    : maximum_(*ParseExpression(maximum)) {}
+    : maximum_(*ParseExpression(maximum)) {
+  dependencies_ = ExtractDependencies(maximum_);
+}
 
 Range AtMost::GetRange() const {
   Range r;
@@ -202,6 +239,10 @@ std::string AtMost::Explanation(LookupVariableFn lookup_variable,
   return std::format("is not at most {}", maximum_.ToString());
 }
 
+std::vector<std::string> AtMost::GetDependencies() const {
+  return dependencies_;
+}
+
 // -----------------------------------------------------------------------------
 //  AtLeast
 
@@ -209,7 +250,9 @@ AtLeast::AtLeast(int64_t minimum)
     : minimum_(*ParseExpression(std::to_string(minimum))) {}
 
 AtLeast::AtLeast(IntegerExpression minimum)
-    : minimum_(*ParseExpression(minimum)) {}
+    : minimum_(*ParseExpression(minimum)) {
+  dependencies_ = ExtractDependencies(minimum_);
+}
 
 Range AtLeast::GetRange() const {
   Range r;
@@ -233,6 +276,10 @@ bool AtLeast::IsSatisfiedWith(LookupVariableFn lookup_variable,
 std::string AtLeast::Explanation(LookupVariableFn lookup_variable,
                                  int64_t value) const {
   return std::format("is not at least {}", minimum_.ToString());
+}
+
+std::vector<std::string> AtLeast::GetDependencies() const {
+  return dependencies_;
 }
 
 }  // namespace moriarty

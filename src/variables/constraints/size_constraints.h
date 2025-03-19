@@ -86,6 +86,9 @@ class SizeCategory : public MConstraint {
         "IsSatisfiedWith() == true always.");
   }
 
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   CommonSize size_;
 };

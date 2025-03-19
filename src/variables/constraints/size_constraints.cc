@@ -46,4 +46,6 @@ std::string SizeCategory::ToString() const {
   return std::format("has approximate size {}", librarian::ToString(size_));
 }
 
+std::vector<std::string> SizeCategory::GetDependencies() const { return {}; }
+
 }  // namespace moriarty

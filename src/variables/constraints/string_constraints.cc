@@ -83,6 +83,8 @@ std::string Alphabet::Explanation(std::string_view value) const {
       "Alphabet::Explanation called with all valid characters.");
 }
 
+std::vector<std::string> Alphabet::GetDependencies() const { return {}; }
+
 // ====== DistinctCharacters ======
 
 bool DistinctCharacters::IsSatisfiedWith(std::string_view value) const {
@@ -114,6 +116,10 @@ std::string DistinctCharacters::Explanation(std::string_view value) const {
       "DistinctCharacters::Explanation called with all distinct characters.");
 }
 
+std::vector<std::string> DistinctCharacters::GetDependencies() const {
+  return {};
+}
+
 // ====== SimplePattern ======
 // TODO: This hides a StatusOr<>. Should throw instead.
 SimplePattern::SimplePattern(std::string_view pattern)
@@ -138,5 +144,9 @@ std::string SimplePattern::Explanation(std::string_view value) const {
   return std::format("does not follow the simple pattern of {}",
                      librarian::DebugString(pattern_.Pattern()));
 }
+
+// This will need the variables inside the SimplePattern once that is
+// implemented.
+std::vector<std::string> SimplePattern::GetDependencies() const { return {}; }
 
 }  // namespace moriarty

@@ -19,12 +19,14 @@
 #include <format>
 #include <string>
 #include <string_view>
+#include <vector>
 
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
 
+// ====== Length ======
 MInteger Length::GetConstraints() const { return length_; }
 
 Length::Length(std::string_view expression) : length_(Exactly(expression)) {}
@@ -33,8 +35,17 @@ std::string Length::ToString() const {
   return std::format("has length that {}", length_.ToString());
 }
 
+std::vector<std::string> Length::GetDependencies() const {
+  return length_.GetDependencies();
+}
+
+// ====== DistinctElements ======
 std::string DistinctElements::ToString() const {
   return "has distinct elements";
+}
+
+std::vector<std::string> DistinctElements::GetDependencies() const {
+  return {};
 }
 
 }  // namespace moriarty

@@ -26,14 +26,12 @@
 #include <memory>
 #include <optional>
 #include <ostream>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
 
-#include "absl/algorithm/container.h"
 #include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "src/contexts/internal/mutable_values_context.h"
@@ -202,7 +200,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // ---------------------------------------------------------------------------
 
   // To be removed
-  virtual std::vector<std::string> GetDependenciesImpl() const;
   virtual absl::Status IsSatisfiedWithImpl(AnalysisContext ctx,
                                            const ValueType& value) const {
     return absl::UnimplementedError("IsSatisfiedWith");
@@ -222,10 +219,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
  private:
   ConstraintHandler<VariableType, ValueType> constraints_;
-
-  // `custom_constraints_deps_` is a list of the needed variables for all
-  // the custom constraints defined for this variable.
-  std::vector<std::string> custom_constraints_deps_;
+  std::vector<std::string> dependencies_;
 
   // Helper function that casts *this to `VariableType`.
   [[nodiscard]] VariableType& UnderlyingVariableType();
@@ -253,6 +247,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
     bool IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const;
     std::string Explanation(AnalysisContext ctx, const ValueType& value) const;
     std::string ToString() const;
+    std::vector<std::string> GetDependencies() const;
     void ApplyTo(VariableType& other) const;
 
    private:
@@ -272,11 +267,10 @@ class MVariable : public moriarty_internal::AbstractVariable {
 template <typename V, typename G>
 MVariable<V, G>::MVariable() {
   // Simple checks to ensure that the template arguments are correct.
-  static_assert(std::default_initializable<VariableType>);
-  static_assert(std::copyable<VariableType>);
-  static_assert(std::derived_from<
-                VariableType,
-                MVariable<VariableType, typename VariableType::value_type>>);
+  static_assert(std::default_initializable<V>);
+  static_assert(std::copyable<V>);
+  static_assert(std::derived_from<V, MVariable<V, typename V::value_type>>);
+  static_assert(std::same_as<typename V::value_type, G>);
 }
 
 // -----------------------------------------------------------------------------
@@ -314,12 +308,6 @@ V& MVariable<V, G>::AddCustomConstraint(
 
 template <typename V, typename G>
 V& MVariable<V, G>::AddCustomConstraint(CustomConstraint<G> constraint) {
-  std::vector<std::string> deps = constraint.GetDependencies();
-  custom_constraints_deps_.insert(custom_constraints_deps_.end(),
-                                  std::make_move_iterator(deps.begin()),
-                                  std::make_move_iterator(deps.end()));
-  // Sort the dependencies so the order of the generation is consistent.
-  absl::c_sort(custom_constraints_deps_);
   return InternalAddConstraint(CustomConstraintWrapper(std::move(constraint)));
 }
 
@@ -393,8 +381,7 @@ template <typename V, typename G>
 std::optional<G> MVariable<V, G>::GetUniqueValue(AnalysisContext ctx) const {
   try {
     // FIXME: Placeholder until Context refactor is done.
-    std::optional<ValueType> known =
-        ctx.GetValueIfKnown<VariableType>(ctx.GetVariableName());
+    std::optional<G> known = ctx.GetValueIfKnown<V>(ctx.GetVariableName());
     if (known) return *known;
 
     return GetUniqueValueImpl(ctx);
@@ -408,7 +395,7 @@ std::optional<G> MVariable<V, G>::GetUniqueValue(AnalysisContext ctx) const {
 }
 
 template <typename V, typename G>
-void MVariable<V, G>::Print(PrinterContext ctx, const ValueType& value) const {
+void MVariable<V, G>::Print(PrinterContext ctx, const G& value) const {
   PrintImpl(ctx, value);
 }
 
@@ -431,19 +418,18 @@ std::vector<V> MVariable<V, G>::ListEdgeCases(AnalysisContext ctx) const {
 
 template <typename V, typename G>
 std::vector<std::string> MVariable<V, G>::GetDependencies() const {
-  std::vector<std::string> this_deps = GetDependenciesImpl();
-  absl::c_copy(custom_constraints_deps_, std::back_inserter(this_deps));
-  return this_deps;
+  return dependencies_;
 }
 
 template <typename V, typename G>
 void MVariable<V, G>::MergeFromAnonymous(
-    const moriarty_internal::AbstractVariable& other) override {
-  const VariableType& typed_other = ConvertTo<VariableType>(other);
+    const moriarty_internal::AbstractVariable& other) {
+  const V& typed_other = ConvertTo<V>(other);
   MergeFrom(typed_other);
 }
 
 template <typename VariableType>
+  requires std::derived_from<VariableType, moriarty_internal::AbstractVariable>
 std::ostream& operator<<(std::ostream& os, const VariableType& var) {
   return os << var.ToString();
 }
@@ -464,11 +450,6 @@ void MVariable<V, G>::PrintImpl(PrinterContext ctx, const G& value) const {
 }
 
 template <typename V, typename G>
-std::vector<std::string> MVariable<V, G>::GetDependenciesImpl() const {
-  return std::vector<std::string>();  // By default, return an empty list.
-}
-
-template <typename V, typename G>
 std::vector<V> MVariable<V, G>::ListEdgeCasesImpl(AnalysisContext ctx) const {
   return std::vector<V>();  // By default, return an empty list.
 }
@@ -482,6 +463,14 @@ std::optional<G> MVariable<V, G>::GetUniqueValueImpl(
 template <typename V, typename G>
 template <typename Constraint>
 V& MVariable<V, G>::InternalAddConstraint(Constraint c) {
+  std::vector<std::string> deps = c.GetDependencies();
+  dependencies_.insert(dependencies_.end(),
+                       std::make_move_iterator(deps.begin()),
+                       std::make_move_iterator(deps.end()));
+  std::ranges::sort(dependencies_);
+  auto end = std::unique(dependencies_.begin(), dependencies_.end());
+  dependencies_.erase(end, dependencies_.end());
+
   constraints_.AddConstraint(std::move(c));
   return UnderlyingVariableType();
 }
@@ -510,8 +499,9 @@ template <typename V, typename G>
 G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
   G potential_value = GenerateImpl(ctx);
 
-  // Generate dependent variables used in custom constraints.
-  for (std::string_view dep : custom_constraints_deps_) ctx.AssignVariable(dep);
+  // Some dependent variables may not have been generate, but are required to
+  // validate. Generate them now.
+  for (std::string_view dep : dependencies_) ctx.AssignVariable(dep);
 
   absl::Status satisfies = IsSatisfiedWith(ctx, potential_value);
   if (!satisfies.ok())
@@ -573,19 +563,25 @@ MVariable<V, G>::CustomConstraintWrapper::CustomConstraintWrapper(
 
 template <typename V, typename G>
 bool MVariable<V, G>::CustomConstraintWrapper::IsSatisfiedWith(
-    AnalysisContext ctx, const ValueType& value) const {
+    AnalysisContext ctx, const G& value) const {
   return constraint_.IsSatisfiedWith(ctx, value);
 }
 
 template <typename V, typename G>
 std::string MVariable<V, G>::CustomConstraintWrapper::Explanation(
-    AnalysisContext ctx, const ValueType& value) const {
+    AnalysisContext ctx, const G& value) const {
   return constraint_.Explanation(value);
 }
 
 template <typename V, typename G>
 std::string MVariable<V, G>::CustomConstraintWrapper::ToString() const {
   return constraint_.ToString();
+}
+
+template <typename V, typename G>
+std::vector<std::string>
+MVariable<V, G>::CustomConstraintWrapper::GetDependencies() const {
+  return constraint_.GetDependencies();
 }
 
 template <typename V, typename G>

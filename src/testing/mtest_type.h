@@ -127,8 +127,6 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   TestType GenerateImpl(
       moriarty::librarian::ResolverContext ctx) const override;
 
-  std::vector<std::string> GetDependenciesImpl() const override;
-
   std::optional<TestType> GetUniqueValueImpl(
       moriarty::librarian::AnalysisContext ctx) const override {
     if (one_of_.HasBeenConstrained()) return one_of_.GetUniqueValue();

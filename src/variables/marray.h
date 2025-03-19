@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <concepts>
 #include <cstdint>
-#include <iterator>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -30,7 +29,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/algorithm/container.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_cat.h"
 #include "src/contexts/librarian/analysis_context.h"
@@ -149,7 +147,6 @@ class MArray : public librarian::MVariable<
   vector_value_type ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const vector_value_type& value) const override;
-  std::vector<std::string> GetDependenciesImpl() const override;
   std::vector<MArray<MElementType>> ListEdgeCasesImpl(
       librarian::AnalysisContext ctx) const override;
   // ---------------------------------------------------------------------------
@@ -341,14 +338,6 @@ int MArray<MElementType>::GetNumberOfRetriesForDistinctElements(int n) {
   for (int i = n; i >= 1; i--) H_n += 1.0 / i;
 
   return n * H_n + 14 * n;
-}
-
-template <typename MElementType>
-std::vector<std::string> MArray<MElementType>::GetDependenciesImpl() const {
-  std::vector<std::string> deps = element_constraints_.GetDependencies();
-  if (length_)
-    absl::c_move(length_->GetDependencies(), std::back_inserter(deps));
-  return deps;
 }
 
 template <typename MoriartyElementType>

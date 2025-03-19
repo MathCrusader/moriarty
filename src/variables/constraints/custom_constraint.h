@@ -50,9 +50,6 @@ class CustomConstraint : MConstraint {
   // Returns the name of the constraint.
   [[nodiscard]] std::string GetName() const;
 
-  // Returns the names of the variables this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
-
   // Determines if `value` satisfies the constraint.
   [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
                                      const T& value) const;
@@ -62,6 +59,9 @@ class CustomConstraint : MConstraint {
 
   // Returns a string explaining why `value` does not satisfy the constraint.
   [[nodiscard]] std::string Explanation(const T& value) const;
+
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
 
  private:
   std::string name_;

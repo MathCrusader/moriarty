@@ -174,10 +174,6 @@ std::string MString::GenerateImplWithDistinctCharacters(
   return std::string(ret.begin(), ret.end());
 }
 
-std::vector<std::string> MString::GetDependenciesImpl() const {
-  return length_ ? length_->GetDependencies() : std::vector<std::string>();
-}
-
 std::string MString::ReadImpl(librarian::ReaderContext ctx) const {
   return ctx.ReadToken();
 }

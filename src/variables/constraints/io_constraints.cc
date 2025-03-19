@@ -43,4 +43,6 @@ std::string IOSeparator::ToString() const {
   throw std::runtime_error("Invalid/Unknown IOSeparator");
 }
 
+std::vector<std::string> IOSeparator::GetDependencies() const { return {}; }
+
 }  // namespace moriarty

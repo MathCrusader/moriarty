@@ -145,6 +145,7 @@ TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentValuesSucceeds) {
       variables.AddVariable("A", MInteger(Between("N", "3 * N"))));
   MORIARTY_ASSERT_OK(variables.AddVariable("C", MInteger(Exactly("N"))));
   MORIARTY_ASSERT_OK(variables.AddVariable("B", MInteger(Exactly("2 * C"))));
+  MORIARTY_ASSERT_OK(variables.AddVariable("N", MInteger()));
   ValueSet known_values;
   known_values.Set<MInteger>("N", 53);
 

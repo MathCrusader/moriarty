@@ -91,6 +91,9 @@ class Exactly : public MConstraint {
   // It is assumed that IsSatisfiedWith() returned false.
   [[nodiscard]] std::string Explanation(const T& value) const;
 
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   T value_;
 };
@@ -150,6 +153,9 @@ class OneOf : public MConstraint {
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
   [[nodiscard]] std::string Explanation(const T& value) const;
+
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
 
  private:
   std::vector<T> options_;
@@ -270,6 +276,12 @@ std::string Exactly<T>::Explanation(const T& value) const {
 }
 
 template <typename T>
+std::vector<std::string> Exactly<T>::GetDependencies() const {
+  return {};
+}
+
+// ====== OneOf ======
+template <typename T>
 OneOf<T>::OneOf(std::vector<T> options) : options_(std::move(options)) {}
 
 template <typename T>
@@ -384,6 +396,11 @@ std::string OneOf<T>::Explanation(const T& value) const {
 
   return std::format("{} is not one of {}", librarian::DebugString(value),
                      options);
+}
+
+template <typename T>
+std::vector<std::string> OneOf<T>::GetDependencies() const {
+  return {};
 }
 
 }  // namespace moriarty

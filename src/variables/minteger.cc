@@ -334,11 +334,4 @@ std::vector<MInteger> MInteger::ListEdgeCasesImpl(
   return instances;
 }
 
-std::vector<std::string> MInteger::GetDependenciesImpl() const {
-  absl::StatusOr<absl::flat_hash_set<std::string>> needed =
-      bounds_->NeededVariables();
-  if (!needed.ok()) return {};
-  return std::vector<std::string>(needed->begin(), needed->end());
-}
-
 }  // namespace moriarty

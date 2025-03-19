@@ -41,6 +41,7 @@ class IntegerRangeMConstraint : public MConstraint {
                                int64_t value) const = 0;
   virtual std::string Explanation(LookupVariableFn lookup_variable,
                                   int64_t value) const = 0;
+  virtual std::vector<std::string> GetDependencies() const = 0;
 };
 
 // Constraint stating that the variable must be exactly the value of this
@@ -65,8 +66,12 @@ class ExactlyIntegerExpression : public IntegerRangeMConstraint {
   [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
                                         int64_t value) const;
 
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   Expression value_;
+  std::vector<std::string> dependencies_;
 };
 
 // Constraint stating that the variable must be exactly the value of this
@@ -75,17 +80,7 @@ class OneOfIntegerExpression : public IntegerRangeMConstraint {
  public:
   // The numeric value must be exactly these values.
   template <typename Container>
-  explicit OneOfIntegerExpression(const Container& options) {
-    for (const std::string& option : options) {
-      auto expr = ParseExpression(option);
-      if (!expr.ok()) {
-        throw std::invalid_argument(
-            std::format("Invalid expression: {}", option));
-      }
-      options_.push_back(*std::move(expr));
-    }
-  }
-
+  explicit OneOfIntegerExpression(const Container& options);
   explicit OneOfIntegerExpression(std::span<const IntegerExpression> options);
   explicit OneOfIntegerExpression(
       std::initializer_list<IntegerExpression> options);
@@ -105,8 +100,12 @@ class OneOfIntegerExpression : public IntegerRangeMConstraint {
   [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
                                         int64_t value) const;
 
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   std::vector<Expression> options_;
+  std::vector<std::string> dependencies_;
 };
 
 // Constraint stating that the numeric value must be in the inclusive range
@@ -140,9 +139,13 @@ class Between : public IntegerRangeMConstraint {
   [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
                                         int64_t value) const;
 
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   Expression minimum_;
   Expression maximum_;
+  std::vector<std::string> dependencies_;
 };
 
 // Constraint stating that the numeric value must be this value or smaller.
@@ -172,8 +175,12 @@ class AtMost : public IntegerRangeMConstraint {
   [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
                                         int64_t value) const;
 
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   Expression maximum_;
+  std::vector<std::string> dependencies_;
 };
 
 // Constraint stating that the numeric value must be this value or larger.
@@ -203,9 +210,28 @@ class AtLeast : public IntegerRangeMConstraint {
   [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
                                         int64_t value) const;
 
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   Expression minimum_;
+  std::vector<std::string> dependencies_;
 };
+
+// -----------------------------------------------------------------------------
+//  Template implementation below
+
+template <typename Container>
+OneOfIntegerExpression::OneOfIntegerExpression(const Container& options) {
+  for (const std::string& option : options) {
+    auto expr = ParseExpression(option);
+    if (!expr.ok()) {
+      throw std::invalid_argument(
+          std::format("Invalid expression: {}", option));
+    }
+    options_.push_back(*std::move(expr));
+  }
+}
 
 }  // namespace moriarty
 

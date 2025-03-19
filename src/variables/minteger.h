@@ -109,7 +109,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   absl::StatusOr<Range::ExtremeValues> GetExtremeValues(
       librarian::ResolverContext ctx) const;
 
-  struct RangeConstraint {
+  class RangeConstraint {
    public:
     explicit RangeConstraint(
         std::unique_ptr<IntegerRangeMConstraint> constraint,
@@ -125,6 +125,9 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
       return constraint_->Explanation(Wrap(ctx), value);
     }
     std::string ToString() const { return constraint_->ToString(); }
+    std::vector<std::string> GetDependencies() const {
+      return constraint_->GetDependencies();
+    }
     void ApplyTo(MInteger& other) const { apply_to_fn_(other); }
 
    private:
@@ -147,7 +150,6 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   int64_t ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const int64_t& value) const override;
-  std::vector<std::string> GetDependenciesImpl() const override;
   std::vector<MInteger> ListEdgeCasesImpl(
       librarian::AnalysisContext ctx) const override;
   std::optional<int64_t> GetUniqueValueImpl(

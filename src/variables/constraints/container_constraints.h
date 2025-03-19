@@ -24,6 +24,7 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/librarian/debug_print.h"
@@ -69,6 +70,9 @@ class Length : public MConstraint {
   [[nodiscard]] std::string Explanation(librarian::AnalysisContext ctx,
                                         const Container& value) const;
 
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   MInteger length_;
 };
@@ -100,6 +104,9 @@ class Elements : public MConstraint {
   [[nodiscard]] std::string Explanation(
       librarian::AnalysisContext ctx,
       const std::vector<typename MElementType::value_type>& value) const;
+
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
 
  private:
   MElementType element_constraints_;
@@ -134,6 +141,9 @@ class Element : public MConstraint {
       librarian::AnalysisContext ctx,
       const MElementType::value_type& value) const;
 
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   MElementType element_constraints_;
 };
@@ -157,6 +167,9 @@ class DistinctElements : public MConstraint {
   template <typename T>
   [[nodiscard]] std::string Explanation(librarian::AnalysisContext ctx,
                                         const std::vector<T>& value) const;
+
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
 };
 
 // -----------------------------------------------------------------------------
@@ -231,6 +244,11 @@ std::string Elements<MElementType>::Explanation(
       "Elements<>()::Explanation called when all elements ok.");
 }
 
+template <typename MElementType>
+std::vector<std::string> Elements<MElementType>::GetDependencies() const {
+  return element_constraints_.GetDependencies();
+}
+
 // ====== Element<I> ======
 template <size_t I, typename MElementType>
 template <typename... Constraints>
@@ -263,6 +281,11 @@ std::string Element<I, MElementType>::Explanation(
   return std::format("tuple index {} (which is {}) {}", I,
                      librarian::DebugString(value),
                      element_constraints_.Explanation(ctx, value));
+}
+
+template <size_t I, typename MElementType>
+std::vector<std::string> Element<I, MElementType>::GetDependencies() const {
+  return element_constraints_.GetDependencies();
 }
 
 // ====== DistinctElements ======

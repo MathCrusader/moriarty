@@ -123,10 +123,6 @@ absl::Status MTestType::IsSatisfiedWithImpl(
   return absl::OkStatus();
 }
 
-std::vector<std::string> MTestType::GetDependenciesImpl() const {
-  return multiplier_.GetDependencies();
-}
-
 // Always returns pi. Does not directly depend on `rng`, but we generate a
 // random number between 1 and 1 (aka, 1) to ensure the RandomEngine is
 // available for use if we wanted to.

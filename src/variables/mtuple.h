@@ -21,13 +21,11 @@
 #include <concepts>
 #include <cstddef>
 #include <format>
-#include <iterator>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
 
-#include "absl/algorithm/container.h"
 #include "absl/strings/str_join.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -108,7 +106,6 @@ class MTuple : public librarian::MVariable<
   tuple_value_type ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const tuple_value_type& value) const override;
-  std::vector<std::string> GetDependenciesImpl() const override;
   // ---------------------------------------------------------------------------
 
   template <size_t I, typename MElementType>
@@ -126,6 +123,9 @@ class MTuple : public librarian::MVariable<
       return constraint_.Explanation(ctx, std::get<I>(value));
     }
     std::string ToString() const { return constraint_.ToString(); }
+    std::vector<std::string> GetDependencies() const {
+      return constraint_.GetDependencies();
+    }
     void ApplyTo(MTuple& other) const { other.AddConstraint(constraint_); }
 
    private:
@@ -244,19 +244,6 @@ MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
   return [&]<size_t... I>(std::index_sequence<I...>) {
     return tuple_value_type { generate_one.template operator()<I>()... };
   }(std::index_sequence_for<T...>{});
-}
-
-template <typename... T>
-std::vector<std::string> MTuple<T...>::GetDependenciesImpl() const {
-  std::vector<std::string> dependencies;
-  std::apply(
-      [&](const auto&... elems) {
-        ((absl::c_move(elems.GetDependencies(),
-                       std::back_inserter(dependencies))),
-         ...);
-      },
-      elements_);
-  return dependencies;
 }
 
 template <typename... T>

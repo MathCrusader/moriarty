@@ -107,7 +107,6 @@ class MString : public librarian::MVariable<MString, std::string> {
   std::string ReadImpl(librarian::ReaderContext ctx) const override;
   void PrintImpl(librarian::PrinterContext ctx,
                  const std::string& value) const override;
-  std::vector<std::string> GetDependenciesImpl() const override;
   std::vector<MString> ListEdgeCasesImpl(
       librarian::AnalysisContext ctx) const override;
   // ---------------------------------------------------------------------------

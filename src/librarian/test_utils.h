@@ -135,6 +135,7 @@ class Context {
         T, moriarty::librarian::MVariable<T, typename T::value_type>>
   Context& WithValue(std::string_view variable_name, T::value_type value) {
     values_.Set<T>(variable_name, value);
+    variables_.AddOrMergeVariable(variable_name, T());
     return *this;
   }
 

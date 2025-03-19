@@ -51,6 +51,9 @@ class IOSeparator : public MConstraint {
     throw std::runtime_error("IOSeparator is always satisfied");
   }
 
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   Whitespace separator_;
 };

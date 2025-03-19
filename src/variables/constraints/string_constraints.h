@@ -62,6 +62,9 @@ class Alphabet : public MConstraint {
   // It is assumed that IsSatisfiedWith() returned false.
   [[nodiscard]] std::string Explanation(std::string_view value) const;
 
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   std::string alphabet_;
 };
@@ -81,6 +84,9 @@ class DistinctCharacters : public MConstraint {
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
   [[nodiscard]] std::string Explanation(std::string_view value) const;
+
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
 };
 
 // Constraint stating that the string must match this simple pattern.
@@ -112,6 +118,9 @@ class SimplePattern : public MConstraint {
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
   [[nodiscard]] std::string Explanation(std::string_view value) const;
+
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
 
  private:
   moriarty_internal::SimplePattern pattern_;
