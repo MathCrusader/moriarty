@@ -40,7 +40,7 @@ struct Even {
   bool IsSatisfiedWith(AnalysisContext ctx, int value) const {
     return value % 2 == 0;
   }
-  std::string Explanation(AnalysisContext ctx, int value) const {
+  std::string UnsatisfiedReason(AnalysisContext ctx, int value) const {
     return std::format("`{}` is not even", value);
   }
   std::string ToString() const { return "is even"; }
@@ -51,7 +51,7 @@ struct Positive {
   bool IsSatisfiedWith(AnalysisContext ctx, int value) const {
     return value > 0;
   }
-  std::string Explanation(AnalysisContext ctx, int value) const {
+  std::string UnsatisfiedReason(AnalysisContext ctx, int value) const {
     return std::format("`{}` is not positive", value);
   }
   std::string ToString() const { return "is positive"; }
@@ -94,7 +94,8 @@ TEST(ConstraintHandlerTest, ToStringShouldWork) {
   }
 }
 
-TEST(ConstraintHandlerTest, ExplanationShouldBeEmptyForSatisfiedConstraints) {
+TEST(ConstraintHandlerTest,
+     UnsatisfiedReasonShouldBeEmptyForSatisfiedConstraints) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   AnalysisContext ctx("X", variables, values);
@@ -102,16 +103,16 @@ TEST(ConstraintHandlerTest, ExplanationShouldBeEmptyForSatisfiedConstraints) {
   {
     ConstraintHandler<MInteger, int> handler;
     EXPECT_TRUE(handler.IsSatisfiedWith(ctx, 5));
-    EXPECT_THAT(handler.Explanation(ctx, 5), IsEmpty());
+    EXPECT_THAT(handler.UnsatisfiedReason(ctx, 5), IsEmpty());
   }
   {
     ConstraintHandler<MString, std::string> handler;
     EXPECT_TRUE(handler.IsSatisfiedWith(ctx, "hello"));
-    EXPECT_THAT(handler.Explanation(ctx, "hello"), IsEmpty());
+    EXPECT_THAT(handler.UnsatisfiedReason(ctx, "hello"), IsEmpty());
   }
 }
 
-TEST(ConstraintHandlerTest, ExplanationShouldContainRelevantMessages) {
+TEST(ConstraintHandlerTest, UnsatisfiedReasonShouldContainRelevantMessages) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   AnalysisContext ctx("X", variables, values);
@@ -120,13 +121,13 @@ TEST(ConstraintHandlerTest, ExplanationShouldContainRelevantMessages) {
   handler.AddConstraint(Even());
   handler.AddConstraint(Positive());
 
-  EXPECT_THAT(handler.Explanation(ctx, -5),
+  EXPECT_THAT(handler.UnsatisfiedReason(ctx, -5),
               AllOf(HasSubstr("even"), HasSubstr("positive")));
-  EXPECT_THAT(handler.Explanation(ctx, 5),
+  EXPECT_THAT(handler.UnsatisfiedReason(ctx, 5),
               AllOf(HasSubstr("even"), Not(HasSubstr("positive"))));
-  EXPECT_THAT(handler.Explanation(ctx, 0),
+  EXPECT_THAT(handler.UnsatisfiedReason(ctx, 0),
               AllOf(Not(HasSubstr("even")), HasSubstr("positive")));
-  EXPECT_THAT(handler.Explanation(ctx, 10),
+  EXPECT_THAT(handler.UnsatisfiedReason(ctx, 10),
               AllOf(Not(HasSubstr("even")), Not(HasSubstr("positive"))));
 }
 

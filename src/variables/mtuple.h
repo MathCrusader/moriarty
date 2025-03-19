@@ -111,22 +111,14 @@ class MTuple : public librarian::MVariable<
   template <size_t I, typename MElementType>
   struct ElementConstraintWrapper {
    public:
-    explicit ElementConstraintWrapper(Element<I, MElementType> constraint)
-        : constraint_(std::move(constraint)) {};
-
+    explicit ElementConstraintWrapper(Element<I, MElementType> constraint);
     bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                         const tuple_value_type& value) const {
-      return constraint_.IsSatisfiedWith(ctx, std::get<I>(value));
-    }
-    std::string Explanation(librarian::AnalysisContext ctx,
-                            const tuple_value_type& value) const {
-      return constraint_.Explanation(ctx, std::get<I>(value));
-    }
-    std::string ToString() const { return constraint_.ToString(); }
-    std::vector<std::string> GetDependencies() const {
-      return constraint_.GetDependencies();
-    }
-    void ApplyTo(MTuple& other) const { other.AddConstraint(constraint_); }
+                         const tuple_value_type& value) const;
+    std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
+                                  const tuple_value_type& value) const;
+    std::string ToString() const;
+    std::vector<std::string> GetDependencies() const;
+    void ApplyTo(MTuple& other) const;
 
    private:
     Element<I, MElementType> constraint_;
@@ -270,6 +262,48 @@ MTuple<T...>::tuple_value_type MTuple<T...>::ReadImpl(
   return [&]<size_t... I>(std::index_sequence<I...>) {
     return tuple_value_type { read_one.template operator()<I>()... };
   }(std::index_sequence_for<T...>{});
+}
+
+template <typename... T>
+template <size_t I, typename MElementType>
+MTuple<T...>::ElementConstraintWrapper<I, MElementType>::
+    ElementConstraintWrapper(Element<I, MElementType> constraint)
+    : constraint_(std::move(constraint)){};
+
+template <typename... T>
+template <size_t I, typename MElementType>
+bool MTuple<T...>::ElementConstraintWrapper<I, MElementType>::IsSatisfiedWith(
+    librarian::AnalysisContext ctx, const tuple_value_type& value) const {
+  return constraint_.IsSatisfiedWith(ctx, std::get<I>(value));
+}
+
+template <typename... T>
+template <size_t I, typename MElementType>
+std::string
+MTuple<T...>::ElementConstraintWrapper<I, MElementType>::UnsatisfiedReason(
+    librarian::AnalysisContext ctx, const tuple_value_type& value) const {
+  return constraint_.UnsatisfiedReason(ctx, std::get<I>(value));
+}
+
+template <typename... T>
+template <size_t I, typename MElementType>
+std::string MTuple<T...>::ElementConstraintWrapper<I, MElementType>::ToString()
+    const {
+  return constraint_.ToString();
+}
+
+template <typename... T>
+template <size_t I, typename MElementType>
+std::vector<std::string> MTuple<T...>::ElementConstraintWrapper<
+    I, MElementType>::GetDependencies() const {
+  return constraint_.GetDependencies();
+}
+
+template <typename... T>
+template <size_t I, typename MElementType>
+void MTuple<T...>::ElementConstraintWrapper<I, MElementType>::ApplyTo(
+    MTuple& other) const {
+  other.AddConstraint(constraint_);
 }
 
 }  // namespace moriarty

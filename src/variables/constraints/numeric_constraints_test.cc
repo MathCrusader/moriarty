@@ -236,37 +236,39 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
   }
 }
 
-TEST(NumericConstraintsTest, ExplanationShouldWork) {
+TEST(NumericConstraintsTest, UnsatisfiedReasonShouldWork) {
   auto tmp = [](std::string_view s) -> int64_t {
     throw std::runtime_error("Should not be called");
   };
 
   {
-    EXPECT_EQ(ExactlyIntegerExpression("x + 1").Explanation(tmp, 10),
+    EXPECT_EQ(ExactlyIntegerExpression("x + 1").UnsatisfiedReason(tmp, 10),
               "is not exactly x + 1");
   }
   {
-    EXPECT_EQ(OneOfIntegerExpression({"x", "14"}).Explanation(tmp, 10),
+    EXPECT_EQ(OneOfIntegerExpression({"x", "14"}).UnsatisfiedReason(tmp, 10),
               "is not one of {x, 14}");
-    EXPECT_EQ(OneOfIntegerExpression({"x", "14"}).Explanation(tmp, 15),
+    EXPECT_EQ(OneOfIntegerExpression({"x", "14"}).UnsatisfiedReason(tmp, 15),
               "is not one of {x, 14}");
   }
   {
-    EXPECT_EQ(Between("x", 12).Explanation(tmp, 9), "is not between x and 12");
-    EXPECT_EQ(Between(4, "y^2").Explanation(tmp, 401),
+    EXPECT_EQ(Between("x", 12).UnsatisfiedReason(tmp, 9),
+              "is not between x and 12");
+    EXPECT_EQ(Between(4, "y^2").UnsatisfiedReason(tmp, 401),
               "is not between 4 and y^2");
-    EXPECT_EQ(Between("x", "y^2").Explanation(tmp, 401),
+    EXPECT_EQ(Between("x", "y^2").UnsatisfiedReason(tmp, 401),
               "is not between x and y^2");
-    EXPECT_EQ(Between(18, 20).Explanation(tmp, 401),
+    EXPECT_EQ(Between(18, 20).UnsatisfiedReason(tmp, 401),
               "is not between 18 and 20");
   }
   {
-    EXPECT_EQ(AtLeast("x").Explanation(tmp, 10), "is not at least x");
-    EXPECT_EQ(AtLeast(100).Explanation(tmp, 11), "is not at least 100");
+    EXPECT_EQ(AtLeast("x").UnsatisfiedReason(tmp, 10), "is not at least x");
+    EXPECT_EQ(AtLeast(100).UnsatisfiedReason(tmp, 11), "is not at least 100");
   }
   {
-    EXPECT_EQ(AtMost("x + 1").Explanation(tmp, 11), "is not at most x + 1");
-    EXPECT_EQ(AtMost(5).Explanation(tmp, 10), "is not at most 5");
+    EXPECT_EQ(AtMost("x + 1").UnsatisfiedReason(tmp, 11),
+              "is not at most x + 1");
+    EXPECT_EQ(AtMost(5).UnsatisfiedReason(tmp, 10), "is not at most 5");
   }
 }
 

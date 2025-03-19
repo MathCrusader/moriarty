@@ -89,7 +89,7 @@ class Exactly : public MConstraint {
 
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string Explanation(const T& value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(const T& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -152,7 +152,7 @@ class OneOf : public MConstraint {
 
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string Explanation(const T& value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(const T& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -270,7 +270,7 @@ bool Exactly<T>::IsSatisfiedWith(const T& value) const {
 }
 
 template <typename T>
-std::string Exactly<T>::Explanation(const T& value) const {
+std::string Exactly<T>::UnsatisfiedReason(const T& value) const {
   return std::format("{} is not exactly {}", librarian::DebugString(value),
                      librarian::DebugString(value_));
 }
@@ -386,7 +386,7 @@ bool OneOf<T>::IsSatisfiedWith(const T& value) const {
 }
 
 template <typename T>
-std::string OneOf<T>::Explanation(const T& value) const {
+std::string OneOf<T>::UnsatisfiedReason(const T& value) const {
   std::string options = "{";
   for (const auto& option : options_) {
     if (options.size() > 1) options += ", ";

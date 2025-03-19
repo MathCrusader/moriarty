@@ -66,7 +66,7 @@ bool ExactlyIntegerExpression::IsSatisfiedWith(LookupVariableFn lookup_variable,
   return expected == value;
 }
 
-std::string ExactlyIntegerExpression::Explanation(
+std::string ExactlyIntegerExpression::UnsatisfiedReason(
     LookupVariableFn lookup_variable, int64_t value) const {
   return std::format("is not exactly {}", value_.ToString());
 }
@@ -131,7 +131,7 @@ bool OneOfIntegerExpression::IsSatisfiedWith(LookupVariableFn lookup_variable,
   return false;
 }
 
-std::string OneOfIntegerExpression::Explanation(
+std::string OneOfIntegerExpression::UnsatisfiedReason(
     LookupVariableFn lookup_variable, int64_t value) const {
   return std::format("is not one of {}", OptionString(options_));
 }
@@ -194,8 +194,8 @@ bool Between::IsSatisfiedWith(LookupVariableFn lookup_variable,
   return (*extremes)->min <= value && value <= (*extremes)->max;
 }
 
-std::string Between::Explanation(LookupVariableFn lookup_variable,
-                                 int64_t value) const {
+std::string Between::UnsatisfiedReason(LookupVariableFn lookup_variable,
+                                       int64_t value) const {
   return std::format("is not between {} and {}", minimum_.ToString(),
                      maximum_.ToString());
 }
@@ -234,8 +234,8 @@ bool AtMost::IsSatisfiedWith(LookupVariableFn lookup_variable,
   return value >= (*extremes)->min && value <= (*extremes)->max;
 }
 
-std::string AtMost::Explanation(LookupVariableFn lookup_variable,
-                                int64_t value) const {
+std::string AtMost::UnsatisfiedReason(LookupVariableFn lookup_variable,
+                                      int64_t value) const {
   return std::format("is not at most {}", maximum_.ToString());
 }
 
@@ -273,8 +273,8 @@ bool AtLeast::IsSatisfiedWith(LookupVariableFn lookup_variable,
   return value >= (*extremes)->min && value <= (*extremes)->max;
 }
 
-std::string AtLeast::Explanation(LookupVariableFn lookup_variable,
-                                 int64_t value) const {
+std::string AtLeast::UnsatisfiedReason(LookupVariableFn lookup_variable,
+                                       int64_t value) const {
   return std::format("is not at least {}", minimum_.ToString());
 }
 

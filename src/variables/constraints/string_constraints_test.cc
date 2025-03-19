@@ -127,12 +127,12 @@ TEST(AlphabetTest, ToStringShouldWork) {
   EXPECT_EQ(Alphabet("AAA").ToString(), "contains only `AAA`");
 }
 
-TEST(AlphabetTest, ExplanationShouldWork) {
-  EXPECT_EQ(Alphabet("abc").Explanation("A"),
+TEST(AlphabetTest, UnsatisfiedReasonShouldWork) {
+  EXPECT_EQ(Alphabet("abc").UnsatisfiedReason("A"),
             "character at index 0 (which is `A`) is not a valid character "
             "(valid characters are `abc`)");
   // TODO: Consider a nicer message for the common cases.
-  EXPECT_EQ(Alphabet::LowerCase().Explanation("abcXdef"),
+  EXPECT_EQ(Alphabet::LowerCase().UnsatisfiedReason("abcXdef"),
             "character at index 3 (which is `X`) is not a valid character "
             "(valid characters are `abcdefghijklmnopqrstuvwxyz`)");
 }
@@ -152,12 +152,12 @@ TEST(DistinctCharactersTest, ToStringShouldWork) {
   EXPECT_EQ(DistinctCharacters().ToString(), "has distinct characters");
 }
 
-TEST(DistinctCharactersTest, ExplanationShouldWork) {
-  EXPECT_EQ(DistinctCharacters().Explanation("aa"),
+TEST(DistinctCharactersTest, UnsatisfiedReasonShouldWork) {
+  EXPECT_EQ(DistinctCharacters().UnsatisfiedReason("aa"),
             "character at index 1 (which is `a`) appears multiple times");
-  EXPECT_EQ(DistinctCharacters().Explanation("abb"),
+  EXPECT_EQ(DistinctCharacters().UnsatisfiedReason("abb"),
             "character at index 2 (which is `b`) appears multiple times");
-  EXPECT_EQ(DistinctCharacters().Explanation("abca"),
+  EXPECT_EQ(DistinctCharacters().UnsatisfiedReason("abca"),
             "character at index 3 (which is `a`) appears multiple times");
 }
 
@@ -194,10 +194,10 @@ TEST(SimplePatternTest, ToStringShouldWork) {
             "has a simple pattern of `[^a-z]?`");
 }
 
-TEST(SimplePatternTest, ExplanationShouldWork) {
-  EXPECT_EQ(SimplePattern("[a-z]*").Explanation("A"),
+TEST(SimplePatternTest, UnsatisfiedReasonShouldWork) {
+  EXPECT_EQ(SimplePattern("[a-z]*").UnsatisfiedReason("A"),
             "does not follow the simple pattern of `[a-z]*`");
-  EXPECT_EQ(SimplePattern("[^a-z]?").Explanation("a"),
+  EXPECT_EQ(SimplePattern("[^a-z]?").UnsatisfiedReason("a"),
             "does not follow the simple pattern of `[^a-z]?`");
 }
 

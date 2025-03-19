@@ -16,8 +16,6 @@
 
 #include "src/variables/constraints/custom_constraint.h"
 
-#include <string>
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/contexts/librarian/analysis_context.h"
@@ -38,7 +36,7 @@ TEST(CustomConstraintTest, BasicGettersWork) {
     EXPECT_EQ(constraint.GetName(), "positive");
     EXPECT_THAT(constraint.GetDependencies(), IsEmpty());
     EXPECT_EQ(constraint.ToString(), "[CustomConstraint] positive");
-    EXPECT_EQ(constraint.Explanation(10),
+    EXPECT_EQ(constraint.UnsatisfiedReason(10),
               "`10` does not satisfy the custom constraint `positive`");
   }
   {  // With context
@@ -54,7 +52,7 @@ TEST(CustomConstraintTest, BasicGettersWork) {
     EXPECT_EQ(constraint.GetName(), "bigger_than_N");
     EXPECT_THAT(constraint.GetDependencies(), ElementsAre("N"));
     EXPECT_EQ(constraint.ToString(), "[CustomConstraint] bigger_than_N");
-    EXPECT_EQ(constraint.Explanation(5),
+    EXPECT_EQ(constraint.UnsatisfiedReason(5),
               "`5` does not satisfy the custom constraint `bigger_than_N`");
   }
 }

@@ -58,7 +58,7 @@ class CustomConstraint : MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns a string explaining why `value` does not satisfy the constraint.
-  [[nodiscard]] std::string Explanation(const T& value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(const T& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -108,7 +108,7 @@ std::string CustomConstraint<T>::ToString() const {
 }
 
 template <typename T>
-std::string CustomConstraint<T>::Explanation(const T& value) const {
+std::string CustomConstraint<T>::UnsatisfiedReason(const T& value) const {
   return std::format("{} does not satisfy the custom constraint `{}`",
                      librarian::DebugString(value), name_);
 }

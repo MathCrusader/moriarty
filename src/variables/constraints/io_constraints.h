@@ -47,7 +47,7 @@ class IOSeparator : public MConstraint {
 
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string Explanation(const auto& value) const {
+  [[nodiscard]] std::string UnsatisfiedReason(const auto& value) const {
     throw std::runtime_error("IOSeparator is always satisfied");
   }
 

@@ -17,6 +17,7 @@
 
 #include <cmath>
 #include <cstdint>
+#include <functional>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -332,6 +333,46 @@ std::vector<MInteger> MInteger::ListEdgeCasesImpl(
   }
 
   return instances;
+}
+
+namespace {
+
+IntegerRangeMConstraint::LookupVariableFn Wrap(librarian::AnalysisContext ctx) {
+  return [=](std::string_view variable) -> int64_t {
+    auto value = ctx.GetUniqueValue<MInteger>(variable);
+    if (!value) throw ValueNotFound(variable);
+    return *value;
+  };
+}
+
+}  // namespace
+
+MInteger::RangeConstraint::RangeConstraint(
+    std::unique_ptr<IntegerRangeMConstraint> constraint,
+    std::function<void(MInteger&)> apply_to_fn)
+    : constraint_(std::move(constraint)),
+      apply_to_fn_(std::move(apply_to_fn)) {};
+
+bool MInteger::RangeConstraint::IsSatisfiedWith(librarian::AnalysisContext ctx,
+                                                int64_t value) const {
+  return constraint_->IsSatisfiedWith(Wrap(ctx), value);
+}
+
+std::string MInteger::RangeConstraint::UnsatisfiedReason(
+    librarian::AnalysisContext ctx, int64_t value) const {
+  return constraint_->UnsatisfiedReason(Wrap(ctx), value);
+}
+
+std::string MInteger::RangeConstraint::ToString() const {
+  return constraint_->ToString();
+}
+
+std::vector<std::string> MInteger::RangeConstraint::GetDependencies() const {
+  return constraint_->GetDependencies();
+}
+
+void MInteger::RangeConstraint::ApplyTo(MInteger& other) const {
+  apply_to_fn_(other);
 }
 
 }  // namespace moriarty

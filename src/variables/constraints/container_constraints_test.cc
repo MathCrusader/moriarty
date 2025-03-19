@@ -57,16 +57,17 @@ TEST(ContainerConstraintsTest, LengthToStringWorks) {
             "has length that is between 1 and 10");
 }
 
-TEST(ContainerConstraintsTest, LengthExplanationWorks) {
+TEST(ContainerConstraintsTest, LengthUnsatisfiedReasonWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   librarian::AnalysisContext ctx("N", variables, values);
 
   EXPECT_EQ(Length(Between(1, 10))
-                .Explanation(ctx, std::string("this string is long")),
+                .UnsatisfiedReason(ctx, std::string("this string is long")),
             "has length (which is `19`) that is not between 1 and 10");
-  EXPECT_EQ(Length(Between(3, 10)).Explanation(ctx, std::vector<int>{1, 2}),
-            "has length (which is `2`) that is not between 3 and 10");
+  EXPECT_EQ(
+      Length(Between(3, 10)).UnsatisfiedReason(ctx, std::vector<int>{1, 2}),
+      "has length (which is `2`) that is not between 3 and 10");
 }
 
 TEST(ContainerConstraintsTest, LengthIsSatisfiedWithWorks) {
@@ -103,16 +104,18 @@ TEST(ContainerConstraintsTest, ElementsToStringWorks) {
             "each element has length that is between 1 and 10");
 }
 
-TEST(ContainerConstraintsTest, ElementsExplanationWorks) {
+TEST(ContainerConstraintsTest, ElementsUnsatisfiedReasonWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   librarian::AnalysisContext ctx("N", variables, values);
 
-  EXPECT_EQ(Elements<MInteger>(Between(1, 10)).Explanation(ctx, {-1, 2, 3}),
-            "array index 0 (which is `-1`) is not between 1 and 10");
+  EXPECT_EQ(
+      Elements<MInteger>(Between(1, 10)).UnsatisfiedReason(ctx, {-1, 2, 3}),
+      "array index 0 (which is `-1`) is not between 1 and 10");
   EXPECT_EQ(
       Elements<MString>(Length(Between(3, 10)))
-          .Explanation(ctx, std::vector<std::string>{"hello", "moto", "me"}),
+          .UnsatisfiedReason(ctx,
+                             std::vector<std::string>{"hello", "moto", "me"}),
       "array index 2 (which is `me`) has length (which is `2`) that is not "
       "between 3 and 10");
 }
@@ -171,15 +174,16 @@ TEST(ContainerConstraintsTest, ElementToStringWorks) {
             "tuple index 0 has length that is between 1 and 10");
 }
 
-TEST(ContainerConstraintsTest, ElementExplanationWorks) {
+TEST(ContainerConstraintsTest, ElementUnsatisfiedReasonWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   librarian::AnalysisContext ctx("N", variables, values);
 
-  EXPECT_EQ((Element<0, MInteger>(Between(1, 10)).Explanation(ctx, -1)),
+  EXPECT_EQ((Element<0, MInteger>(Between(1, 10)).UnsatisfiedReason(ctx, -1)),
             "tuple index 0 (which is `-1`) is not between 1 and 10");
   EXPECT_EQ(
-      (Element<12, MString>(Length(Between(1, 3))).Explanation(ctx, "hello")),
+      (Element<12, MString>(Length(Between(1, 3)))
+           .UnsatisfiedReason(ctx, "hello")),
       "tuple index 12 (which is `hello`) has length (which is `5`) that is not "
       "between 1 and 3");
 }
@@ -210,18 +214,19 @@ TEST(ContainerConstraintsTest, DistinctElementsToStringWorks) {
   EXPECT_EQ(DistinctElements().ToString(), "has distinct elements");
 }
 
-TEST(ContainerConstraintsTest, DistinctElementsExplanationWorks) {
+TEST(ContainerConstraintsTest, DistinctElementsUnsatisfiedReasonWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   librarian::AnalysisContext ctx("N", variables, values);
 
-  EXPECT_EQ(DistinctElements().Explanation(ctx, std::vector{11, 22, 11}),
+  EXPECT_EQ(DistinctElements().UnsatisfiedReason(ctx, std::vector{11, 22, 11}),
             "array indices 0 and 2 (which are `11`) are not distinct");
-  EXPECT_EQ(DistinctElements().Explanation(
+  EXPECT_EQ(DistinctElements().UnsatisfiedReason(
                 ctx, std::vector<std::string>{"hello", "hell", "help", "hell"}),
             "array indices 1 and 3 (which are `hell`) are not distinct");
-  EXPECT_EQ(DistinctElements().Explanation(ctx, std::vector{1, 2, 3, 2, 2, 3}),
-            "array indices 1 and 3 (which are `2`) are not distinct");
+  EXPECT_EQ(
+      DistinctElements().UnsatisfiedReason(ctx, std::vector{1, 2, 3, 2, 2, 3}),
+      "array indices 1 and 3 (which are `2`) are not distinct");
 }
 
 TEST(ContainerConstraintsTest, DistinctElementsIsSatisfiedWithWorks) {

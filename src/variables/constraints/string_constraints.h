@@ -60,7 +60,7 @@ class Alphabet : public MConstraint {
 
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string Explanation(std::string_view value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(std::string_view value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -83,7 +83,7 @@ class DistinctCharacters : public MConstraint {
 
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string Explanation(std::string_view value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(std::string_view value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -117,7 +117,7 @@ class SimplePattern : public MConstraint {
 
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string Explanation(std::string_view value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(std::string_view value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;

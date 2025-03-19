@@ -80,9 +80,9 @@ class SizeCategory : public MConstraint {
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
   template <typename T>
-  [[nodiscard]] std::string Explanation(const T& value) const {
+  [[nodiscard]] std::string UnsatisfiedReason(const T& value) const {
     throw std::runtime_error(
-        "SizeCategory::Explanation should never be called since "
+        "SizeCategory::UnsatisfiedReason should never be called since "
         "IsSatisfiedWith() == true always.");
   }
 

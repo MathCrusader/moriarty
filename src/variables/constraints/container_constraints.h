@@ -67,8 +67,8 @@ class Length : public MConstraint {
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
   template <typename Container>
-  [[nodiscard]] std::string Explanation(librarian::AnalysisContext ctx,
-                                        const Container& value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
+                                              const Container& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -101,7 +101,7 @@ class Elements : public MConstraint {
 
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string Explanation(
+  [[nodiscard]] std::string UnsatisfiedReason(
       librarian::AnalysisContext ctx,
       const std::vector<typename MElementType::value_type>& value) const;
 
@@ -137,7 +137,7 @@ class Element : public MConstraint {
 
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string Explanation(
+  [[nodiscard]] std::string UnsatisfiedReason(
       librarian::AnalysisContext ctx,
       const MElementType::value_type& value) const;
 
@@ -165,8 +165,8 @@ class DistinctElements : public MConstraint {
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
   template <typename T>
-  [[nodiscard]] std::string Explanation(librarian::AnalysisContext ctx,
-                                        const std::vector<T>& value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(
+      librarian::AnalysisContext ctx, const std::vector<T>& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -193,11 +193,11 @@ bool Length::IsSatisfiedWith(librarian::AnalysisContext ctx,
 }
 
 template <typename Container>
-std::string Length::Explanation(librarian::AnalysisContext ctx,
-                                const Container& value) const {
+std::string Length::UnsatisfiedReason(librarian::AnalysisContext ctx,
+                                      const Container& value) const {
   return std::format(
       "has length (which is {}) that {}", librarian::DebugString(value.size()),
-      length_.Explanation(ctx, static_cast<int64_t>(value.size())));
+      length_.UnsatisfiedReason(ctx, static_cast<int64_t>(value.size())));
 }
 
 // ====== Elements ======
@@ -229,7 +229,7 @@ std::string Elements<MElementType>::ToString() const {
 }
 
 template <typename MElementType>
-std::string Elements<MElementType>::Explanation(
+std::string Elements<MElementType>::UnsatisfiedReason(
     librarian::AnalysisContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
   for (int idx = -1; const auto& elem : value) {
@@ -237,11 +237,11 @@ std::string Elements<MElementType>::Explanation(
     if (!element_constraints_.IsSatisfiedWith(ctx, elem).ok()) {
       return std::format("array index {} (which is {}) {}", idx,
                          librarian::DebugString(elem),
-                         element_constraints_.Explanation(ctx, elem));
+                         element_constraints_.UnsatisfiedReason(ctx, elem));
     }
   }
   throw std::invalid_argument(
-      "Elements<>()::Explanation called when all elements ok.");
+      "Elements<>()::UnsatisfiedReason called when all elements ok.");
 }
 
 template <typename MElementType>
@@ -275,12 +275,12 @@ std::string Element<I, MElementType>::ToString() const {
 }
 
 template <size_t I, typename MElementType>
-std::string Element<I, MElementType>::Explanation(
+std::string Element<I, MElementType>::UnsatisfiedReason(
     librarian::AnalysisContext ctx,
     const MElementType::value_type& value) const {
   return std::format("tuple index {} (which is {}) {}", I,
                      librarian::DebugString(value),
-                     element_constraints_.Explanation(ctx, value));
+                     element_constraints_.UnsatisfiedReason(ctx, value));
 }
 
 template <size_t I, typename MElementType>
@@ -297,8 +297,8 @@ bool DistinctElements::IsSatisfiedWith(librarian::AnalysisContext ctx,
 }
 
 template <typename T>
-std::string DistinctElements::Explanation(librarian::AnalysisContext ctx,
-                                          const std::vector<T>& value) const {
+std::string DistinctElements::UnsatisfiedReason(
+    librarian::AnalysisContext ctx, const std::vector<T>& value) const {
   std::unordered_map<T, int> seen;
   for (int idx = -1; const auto& elem : value) {
     idx++;
@@ -310,7 +310,7 @@ std::string DistinctElements::Explanation(librarian::AnalysisContext ctx,
     }
   }
   throw std::invalid_argument(
-      "DistinctElements::Explanation called with all elements distinct.");
+      "DistinctElements::UnsatisfiedReason called with all elements distinct.");
 }
 
 }  // namespace moriarty

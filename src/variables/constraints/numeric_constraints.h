@@ -39,8 +39,8 @@ class IntegerRangeMConstraint : public MConstraint {
   virtual std::string ToString() const = 0;
   virtual bool IsSatisfiedWith(LookupVariableFn lookup_variable,
                                int64_t value) const = 0;
-  virtual std::string Explanation(LookupVariableFn lookup_variable,
-                                  int64_t value) const = 0;
+  virtual std::string UnsatisfiedReason(LookupVariableFn lookup_variable,
+                                        int64_t value) const = 0;
   virtual std::vector<std::string> GetDependencies() const = 0;
 };
 
@@ -63,8 +63,8 @@ class ExactlyIntegerExpression : public IntegerRangeMConstraint {
 
   // Gives a human-readable explanation of why value does not satisfy the
   // constraints. Precondition: IsSatisfiedWith() == false;
-  [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
-                                        int64_t value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(LookupVariableFn lookup_variable,
+                                              int64_t value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -97,8 +97,8 @@ class OneOfIntegerExpression : public IntegerRangeMConstraint {
 
   // Gives a human-readable explanation of why value does not satisfy the
   // constraints. Precondition: IsSatisfiedWith() == false;
-  [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
-                                        int64_t value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(LookupVariableFn lookup_variable,
+                                              int64_t value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -136,8 +136,8 @@ class Between : public IntegerRangeMConstraint {
 
   // Gives a human-readable explanation of why value does not satisfy the
   // constraints. Precondition: IsSatisfiedWith() == false;
-  [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
-                                        int64_t value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(LookupVariableFn lookup_variable,
+                                              int64_t value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -172,8 +172,8 @@ class AtMost : public IntegerRangeMConstraint {
 
   // Gives a human-readable explanation of why value does not satisfy the
   // constraints. Precondition: IsSatisfiedWith() == false;
-  [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
-                                        int64_t value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(LookupVariableFn lookup_variable,
+                                              int64_t value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -207,8 +207,8 @@ class AtLeast : public IntegerRangeMConstraint {
 
   // Gives a human-readable explanation of why value does not satisfy the
   // constraints. Precondition: IsSatisfiedWith() == false;
-  [[nodiscard]] std::string Explanation(LookupVariableFn lookup_variable,
-                                        int64_t value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(LookupVariableFn lookup_variable,
+                                              int64_t value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;

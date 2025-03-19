@@ -34,9 +34,9 @@ concept ConstraintHasSimplifiedIsSatisfiedWithFn =
     };
 
 template <typename ConstraintType, typename ValueType>
-concept ConstraintHasSimplifiedExplanationFn =
+concept ConstraintHasSimplifiedUnsatisfiedReasonFn =
     requires(const ConstraintType& c, const ValueType& v) {
-      { c.Explanation(v) } -> std::same_as<std::string>;
+      { c.UnsatisfiedReason(v) } -> std::same_as<std::string>;
     };
 
 template <typename ConstraintType, typename VariableType>
@@ -66,11 +66,11 @@ class ConstraintHandler {
   auto IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const
       -> bool;
 
-  // Explanation()
+  // UnsatisfiedReason()
   //
   // Returns a string explaining why the value does not satisfy the constraints.
   // It is assumed that IsSatisfiedWith() returned false.
-  auto Explanation(AnalysisContext ctx, const ValueType& value) const
+  auto UnsatisfiedReason(AnalysisContext ctx, const ValueType& value) const
       -> std::string;
 
   // ToString()
@@ -89,7 +89,8 @@ class ConstraintHandler {
     virtual ~ConstraintHusk() = default;
     virtual auto IsSatisfiedWith(AnalysisContext ctx,
                                  const ValueType& value) const -> bool = 0;
-    virtual auto Explanation(AnalysisContext ctx, const ValueType& value) const
+    virtual auto UnsatisfiedReason(AnalysisContext ctx,
+                                   const ValueType& value) const
         -> std::string = 0;
     virtual auto ToString() const -> std::string = 0;
     virtual auto ApplyTo(VariableType& other) const -> void = 0;
@@ -109,12 +110,12 @@ class ConstraintHandler {
         return constraint_.IsSatisfiedWith(ctx, value);
       }
     }
-    auto Explanation(AnalysisContext ctx, const ValueType& value) const
+    auto UnsatisfiedReason(AnalysisContext ctx, const ValueType& value) const
         -> std::string override {
-      if constexpr (ConstraintHasSimplifiedExplanationFn<U, ValueType>) {
-        return constraint_.Explanation(value);
+      if constexpr (ConstraintHasSimplifiedUnsatisfiedReasonFn<U, ValueType>) {
+        return constraint_.UnsatisfiedReason(value);
       } else {
-        return constraint_.Explanation(ctx, value);
+        return constraint_.UnsatisfiedReason(ctx, value);
       }
     }
     auto ToString() const -> std::string override {
@@ -160,13 +161,13 @@ auto ConstraintHandler<VariableType, ValueType>::IsSatisfiedWith(
 }
 
 template <typename VariableType, typename ValueType>
-auto ConstraintHandler<VariableType, ValueType>::Explanation(
+auto ConstraintHandler<VariableType, ValueType>::UnsatisfiedReason(
     AnalysisContext ctx, const ValueType& value) const -> std::string {
   std::string explanation;
   for (const auto& constraint : constraints_) {
     if (!constraint->IsSatisfiedWith(ctx, value)) {
       if (!explanation.empty()) explanation += "; ";
-      explanation += constraint->Explanation(ctx, value);
+      explanation += constraint->UnsatisfiedReason(ctx, value);
     }
   }
   return explanation;

@@ -129,14 +129,14 @@ class MVariable : public moriarty_internal::AbstractVariable {
   absl::Status IsSatisfiedWith(AnalysisContext ctx,
                                const ValueType& value) const;
 
-  // Explanation()
+  // UnsatisfiedReason()
   //
   // Returns a string explaining why `value` does not satisfy the constraints on
   // this variable.
   //
   // Precondition: `IsSatisfiedWith(ctx, value)` is false.
-  [[nodiscard]] std::string Explanation(AnalysisContext ctx,
-                                        const ValueType& value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(AnalysisContext ctx,
+                                              const ValueType& value) const;
 
   // Generate()
   //
@@ -245,7 +245,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
    public:
     explicit CustomConstraintWrapper(CustomConstraint<ValueType> constraint);
     bool IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const;
-    std::string Explanation(AnalysisContext ctx, const ValueType& value) const;
+    std::string UnsatisfiedReason(AnalysisContext ctx,
+                                  const ValueType& value) const;
     std::string ToString() const;
     std::vector<std::string> GetDependencies() const;
     void ApplyTo(VariableType& other) const;
@@ -315,7 +316,7 @@ template <typename V, typename G>
 absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
                                               const G& value) const {
   if (!constraints_.IsSatisfiedWith(ctx, value)) {
-    std::string reason = constraints_.Explanation(ctx, value);
+    std::string reason = constraints_.UnsatisfiedReason(ctx, value);
     return UnsatisfiedConstraintError(reason);
   }
 
@@ -329,8 +330,8 @@ absl::Status MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
 }
 
 template <typename V, typename G>
-std::string MVariable<V, G>::Explanation(AnalysisContext ctx,
-                                         const G& value) const {
+std::string MVariable<V, G>::UnsatisfiedReason(AnalysisContext ctx,
+                                               const G& value) const {
   auto status = IsSatisfiedWith(ctx, value);
   if (status.ok()) throw std::invalid_argument("Value satisfies constraints.");
   return std::string(status.message());
@@ -568,9 +569,9 @@ bool MVariable<V, G>::CustomConstraintWrapper::IsSatisfiedWith(
 }
 
 template <typename V, typename G>
-std::string MVariable<V, G>::CustomConstraintWrapper::Explanation(
+std::string MVariable<V, G>::CustomConstraintWrapper::UnsatisfiedReason(
     AnalysisContext ctx, const G& value) const {
-  return constraint_.Explanation(value);
+  return constraint_.UnsatisfiedReason(value);
 }
 
 template <typename V, typename G>

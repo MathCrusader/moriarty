@@ -135,9 +135,9 @@ TEST(BaseConstraintsTest, ExactlyIsSatisfiedWithShouldWork) {
   }
 }
 
-TEST(BaseConstraintsTest, ExactlyExplanationShouldWork) {
-  EXPECT_EQ(Exactly(123).Explanation(11), "`11` is not exactly `123`");
-  EXPECT_EQ(Exactly("abc").Explanation("hello"),
+TEST(BaseConstraintsTest, ExactlyUnsatisfiedReasonShouldWork) {
+  EXPECT_EQ(Exactly(123).UnsatisfiedReason(11), "`11` is not exactly `123`");
+  EXPECT_EQ(Exactly("abc").UnsatisfiedReason("hello"),
             "`hello` is not exactly `abc`");
 }
 
@@ -263,10 +263,10 @@ TEST(BaseConstraintsTest, OneOfIsSatisfiedWithShouldWork) {
   }
 }
 
-TEST(BaseConstraintsTest, OneOfExplanationShouldWork) {
-  EXPECT_EQ(OneOf({123, 456}).Explanation(11),
+TEST(BaseConstraintsTest, OneOfUnsatisfiedReasonShouldWork) {
+  EXPECT_EQ(OneOf({123, 456}).UnsatisfiedReason(11),
             "`11` is not one of {`123`, `456`}");
-  EXPECT_EQ(OneOf({"abc", "def"}).Explanation("hello"),
+  EXPECT_EQ(OneOf({"abc", "def"}).UnsatisfiedReason("hello"),
             "`hello` is not one of {`abc`, `def`}");
 }
 

@@ -24,7 +24,6 @@
 #include <memory>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <type_traits>
 #include <vector>
 
@@ -33,7 +32,6 @@
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
-#include "src/errors.h"
 #include "src/internal/range.h"
 #include "src/librarian/cow_ptr.h"
 #include "src/librarian/mvariable.h"
@@ -113,35 +111,17 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
    public:
     explicit RangeConstraint(
         std::unique_ptr<IntegerRangeMConstraint> constraint,
-        std::function<void(MInteger&)> apply_to_fn)
-        : constraint_(std::move(constraint)),
-          apply_to_fn_(std::move(apply_to_fn)) {};
-
-    bool IsSatisfiedWith(librarian::AnalysisContext ctx, int64_t value) const {
-      return constraint_->IsSatisfiedWith(Wrap(ctx), value);
-    }
-    std::string Explanation(librarian::AnalysisContext ctx,
-                            int64_t value) const {
-      return constraint_->Explanation(Wrap(ctx), value);
-    }
-    std::string ToString() const { return constraint_->ToString(); }
-    std::vector<std::string> GetDependencies() const {
-      return constraint_->GetDependencies();
-    }
-    void ApplyTo(MInteger& other) const { apply_to_fn_(other); }
+        std::function<void(MInteger&)> apply_to_fn);
+    bool IsSatisfiedWith(librarian::AnalysisContext ctx, int64_t value) const;
+    std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
+                                  int64_t value) const;
+    std::string ToString() const;
+    std::vector<std::string> GetDependencies() const;
+    void ApplyTo(MInteger& other) const;
 
    private:
     std::unique_ptr<IntegerRangeMConstraint> constraint_;
     std::function<void(MInteger&)> apply_to_fn_;
-
-    IntegerRangeMConstraint::LookupVariableFn Wrap(
-        librarian::AnalysisContext ctx) const {
-      return [=](std::string_view variable) -> int64_t {
-        auto value = ctx.GetUniqueValue<MInteger>(variable);
-        if (!value) throw ValueNotFound(variable);
-        return *value;
-      };
-    }
   };
 
   // ---------------------------------------------------------------------------

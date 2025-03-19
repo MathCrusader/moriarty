@@ -68,7 +68,7 @@ std::string Alphabet::ToString() const {
   return std::format("contains only {}", librarian::DebugString(alphabet_));
 }
 
-std::string Alphabet::Explanation(std::string_view value) const {
+std::string Alphabet::UnsatisfiedReason(std::string_view value) const {
   for (int idx = -1; char c : value) {
     idx++;
     if (alphabet_.find(c) == std::string::npos) {
@@ -80,7 +80,7 @@ std::string Alphabet::Explanation(std::string_view value) const {
   }
 
   throw std::invalid_argument(
-      "Alphabet::Explanation called with all valid characters.");
+      "Alphabet::UnsatisfiedReason called with all valid characters.");
 }
 
 std::vector<std::string> Alphabet::GetDependencies() const { return {}; }
@@ -100,7 +100,8 @@ std::string DistinctCharacters::ToString() const {
   return "has distinct characters";
 }
 
-std::string DistinctCharacters::Explanation(std::string_view value) const {
+std::string DistinctCharacters::UnsatisfiedReason(
+    std::string_view value) const {
   std::bitset<sizeof(unsigned char) * 256> seen;
   for (int idx = -1; unsigned char c : value) {
     idx++;
@@ -113,7 +114,8 @@ std::string DistinctCharacters::Explanation(std::string_view value) const {
   }
 
   throw std::invalid_argument(
-      "DistinctCharacters::Explanation called with all distinct characters.");
+      "DistinctCharacters::UnsatisfiedReason called with all distinct "
+      "characters.");
 }
 
 std::vector<std::string> DistinctCharacters::GetDependencies() const {
@@ -140,7 +142,7 @@ std::string SimplePattern::ToString() const {
                      librarian::DebugString(pattern_.Pattern()));
 }
 
-std::string SimplePattern::Explanation(std::string_view value) const {
+std::string SimplePattern::UnsatisfiedReason(std::string_view value) const {
   return std::format("does not follow the simple pattern of {}",
                      librarian::DebugString(pattern_.Pattern()));
 }
