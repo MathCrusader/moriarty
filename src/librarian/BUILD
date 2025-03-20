@@ -215,10 +215,6 @@ cc_test(
     deps = [
         ":size_property",
         "//src/internal:range",
-        "//src/util/status_macro:status_macros",
-        "//src/util/test_status_macro:status_testutil",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "@googletest//:gtest_main",
     ],
 )

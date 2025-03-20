@@ -108,11 +108,6 @@ cc_library(
     ],
     deps = [
         ":expressions",
-        "//src/util/status_macro:status_macros",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -255,9 +250,8 @@ cc_test(
         "range_test.cc",
     ],
     deps = [
+        ":expressions",
         ":range",
-        "//src/util/test_status_macro:status_testutil",
-        "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
     ],
 )

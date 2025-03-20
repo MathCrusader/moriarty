@@ -41,7 +41,7 @@ MATCHER_P(DoesNotParse, reason, "expression should not be parseable") {
   std::string str(arg);
   try {
     auto x = Expression(str);
-  } catch (const std::runtime_error& e) {
+  } catch (const std::invalid_argument& e) {
     if (testing::Matches(HasSubstr(reason))(e.what())) return true;
     *result_listener
         << "Expression failed to parse, but didn't have the right reason; "

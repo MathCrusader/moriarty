@@ -538,7 +538,7 @@ void NewApplyOperation(Operator op,
   auto binary_op = [&]() -> std::pair<std::unique_ptr<ExpressionNode>,
                                       std::unique_ptr<ExpressionNode>> {
     if (operands.size() < 2) {
-      throw std::runtime_error(
+      throw std::invalid_argument(
           "Attempting to do a binary operation, but I don't have 2 operands.");
     }
     auto rhs = std::move(operands.top());
@@ -549,7 +549,7 @@ void NewApplyOperation(Operator op,
   };
   auto unary_op = [&]() -> std::unique_ptr<ExpressionNode> {
     if (operands.size() < 1) {
-      throw std::runtime_error(
+      throw std::invalid_argument(
           "Attempting to do a unary operation, but I don't have 2 operands.");
     }
     auto rhs = std::move(operands.top());
@@ -642,7 +642,7 @@ void PushScopeToken(Token token, std::stack<Operator>& operators,
   // This means we have an empty string in some substring scope.
   // E.g., "", "()", "max(4,,5)", etc
   if (operands.empty())
-    throw std::runtime_error("No tokens to parse inside (sub)expression");
+    throw std::invalid_argument("No tokens to parse inside (sub)expression");
 
   if (token.kind == TokenT::kComma) {
     operators.push({OperatorT::kCommaScope, token.str});
@@ -663,14 +663,14 @@ void PushScopeToken(Token token, std::stack<Operator>& operators,
   if (operators.empty() ||
       *close_scope_precedence != Precedence(operators.top().op)) {
     if (token.kind == TokenT::kEndOfExpression) {
-      throw std::runtime_error(
+      throw std::invalid_argument(
           "Unexpected end-of-expression. Probably an extra '(' or ','");
     } else {
-      throw std::runtime_error("')' is missing a corresponding '('");
+      throw std::invalid_argument("')' is missing a corresponding '('");
     }
   }
   if (operands.empty())
-    throw std::runtime_error("No tokens to parse inside (sub)expression");
+    throw std::invalid_argument("No tokens to parse inside (sub)expression");
 
   Operator op = operators.top();
   arg_str = Concat(op.str, operands.top()->ToString(), arg_str);
@@ -686,7 +686,8 @@ void PushScopeToken(Token token, std::stack<Operator>& operators,
   }
 
   if (args.size() != 1)
-    throw std::runtime_error(std::format("Invalid parentheses: {}", arg_str));
+    throw std::invalid_argument(
+        std::format("Invalid parentheses: {}", arg_str));
   args[0]->SetString(arg_str);
   operands.push(std::move(args[0]));
 }
@@ -763,7 +764,7 @@ bool IsUnaryFollowing(TokenT previous_token) {
       return false;
     case TokenT::kUnaryNegate:
     case TokenT::kUnaryPlus:
-      throw std::runtime_error(
+      throw std::invalid_argument(
           "Error in expression. Found a unary operator after another unary "
           "operator. --3 is not interpreted as -(-3). Note that `x--3` will "
           "work [x - (-3)], but `(--3)` will not.");
@@ -830,7 +831,7 @@ std::pair<TokenT, std::string_view> NewConsumeFirstToken(
     return {TokenT::kVariable, expression};
   }
 
-  throw std::runtime_error("[Parse Error] Unknown character in expression");
+  throw std::invalid_argument("[Parse Error] Unknown character in expression");
 }
 
 std::unique_ptr<ExpressionNode> ParseExpression(std::string_view expression) {
@@ -862,7 +863,7 @@ std::unique_ptr<ExpressionNode> ParseExpression(std::string_view expression) {
       expression = new_suffix;
       prev = token_kind;
     } catch (std::exception& e) {
-      throw std::runtime_error(
+      throw std::invalid_argument(
           ParsingErrorMessage(original_expression, expression, e.what()));
     }
   }
@@ -887,7 +888,7 @@ std::vector<std::string> Expression::GetDependencies() const {
   return dependencies_;
 }
 
-std::string_view Expression::ToString() const { return str_; }
+std::string Expression::ToString() const { return str_; }
 
 int64_t Expression::Evaluate(
     std::function<int64_t(std::string_view)> lookup_variable) const {

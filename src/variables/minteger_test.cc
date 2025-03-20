@@ -53,10 +53,12 @@ using ::testing::AnyOf;
 using ::testing::Each;
 using ::testing::Eq;
 using ::testing::Ge;
+using ::testing::HasSubstr;
 using ::testing::IsSupersetOf;
 using ::testing::Le;
 using ::testing::Optional;
 using ::testing::Throws;
+using ::testing::ThrowsMessage;
 using ::testing::UnorderedElementsAre;
 
 TEST(MIntegerTest, TypenameIsCorrect) {
@@ -266,12 +268,13 @@ TEST(MIntegerTest, AtMostLargerThanAtLeastShouldFail) {
       std::runtime_error);
 }
 
-TEST(MIntegerNonBuilderDeathTest,
-     AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {
-  // We should throw a nice exception here, not ABSL die.
-  EXPECT_DEATH({ MInteger(AtLeast("3 + ")); }, "operation");
-  EXPECT_DEATH({ MInteger(AtMost("+ X +")); }, "operation");
-  EXPECT_DEATH({ MInteger(Between("N + 2", "* M + M")); }, "operation");
+TEST(MIntegerTest, AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {
+  EXPECT_THAT([] { MInteger(AtLeast("3 + ")); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+  EXPECT_THAT([] { MInteger(AtMost("+ X +")); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+  EXPECT_THAT([] { MInteger(Between("N + 2", "* M + M")); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
 }
 
 TEST(MIntegerTest, AtMostAndAtLeastWithExpressionsShouldLimitTheOutputRange) {
@@ -432,16 +435,15 @@ TEST(MIntegerTest, InvalidSizeCombinationsShouldThrow) {
 }
 
 TEST(MIntegerTest, InvalidExpressionsShouldFail) {
-  // TODO: These should all throw, not die or status.
-  EXPECT_DEATH(
-      { Generate(MInteger(Exactly("N + "))).IgnoreError(); }, "operation");
-  EXPECT_DEATH(
-      { Generate(MInteger(AtMost("N + "))).IgnoreError(); }, "operation");
-  EXPECT_DEATH(
-      { Generate(MInteger(AtLeast("N + "))).IgnoreError(); }, "operation");
-  EXPECT_DEATH(
-      { Generate(MInteger(Between("& x", "N + "))).IgnoreError(); },
-      "Unknown character");
+  EXPECT_THAT([] { Generate(MInteger(Exactly("N + "))).IgnoreError(); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+  EXPECT_THAT([] { Generate(MInteger(AtMost("N + "))).IgnoreError(); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+  EXPECT_THAT([] { Generate(MInteger(AtLeast("N + "))).IgnoreError(); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+  EXPECT_THAT(
+      [] { Generate(MInteger(Between("& x", "N + "))).IgnoreError(); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("Unknown character")));
 }
 
 TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithNoVariablesShouldWork) {

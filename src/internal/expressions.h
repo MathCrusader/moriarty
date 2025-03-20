@@ -42,12 +42,15 @@ class Expression {
   [[nodiscard]] int64_t Evaluate(
       std::function<int64_t(std::string_view)> lookup_variable) const;
 
-  [[nodiscard]] std::string_view ToString() const;
+  [[nodiscard]] std::string ToString() const;
 
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
 
  private:
-  std::unique_ptr<moriarty_internal::ExpressionNode> expr_;
+  // Note: We are using a shared_ptr here since this type is completely
+  // immutable after construction. It is passed to several functions, but since
+  // it is immutable, the copying is overkill.
+  std::shared_ptr<moriarty_internal::ExpressionNode> expr_;
   std::string str_;
   std::vector<std::string> dependencies_;
 };

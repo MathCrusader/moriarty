@@ -20,7 +20,6 @@
 #include <cstdint>
 #include <functional>
 #include <span>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -223,14 +222,8 @@ class AtLeast : public IntegerRangeMConstraint {
 
 template <typename Container>
 OneOfIntegerExpression::OneOfIntegerExpression(const Container& options) {
-  for (const std::string& option : options) {
-    auto expr = ParseExpression(option);
-    if (!expr.ok()) {
-      throw std::invalid_argument(
-          std::format("Invalid expression: {}", option));
-    }
-    options_.push_back(*std::move(expr));
-  }
+  for (const std::string& option : options)
+    options_.push_back(Expression(option));
 }
 
 }  // namespace moriarty

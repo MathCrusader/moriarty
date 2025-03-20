@@ -17,20 +17,16 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
+#include <stdexcept>
 
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/range.h"
-#include "src/util/status_macro/status_macros.h"
-#include "src/util/test_status_macro/status_testutil.h"
 
 namespace moriarty {
 namespace librarian {
 namespace {
 
-using ::moriarty::StatusIs;
 using ::testing::Optional;
 using ::testing::Range;
 using ::testing::Throws;
@@ -38,46 +34,58 @@ using ::testing::Values;
 
 class SizePropertyTest : public testing::TestWithParam<int64_t> {};
 
-absl::StatusOr<moriarty::Range::ExtremeValues> ExtractExtremes(
-    moriarty::Range r) {
-  MORIARTY_ASSIGN_OR_RETURN(
-      std::optional<moriarty::Range::ExtremeValues> extremes, r.Extremes());
-  if (!extremes.has_value())
-    return absl::FailedPreconditionError("Range is empty.");
+moriarty::Range::ExtremeValues ExtractExtremes(moriarty::Range r) {
+  std::optional<moriarty::Range::ExtremeValues> extremes =
+      r.Extremes([](std::string_view) -> int64_t {
+        throw std::invalid_argument("No variables known");
+      });
+  if (!extremes.has_value()) {
+    throw std::invalid_argument("Range is empty.");
+  }
   return *extremes;
 }
 
+MATCHER(EmptyRange, "should have an empty extreme range") {
+  std::optional<moriarty::Range::ExtremeValues> extremes =
+      arg.Extremes([](std::string_view) -> int64_t {
+        throw std::invalid_argument("No variables known");
+      });
+  if (!extremes.has_value()) return true;
+
+  *result_listener << "Range is not empty: " << extremes->min << ", "
+                   << extremes->max;
+  return false;
+}
+
 TEST_P(SizePropertyTest, MinimumShouldBeExtremal) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues extremes,
-                                ExtractExtremes(GetMinRange(GetParam())));
+  moriarty::Range::ExtremeValues extremes =
+      ExtractExtremes(GetMinRange(GetParam()));
 
   EXPECT_EQ(extremes.min, 1);
   EXPECT_EQ(extremes.max, 1);
 }
 
 TEST_P(SizePropertyTest, MaximumShouldBeExtremal) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues extremes,
-                                ExtractExtremes(GetMaxRange(GetParam())));
+  moriarty::Range::ExtremeValues extremes =
+      ExtractExtremes(GetMaxRange(GetParam()));
 
   EXPECT_EQ(extremes.min, GetParam());
   EXPECT_EQ(extremes.max, GetParam());
 }
 
 TEST_P(SizePropertyTest, AllSizesShouldBeOrdered) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues min,
-                                ExtractExtremes(GetMinRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues tiny,
-                                ExtractExtremes(GetTinyRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues small,
-                                ExtractExtremes(GetSmallRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues medium,
-                                ExtractExtremes(GetMediumRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues large,
-                                ExtractExtremes(GetLargeRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues huge,
-                                ExtractExtremes(GetHugeRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues max,
-                                ExtractExtremes(GetMaxRange(GetParam())));
+  moriarty::Range::ExtremeValues min = ExtractExtremes(GetMinRange(GetParam()));
+  moriarty::Range::ExtremeValues tiny =
+      ExtractExtremes(GetTinyRange(GetParam()));
+  moriarty::Range::ExtremeValues small =
+      ExtractExtremes(GetSmallRange(GetParam()));
+  moriarty::Range::ExtremeValues medium =
+      ExtractExtremes(GetMediumRange(GetParam()));
+  moriarty::Range::ExtremeValues large =
+      ExtractExtremes(GetLargeRange(GetParam()));
+  moriarty::Range::ExtremeValues huge =
+      ExtractExtremes(GetHugeRange(GetParam()));
+  moriarty::Range::ExtremeValues max = ExtractExtremes(GetMaxRange(GetParam()));
 
   // Left endpoints are ordered.
   EXPECT_LE(min.min, tiny.min);
@@ -97,20 +105,18 @@ TEST_P(SizePropertyTest, AllSizesShouldBeOrdered) {
 }
 
 TEST_P(SizePropertyTest, AllSizesShouldBeBetweenOneAndN) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues min,
-                                ExtractExtremes(GetMinRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues tiny,
-                                ExtractExtremes(GetTinyRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues small,
-                                ExtractExtremes(GetSmallRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues medium,
-                                ExtractExtremes(GetMediumRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues large,
-                                ExtractExtremes(GetLargeRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues huge,
-                                ExtractExtremes(GetHugeRange(GetParam())));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(moriarty::Range::ExtremeValues max,
-                                ExtractExtremes(GetMaxRange(GetParam())));
+  moriarty::Range::ExtremeValues min = ExtractExtremes(GetMinRange(GetParam()));
+  moriarty::Range::ExtremeValues tiny =
+      ExtractExtremes(GetTinyRange(GetParam()));
+  moriarty::Range::ExtremeValues small =
+      ExtractExtremes(GetSmallRange(GetParam()));
+  moriarty::Range::ExtremeValues medium =
+      ExtractExtremes(GetMediumRange(GetParam()));
+  moriarty::Range::ExtremeValues large =
+      ExtractExtremes(GetLargeRange(GetParam()));
+  moriarty::Range::ExtremeValues huge =
+      ExtractExtremes(GetHugeRange(GetParam()));
+  moriarty::Range::ExtremeValues max = ExtractExtremes(GetMaxRange(GetParam()));
 
   // Left endpoints are >= 1.
   EXPECT_GE(min.min, 1);
@@ -152,37 +158,23 @@ INSTANTIATE_TEST_SUITE_P(LargerValues, SizePropertyTest,
                                 std::numeric_limits<int64_t>::max()));
 
 TEST(SizePropertyTest, ZeroNShouldGiveEmptyRange) {
-  EXPECT_THAT(ExtractExtremes(GetMinRange(0)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetTinyRange(0)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetSmallRange(0)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetMediumRange(0)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetLargeRange(0)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetHugeRange(0)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetMaxRange(0)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THAT(GetMinRange(0), EmptyRange());
+  EXPECT_THAT(GetTinyRange(0), EmptyRange());
+  EXPECT_THAT(GetSmallRange(0), EmptyRange());
+  EXPECT_THAT(GetMediumRange(0), EmptyRange());
+  EXPECT_THAT(GetLargeRange(0), EmptyRange());
+  EXPECT_THAT(GetHugeRange(0), EmptyRange());
+  EXPECT_THAT(GetMaxRange(0), EmptyRange());
 }
 
 TEST(SizePropertyTest, NegativeNShouldGiveEmptyRange) {
-  EXPECT_THAT(ExtractExtremes(GetMinRange(-5)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetTinyRange(-5)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetSmallRange(-5)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetMediumRange(-5)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetLargeRange(-5)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetHugeRange(-5)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-  EXPECT_THAT(ExtractExtremes(GetMaxRange(-5)),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
+  EXPECT_THAT(GetMinRange(-5), EmptyRange());
+  EXPECT_THAT(GetTinyRange(-5), EmptyRange());
+  EXPECT_THAT(GetSmallRange(-5), EmptyRange());
+  EXPECT_THAT(GetMediumRange(-5), EmptyRange());
+  EXPECT_THAT(GetLargeRange(-5), EmptyRange());
+  EXPECT_THAT(GetHugeRange(-5), EmptyRange());
+  EXPECT_THAT(GetMaxRange(-5), EmptyRange());
 }
 
 TEST(SizePropertyTest, MergeSizesWithAnyShouldTakeOtherOption) {

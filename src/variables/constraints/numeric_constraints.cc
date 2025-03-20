@@ -29,30 +29,17 @@
 
 namespace moriarty {
 
-namespace {
-
-std::vector<std::string> ExtractDependencies(const Expression& expr) {
-  auto deps = NeededVariables(expr);
-  if (!deps.ok())
-    throw std::invalid_argument("Cannot get dependencies of expression");
-  return {deps->begin(), deps->end()};
-}
-
-}  // namespace
-
 // -----------------------------------------------------------------------------
 //  ExactlyIntegerExpression
 
 // TODO: These hide absl::StatusOr<>. We should consider alternatives.
 ExactlyIntegerExpression::ExactlyIntegerExpression(IntegerExpression value)
-    : value_(*ParseExpression(value)) {
-  dependencies_ = ExtractDependencies(value_);
-}
+    : value_(value), dependencies_(value_.GetDependencies()) {}
 
 Range ExactlyIntegerExpression::GetRange() const {
   Range r;
-  r.AtMost(value_.ToString()).IgnoreError();
-  r.AtLeast(value_.ToString()).IgnoreError();
+  r.AtMost(value_);
+  r.AtLeast(value_);
   return r;
 }
 
@@ -62,7 +49,7 @@ std::string ExactlyIntegerExpression::ToString() const {
 
 bool ExactlyIntegerExpression::IsSatisfiedWith(LookupVariableFn lookup_variable,
                                                int64_t value) const {
-  int64_t expected = EvaluateIntegerExpression(value_, lookup_variable);
+  int64_t expected = value_.Evaluate(lookup_variable);
   return expected == value;
 }
 
@@ -86,13 +73,8 @@ OneOfIntegerExpression::OneOfIntegerExpression(
 OneOfIntegerExpression::OneOfIntegerExpression(
     std::span<const IntegerExpression> options) {
   for (const auto& option : options) {
-    auto expr = ParseExpression(option);
-    if (!expr.ok()) {
-      throw std::invalid_argument(
-          std::format("OneOfIntegerExpression: {}", expr.status().ToString()));
-    }
-    options_.push_back(*std::move(expr));
-    auto deps = ExtractDependencies(options_.back());
+    options_.push_back(Expression(option));
+    auto deps = options_.back().GetDependencies();
     dependencies_.insert(dependencies_.end(), deps.begin(), deps.end());
   }
 }
@@ -125,7 +107,7 @@ std::string OneOfIntegerExpression::ToString() const {
 bool OneOfIntegerExpression::IsSatisfiedWith(LookupVariableFn lookup_variable,
                                              int64_t value) const {
   for (const auto& option : options_) {
-    int64_t expected = EvaluateIntegerExpression(option, lookup_variable);
+    int64_t expected = option.Evaluate(lookup_variable);
     if (expected == value) return true;
   }
   return false;
@@ -145,8 +127,7 @@ std::vector<std::string> OneOfIntegerExpression::GetDependencies() const {
 
 // TODO: These hide absl::StatusOr<>. We should consider alternatives.
 Between::Between(int64_t minimum, int64_t maximum)
-    : minimum_(*ParseExpression(std::to_string(minimum))),
-      maximum_(*ParseExpression(std::to_string(maximum))) {
+    : minimum_(std::to_string(minimum)), maximum_(std::to_string(maximum)) {
   if (minimum > maximum) {
     throw std::invalid_argument(
         "minimum must be less than or equal to maximum in Between()");
@@ -154,29 +135,26 @@ Between::Between(int64_t minimum, int64_t maximum)
 }
 
 Between::Between(int64_t minimum, IntegerExpression maximum)
-    : minimum_(*ParseExpression(std::to_string(minimum))),
-      maximum_(*ParseExpression(maximum)) {
-  dependencies_ = ExtractDependencies(maximum_);
-}
+    : minimum_(std::to_string(minimum)),
+      maximum_(maximum),
+      dependencies_(maximum_.GetDependencies()) {}
 
 Between::Between(IntegerExpression minimum, int64_t maximum)
-    : minimum_(*ParseExpression(minimum)),
-      maximum_(*ParseExpression(std::to_string(maximum))) {
-  dependencies_ = ExtractDependencies(minimum_);
-}
+    : minimum_(minimum),
+      maximum_(std::to_string(maximum)),
+      dependencies_(minimum_.GetDependencies()) {}
 
 Between::Between(IntegerExpression minimum, IntegerExpression maximum)
-    : minimum_(*ParseExpression(minimum)), maximum_(*ParseExpression(maximum)) {
-  dependencies_ = ExtractDependencies(minimum_);
-  auto max_deps = ExtractDependencies(maximum_);
+    : minimum_(minimum), maximum_(maximum) {
+  dependencies_ = minimum_.GetDependencies();
+  auto max_deps = maximum_.GetDependencies();
   dependencies_.insert(dependencies_.end(), max_deps.begin(), max_deps.end());
 }
 
-// FIXME: This is a silly way of doing this... We shouldn't reconstruct.
 Range Between::GetRange() const {
   Range r;
-  r.AtLeast(minimum_.ToString()).IgnoreError();
-  r.AtMost(maximum_.ToString()).IgnoreError();
+  r.AtLeast(minimum_);
+  r.AtMost(maximum_);
   return r;
 }
 
@@ -187,11 +165,10 @@ std::string Between::ToString() const {
 
 bool Between::IsSatisfiedWith(LookupVariableFn lookup_variable,
                               int64_t value) const {
-  absl::StatusOr<std::optional<Range::ExtremeValues>> extremes =
+  std::optional<Range::ExtremeValues> extremes =
       GetRange().Extremes(lookup_variable);
-  if (!extremes.ok()) return false;
-  if (!extremes->has_value()) return false;
-  return (*extremes)->min <= value && value <= (*extremes)->max;
+  if (!extremes) return false;
+  return extremes->min <= value && value <= extremes->max;
 }
 
 std::string Between::UnsatisfiedReason(LookupVariableFn lookup_variable,
@@ -207,17 +184,14 @@ std::vector<std::string> Between::GetDependencies() const {
 // -----------------------------------------------------------------------------
 //  AtMost
 
-AtMost::AtMost(int64_t maximum)
-    : maximum_(*ParseExpression(std::to_string(maximum))) {}
+AtMost::AtMost(int64_t maximum) : maximum_(std::to_string(maximum)) {}
 
 AtMost::AtMost(IntegerExpression maximum)
-    : maximum_(*ParseExpression(maximum)) {
-  dependencies_ = ExtractDependencies(maximum_);
-}
+    : maximum_(maximum), dependencies_(maximum_.GetDependencies()) {}
 
 Range AtMost::GetRange() const {
   Range r;
-  r.AtMost(maximum_.ToString()).IgnoreError();
+  r.AtMost(maximum_);
   return r;
 }
 
@@ -227,11 +201,10 @@ std::string AtMost::ToString() const {
 
 bool AtMost::IsSatisfiedWith(LookupVariableFn lookup_variable,
                              int64_t value) const {
-  absl::StatusOr<std::optional<Range::ExtremeValues>> extremes =
+  std::optional<Range::ExtremeValues> extremes =
       GetRange().Extremes(lookup_variable);
-  if (!extremes.ok()) return false;
-  if (!extremes->has_value()) return false;
-  return value >= (*extremes)->min && value <= (*extremes)->max;
+  if (!extremes) return false;
+  return extremes->min <= value && value <= extremes->max;
 }
 
 std::string AtMost::UnsatisfiedReason(LookupVariableFn lookup_variable,
@@ -246,17 +219,14 @@ std::vector<std::string> AtMost::GetDependencies() const {
 // -----------------------------------------------------------------------------
 //  AtLeast
 
-AtLeast::AtLeast(int64_t minimum)
-    : minimum_(*ParseExpression(std::to_string(minimum))) {}
+AtLeast::AtLeast(int64_t minimum) : minimum_(std::to_string(minimum)) {}
 
 AtLeast::AtLeast(IntegerExpression minimum)
-    : minimum_(*ParseExpression(minimum)) {
-  dependencies_ = ExtractDependencies(minimum_);
-}
+    : minimum_(minimum), dependencies_(minimum_.GetDependencies()) {}
 
 Range AtLeast::GetRange() const {
   Range r;
-  r.AtLeast(minimum_.ToString()).IgnoreError();
+  r.AtLeast(minimum_);
   return r;
 }
 
@@ -266,11 +236,10 @@ std::string AtLeast::ToString() const {
 
 bool AtLeast::IsSatisfiedWith(LookupVariableFn lookup_variable,
                               int64_t value) const {
-  absl::StatusOr<std::optional<Range::ExtremeValues>> extremes =
+  std::optional<Range::ExtremeValues> extremes =
       GetRange().Extremes(lookup_variable);
-  if (!extremes.ok()) return false;
-  if (!extremes->has_value()) return false;
-  return value >= (*extremes)->min && value <= (*extremes)->max;
+  if (!extremes) return false;
+  return extremes->min <= value && value <= extremes->max;
 }
 
 std::string AtLeast::UnsatisfiedReason(LookupVariableFn lookup_variable,

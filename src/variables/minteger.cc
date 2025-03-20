@@ -15,6 +15,7 @@
 
 #include "src/variables/minteger.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <functional>
@@ -28,12 +29,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/algorithm/container.h"
-#include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
@@ -43,7 +38,6 @@
 #include "src/internal/range.h"
 #include "src/librarian/one_of_handler.h"
 #include "src/librarian/size_property.h"
-#include "src/util/status_macro/status_macros.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/constraints/size_constraints.h"
@@ -122,11 +116,12 @@ std::optional<int64_t> MInteger::GetUniqueValueImpl(
   auto option1 = one_of_int_->GetUniqueValue();
   if (option1) return *option1;
 
+  // FIXME: This is silly to recompile the expression every time.
   auto option2 = one_of_expr_->GetUniqueValue();
   if (option2) {
-    auto expr = *ParseExpression(*option2);
+    Expression expr(*option2);
     try {
-      return EvaluateIntegerExpression(expr, [&](std::string_view var) {
+      return expr.Evaluate([&](std::string_view var) {
         auto value = ctx.GetUniqueValue<MInteger>(var);
         if (!value) throw ValueNotFound(var);
         return *value;
@@ -137,52 +132,37 @@ std::optional<int64_t> MInteger::GetUniqueValueImpl(
     }
   }
 
-  absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
-  if (!extremes.ok()) return std::nullopt;
-  if (extremes->min != extremes->max) return std::nullopt;
+  std::optional<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
+  if (!extremes || extremes->min != extremes->max) return std::nullopt;
 
   return extremes->min;
 }
 
-absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues(
+Range::ExtremeValues MInteger::GetExtremeValues(
     librarian::ResolverContext ctx) const {
-  MORIARTY_ASSIGN_OR_RETURN(
-      absl::flat_hash_set<std::string> needed_dependent_variables,
-      bounds_->NeededVariables(), _ << "Error getting the needed variables");
-
-  absl::flat_hash_map<std::string, int64_t> dependent_variables;
-
-  for (std::string_view name : needed_dependent_variables) {
-    dependent_variables[name] = ctx.GenerateVariable<MInteger>(name);
-  }
-
-  MORIARTY_ASSIGN_OR_RETURN(std::optional<Range::ExtremeValues> extremes,
-                            bounds_->Extremes(dependent_variables));
-  if (!extremes) return absl::InvalidArgumentError("Valid range is empty");
+  std::optional<Range::ExtremeValues> extremes =
+      bounds_->Extremes([&](std::string_view var) {
+        return ctx.GenerateVariable<MInteger>(var);
+      });
+  if (!extremes)
+    throw std::runtime_error(
+        "Attempting to generate an integer, but no valid integers available");
   return *extremes;
 }
 
-absl::StatusOr<Range::ExtremeValues> MInteger::GetExtremeValues(
+std::optional<Range::ExtremeValues> MInteger::GetExtremeValues(
     librarian::AnalysisContext ctx) const {
-  MORIARTY_ASSIGN_OR_RETURN(
-      absl::flat_hash_set<std::string> needed_dependent_variables,
-      bounds_->NeededVariables(), _ << "Error getting the needed variables");
-
-  absl::flat_hash_map<std::string, int64_t> dependent_variables;
-
-  for (std::string_view name : needed_dependent_variables) {
-    std::optional<int64_t> value = ctx.GetUniqueValue<MInteger>(name);
-    if (!value) {
-      return absl::InvalidArgumentError(
-          absl::Substitute("Unknown dependent variable: $0", name));
-    }
-    dependent_variables[name] = std::move(*value);
+  try {
+    std::optional<Range::ExtremeValues> extremes =
+        bounds_->Extremes([&](std::string_view var) {
+          auto value = ctx.GetUniqueValue<MInteger>(var);
+          if (!value) throw ValueNotFound(var);
+          return *value;
+        });
+    return extremes;
+  } catch (const ValueNotFound& e) {
+    return std::nullopt;
   }
-
-  MORIARTY_ASSIGN_OR_RETURN(std::optional<Range::ExtremeValues> extremes,
-                            bounds_->Extremes(dependent_variables));
-  if (!extremes) return absl::InvalidArgumentError("Valid range is empty");
-  return *extremes;
 }
 
 namespace {
@@ -199,14 +179,14 @@ namespace {
     }
   }
 
+  // FIXME: This is stilly to reparse the expression every time.
   if (exprs.HasBeenConstrained()) {
     std::vector<int64_t> options;
     for (const std::string& option : exprs.GetOptions()) {
-      Expression expr = *ParseExpression(option);
-      options.push_back(
-          EvaluateIntegerExpression(expr, [&](std::string_view var) {
-            return ctx.GenerateVariable<MInteger>(var);
-          }));
+      Expression expr(option);
+      options.push_back(expr.Evaluate([&](std::string_view var) {
+        return ctx.GenerateVariable<MInteger>(var);
+      }));
     }
   }
 
@@ -216,55 +196,51 @@ namespace {
 }  // namespace
 
 int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
-  auto extremes = GetExtremeValues(ctx);
-  if (!extremes.ok()) {
-    throw std::runtime_error(std::string(extremes.status().message()));
-  }
+  Range::ExtremeValues extremes = GetExtremeValues(ctx);
 
   if (one_of_int_->HasBeenConstrained() || one_of_expr_->HasBeenConstrained()) {
     std::vector<int64_t> options =
         ExtractOneOfOptions(ctx, *one_of_int_, *one_of_expr_);
     std::erase_if(options, [&](int64_t value) {
-      return !(extremes->min <= value && value <= extremes->max);
+      return !(extremes.min <= value && value <= extremes.max);
     });
     return ctx.RandomElement(options);
   }
 
   if (size_handler_->GetConstrainedSize() == CommonSize::kAny)
-    return ctx.RandomInteger(extremes->min, extremes->max);
+    return ctx.RandomInteger(extremes.min, extremes.max);
 
   // TODO(darcybest): Make this work for larger ranges.
-  if ((extremes->min <= std::numeric_limits<int64_t>::min() / 2) &&
-      (extremes->max >= std::numeric_limits<int64_t>::max() / 2)) {
-    return ctx.RandomInteger(extremes->min, extremes->max);
+  if ((extremes.min <= std::numeric_limits<int64_t>::min() / 2) &&
+      (extremes.max >= std::numeric_limits<int64_t>::max() / 2)) {
+    return ctx.RandomInteger(extremes.min, extremes.max);
   }
 
   // Note: `max - min + 1` does not overflow because of the check above.
   Range range = librarian::GetRange(size_handler_->GetConstrainedSize(),
-                                    extremes->max - extremes->min + 1);
+                                    extremes.max - extremes.min + 1);
 
-  absl::StatusOr<std::optional<Range::ExtremeValues>> rng_extremes =
-      range.Extremes();
-  if (!rng_extremes.ok()) {
-    throw std::runtime_error(std::string(rng_extremes.status().message()));
-  }
+  std::optional<Range::ExtremeValues> rng_extremes =
+      range.Extremes([&](std::string_view var) -> int64_t {
+        return ctx.GenerateVariable<MInteger>(var);
+      });
 
   // If a special size has been requested, attempt to generate that. If that
   // fails, generate the full range.
-  if (*rng_extremes) {
+  if (rng_extremes) {
     // Offset the values appropriately. These ranges were supposed to be for
     // [1, N].
-    (*rng_extremes)->min += extremes->min - 1;
-    (*rng_extremes)->max += extremes->min - 1;
+    rng_extremes->min += extremes.min - 1;
+    rng_extremes->max += extremes.min - 1;
 
     try {
-      return ctx.RandomInteger((*rng_extremes)->min, (*rng_extremes)->max);
+      return ctx.RandomInteger(rng_extremes->min, rng_extremes->max);
     } catch (const std::exception& e) {
       // If the special size fails, simply pass through.
     }
   }
 
-  return ctx.RandomInteger(extremes->min, extremes->max);
+  return ctx.RandomInteger(extremes.min, extremes.max);
 }
 
 int64_t MInteger::ReadImpl(librarian::ReaderContext ctx) const {
@@ -286,12 +262,10 @@ void MInteger::PrintImpl(librarian::PrinterContext ctx,
 
 std::vector<MInteger> MInteger::ListEdgeCasesImpl(
     librarian::AnalysisContext ctx) const {
-  absl::StatusOr<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
+  std::optional<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
 
-  int64_t min =
-      extremes.ok() ? extremes->min : std::numeric_limits<int64_t>::min();
-  int64_t max =
-      extremes.ok() ? extremes->max : std::numeric_limits<int64_t>::max();
+  int64_t min = extremes ? extremes->min : std::numeric_limits<int64_t>::min();
+  int64_t max = extremes ? extremes->max : std::numeric_limits<int64_t>::max();
 
   // TODO(hivini): Create more interesting cases instead of a list of ints.
   std::vector<int64_t> values = {min};
@@ -304,7 +278,7 @@ std::vector<MInteger> MInteger::ListEdgeCasesImpl(
     for (int64_t v : insert_list) {
       // min and max are already in, only include values strictly in (min,
       // max).
-      if (min < v && v < max && absl::c_find(values, v) == values.end())
+      if (min < v && v < max && std::ranges::find(values, v) == values.end())
         values.push_back(v);
     }
   };

@@ -31,38 +31,35 @@ using ::moriarty::Between;
 using ::testing::ElementsAre;
 using ::testing::Throws;
 
-testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
-  auto extremes1 = r1.Extremes();
-  auto extremes2 = r2.Extremes();
-  if (!extremes1.ok())
-    return testing::AssertionFailure()
-           << "r1.Extremes() failed; " << extremes1.status();
-  if (!extremes2.ok())
-    return testing::AssertionFailure()
-           << "r2.Extremes() failed; " << extremes2.status();
+int64_t NoVariablesKnown(std::string_view var) {
+  throw std::invalid_argument("No variables known");
+}
 
-  if (!(*extremes1).has_value() && !(*extremes2).has_value())
+testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
+  auto extremes1 = r1.Extremes(NoVariablesKnown);
+  auto extremes2 = r2.Extremes(NoVariablesKnown);
+
+  if (!extremes1.has_value() && !extremes2.has_value())
     return testing::AssertionSuccess() << "both ranges are empty";
 
-  if (!(*extremes1).has_value())
+  if (!extremes1.has_value())
     return testing::AssertionFailure()
-           << "first range is empty, second is " << "[" << (*extremes2)->min
-           << ", " << (*extremes2)->max << "]";
+           << "first range is empty, second is " << "[" << extremes2->min
+           << ", " << extremes2->max << "]";
 
-  if (!(*extremes2).has_value())
+  if (!extremes2.has_value())
     return testing::AssertionFailure()
-           << "first range is " << "[" << (*extremes1)->min << ", "
-           << (*extremes1)->max << "]" << ", second is empty";
+           << "first range is " << "[" << extremes1->min << ", "
+           << extremes1->max << "]" << ", second is empty";
 
-  if ((*extremes1) == (*extremes2))
+  if (extremes1 == extremes2)
     return testing::AssertionSuccess()
-           << "both ranges are [" << (*extremes1)->min << ", "
-           << (*extremes1)->max;
+           << "both ranges are [" << extremes1->min << ", " << extremes1->max;
 
   return testing::AssertionFailure()
-         << "are not equal " << "[" << (*extremes1)->min << ", "
-         << (*extremes1)->max << "]" << " vs " << "[" << (*extremes2)->min
-         << ", " << (*extremes2)->max << "]";
+         << "are not equal " << "[" << extremes1->min << ", " << extremes1->max
+         << "]" << " vs " << "[" << extremes2->min << ", " << extremes2->max
+         << "]";
 }
 
 TEST(NumericConstraintsTest, InvalidBetweenShouldThrow) {
@@ -71,44 +68,25 @@ TEST(NumericConstraintsTest, InvalidBetweenShouldThrow) {
 
 TEST(NumericConstraintsTest, InvalidExpressionsShouldThrow) {
   {
-    EXPECT_DEATH({ ExactlyIntegerExpression("2 *"); }, "INVALID_ARGUMENT");
+    EXPECT_THAT([] { ExactlyIntegerExpression("2 *"); },
+                Throws<std::invalid_argument>());
     EXPECT_THAT([] { OneOfIntegerExpression({"3", "2 *"}); },
                 Throws<std::invalid_argument>());
-    EXPECT_DEATH({ Between("2 *", 5); }, "INVALID_ARGUMENT");
-    EXPECT_DEATH({ Between(5, "2 *"); }, "INVALID_ARGUMENT");
-    EXPECT_DEATH({ AtMost("2 *"); }, "INVALID_ARGUMENT");
-    EXPECT_DEATH({ AtLeast("2 *"); }, "INVALID_ARGUMENT");
+    EXPECT_THAT([] { Between("2 *", 5); }, Throws<std::invalid_argument>());
+    EXPECT_THAT([] { Between(5, "2 *"); }, Throws<std::invalid_argument>());
+    EXPECT_THAT([] { AtMost("2 *"); }, Throws<std::invalid_argument>());
+    EXPECT_THAT([] { AtLeast("2 *"); }, Throws<std::invalid_argument>());
   }
   {
-    EXPECT_DEATH({ ExactlyIntegerExpression(""); }, "INVALID_ARGUMENT");
+    EXPECT_THAT([] { ExactlyIntegerExpression(""); },
+                Throws<std::invalid_argument>());
     EXPECT_THAT([] { OneOfIntegerExpression({""}); },
                 Throws<std::invalid_argument>());
-    EXPECT_DEATH({ Between("", 5); }, "INVALID_ARGUMENT");
-    EXPECT_DEATH({ Between(5, ""); }, "INVALID_ARGUMENT");
-    EXPECT_DEATH({ AtMost(""); }, "INVALID_ARGUMENT");
-    EXPECT_DEATH({ AtLeast(""); }, "INVALID_ARGUMENT");
+    EXPECT_THAT([] { Between("", 5); }, Throws<std::invalid_argument>());
+    EXPECT_THAT([] { Between(5, ""); }, Throws<std::invalid_argument>());
+    EXPECT_THAT([] { AtMost(""); }, Throws<std::invalid_argument>());
+    EXPECT_THAT([] { AtLeast(""); }, Throws<std::invalid_argument>());
   }
-
-  // {
-  //   EXPECT_THAT([] { ExactlyIntegerExpression("2 *"); },
-  //               Throws<std::invalid_argument>());
-  //   EXPECT_THAT([] { OneOfIntegerExpression({"3", "2 *"}); },
-  //               Throws<std::invalid_argument>());
-  //   EXPECT_THAT([] { Between("2 *", 5); }, Throws<std::invalid_argument>());
-  //   EXPECT_THAT([] { Between(5, "2 *"); }, Throws<std::invalid_argument>());
-  //   EXPECT_THAT([] { AtMost("2 *"); }, Throws<std::invalid_argument>());
-  //   EXPECT_THAT([] { AtLeast("2 *"); }, Throws<std::invalid_argument>());
-  // }
-  // {
-  //   EXPECT_THAT([] { ExactlyIntegerExpression(""); },
-  //               Throws<std::invalid_argument>());
-  //   EXPECT_THAT([] { OneOfIntegerExpression({""}); },
-  //               Throws<std::invalid_argument>());
-  //   EXPECT_THAT([] { Between("", 5); }, Throws<std::invalid_argument>());
-  //   EXPECT_THAT([] { Between(5, ""); }, Throws<std::invalid_argument>());
-  //   EXPECT_THAT([] { AtMost(""); }, Throws<std::invalid_argument>());
-  //   EXPECT_THAT([] { AtLeast(""); }, Throws<std::invalid_argument>());
-  // }
 }
 
 TEST(NumericConstraintsTest, GetRangeShouldGiveCorrectValues) {

@@ -25,10 +25,6 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "src/internal/expressions.h"
 
 namespace moriarty {
@@ -61,15 +57,8 @@ class Range {
 
   // AtLeast()
   //
-  // This range is at least `integer_expression`. For example,
-  //   `AtLeast("3 * N + 1")`
-  //
-  // Multiple calls to `AtLeast` are ANDed  together. For example,
-  //   `AtLeast(5); AtLeast("X + Y"); AtLeast("W");`
-  // means that this is at least max({5, Evaluate("X + Y"), Evaluate("W")}).
-  //
-  // Returns a non-OK status if parsing fails.
-  absl::Status AtLeast(std::string_view integer_expression);
+  // This range is at least `minimum`.
+  void AtLeast(Expression minimum);
 
   // AtMost()
   //
@@ -83,15 +72,8 @@ class Range {
 
   // AtMost()
   //
-  // This range is at most `integer_expression`. For example,
-  //   `AtMost("3 * N + 1")`
-  //
-  // Multiple calls to `AtMost` are ANDed  together. For example,
-  //   `AtMost(5); AtMost("X + Y"); AtMost("W");`
-  // means that this is at most min({5, Evaluate("X + Y"), Evaluate("W")}).
-  //
-  // Returns a non-OK status if parsing fails.
-  absl::Status AtMost(std::string_view integer_expression);
+  // This range is at most `maximum`.
+  void AtMost(Expression maximum);
 
   // IsEmpty()
   //
@@ -112,21 +94,8 @@ class Range {
   // if the range is empty.
   //
   // Uses get_value(var_name) to get the current value of any needed variables.
-  absl::StatusOr<std::optional<ExtremeValues>> Extremes(
+  std::optional<ExtremeValues> Extremes(
       std::function<int64_t(std::string_view)> get_value) const;
-
-  // Extremes()
-  //
-  // Returns the two extremes of the range (min and max). Returns `std::nullopt`
-  // if the range is empty.
-  absl::StatusOr<std::optional<ExtremeValues>> Extremes(
-      const absl::flat_hash_map<std::string, int64_t>& variables = {}) const;
-
-  // NeededVariables()
-  //
-  // Returns a set of all variable's values needed in order to evaluate
-  // `Extremes()`.
-  absl::StatusOr<absl::flat_hash_set<std::string>> NeededVariables() const;
 
   // Intersect()
   //
@@ -150,20 +119,11 @@ class Range {
   int64_t min_ = std::numeric_limits<int64_t>::min();
   int64_t max_ = std::numeric_limits<int64_t>::max();
 
-  // If any input argument was invalid, then this stores that for when it is
-  // actually needed.
-  //
-  // TODO(darcybest): This should not be lazily stored long term. We should pass
-  // the value back to the user and they should fail as needed.
-  absl::Status parameter_status_ = absl::OkStatus();
-
   // `min_exprs_` and `max_exprs_` are lists of Expressions that represent the
   // lower/upper bounds. They must be evaluated when `Extremes()` is called in
   // order to determine which is largest/smallest.
   std::vector<Expression> min_exprs_;
   std::vector<Expression> max_exprs_;
-
-  absl::flat_hash_set<std::string> needed_variables_;
 };
 
 // Creates a range with no elements in it.

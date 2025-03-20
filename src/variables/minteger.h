@@ -27,7 +27,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "absl/status/statusor.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
@@ -102,10 +101,9 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // Computes and returns the minimum and maximum of `bounds_`. Returns
   // `kInvalidArgumentError` if the range is empty. The `ResolverContext`
   // version may generate other dependent variables if needed along the way.
-  absl::StatusOr<Range::ExtremeValues> GetExtremeValues(
+  std::optional<Range::ExtremeValues> GetExtremeValues(
       librarian::AnalysisContext ctx) const;
-  absl::StatusOr<Range::ExtremeValues> GetExtremeValues(
-      librarian::ResolverContext ctx) const;
+  Range::ExtremeValues GetExtremeValues(librarian::ResolverContext ctx) const;
 
   class RangeConstraint {
    public:

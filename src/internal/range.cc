@@ -26,15 +26,10 @@
 #include <utility>
 #include <vector>
 
-#include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
 #include "absl/strings/substitute.h"
 #include "src/internal/expressions.h"
-#include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
 
@@ -42,40 +37,14 @@ Range::Range(int64_t minimum, int64_t maximum) : min_(minimum), max_(maximum) {}
 
 void Range::AtLeast(int64_t minimum) { min_ = std::max(min_, minimum); }
 
-absl::Status Range::AtLeast(std::string_view integer_expression) {
-  absl::StatusOr<Expression> expr = ParseExpression(integer_expression);
-  if (!expr.ok()) {
-    absl::Status status = absl::InvalidArgumentError(absl::Substitute(
-        "AtLeast called with invalid expression; $0", expr.status().message()));
-    parameter_status_.Update(status);
-    return status;
-  }
-
-  MORIARTY_ASSIGN_OR_RETURN(absl::flat_hash_set<std::string> vars,
-                            moriarty::NeededVariables(*expr));
-  needed_variables_.merge(vars);
-
-  min_exprs_.push_back(std::move(*expr));
-  return absl::OkStatus();
+void Range::AtLeast(Expression minimum) {
+  min_exprs_.push_back(std::move(minimum));
 }
 
 void Range::AtMost(int64_t maximum) { max_ = std::min(max_, maximum); }
 
-absl::Status Range::AtMost(std::string_view integer_expression) {
-  absl::StatusOr<Expression> expr = ParseExpression(integer_expression);
-  if (!expr.ok()) {
-    absl::Status status = absl::InvalidArgumentError(absl::Substitute(
-        "AtMost called with invalid expression; $0", expr.status().message()));
-    parameter_status_.Update(status);
-    return status;
-  }
-
-  MORIARTY_ASSIGN_OR_RETURN(absl::flat_hash_set<std::string> vars,
-                            moriarty::NeededVariables(*expr));
-  needed_variables_.merge(vars);
-
-  max_exprs_.push_back(std::move(*expr));
-  return absl::OkStatus();
+void Range::AtMost(Expression maximum) {
+  max_exprs_.push_back(std::move(maximum));
 }
 
 bool Range::IsEmpty() const { return min_ > max_; }
@@ -86,10 +55,10 @@ namespace {
 // value of `compare`.
 template <typename F>
 int64_t FindExtreme(int64_t initial_value, std::span<const Expression> exprs,
-                    const absl::flat_hash_map<std::string, int64_t>& variables,
+                    std::function<int64_t(std::string_view)> get_value,
                     F compare) {
   for (const Expression& expr : exprs) {
-    int64_t val = EvaluateIntegerExpression(expr, variables);
+    int64_t val = expr.Evaluate(get_value);
     if (compare(val, initial_value)) initial_value = val;
   }
   return initial_value;
@@ -97,38 +66,18 @@ int64_t FindExtreme(int64_t initial_value, std::span<const Expression> exprs,
 
 }  // namespace
 
-auto Range::Extremes(std::function<int64_t(std::string_view)> get_value) const
-    -> absl::StatusOr<std::optional<ExtremeValues>> {
-  absl::flat_hash_map<std::string, int64_t> variables;
-  for (const std::string& var : needed_variables_) {
-    variables[var] = get_value(var);
-  }
-  return Extremes(variables);
-}
-
-absl::StatusOr<std::optional<Range::ExtremeValues>> Range::Extremes(
-    const absl::flat_hash_map<std::string, int64_t>& variables) const {
-  MORIARTY_RETURN_IF_ERROR(parameter_status_);
-
+std::optional<Range::ExtremeValues> Range::Extremes(
+    std::function<int64_t(std::string_view)> get_value) const {
   ExtremeValues extremes = {
-      .min = FindExtreme(min_, min_exprs_, variables, std::greater<int64_t>()),
-      .max = FindExtreme(max_, max_exprs_, variables, std::less<int64_t>())};
+      .min = FindExtreme(min_, min_exprs_, get_value, std::greater<int64_t>()),
+      .max = FindExtreme(max_, max_exprs_, get_value, std::less<int64_t>())};
 
   if (extremes.min > extremes.max) return std::nullopt;
 
   return extremes;
 }
 
-absl::StatusOr<absl::flat_hash_set<std::string>> Range::NeededVariables()
-    const {
-  MORIARTY_RETURN_IF_ERROR(parameter_status_);
-
-  return needed_variables_;
-}
-
 void Range::Intersect(const Range& other) {
-  parameter_status_.Update(other.parameter_status_);
-
   AtLeast(other.min_);
   AtMost(other.max_);
 
@@ -136,9 +85,6 @@ void Range::Intersect(const Range& other) {
                     other.min_exprs_.end());
   max_exprs_.insert(max_exprs_.end(), other.max_exprs_.begin(),
                     other.max_exprs_.end());
-
-  needed_variables_.insert(other.needed_variables_.begin(),
-                           other.needed_variables_.end());
 }
 
 namespace {
@@ -189,8 +135,6 @@ std::string Range::ToString() const {
 }
 
 bool operator==(const Range& r1, const Range& r2) {
-  // Invalid ranges are never equal (similar to NaN).
-  if (!r1.parameter_status_.ok() || !r2.parameter_status_.ok()) return false;
   if (r1.IsEmpty() || r2.IsEmpty()) return r1.IsEmpty() == r2.IsEmpty();
 
   if (std::tie(r1.min_, r1.max_) != std::tie(r2.min_, r2.max_)) return false;

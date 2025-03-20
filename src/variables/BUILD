@@ -75,12 +75,6 @@ cc_library(
         "//src/variables/constraints:base_constraints",
         "//src/variables/constraints:numeric_constraints",
         "//src/variables/constraints:size_constraints",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
     ],
 )
 
