@@ -50,7 +50,6 @@ using ::moriarty_testing::Read;
 using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::AllOf;
 using ::testing::AnyOf;
-using ::testing::Each;
 using ::testing::Eq;
 using ::testing::Ge;
 using ::testing::HasSubstr;
@@ -66,41 +65,38 @@ TEST(MIntegerTest, TypenameIsCorrect) {
 }
 
 TEST(MIntegerTest, PrintShouldSucceed) {
-  EXPECT_THAT(Print(MInteger(), -1), IsOkAndHolds("-1"));
-  EXPECT_THAT(Print(MInteger(), 0), IsOkAndHolds("0"));
-  EXPECT_THAT(Print(MInteger(), 1), IsOkAndHolds("1"));
+  EXPECT_EQ(Print(MInteger(), -1), "-1");
+  EXPECT_EQ(Print(MInteger(), 0), "0");
+  EXPECT_EQ(Print(MInteger(), 1), "1");
 }
 
 TEST(MIntegerTest, ValidReadShouldSucceed) {
-  EXPECT_THAT(Read(MInteger(), "123"), IsOkAndHolds(123));
-  EXPECT_THAT(Read(MInteger(), "456 "), IsOkAndHolds(456));
-  EXPECT_THAT(Read(MInteger(), "-789"), IsOkAndHolds(-789));
+  EXPECT_EQ(Read(MInteger(), "123"), 123);
+  EXPECT_EQ(Read(MInteger(), "456 "), 456);
+  EXPECT_EQ(Read(MInteger(), "-789"), -789);
 
   // Extremes
   int64_t min = std::numeric_limits<int64_t>::min();
   int64_t max = std::numeric_limits<int64_t>::max();
-  EXPECT_THAT(Read(MInteger(), std::to_string(min)), IsOkAndHolds(min));
-  EXPECT_THAT(Read(MInteger(), std::to_string(max)), IsOkAndHolds(max));
+  EXPECT_EQ(Read(MInteger(), std::to_string(min)), min);
+  EXPECT_EQ(Read(MInteger(), std::to_string(max)), max);
 }
 
 TEST(MIntegerTest, ReadWithTokensAfterwardsIsFine) {
-  EXPECT_THAT(Read(MInteger(), "-123 you should ignore this"),
-              IsOkAndHolds(-123));
+  EXPECT_EQ(Read(MInteger(), "-123 you should ignore this"), -123);
 }
 
 TEST(MIntegerTest, InvalidReadShouldFail) {
   // EOF
-  EXPECT_THROW({ Read(MInteger(), "").IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ (void)Read(MInteger(), ""); }, std::runtime_error);
   // EOF with whitespace
-  EXPECT_THROW({ Read(MInteger(), " ").IgnoreError(); }, std::runtime_error);
-
+  EXPECT_THROW({ (void)Read(MInteger(), " "); }, std::runtime_error);
   // Double negative
-  EXPECT_THROW(
-      { Read(MInteger(), "--123").IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ (void)Read(MInteger(), "--123"); }, std::runtime_error);
   // Invalid character start/middle/end
-  EXPECT_THROW({ Read(MInteger(), "c123").IgnoreError(); }, std::runtime_error);
-  EXPECT_THROW({ Read(MInteger(), "12c3").IgnoreError(); }, std::runtime_error);
-  EXPECT_THROW({ Read(MInteger(), "123c").IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ (void)Read(MInteger(), "c123"); }, std::runtime_error);
+  EXPECT_THROW({ (void)Read(MInteger(), "12c3"); }, std::runtime_error);
+  EXPECT_THROW({ (void)Read(MInteger(), "123c"); }, std::runtime_error);
 }
 
 TEST(MIntegerTest, GenerateShouldSuccessfullyComplete) {
@@ -278,32 +274,29 @@ TEST(MIntegerTest, AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {
 }
 
 TEST(MIntegerTest, AtMostAndAtLeastWithExpressionsShouldLimitTheOutputRange) {
-  // TODO(darcybest): Make GeneratedValuesAre compatible with Context instead of
-  // using GenerateLots().
-  EXPECT_THAT(GenerateLots(MInteger(AtLeast(0), AtMost("3 * N + 1")),
-                           Context().WithValue<MInteger>("N", 10)),
-              IsOkAndHolds(Each(AllOf(Ge(0), Le(31)))));
-  EXPECT_THAT(GenerateLots(MInteger(AtLeast("3 * N + 1"), AtMost(50)),
-                           Context().WithValue<MInteger>("N", 10)),
-              IsOkAndHolds(Each(AllOf(Ge(31), Le(50)))));
+  EXPECT_THAT(MInteger(AtMost("3 * N + 1"), AtLeast(0)),
+              GeneratedValuesAre(AllOf(Ge(0), Le(31)),
+                                 Context().WithValue<MInteger>("N", 10)));
+  EXPECT_THAT(MInteger(AtLeast("3 * N + 1"), AtMost(50)),
+              GeneratedValuesAre(AllOf(Ge(31), Le(50)),
+                                 Context().WithValue<MInteger>("N", 10)));
 }
 
 TEST(
     MIntegerTest,
     MultipleExpressionsAndConstantsInAtLeastAtMostBetweenShouldRestrictOutput) {
-  // TODO(darcybest): Make GeneratedValuesAre compatible with Context.
   EXPECT_THAT(
-      GenerateLots(
-          MInteger(AtLeast(0), AtMost("3 * N + 1"), Between("N + M", 100)),
-          Context().WithValue<MInteger>("N", 10).WithValue<MInteger>("M", 15)),
-      IsOkAndHolds(Each(AllOf(Ge(0), Le(31), Ge(25), Le(100)))));
+      MInteger(AtLeast(0), AtMost("3 * N + 1"), Between("N + M", 100)),
+      GeneratedValuesAre(
+          AllOf(Ge(0), Le(31), Ge(25), Le(100)),
+          Context().WithValue<MInteger>("N", 10).WithValue<MInteger>("M", 15)));
 
   EXPECT_THAT(
-      GenerateLots(
-          MInteger(AtLeast("3 * N + 1"), AtLeast("3 * M + 3"), AtMost(50),
-                   AtMost("M ^ 2")),
-          Context().WithValue<MInteger>("N", 6).WithValue<MInteger>("M", 5)),
-      IsOkAndHolds(Each(AllOf(Ge(19), Ge(18), Le(50), Le(25)))));
+      MInteger(AtLeast("3 * N + 1"), AtLeast("3 * M + 3"), AtMost(50),
+               AtMost("M ^ 2")),
+      GeneratedValuesAre(
+          AllOf(Ge(19), Ge(18), Le(50), Le(25)),
+          Context().WithValue<MInteger>("N", 6).WithValue<MInteger>("M", 5)));
 }
 
 TEST(MIntegerTest, AllOverloadsOfExactlyAreEffective) {
@@ -314,12 +307,10 @@ TEST(MIntegerTest, AllOverloadsOfExactlyAreEffective) {
                 GeneratedValuesAre(10));
   }
   {  // With variables
-    EXPECT_THAT(GenerateLots(MInteger(Exactly("3 * N + 1")),
-                             Context().WithValue<MInteger>("N", 10)),
-                IsOkAndHolds(Each(31)));
-    EXPECT_THAT(GenerateLots(MInteger(ExactlyIntegerExpression("3 * N + 1")),
-                             Context().WithValue<MInteger>("N", 10)),
-                IsOkAndHolds(Each(31)));
+    EXPECT_THAT(MInteger(Exactly("3 * N + 1")),
+                GeneratedValuesAre(31, Context().WithValue<MInteger>("N", 10)));
+    EXPECT_THAT(MInteger(ExactlyIntegerExpression("3 * N + 1")),
+                GeneratedValuesAre(31, Context().WithValue<MInteger>("N", 10)));
   }
 }
 

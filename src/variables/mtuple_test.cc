@@ -34,7 +34,6 @@
 namespace moriarty {
 namespace {
 
-using ::moriarty::IsOkAndHolds;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GenerateSameValues;
@@ -58,76 +57,59 @@ TEST(MTupleTest, TypenameIsCorrect) {
   EXPECT_EQ(MTuple(MInteger(), MTuple(MInteger(), MInteger())).Typename(),
             "MTuple<MInteger, MTuple<MInteger, MInteger>>");
 }
-
 TEST(MTupleTest, PrintShouldSucceed) {
-  EXPECT_THAT(Print(MTuple(MInteger(), MInteger()), {1, 2}),
-              IsOkAndHolds("1 2"));
-  EXPECT_THAT(
+  EXPECT_EQ(Print(MTuple(MInteger(), MInteger()), {1, 2}), "1 2");
+  EXPECT_EQ(
       Print(MTuple(MInteger(), MInteger(), MTuple(MInteger(), MInteger())),
             {1, 2, {5, 6}}),
-      IsOkAndHolds("1 2 5 6"));
+      "1 2 5 6");
 }
 
 TEST(MTupleTest, PrintWithProperSeparatorShouldSucceed) {
-  EXPECT_THAT(
-      Print(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
-            {1, 22, 333}),
-      IsOkAndHolds("1\n22\n333"));
-  EXPECT_THAT(Print(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
-                    {1, "twotwo", 333}),
-              IsOkAndHolds("1\ttwotwo\t333"));
+  EXPECT_EQ(Print(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
+                  {1, 22, 333}),
+            "1\n22\n333");
+  EXPECT_EQ(Print(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
+                  {1, "twotwo", 333}),
+            "1\ttwotwo\t333");
 }
 
 TEST(MTupleTest, TypicalReadCaseWorks) {
-  EXPECT_THAT(Read(MTuple<MInteger, MInteger, MInteger>(), "1 22 333"),
-              IsOkAndHolds(FieldsAre(1, 22, 333)));
-  EXPECT_THAT(Read(MTuple<MInteger, MString, MInteger>(), "1 twotwo 333"),
-              IsOkAndHolds(FieldsAre(1, "twotwo", 333)));
+  EXPECT_EQ(Read(MTuple<MInteger, MInteger, MInteger>(), "1 22 333"),
+            std::make_tuple(1, 22, 333));
+  EXPECT_EQ(Read(MTuple<MInteger, MString, MInteger>(), "1 twotwo 333"),
+            std::make_tuple(1, "twotwo", 333));
 }
 
 TEST(MTupleTest, ReadWithProperSeparatorShouldSucceed) {
-  EXPECT_THAT(Read(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
-                   "1\n22\n333"),
-              IsOkAndHolds(FieldsAre(1, 22, 333)));
-  EXPECT_THAT(Read(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
-                   "1\ttwotwo\t333"),
-              IsOkAndHolds(FieldsAre(1, "twotwo", 333)));
+  EXPECT_EQ(Read(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
+                 "1\n22\n333"),
+            std::make_tuple(1, 22, 333));
+  EXPECT_EQ(Read(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
+                 "1\ttwotwo\t333"),
+            std::make_tuple(1, "twotwo", 333));
 }
 
 TEST(MTupleTest, ReadWithIncorrectSeparatorShouldFail) {
+  EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(), "1\t22\t333"),
+               std::runtime_error);
   EXPECT_THROW(
-      {
-        Read(MTuple<MInteger, MInteger, MInteger>(), "1\t22\t333")
-            .IgnoreError();
-      },
+      (void)Read(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
+                 "1 22 333"),
       std::runtime_error);
   EXPECT_THROW(
-      {
-        Read(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
-             "1 22 333")
-            .IgnoreError();
-      },
-      std::runtime_error);
-  EXPECT_THROW(
-      {
-        Read(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
-             "1\ttwotwo 333")
-            .IgnoreError();
-      },
+      (void)Read(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
+                 "1\ttwotwo 333"),
       std::runtime_error);
 }
 
 TEST(MTupleTest, ReadingTheWrongTypeShouldFail) {
   // MString where MInteger should be
-  EXPECT_THROW(
-      {
-        Read(MTuple<MInteger, MInteger, MInteger>(), "1 two 3").IgnoreError();
-      },
-      std::runtime_error);
+  EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(), "1 two 3"),
+               std::runtime_error);
   // Not enough input
-  EXPECT_THROW(
-      { Read(MTuple<MInteger, MInteger, MInteger>(), "1 22").IgnoreError(); },
-      std::runtime_error);
+  EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(), "1 22"),
+               std::runtime_error);
 }
 
 TEST(MTupleTest, SimpleGenerateCaseWorks) {

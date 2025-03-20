@@ -20,6 +20,45 @@
 // In this file, you'll find several helpful functions when testing your custom
 // Moriarty MVariable type.
 //
+// Dependent Variables / Global Context
+//
+//    * Context
+//        When variables depend on one another (e.g., length of an array is "N",
+//        which is another MVariable), they need to live in the same context.
+//        Context contains global information for several test functions.
+//             Context()
+//                 .WithValue<MInteger>("N", 5)
+//                 .WithVariable("X", MString());
+//
+// Matchers (for googletest):
+//
+//    * GeneratedValuesAre(M, [optional] context)
+//        Generates several values from an MVariable and checks that each one
+//        satisfies another googletest matcher M. Example:
+//             EXPECT_THAT(MInteger().Between(1, 10), GeneratedValuesAre(Ge(1)))
+//
+//     * IsSatisfiedWith(x, [optional] context)
+//         Determines if `x` satisfies the constraints of the variable. Example:
+//             EXPECT_THAT(MInteger().Between(1, 10), IsSatisfiedWith(6))
+//
+//     * IsNotSatisfiedWith(x, reason, [optional] context)
+//         Determines if `x` does not satisfy the constraints of the variable.
+//         Prefer this over Not(IsSatisfiedWith()).
+//         Example:
+//             EXPECT_THAT(MInteger().Between(1, 10),
+//                         IsNotSatisfiedWith(60, "range"))
+//
+// Input / Output Helpers:
+//
+//    * Read(x, stream/string, [optional] context)
+//        Reads a value using constraints from an MVariable `x` from the
+//        input stream (or string) and returns that value.
+//
+//    * Print(x, value, [optional] context)
+//        Prints `value` using constraints from an MVariable `x` to a string and
+//        returns that string.
+//
+//
 // Generate Helpers:
 //
 //     * Generate(x, [optional] context)
@@ -36,41 +75,6 @@
 //         Calls `GenerateN(x, N)`, for some N (probably N=30 ish). Prefer to
 //         use `GeneratedValuesAre()` matcher below instead of generating lots
 //         of values and checking each for a property.
-//
-// Input / Output Helpers:
-//
-//    * Read(x, stream/string, [optional] context)
-//        Reads a value using constraints from an MVariable `x` from the
-//        input stream (or string) and returns that value.
-//
-//    * Print(x, value, [optional] context)
-//        Prints `value` using constraints from an MVariable `x` to a string and
-//        returns that string.
-//
-// Dependent Variables / Global Context
-//
-//    * Context
-//        When variables depend on one another (e.g., length of an array is "N",
-//        which is another MVariable), they need to live in the same context.
-//        Context contains global information for several test functions.
-//
-// Matchers (for googletest):
-//
-//    * GeneratedValuesAre(M)
-//        Generates several values from an MVariable and checks that each one
-//        satisfies another googletest matcher M. Example:
-//             EXPECT_THAT(MInteger().Between(1, 10), GeneratedValuesAre(Ge(1)))
-//
-//     * IsSatisfiedWith(x, [optional] context)
-//         Determines if `x` satisfies the constraints of the variable. Example:
-//             EXPECT_THAT(MInteger().Between(1, 10), IsSatisfiedWith(6))
-//
-//     * IsNotSatisfiedWith(x, reason, [optional] context)
-//         Determines if `x` does not satisfy the constraints of the variable.
-//         Prefer this over Not(IsSatisfiedWith()).
-//         Example:
-//             EXPECT_THAT(MInteger().Between(1, 10),
-//                         IsNotSatisfiedWith(60, "range"))
 //
 // Other googletest helpers:
 //
@@ -174,7 +178,6 @@ class Context {
 //   EXPECT_THAT(Generate(MInteger(Exactly("3 * N + 1")),
 //                        Context().WithValue("N", 3)),
 //               IsOkAndHolds(10));
-
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
@@ -241,8 +244,8 @@ std::vector<typename T::value_type> GenerateEdgeCases(T variable);
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<typename T::value_type> Read(T variable, std::istream& is,
-                                            Context context = {});
+[[nodiscard]] T::value_type Read(T variable, std::istream& is,
+                                 Context context = {});
 
 // Read() [For tests only]
 //
@@ -252,9 +255,8 @@ absl::StatusOr<typename T::value_type> Read(T variable, std::istream& is,
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<typename T::value_type> Read(T variable,
-                                            std::string_view read_from,
-                                            Context context = {});
+[[nodiscard]] T::value_type Read(T variable, std::string_view read_from,
+                                 Context context = {});
 
 // Print() [For tests only]
 //
@@ -263,8 +265,8 @@ absl::StatusOr<typename T::value_type> Read(T variable,
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<std::string> Print(T variable, typename T::value_type value,
-                                  Context context = {});
+[[nodiscard]] std::string Print(T variable, typename T::value_type value,
+                                Context context = {});
 
 // GenerateSameValues() [for use with GoogleTest]
 //
@@ -318,6 +320,35 @@ MATCHER_P(GeneratedValuesAre, matcher,
                            negation ? "should not" : "should")) {
   // The `auto` is hiding an absl::StatusOr<std::vector<>> of the generated type
   auto values = GenerateLots(arg);
+  if (!values.ok()) {
+    *result_listener << "Failed to generate values. " << values.status();
+    return false;
+  }
+
+  for (int i = 0; i < values->size(); i++) {
+    auto value = (*values)[i];  // `auto` is hiding the generated type
+    if (!testing::ExplainMatchResult(matcher, value, result_listener)) {
+      *result_listener << "The " << i + 1 << "-th generated value ("
+                       << testing::PrintToString(value)
+                       << ") does not satisfy matcher; ";
+      return false;
+    }
+  }
+
+  *result_listener << "all generated values satisfy constraints";
+  return true;
+}
+
+// GeneratedValuesAre() [for use with GoogleTest]
+//
+// Determines if values generated from this variable satisfy a constraint.
+//
+// Same as GeneratedValuesAre, but with a context.
+MATCHER_P2(GeneratedValuesAre, matcher, context,
+           absl::Substitute("generated values $0 satisfy constraints",
+                            negation ? "should not" : "should")) {
+  // The `auto` is hiding an absl::StatusOr<std::vector<>> of the generated type
+  auto values = GenerateLots(arg, context);
   if (!values.ok()) {
     *result_listener << "Failed to generate values. " << values.status();
     return false;
@@ -405,8 +436,7 @@ std::optional<typename T::value_type> GetUniqueValue(T variable,
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<typename T::value_type> Read(T variable, std::istream& is,
-                                            Context context) {
+T::value_type Read(T variable, std::istream& is, Context context) {
   std::string var_name = absl::Substitute("Read($0)", variable.Typename());
   context.WithVariable(var_name, variable);
 
@@ -426,9 +456,7 @@ absl::StatusOr<typename T::value_type> Read(T variable, std::istream& is,
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<typename T::value_type> Read(T variable,
-                                            std::string_view read_from,
-                                            Context context) {
+T::value_type Read(T variable, std::string_view read_from, Context context) {
   std::istringstream ss((std::string(read_from)));
   return Read(variable, ss, std::move(context));
 }
@@ -436,8 +464,7 @@ absl::StatusOr<typename T::value_type> Read(T variable,
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<std::string> Print(T variable, typename T::value_type value,
-                                  Context context) {
+std::string Print(T variable, typename T::value_type value, Context context) {
   std::string var_name = absl::Substitute("Print($0)", variable.Typename());
   context.WithVariable(var_name, variable);
   context.WithValue<T>(var_name, value);

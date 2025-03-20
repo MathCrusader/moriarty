@@ -55,30 +55,27 @@ TEST(MStringTest, TypenameIsCorrect) {
 }
 
 TEST(MStringTest, PrintShouldSucceed) {
-  EXPECT_THAT(Print(MString(), "value!"), IsOkAndHolds("value!"));
-  EXPECT_THAT(Print(MString(), ""), IsOkAndHolds(""));
-  EXPECT_THAT(Print(MString(), "multiple tokens"),
-              IsOkAndHolds("multiple tokens"));
+  EXPECT_EQ(Print(MString(), "value!"), "value!");
+  EXPECT_EQ(Print(MString(), ""), "");
+  EXPECT_EQ(Print(MString(), "multiple tokens"), "multiple tokens");
 }
 
 TEST(MStringTest, SingleTokenReadShouldSucceed) {
-  EXPECT_THAT(Read(MString(), "123"), IsOkAndHolds("123"));
-  EXPECT_THAT(Read(MString(), "abc"), IsOkAndHolds("abc"));
+  EXPECT_EQ(Read(MString(), "123"), "123");
+  EXPECT_EQ(Read(MString(), "abc"), "abc");
 }
 
 TEST(MStringTest, InputWithTokenWithWhitespaceAfterShouldReadToken) {
-  EXPECT_THAT(Read(MString(), "world "), IsOkAndHolds("world"));
-  EXPECT_THAT(Read(MString(), "you should ignore some of this"),
-              IsOkAndHolds("you"));
+  EXPECT_EQ(Read(MString(), "world "), "world");
+  EXPECT_EQ(Read(MString(), "you should ignore some of this"), "you");
 }
 
 TEST(MStringTest, ReadATokenWithLeadingWhitespaceShouldFail) {
-  EXPECT_THROW(
-      { Read(MString(), " spacebefore").IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW((void)Read(MString(), " spacebefore"), std::runtime_error);
 }
 
 TEST(MStringTest, ReadAtEofShouldFail) {
-  EXPECT_THROW({ Read(MString(), "").IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW((void)Read(MString(), ""), std::runtime_error);
 }
 
 TEST(MStringTest, IsSatisfiedWithShouldAcceptAllMStringsForDefault) {

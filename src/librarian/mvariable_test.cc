@@ -63,8 +63,8 @@ using ::testing::SizeIs;
 using ::testing::Truly;
 
 TEST(MVariableTest, PrintShouldSucceed) {
-  EXPECT_THAT(Print(MTestType(), -1), IsOkAndHolds("-1"));
-  EXPECT_THAT(Print(MTestType(), 153), IsOkAndHolds("153"));
+  EXPECT_EQ(Print(MTestType(), -1), "-1");
+  EXPECT_EQ(Print(MTestType(), 153), "153");
 }
 
 TEST(MVariableTest, GenerateShouldProduceAValue) {
@@ -506,28 +506,25 @@ class MEmptyClass : public MVariable<MEmptyClass, EmptyClass> {
     throw std::runtime_error("Unimplemented: GenerateImpl");
   }
 };
-
 TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToRead) {
-  EXPECT_THROW(
-      { Read(MEmptyClass(), "1234").IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ (void)Read(MEmptyClass(), "1234"); }, std::runtime_error);
 }
 
 TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToPrint) {
   EXPECT_THROW(
-      { Print(MEmptyClass(), EmptyClass()).IgnoreError(); },
-      std::runtime_error);
+      { (void)Print(MEmptyClass(), EmptyClass()); }, std::runtime_error);
 }
 
 TEST(MVariableTest, ReadValueShouldBeSuccessfulInNormalState) {
-  EXPECT_THAT(Read(MTestType(), "1234"), IsOkAndHolds(1234));
+  EXPECT_EQ(Read(MTestType(), "1234"), 1234);
 }
 
 TEST(MVariableTest, FailedReadShouldFail) {
-  EXPECT_THROW({ Read(MTestType(), "bad").IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ (void)Read(MTestType(), "bad"); }, std::runtime_error);
 }
 
 TEST(MVariableTest, PrintValueShouldBeSuccessfulInNormalState) {
-  EXPECT_THAT(Print(MTestType(), TestType(1234)), IsOkAndHolds("1234"));
+  EXPECT_EQ(Print(MTestType(), TestType(1234)), "1234");
 }
 
 TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {

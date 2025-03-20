@@ -83,20 +83,17 @@ MATCHER(HasDuplicateIntegers,
   }
   return false;
 }
-
 TEST(MArrayTest, TypicalReadCaseWorks) {
-  EXPECT_THAT(Read(MArray<MInteger>(Length(6)), "1 2 3 4 5 6"),
-              IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
-  EXPECT_THAT(
-      Read(MArray<MString>(Length(5)), "Hello, World! Welcome to Moriarty!"),
-      IsOkAndHolds(
-          ElementsAre("Hello,", "World!", "Welcome", "to", "Moriarty!")));
+  EXPECT_EQ(Print(MArray<MInteger>(Length(6)), {1, 2, 3, 4, 5, 6}),
+            "1 2 3 4 5 6");
+  EXPECT_EQ(Print(MArray<MString>(Length(5)),
+                  {"Hello,", "World!", "Welcome", "to", "Moriarty!"}),
+            "Hello, World! Welcome to Moriarty!");
 }
 
 TEST(MArrayTest, ReadingTheWrongLengthOfMArrayShouldFail) {
-  EXPECT_THROW(
-      { Read(MArray<MInteger>(Length(6)), "1 2 3 4").IgnoreError(); },
-      std::runtime_error);
+  EXPECT_THROW((void)Read(MArray<MInteger>(Length(6)), "1 2 3 4"),
+               std::runtime_error);
 }
 
 TEST(MArrayTest, SimpleGenerateCaseWorks) {
@@ -354,75 +351,69 @@ TEST(MArrayTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
       Generate(MArray<MInteger>(Elements<MInteger>(Between(1, "10^4")),
                                 Length("10^4"), DistinctElements())));
 }
-
 TEST(MArrayTest, WhitespaceSeparatorShouldAffectPrint) {
-  EXPECT_THAT(Print(MArray<MInteger>(IOSeparator::Newline()), {1, 2, 3}),
-              IsOkAndHolds("1\n2\n3"));  // Note no newline after
+  EXPECT_EQ(Print(MArray<MInteger>(IOSeparator::Newline()), {1, 2, 3}),
+            "1\n2\n3");  // Note no newline after
 }
 
 TEST(MArrayTest, WhitespaceSeparatorShouldAffectRead) {
-  EXPECT_THAT(Read(MArray<MInteger>(IOSeparator::Newline(), Length(6)),
-                   "1\n2\n3\n4\n5\n6"),
-              IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
+  EXPECT_EQ(Read(MArray<MInteger>(IOSeparator::Newline(), Length(6)),
+                 "1\n2\n3\n4\n5\n6"),
+            (std::vector<int64_t>{1, 2, 3, 4, 5, 6}));
 
-  EXPECT_THAT(Read(MArray<MInteger>(IOSeparator::Tab(), Length(3)), "3\t2\t1"),
-              IsOkAndHolds(ElementsAre(3, 2, 1)));
+  EXPECT_EQ(Read(MArray<MInteger>(IOSeparator::Tab(), Length(3)), "3\t2\t1"),
+            (std::vector<int64_t>{3, 2, 1}));
 
   // Read wrong whitespace between characters.
-  EXPECT_THROW(
-      {
-        Read(MArray<MInteger>(IOSeparator::Newline(), Length(6)),
-             "1\n2\n3 4\n5\n6")
-            .IgnoreError();
-      },
-      std::runtime_error);
+  EXPECT_THROW((void)Read(MArray<MInteger>(IOSeparator::Newline(), Length(6)),
+                          "1\n2\n3 4\n5\n6"),
+               std::runtime_error);
 }
 
 TEST(MArrayTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
-  EXPECT_THAT(Read(MArray<MInteger>(IOSeparator::Newline(),
-                                    IOSeparator::Newline(), Length(6)),
-                   "1\n2\n3\n4\n5\n6"),
-              IsOkAndHolds(ElementsAre(1, 2, 3, 4, 5, 6)));
+  EXPECT_EQ(Read(MArray<MInteger>(IOSeparator::Newline(),
+                                  IOSeparator::Newline(), Length(6)),
+                 "1\n2\n3\n4\n5\n6"),
+            (std::vector<int64_t>{1, 2, 3, 4, 5, 6}));
 }
 
 TEST(MArrayTest, WhitespaceSeparatorShouldFailWithTwoSeparators) {
-  EXPECT_THAT(
-      [] { MArray<MInteger>(IOSeparator::Newline(), IOSeparator::Tab()); },
-      Throws<std::runtime_error>());
+  EXPECT_THROW(
+      (void)MArray<MInteger>(IOSeparator::Newline(), IOSeparator::Tab()),
+      std::runtime_error);
 }
 
 TEST(MArrayTest, ReadShouldBeAbleToDetermineLengthFromAnotherVariable) {
-  EXPECT_THAT(Read(MArray<MInteger>(Length("N")), "1 2 3",
-                   Context().WithValue<MInteger>("N", 3)),
-              IsOkAndHolds(ElementsAre(1, 2, 3)));
+  EXPECT_EQ(Read(MArray<MInteger>(Length("N")), "1 2 3",
+                 Context().WithValue<MInteger>("N", 3)),
+            (std::vector<int64_t>{1, 2, 3}));
 
-  EXPECT_THAT(Read(MArray<MInteger>(Length("N")), "1 2 3",
-                   Context().WithVariable("N", MInteger(Between(3, 3)))),
-              IsOkAndHolds(ElementsAre(1, 2, 3)));
+  EXPECT_EQ(Read(MArray<MInteger>(Length("N")), "1 2 3",
+                 Context().WithVariable("N", MInteger(Between(3, 3)))),
+            (std::vector<int64_t>{1, 2, 3}));
 
-  EXPECT_THAT(Read(MArray<MInteger>(Length("N")), "1 2 3",
-                   Context().WithVariable("N", MInteger(Exactly<int64_t>(3)))),
-              IsOkAndHolds(ElementsAre(1, 2, 3)));
+  EXPECT_EQ(Read(MArray<MInteger>(Length("N")), "1 2 3",
+                 Context().WithVariable("N", MInteger(Exactly<int64_t>(3)))),
+            (std::vector<int64_t>{1, 2, 3}));
 
-  EXPECT_THAT(Read(MArray<MInteger>(Length(3)), "1 2 3"),
-              IsOkAndHolds(ElementsAre(1, 2, 3)));
+  EXPECT_EQ(Read(MArray<MInteger>(Length(3)), "1 2 3"),
+            (std::vector<int64_t>{1, 2, 3}));
 
-  EXPECT_THAT(Read(MArray<MInteger>(Length(Between(3, 3))), "1 2 3"),
-              IsOkAndHolds(ElementsAre(1, 2, 3)));
+  EXPECT_EQ(Read(MArray<MInteger>(Length(Between(3, 3))), "1 2 3"),
+            (std::vector<int64_t>{1, 2, 3}));
 }
 
 TEST(MArrayTest,
      ReadShouldFailIfLengthDependsOnAnUnknownVariableOrNonUniqueInteger) {
-  EXPECT_THAT(
-      [&] { Read(MArray<MInteger>(Length("N")), "1 2 3").IgnoreError(); },
-      ThrowsVariableNotFound("N"));
+  EXPECT_THAT([] { (void)Read(MArray<MInteger>(Length("N")), "1 2 3"); },
+              ThrowsVariableNotFound("N"));
 
   EXPECT_THROW(
-      { Read(MArray<MInteger>(Length(Between(2, 3))), "1 2 3").IgnoreError(); },
+      [] { (void)Read(MArray<MInteger>(Length(Between(2, 3))), "1 2 3"); }(),
       std::runtime_error);
 
   EXPECT_THROW(
-      { Read(MArray<MInteger>(Length(Between(3, 4))), "1 2 3").IgnoreError(); },
+      [] { (void)Read(MArray<MInteger>(Length(Between(3, 4))), "1 2 3"); }(),
       std::runtime_error);
 }
 
