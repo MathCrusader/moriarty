@@ -66,14 +66,7 @@ cc_library(
         "expressions.h",
     ],
     deps = [
-        "//src/util/status_macro:status_macros",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/numeric:int128",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -224,13 +217,6 @@ cc_test(
     ],
     deps = [
         ":expressions",
-        "//src/util/status_macro:status_macros",
-        "//src/util/test_status_macro:status_testutil",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "@googletest//:gtest_main",
     ],
 )

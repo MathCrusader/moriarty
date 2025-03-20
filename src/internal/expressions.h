@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,156 +23,60 @@
 #include <memory>
 #include <string>
 #include <string_view>
-#include <utility>
-#include <variant>
 #include <vector>
 
-#include "absl/algorithm/container.h"
-#include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
-#include "absl/status/statusor.h"
+#include "absl/numeric/int128.h"
+
+namespace moriarty::moriarty_internal {
+class ExpressionNode;  // Forward declaring ExpressionNode
+}  // namespace moriarty::moriarty_internal
 
 namespace moriarty {
 
-class Expression;  // Forward declaring Expression.
+class Expression {
+ public:
+  explicit Expression(std::string_view str);
 
-// EvaluateIntegerExpression()
-//
-// Evaluates an expression tree of binary/unary operations and returns the
-// integer response. If any intermediate step in the calculation overflows a
-// 64-bit signed integer, a FailedPreconditionError is thrown.
-// If there are variables present in `expression`, then `variables` will be
-// used as their values. All variables must be present in `variables`.
-int64_t EvaluateIntegerExpression(const Expression& expression);
-int64_t EvaluateIntegerExpression(
-    const Expression& expression,
-    const absl::flat_hash_map<std::string, int64_t>& variables);
-int64_t EvaluateIntegerExpression(
-    const Expression& expression,
-    std::function<int64_t(std::string_view)> lookup_variable);
+  [[nodiscard]] int64_t Evaluate() const;
 
-// ParseExpression()
-//
-// Given a string representation in infix notation, returns the corresponding
-// `Expression`.
-absl::StatusOr<Expression> ParseExpression(std::string_view expression);
+  [[nodiscard]] int64_t Evaluate(
+      std::function<int64_t(std::string_view)> lookup_variable) const;
 
-// NeededVariables()
-//
-// Returns all variables needed in order to evaluate `expression`.
-absl::StatusOr<absl::flat_hash_set<std::string>> NeededVariables(
-    const Expression& expression);
+  [[nodiscard]] std::string_view ToString() const;
+
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
+ private:
+  std::unique_ptr<moriarty_internal::ExpressionNode> expr_;
+  std::string str_;
+  std::vector<std::string> dependencies_;
+};
 
 namespace moriarty_internal {
 
-enum class BinaryOperator {
-  // Input: (int, int) Output: int
-  kAdd,
-  kSubtract,
-  kMultiply,
-  kDivide,
-  kModulo,
-  kExponentiate
-};
-
-enum class UnaryOperator { kPlus, kNegate };
-
-class BinaryOperation {
+class ExpressionNode {
  public:
-  BinaryOperation(Expression lhs, BinaryOperator op, Expression rhs);
-  BinaryOperation(const BinaryOperation& other);
-  BinaryOperation& operator=(BinaryOperation other);
-  BinaryOperation(BinaryOperation&& other) noexcept = default;
+  using LookupFn = std::function<int64_t(std::string_view)>;
+  virtual ~ExpressionNode() = default;
 
-  BinaryOperator Op() const { return op_; }
-  const Expression& Lhs() const { return *lhs_; }
-  const Expression& Rhs() const { return *rhs_; }
+  [[nodiscard]] virtual absl::int128 Evaluate(const LookupFn& fn) const = 0;
+
+  // These functions are only safe to call during parsing. After that, they are
+  // undefined behaviour.
+  [[nodiscard]] std::string_view ToString() const;
+  void SetString(std::string_view new_prefix);
+  std::vector<std::string> ReleaseDependencies();
+  void AddDependencies(std::vector<std::string>&& dependencies);
+
+ protected:
+  ExpressionNode(std::string_view str);
 
  private:
-  BinaryOperator op_;
-  std::unique_ptr<Expression> lhs_;
-  std::unique_ptr<Expression> rhs_;
-};
-
-class UnaryOperation {
- public:
-  UnaryOperation(UnaryOperator op, Expression rhs);
-  UnaryOperation(const UnaryOperation& other);
-  UnaryOperation& operator=(UnaryOperation other);
-  UnaryOperation(UnaryOperation&& other) noexcept = default;
-
-  UnaryOperator Op() const { return op_; }
-  const Expression& Rhs() const { return *rhs_; }
-
- private:
-  UnaryOperator op_;
-  std::unique_ptr<Expression> rhs_;
-};
-
-class Function {
- public:
-  Function(std::string name,
-           std::vector<std::unique_ptr<Expression>> arguments);
-  Function(const Function& other);
-  Function& operator=(Function other);
-  Function(Function&& other) noexcept = default;
-
-  std::string Name() const { return name_; }
-  const std::vector<std::unique_ptr<Expression>>& Arguments() const {
-    return arguments_;
-  }
-
-  void AppendArgument(Expression expr);
-  void ReverseArguments() { absl::c_reverse(arguments_); }
-  void SetName(std::string name) { name_ = std::move(name); }
-
- private:
-  std::string name_;
-  std::vector<std::unique_ptr<Expression>> arguments_;
-};
-
-class Literal {
- public:
-  explicit Literal(int64_t value) : value_(value) {}
-  explicit Literal(std::string value) : value_(std::move(value)) {}
-
-  bool IsVariable() const {
-    return std::holds_alternative<std::string>(value_);
-  }
-  // Precondition: IsVariable() == true
-  std::string VariableName() const { return std::get<std::string>(value_); }
-  // Precondition: IsVariable() == false
-  int64_t Value() const { return std::get<int64_t>(value_); }
-
- private:
-  std::variant<std::string, int64_t> value_;
+  std::string_view str_;
+  std::vector<std::string> dependencies_;
 };
 
 }  // namespace moriarty_internal
-
-class Expression {
- public:
-  using Types = std::variant<
-      moriarty_internal::Literal, moriarty_internal::BinaryOperation,
-      moriarty_internal::UnaryOperation, moriarty_internal::Function>;
-
-  // Constructors are not `explicit` here since each of these objects *are*
-  // `Expression`s.
-  Expression(moriarty_internal::Literal literal);            // NOLINT
-  Expression(moriarty_internal::BinaryOperation binary_op);  // NOLINT
-  Expression(moriarty_internal::UnaryOperation unary_op);    // NOLINT
-  Expression(moriarty_internal::Function function);          // NOLINT
-
-  const Types& Get() const { return expression_; }
-
-  void SetString(std::string_view str) { str_expression_ = std::string(str); }
-  [[nodiscard]] std::string ToString() const { return str_expression_; }
-
- private:
-  Types expression_;
-  std::string str_expression_;
-};
-
 }  // namespace moriarty
 
 #endif  // MORIARTY_SRC_INTERNAL_EXPRESSIONS_H_
