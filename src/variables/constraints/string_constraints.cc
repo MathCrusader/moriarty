@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -123,9 +124,8 @@ std::vector<std::string> DistinctCharacters::GetDependencies() const {
 }
 
 // ====== SimplePattern ======
-// TODO: This hides a StatusOr<>. Should throw instead.
 SimplePattern::SimplePattern(std::string_view pattern)
-    : pattern_(*moriarty_internal::SimplePattern::Create(pattern)) {}
+    : pattern_(moriarty_internal::SimplePattern(std::string(pattern))) {}
 
 std::string SimplePattern::GetPattern() const { return pattern_.Pattern(); }
 

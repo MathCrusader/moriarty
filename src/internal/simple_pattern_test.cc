@@ -16,17 +16,16 @@
 
 #include <cstdint>
 #include <limits>
+#include <optional>
 #include <ostream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/random_engine.h"
-#include "src/util/test_status_macro/status_testutil.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -46,9 +45,6 @@ void PrintTo(const PatternNode& node, std::ostream* os, int depth = 0) {
 
 namespace {
 
-using ::moriarty::IsOk;
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Eq;
@@ -56,11 +52,15 @@ using ::testing::ExplainMatchResult;
 using ::testing::Field;
 using ::testing::FieldsAre;
 using ::testing::Ge;
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Le;
 using ::testing::Matches;
 using ::testing::Not;
+using ::testing::Optional;
 using ::testing::SizeIs;
+using ::testing::Throws;
+using ::testing::ThrowsMessage;
 
 SimplePattern::RandFn Random() {
   RandomEngine random_engine({1, 2, 3, 4}, "v0.1");
@@ -69,330 +69,273 @@ SimplePattern::RandFn Random() {
   };
 }
 
-TEST(SimplePatternTest, CreateShouldAcceptGoodPatterns) {
-  MORIARTY_EXPECT_OK(SimplePattern::Create("abc"));
-  MORIARTY_EXPECT_OK(SimplePattern::Create("a*"));
-  MORIARTY_EXPECT_OK(SimplePattern::Create("a*b+"));
-  MORIARTY_EXPECT_OK(SimplePattern::Create("a|b|c"));
-  MORIARTY_EXPECT_OK(SimplePattern::Create("a(bc)"));
+MATCHER_P(SimplePatternMatches, str, "") {
+  std::string pattern{arg};  // Cast immediately to get better compile messages.
+
+  try {
+    (void)SimplePattern(pattern);
+  } catch (const std::invalid_argument& e) {
+    *result_listener << "Invalid Pattern: " << e.what();
+    return false;
+  }
+
+  SimplePattern simple_pattern = SimplePattern(pattern);
+  if (simple_pattern.Matches(str)) {
+    *result_listener << "matches " << str;
+    return true;
+  }
+  *result_listener << "does not match " << str;
+  return false;
+}
+
+MATCHER_P(IsInvalidSimplePattern, reason, "") {
+  std::string pattern{arg};  // Cast immediately to get better compile messages.
+
+  try {
+    (void)SimplePattern(pattern);
+    *result_listener << "Expected invalid pattern, but got a valid one: "
+                     << pattern;
+    return false;
+  } catch (const std::invalid_argument& e) {
+    if (Matches(testing::HasSubstr(reason))(e.what())) {
+      *result_listener << "Invalid Pattern (in a good way): " << e.what();
+      return true;
+    }
+    *result_listener << "Invalid Pattern, but not for the right reason: "
+                     << e.what();
+    return false;
+  }
+}
+
+TEST(SimplePatternTest, BasicChecksShouldWork) {
+  EXPECT_THAT("abc", SimplePatternMatches("abc"));
+  EXPECT_THAT("a*", SimplePatternMatches("a"));
+  EXPECT_THAT("a*b+", SimplePatternMatches("ab"));
+  EXPECT_THAT("a|b|c", SimplePatternMatches("a"));
+  EXPECT_THAT("a(bc)", SimplePatternMatches("abc"));
 }
 
 TEST(SimplePatternTest, CreateShouldRejectBadPatterns) {
-  EXPECT_THAT(SimplePattern::Create("ab)"), Not(IsOk()));
-  EXPECT_THAT(SimplePattern::Create("(*)"), Not(IsOk()));
-  EXPECT_THAT(SimplePattern::Create("*"), Not(IsOk()));
+  EXPECT_THAT("ab)", IsInvalidSimplePattern(")"));
+  EXPECT_THAT("(*)", IsInvalidSimplePattern("*"));
+  EXPECT_THAT("*", IsInvalidSimplePattern("*"));
 }
 
 TEST(SimplePatternTest, CreateShouldRejectEmptyPattern) {
-  EXPECT_THAT(SimplePattern::Create(""), Not(IsOk()));
+  EXPECT_THAT("", IsInvalidSimplePattern("mpty"));
 }
 
 TEST(SimplePatternTest, PatternShouldMatchSimpleCase) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a"));
-  EXPECT_TRUE(p.Matches("a"));
-}
-
-TEST(SimplePatternTest, PatternShouldMatchSimpleConcatCase) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("abc"));
-  EXPECT_TRUE(p.Matches("abc"));
+  EXPECT_THAT("a", SimplePatternMatches("a"));
+  EXPECT_THAT("abc", SimplePatternMatches("abc"));
 }
 
 TEST(SimplePatternTest, PatternShouldMatchSimpleOrCase) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("a|b|c"));
-  EXPECT_TRUE(p.Matches("c"));
-  EXPECT_TRUE(p.Matches("a"));
-  EXPECT_TRUE(p.Matches("b"));
+  EXPECT_THAT("a|b|c", SimplePatternMatches("a"));
+  EXPECT_THAT("a|b|c", SimplePatternMatches("b"));
+  EXPECT_THAT("a|b|c", SimplePatternMatches("c"));
 }
 
 TEST(SimplePatternTest, NestedPatternShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("(a|b|c)(d|e|f)"));
-  EXPECT_TRUE(p.Matches("ce"));
-  EXPECT_TRUE(p.Matches("af"));
-  EXPECT_FALSE(p.Matches("bx"));
-  EXPECT_FALSE(p.Matches("xe"));
+  EXPECT_THAT("(a|b|c)(d|e|f)", SimplePatternMatches("ce"));
+  EXPECT_THAT("(a|b|c)(d|e|f)", SimplePatternMatches("af"));
+  EXPECT_THAT("(a|b|c)(d|e|f)", Not(SimplePatternMatches("bx")));
+  EXPECT_THAT("(a|b|c)(d|e|f)", Not(SimplePatternMatches("xe")));
 }
 
 TEST(SimplePatternTest, DotWildcardDoesNotExist) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("."));
-
-  EXPECT_FALSE(p.Matches("a"));
-  EXPECT_TRUE(p.Matches("."));
+  EXPECT_THAT(".", SimplePatternMatches("."));
+  EXPECT_THAT(".", Not(SimplePatternMatches("a")));
 }
 
 TEST(SimplePatternTest, StarWildcardsShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a*"));
+  EXPECT_THAT("a*", SimplePatternMatches(""));
+  EXPECT_THAT("a*", SimplePatternMatches("a"));
+  EXPECT_THAT("a*", SimplePatternMatches("aa"));
+  EXPECT_THAT("a*", SimplePatternMatches("aaa"));
 
-  EXPECT_TRUE(p.Matches(""));
-  EXPECT_TRUE(p.Matches("a"));
-  EXPECT_TRUE(p.Matches("aa"));
-  EXPECT_TRUE(p.Matches("aaa"));
-
-  EXPECT_FALSE(p.Matches("x"));
-  EXPECT_FALSE(p.Matches("aax"));
+  EXPECT_THAT("a*", Not(SimplePatternMatches("x")));
+  EXPECT_THAT("a*", Not(SimplePatternMatches("aax")));
 }
 
 TEST(SimplePatternTest, PlusWildcardsShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a+"));
+  EXPECT_THAT("a+", Not(SimplePatternMatches("")));
+  EXPECT_THAT("a+", SimplePatternMatches("a"));
+  EXPECT_THAT("a+", SimplePatternMatches("aa"));
+  EXPECT_THAT("a+", SimplePatternMatches("aaa"));
 
-  EXPECT_FALSE(p.Matches(""));
-  EXPECT_TRUE(p.Matches("a"));
-  EXPECT_TRUE(p.Matches("aa"));
-  EXPECT_TRUE(p.Matches("aaa"));
-
-  EXPECT_FALSE(p.Matches("x"));
-  EXPECT_FALSE(p.Matches("aax"));
+  EXPECT_THAT("a+", Not(SimplePatternMatches("x")));
+  EXPECT_THAT("a+", Not(SimplePatternMatches("aax")));
 }
 
 TEST(SimplePatternTest, QuestionMarkWildcardsShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a?"));
+  EXPECT_THAT("a?", SimplePatternMatches(""));
+  EXPECT_THAT("a?", SimplePatternMatches("a"));
+  EXPECT_THAT("a?", Not(SimplePatternMatches("aa")));
 
-  EXPECT_TRUE(p.Matches(""));
-  EXPECT_TRUE(p.Matches("a"));
-  EXPECT_FALSE(p.Matches("aa"));
-
-  EXPECT_FALSE(p.Matches("x"));
-  EXPECT_FALSE(p.Matches("aax"));
+  EXPECT_THAT("a?", Not(SimplePatternMatches("x")));
+  EXPECT_THAT("a?", Not(SimplePatternMatches("aax")));
 }
 
 TEST(SimplePatternTest, ExactLengthWildcardsShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a{2}"));
+  EXPECT_THAT("a{2}", Not(SimplePatternMatches("")));
+  EXPECT_THAT("a{2}", Not(SimplePatternMatches("a")));
+  EXPECT_THAT("a{2}", SimplePatternMatches("aa"));
+  EXPECT_THAT("a{2}", Not(SimplePatternMatches("aaa")));
 
-  EXPECT_FALSE(p.Matches(""));
-  EXPECT_FALSE(p.Matches("a"));
-  EXPECT_TRUE(p.Matches("aa"));
-  EXPECT_FALSE(p.Matches("aaa"));
-
-  EXPECT_FALSE(p.Matches("x"));
-  EXPECT_FALSE(p.Matches("aax"));
+  EXPECT_THAT("a{2}", Not(SimplePatternMatches("x")));
+  EXPECT_THAT("a{2}", Not(SimplePatternMatches("aax")));
 }
 
 TEST(SimplePatternTest, RangeLengthWildcardsShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("a{1, 2}"));
+  EXPECT_THAT("a{1, 2}", Not(SimplePatternMatches("")));
+  EXPECT_THAT("a{1, 2}", SimplePatternMatches("a"));
+  EXPECT_THAT("a{1, 2}", SimplePatternMatches("aa"));
+  EXPECT_THAT("a{1, 2}", Not(SimplePatternMatches("aaa")));
 
-  EXPECT_FALSE(p.Matches(""));
-  EXPECT_TRUE(p.Matches("a"));
-  EXPECT_TRUE(p.Matches("aa"));
-  EXPECT_FALSE(p.Matches("aaa"));
-
-  EXPECT_FALSE(p.Matches("x"));
-  EXPECT_FALSE(p.Matches("aax"));
+  EXPECT_THAT("a{1, 2}", Not(SimplePatternMatches("x")));
+  EXPECT_THAT("a{1, 2}", Not(SimplePatternMatches("aax")));
 }
-
 TEST(SimplePatternTest, UpperBoundWildcardsShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("a{,2}"));
+  EXPECT_THAT("a{,2}", SimplePatternMatches(""));
+  EXPECT_THAT("a{,2}", SimplePatternMatches("a"));
+  EXPECT_THAT("a{,2}", SimplePatternMatches("aa"));
+  EXPECT_THAT("a{,2}", Not(SimplePatternMatches("aaa")));
 
-  EXPECT_TRUE(p.Matches(""));
-  EXPECT_TRUE(p.Matches("a"));
-  EXPECT_TRUE(p.Matches("aa"));
-  EXPECT_FALSE(p.Matches("aaa"));
-
-  EXPECT_FALSE(p.Matches("x"));
-  EXPECT_FALSE(p.Matches("aax"));
+  EXPECT_THAT("a{,2}", Not(SimplePatternMatches("x")));
+  EXPECT_THAT("a{,2}", Not(SimplePatternMatches("aax")));
 }
 
 TEST(SimplePatternTest, LowerBoundWildcardsShouldMatch) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("a{2,}"));
+  EXPECT_THAT("a{2,}", Not(SimplePatternMatches("")));
+  EXPECT_THAT("a{2,}", Not(SimplePatternMatches("a")));
+  EXPECT_THAT("a{2,}", SimplePatternMatches("aa"));
+  EXPECT_THAT("a{2,}", SimplePatternMatches("aaa"));
 
-  EXPECT_FALSE(p.Matches(""));
-  EXPECT_FALSE(p.Matches("a"));
-  EXPECT_TRUE(p.Matches("aa"));
-  EXPECT_TRUE(p.Matches("aaa"));
-
-  EXPECT_FALSE(p.Matches("x"));
-  EXPECT_FALSE(p.Matches("aax"));
+  EXPECT_THAT("a{2,}", Not(SimplePatternMatches("x")));
+  EXPECT_THAT("a{2,}", Not(SimplePatternMatches("aax")));
 }
 
 TEST(SimplePatternTest, CharacterSetsSimpleCaseShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("[abc]"));
-
-  EXPECT_TRUE(p.Matches("a"));
-  EXPECT_TRUE(p.Matches("b"));
-  EXPECT_TRUE(p.Matches("c"));
-  EXPECT_FALSE(p.Matches("d"));
-  EXPECT_FALSE(p.Matches("ab"));
+  EXPECT_THAT("[abc]", SimplePatternMatches("a"));
+  EXPECT_THAT("[abc]", SimplePatternMatches("b"));
+  EXPECT_THAT("[abc]", SimplePatternMatches("c"));
+  EXPECT_THAT("[abc]", Not(SimplePatternMatches("d")));
+  EXPECT_THAT("[abc]", Not(SimplePatternMatches("ab")));
 }
 
 TEST(SimplePatternTest, ConcatenatedCharacterSetsSimpleCaseShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("[abc][def]"));
-
-  EXPECT_TRUE(p.Matches("ad"));
-  EXPECT_TRUE(p.Matches("bf"));
-  EXPECT_TRUE(p.Matches("cd"));
-  EXPECT_FALSE(p.Matches("ax"));
-  EXPECT_FALSE(p.Matches("dd"));
+  EXPECT_THAT("[abc][def]", SimplePatternMatches("ad"));
+  EXPECT_THAT("[abc][def]", SimplePatternMatches("bf"));
+  EXPECT_THAT("[abc][def]", SimplePatternMatches("cd"));
+  EXPECT_THAT("[abc][def]", Not(SimplePatternMatches("ax")));
+  EXPECT_THAT("[abc][def]", Not(SimplePatternMatches("dd")));
 }
 
 TEST(SimplePatternTest, CharacterSetsWithRangesSimpleCaseShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("[a-f]"));
-
-  EXPECT_TRUE(p.Matches("a"));
-  EXPECT_TRUE(p.Matches("b"));
-  EXPECT_TRUE(p.Matches("f"));
-  EXPECT_FALSE(p.Matches("g"));
-  EXPECT_FALSE(p.Matches("x"));
+  EXPECT_THAT("[a-f]", SimplePatternMatches("a"));
+  EXPECT_THAT("[a-f]", SimplePatternMatches("b"));
+  EXPECT_THAT("[a-f]", SimplePatternMatches("f"));
+  EXPECT_THAT("[a-f]", Not(SimplePatternMatches("g")));
+  EXPECT_THAT("[a-f]", Not(SimplePatternMatches("x")));
 }
 
 TEST(SimplePatternTest,
      CharacterSetsWithRangesAndWildcardsSimpleCaseShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("[a-f]*"));
-
-  EXPECT_TRUE(p.Matches(""));
-  EXPECT_TRUE(p.Matches("aaa"));
-  EXPECT_TRUE(p.Matches("ba"));
-  EXPECT_TRUE(p.Matches("deadbeef"));
-  EXPECT_FALSE(p.Matches("xxx"));
-  EXPECT_FALSE(p.Matches("0"));
+  EXPECT_THAT("[a-f]*", SimplePatternMatches(""));
+  EXPECT_THAT("[a-f]*", SimplePatternMatches("aaa"));
+  EXPECT_THAT("[a-f]*", SimplePatternMatches("ba"));
+  EXPECT_THAT("[a-f]*", SimplePatternMatches("deadbeef"));
+  EXPECT_THAT("[a-f]*", Not(SimplePatternMatches("xxx")));
+  EXPECT_THAT("[a-f]*", Not(SimplePatternMatches("0")));
 }
 
 TEST(SimplePatternTest, RecursiveGroupingsShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("((hello|bye)world)"));
-
-  EXPECT_TRUE(p.Matches("helloworld"));
-  EXPECT_TRUE(p.Matches("byeworld"));
-  EXPECT_FALSE(p.Matches("hello"));
-  EXPECT_FALSE(p.Matches("bye"));
-  EXPECT_FALSE(p.Matches("world"));
+  EXPECT_THAT("((hello|bye)world)", SimplePatternMatches("helloworld"));
+  EXPECT_THAT("((hello|bye)world)", SimplePatternMatches("byeworld"));
+  EXPECT_THAT("((hello|bye)world)", Not(SimplePatternMatches("hello")));
+  EXPECT_THAT("((hello|bye)world)", Not(SimplePatternMatches("bye")));
+  EXPECT_THAT("((hello|bye)world)", Not(SimplePatternMatches("world")));
 }
 
 TEST(SimplePatternTest, GroupingsAndAnOrClauseShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("((hello|bye)|other)"));
-
-  EXPECT_FALSE(p.Matches("helloother"));
-  EXPECT_FALSE(p.Matches("byeother"));
-  EXPECT_TRUE(p.Matches("hello"));
-  EXPECT_TRUE(p.Matches("bye"));
-  EXPECT_TRUE(p.Matches("other"));
+  EXPECT_THAT("((hello|bye)|other)", Not(SimplePatternMatches("helloother")));
+  EXPECT_THAT("((hello|bye)|other)", Not(SimplePatternMatches("byeother")));
+  EXPECT_THAT("((hello|bye)|other)", SimplePatternMatches("hello"));
+  EXPECT_THAT("((hello|bye)|other)", SimplePatternMatches("bye"));
+  EXPECT_THAT("((hello|bye)|other)", SimplePatternMatches("other"));
 }
 
 TEST(SimplePatternTest, GroupingWithWildcardsShouldFail) {
-  EXPECT_THAT(SimplePattern::Create("(ac)*"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT("(ac)*", IsInvalidSimplePattern("*"));
 }
 
 TEST(SimplePatternTest, InvalidSyntaxShouldFail) {
-  EXPECT_THAT(SimplePattern::Create("|"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(SimplePattern::Create("*"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(SimplePattern::Create("ab)"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(SimplePattern::Create("["),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(SimplePattern::Create("]"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT("|", IsInvalidSimplePattern("|"));
+  EXPECT_THAT("*", IsInvalidSimplePattern("*"));
+  EXPECT_THAT("ab)", IsInvalidSimplePattern(")"));
+  EXPECT_THAT("[", IsInvalidSimplePattern("["));
+  EXPECT_THAT("]", IsInvalidSimplePattern("]"));
 }
 
-TEST(SimplePatternTest, FineToHaveLotsOfSquareBrackets) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("[a][b][X][Y][Z][@][!]"));
-
-  EXPECT_TRUE(p.Matches("abXYZ@!"));
-}
-
-TEST(SimplePatternTest, SpecialCharactersCanBeUsedInsideSquareBrackets) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("[(][)][*][[][]][?][+]"));
-
-  EXPECT_TRUE(p.Matches("()*[]?+"));
-}
-
-TEST(SimplePatternTest, SimpleGenerationWorks) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a"));
-  for (int tries = 0; tries < 10; tries++) {
-    EXPECT_THAT(p.Generate(Random()), IsOkAndHolds("a"));
-  }
+TEST(SimplePatternTest, SquareBracketsShouldWork) {
+  EXPECT_THAT("[a][b][X][Y][Z][@][!]", SimplePatternMatches("abXYZ@!"));
+  EXPECT_THAT("[(][)][*][[][]][?][+]", SimplePatternMatches("()*[]?+"));
 }
 
 TEST(SimplePatternTest, NonEscapedSpacesInCharSetShouldBeIgnored) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("a[b c]d"));
-
-  EXPECT_TRUE(p.Matches("abd"));
-  EXPECT_TRUE(p.Matches("acd"));
-  EXPECT_FALSE(p.Matches("a d"));
+  EXPECT_THAT("a[b c]d", SimplePatternMatches("abd"));
+  EXPECT_THAT("a[b c]d", SimplePatternMatches("acd"));
+  EXPECT_THAT("a[b c]d", Not(SimplePatternMatches("a d")));
 }
 
 TEST(SimplePatternTest, NonEscapedSpacesOutsideCharSetShouldBeIgnored) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a bc"));
-
-  EXPECT_TRUE(p.Matches("abc"));
-  EXPECT_FALSE(p.Matches("a bc"));
+  EXPECT_THAT("a bc", SimplePatternMatches("abc"));
+  EXPECT_THAT("a bc", Not(SimplePatternMatches("a bc")));
 }
 
 TEST(SimplePatternTest, EscapedSpacesShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create(R"(a[b\ c]d)"));
-
-  EXPECT_TRUE(p.Matches("abd"));
-  EXPECT_TRUE(p.Matches("acd"));
-  EXPECT_TRUE(p.Matches("a d"));
+  EXPECT_THAT(R"(a[b\ c]d)", SimplePatternMatches("abd"));
+  EXPECT_THAT(R"(a[b\ c]d)", SimplePatternMatches("acd"));
+  EXPECT_THAT(R"(a[b\ c]d)", SimplePatternMatches("a d"));
 }
 
 TEST(SimplePatternTest, EscapedBackslashShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create(R"(a[b\\c]d)"));
-
-  EXPECT_TRUE(p.Matches("abd"));
-  EXPECT_TRUE(p.Matches("acd"));
-  EXPECT_TRUE(p.Matches(R"(a\d)"));
-}
-
-TEST(SimplePatternTest, EscapedCharacterAtEndOfStringShouldFail) {
-  EXPECT_THAT(SimplePattern::Create(R"(abc\)"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT(R"(a[b\\c]d)", SimplePatternMatches("abd"));
+  EXPECT_THAT(R"(a[b\\c]d)", SimplePatternMatches("acd"));
+  EXPECT_THAT(R"(a[b\\c]d)", SimplePatternMatches(R"(a\d)"));
 }
 
 TEST(SimplePatternTest, InvalidEscapeCharactersShouldFail) {
-  EXPECT_THAT(SimplePattern::Create(R"(\n)"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(SimplePattern::Create(R"(\r)"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(SimplePattern::Create(R"(\t)"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(SimplePattern::Create(R"(\x)"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(SimplePattern::Create(R"(\a)"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(SimplePattern::Create(R"(\b)"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT(R"(abc\)", IsInvalidSimplePattern("escape"));
+  EXPECT_THAT(R"(\n)", IsInvalidSimplePattern("escape"));
+  EXPECT_THAT(R"(\r)", IsInvalidSimplePattern("escape"));
+  EXPECT_THAT(R"(\t)", IsInvalidSimplePattern("escape"));
+  EXPECT_THAT(R"(\x)", IsInvalidSimplePattern("escape"));
+  EXPECT_THAT(R"(\a)", IsInvalidSimplePattern("escape"));
+  EXPECT_THAT(R"(\b)", IsInvalidSimplePattern("escape"));
 }
 
-// SubpatternsAre() [for use with GoogleTest]
+// GeneratedValuesAre() [for use with GoogleTest]
 //
 // Checks if the subpatterns of a PatternNode are as expected.
 //
 // Example usage:
 //
-// EXPECT_THAT(SimplePattern::Create("regex"),
+// EXPECT_THAT(SimplePattern("regex"),
 //             GeneratedValuesAre(SizeIs(Le(10)));
 MATCHER_P(GeneratedValuesAre, matcher, "") {
-  if (!arg.ok()) {
-    return false;
-  }
-  SimplePattern p = *arg;  // absl::StatusOr<SimplePattern> -> SimplePattern
+  std::string str{arg};  // Cast immediately to get better compile messages.
+  SimplePattern p = SimplePattern(str);
 
   for (int tries = 0; tries < 10; tries++) {
-    absl::StatusOr<std::string> value = p.Generate(Random());
-    if (!value.ok()) {
-      *result_listener << "Failed to generate value: " << value.status();
-      return false;
+    std::string value = p.Generate(Random());
+
+    if (!Matches(matcher)(value)) {
+      return ExplainMatchResult(matcher, value, result_listener);
     }
-    if (!Matches(matcher)(*value)) {
-      return ExplainMatchResult(matcher, *value, result_listener);
-    }
-    if (!p.Matches(*value)) {
-      *result_listener << "Generated value does not match pattern: " << *value;
+    if (!p.Matches(value)) {
+      *result_listener << "Generated value does not match pattern: " << value;
       return false;
     }
   }
@@ -401,95 +344,95 @@ MATCHER_P(GeneratedValuesAre, matcher, "") {
 
 MATCHER_P2(GeneratedValuesWithRestrictionsAre, matcher, restricted_alphabet,
            "") {
-  if (!arg.ok()) {
-    return false;
-  }
-  SimplePattern p = *arg;  // absl::StatusOr<SimplePattern> -> SimplePattern
+  std::string str{arg};  // Cast immediately to get better compile messages.
+  std::string restricted_alphabet_copy{restricted_alphabet};
+  SimplePattern p = SimplePattern(str);
 
   for (int tries = 0; tries < 10; tries++) {
-    absl::StatusOr<std::string> value =
-        p.GenerateWithRestrictions(restricted_alphabet, Random());
-    if (!value.ok()) {
-      *result_listener << "Failed to generate value: " << value.status();
-      return false;
+    std::string value =
+        p.GenerateWithRestrictions(restricted_alphabet_copy, Random());
+    if (!Matches(matcher)(value)) {
+      return ExplainMatchResult(matcher, value, result_listener);
     }
-    if (!Matches(matcher)(*value)) {
-      return ExplainMatchResult(matcher, *value, result_listener);
-    }
-    if (!p.Matches(*value)) {
-      *result_listener << "Generated value does not match pattern: " << *value;
+    if (!p.Matches(value)) {
+      *result_listener << "Generated value does not match pattern: " << value;
       return false;
     }
   }
   return true;
 }
 
+TEST(SimplePatternTest, SimpleGenerationWorks) {
+  SimplePattern p = SimplePattern("a");
+  for (int tries = 0; tries < 10; tries++) {
+    EXPECT_EQ(p.Generate(Random()), "a");
+  }
+}
+
 TEST(SimplePatternTest, GenerationWithOrClauseShouldWork) {
-  EXPECT_THAT(SimplePattern::Create("a|b|c"),
-              GeneratedValuesAre(AnyOf("a", "b", "c")));
+  EXPECT_THAT("a|b|c", GeneratedValuesAre(AnyOf("a", "b", "c")));
 }
 
 TEST(SimplePatternTest, GenerationWithComplexOrClauseShouldWork) {
-  EXPECT_THAT(SimplePattern::Create("a|bb|ccc"),
-              GeneratedValuesAre(AnyOf("a", "bb", "ccc")));
+  EXPECT_THAT("a|bb|ccc", GeneratedValuesAre(AnyOf("a", "bb", "ccc")));
 }
 
 TEST(SimplePatternTest, GenerationWithConcatenationShouldWork) {
-  EXPECT_THAT(SimplePattern::Create("abcde"), GeneratedValuesAre("abcde"));
+  EXPECT_THAT("abcde", GeneratedValuesAre("abcde"));
 }
 
 TEST(SimplePatternTest, GenerationWithLengthRangesGivesProperLengths) {
-  EXPECT_THAT(SimplePattern::Create("a{4, 8}"),
-              GeneratedValuesAre(SizeIs(AllOf(Ge(4), Le(8)))));
-  EXPECT_THAT(SimplePattern::Create("a{,8}"),
-              GeneratedValuesAre(SizeIs(Le(8))));
-  EXPECT_THAT(SimplePattern::Create("a{8}"), GeneratedValuesAre(SizeIs(8)));
+  EXPECT_THAT("a{4, 8}", GeneratedValuesAre(SizeIs(AllOf(Ge(4), Le(8)))));
+  EXPECT_THAT("a{,8}", GeneratedValuesAre(SizeIs(Le(8))));
+  EXPECT_THAT("a{8}", GeneratedValuesAre(SizeIs(8)));
 }
 
 TEST(SimplePatternTest, GenerationWithNestedSubExpressionsShouldWork) {
-  EXPECT_THAT(SimplePattern::Create("a(b|c)(d|e)"),
+  EXPECT_THAT("a(b|c)(d|e)",
               GeneratedValuesAre(AnyOf("abd", "abe", "acd", "ace")));
 }
 
 TEST(SimplePatternTest, GenerationWithLargeWildcardShouldThrowError) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p1, SimplePattern::Create("a+"));
-  EXPECT_THAT(p1.Generate(Random()),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  SimplePattern p1 = SimplePattern("a+");
+  EXPECT_THAT([&] { (void)p1.Generate(Random()); },
+              ThrowsMessage<std::runtime_error>(
+                  AllOf(HasSubstr("generate"), HasSubstr("+"))));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p2, SimplePattern::Create("a*"));
-  EXPECT_THAT(p2.Generate(Random()),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  SimplePattern p2 = SimplePattern("a*");
+  EXPECT_THAT([&] { (void)p2.Generate(Random()); },
+              ThrowsMessage<std::runtime_error>(
+                  AllOf(HasSubstr("generate"), HasSubstr("*"))));
 }
 
 TEST(SimplePatternTest, GenerationWithSmallWildcardShouldWork) {
-  EXPECT_THAT(SimplePattern::Create("a?b"),
-              GeneratedValuesAre(AnyOf("ab", "b")));
+  EXPECT_THAT("a?b", GeneratedValuesAre(AnyOf("ab", "b")));
 }
 
 TEST(SimplePatternTest, GenerationWithAlphabetRestrictionsShouldWork) {
   // Restricting the alphabet to only 'f's should only be able to generate one
   // string.
-  EXPECT_THAT(SimplePattern::Create("[a-z]{8}"),
-              GeneratedValuesWithRestrictionsAre("ffffffff", "f"));
+  EXPECT_THAT("[a-z]{8}", GeneratedValuesWithRestrictionsAre("ffffffff", "f"));
 
-  EXPECT_THAT(
-      SimplePattern::Create("[a-z]{2}"),
-      GeneratedValuesWithRestrictionsAre(AnyOf("ff", "fx", "xf", "xx"), "fx"));
+  EXPECT_THAT("[a-z]{2}", GeneratedValuesWithRestrictionsAre(
+                              AnyOf("ff", "fx", "xf", "xx"), "fx"));
 }
 
 TEST(SimplePatternTest,
      GenerationWithVeryStrongRestrictionsShouldAttemptEmptyString) {
   // Restricting the alphabet to only 'x' means that only the empty string is
   // valid.
-  EXPECT_THAT(SimplePattern::Create("[a-f]{0, 10}"),
-              GeneratedValuesWithRestrictionsAre("", "x"));
+  EXPECT_THAT("[a-f]{0, 10}", GeneratedValuesWithRestrictionsAre("", "x"));
 
   // If the pattern doesn't allow the empty string, ensure it fails.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
-                                SimplePattern::Create("[a-f]{1, 10}"));
+  SimplePattern p = SimplePattern("[a-f]{1, 10}");
   EXPECT_THAT(
-      p.GenerateWithRestrictions(/*restricted_alphabet = */ "x", Random()),
-      StatusIs(absl::StatusCode::kInvalidArgument));
+      [&] {
+        (void)p.GenerateWithRestrictions(/*restricted_alphabet = */ "x",
+                                         Random());
+      },
+      ThrowsMessage<std::invalid_argument>(
+          HasSubstr("No valid characters for generation, but empty string is "
+                    "not allowed.")));
 }
 
 // -----------------------------------------------------------------------------
@@ -502,7 +445,8 @@ TEST(SimplePatternTest,
 //
 // Example usage:
 //
-// EXPECT_THAT(your_code(), SubpatternsAre(PatternNode::SubpatternType::kAnyOf,
+// EXPECT_THAT(your_code(),
+// SubpatternsAre(PatternNode::SubpatternType::kAnyOf,
 //                                         {"a", "b|c", "d"}));
 MATCHER_P2(SubpatternsAre, expected_type, expected_subpatterns, "") {
   if (arg.subpattern_type != expected_type) {
@@ -525,740 +469,740 @@ MATCHER_P2(SubpatternsAre, expected_type, expected_subpatterns, "") {
   return true;
 }
 
-TEST(RepeatedCharSetTest, DefaultSetShouldOnlyEmptyString) {
-  RepeatedCharSet r;
-  MORIARTY_EXPECT_OK(r.IsValid(""));
-  EXPECT_THAT(r.IsValid("a"), Not(IsOk()));
-  EXPECT_THAT(r.IsValid("b"), Not(IsOk()));
-  EXPECT_THAT(r.IsValid("abc"), Not(IsOk()));
+MATCHER_P(AcceptsOnly, good_chars, "") {
+  RepeatedCharSet r{arg};  // Convert immediately to get a nicer compile message
+  std::string good_chars_copy = good_chars;
+
+  for (char c : good_chars_copy) {
+    if (!r.IsValidCharacter(c)) {
+      *result_listener << "Failed to accept character: " << c;
+      return false;
+    }
+  }
+
+  for (int c = 0; c < 255; c++) {
+    if (good_chars_copy.find(char(c)) == std::string::npos) {
+      if (r.IsValidCharacter(char(c))) {
+        *result_listener << "Unexpected accepted character: " << c;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+MATCHER_P(AcceptsAllBut, bad_chars, "") {
+  RepeatedCharSet r{arg};  // Convert immediately to get a nicer compile message
+  std::string bad_chars_copy = bad_chars;
+
+  for (char c : bad_chars_copy) {
+    if (r.IsValidCharacter(c)) {
+      *result_listener << "Accepted character: " << c;
+      return false;
+    }
+  }
+
+  for (int c = 0; c < 128; c++) {
+    if (bad_chars_copy.find(char(c)) == std::string::npos) {
+      if (!r.IsValidCharacter(char(c))) {
+        *result_listener << "Unexpected unaccepted character: " << c;
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+TEST(RepeatedCharSetTest, DefaultShouldNotAcceptAnyChars) {
+  EXPECT_THAT(RepeatedCharSet(), AcceptsOnly(""));
 }
 
 TEST(RepeatedCharSetTest, AddedCharactersShouldBeAccepted) {
   RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.SetRange(1, 1));
-  MORIARTY_ASSERT_OK(r.Add('a'));
-  MORIARTY_ASSERT_OK(r.Add('b'));
-  MORIARTY_EXPECT_OK(r.IsValid("a"));
-  MORIARTY_EXPECT_OK(r.IsValid("b"));
-}
-
-TEST(RepeatedCharSetTest, NonAddedCharactersShouldNotBeAccepted) {
-  RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.SetRange(1, 1));
-  MORIARTY_ASSERT_OK(r.Add('a'));
-  MORIARTY_ASSERT_OK(r.Add('b'));
-
-  EXPECT_THAT(r.IsValid("c"), StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(r.IsValid("d"), StatusIs(absl::StatusCode::kInvalidArgument));
+  r.SetRange(1, 1);
+  EXPECT_TRUE(r.Add('a'));
+  EXPECT_TRUE(r.Add('b'));
+  EXPECT_THAT(r, AcceptsOnly("ab"));
 }
 
 TEST(RepeatedCharSetTest, DefaultLengthShouldBeZero) {
-  RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.Add('a'));
-  MORIARTY_EXPECT_OK(r.IsValid(""));
-  EXPECT_THAT(r.IsValid("a"), StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(r.IsValid("aa"), StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_EQ(RepeatedCharSet().MinLength(), 0);
+  EXPECT_EQ(RepeatedCharSet().MaxLength(), 0);
 }
 
-TEST(RepeatedCharSetTest, ZeroRangeShouldBeOk) {
+TEST(RepeatedCharSetTest, FlippingDefaultShouldAcceptEverything) {
   RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.SetRange(0, 0));
-  MORIARTY_EXPECT_OK(r.IsValid(""));
-}
-
-TEST(RepeatedCharSetTest, IsValidShouldCheckRange) {
-  RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.Add('a'));
-  MORIARTY_ASSERT_OK(r.SetRange(2, 3));
-
-  EXPECT_THAT(r.IsValid("a"), StatusIs(absl::StatusCode::kInvalidArgument));
-  MORIARTY_EXPECT_OK(r.IsValid("aa"));
-  MORIARTY_EXPECT_OK(r.IsValid("aaa"));
-  EXPECT_THAT(r.IsValid("aaaa"), StatusIs(absl::StatusCode::kInvalidArgument));
-}
-
-TEST(RepeatedCharSetTest, FlippingShouldImpactIsValid) {
-  RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.SetRange(1, 1));
+  r.SetRange(1, 1);
   r.FlipValidCharacters();
-  MORIARTY_EXPECT_OK(r.IsValid("a"));
-  MORIARTY_EXPECT_OK(r.IsValid("b"));
-  MORIARTY_EXPECT_OK(r.IsValid("c"));
+  EXPECT_THAT(r, AcceptsAllBut(""));
 }
 
 TEST(RepeatedCharSetTest, FlippingShouldTurnOffAddedCharacters) {
   RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.SetRange(1, 1));
-  MORIARTY_ASSERT_OK(r.Add('a'));
+  r.SetRange(1, 1);
+  EXPECT_TRUE(r.Add('a'));
   r.FlipValidCharacters();
-
-  EXPECT_THAT(r.IsValid("a"), StatusIs(absl::StatusCode::kInvalidArgument));
-  MORIARTY_EXPECT_OK(r.IsValid("b"));
-  MORIARTY_EXPECT_OK(r.IsValid("c"));
+  EXPECT_THAT(r, AcceptsAllBut("a"));
 }
 
 TEST(RepeatedCharSetTest, AddingAgainAfterFlipShouldBeOk) {
   RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.SetRange(1, 1));
-  MORIARTY_ASSERT_OK(r.Add('a'));
+  r.SetRange(1, 1);
+  EXPECT_TRUE(r.Add('a'));
   r.FlipValidCharacters();
-  MORIARTY_ASSERT_OK(r.Add('a'));
-  MORIARTY_EXPECT_OK(r.IsValid("a"));
+  EXPECT_THAT(r, AcceptsAllBut("a"));
+  EXPECT_TRUE(r.Add('a'));
+  EXPECT_THAT(r, AcceptsAllBut(""));
 }
 
 TEST(RepeatedCharSetTest, LongestValidPrefixShouldSucceedForLengthZero) {
-  EXPECT_THAT(RepeatedCharSet().LongestValidPrefix("a"), IsOkAndHolds(0));
+  EXPECT_EQ(RepeatedCharSet().LongestValidPrefix("a"), 0);
 }
 
 TEST(RepeatedCharSetTest, LongestValidPrefixShouldSucceedForLengthOneGood) {
   RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.SetRange(1, 1));
-  MORIARTY_ASSERT_OK(r.Add('a'));
-
-  EXPECT_THAT(r.LongestValidPrefix("a"), IsOkAndHolds(1));
+  r.SetRange(1, 1);
+  EXPECT_TRUE(r.Add('a'));
+  EXPECT_THAT(r.LongestValidPrefix("a"), Optional(1));
 }
 
 TEST(RepeatedCharSetTest, LongestValidPrefixShouldFailForLengthOneBad) {
   RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.SetRange(1, 1));
-  MORIARTY_ASSERT_OK(r.Add('a'));
-
-  EXPECT_THAT(r.LongestValidPrefix("b"), Not(IsOk()));
+  r.SetRange(1, 1);
+  EXPECT_TRUE(r.Add('a'));
+  EXPECT_EQ(r.LongestValidPrefix("b"), std::nullopt);
 }
 
 TEST(RepeatedCharSetTest, LongestValidPrefixShouldSucceedForLongerStrings) {
   RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.SetRange(1, 4));
-  MORIARTY_ASSERT_OK(r.Add('a'));
-
-  EXPECT_THAT(r.LongestValidPrefix("aaaaaaaaaaa"), IsOkAndHolds(4));
+  r.SetRange(1, 4);
+  EXPECT_TRUE(r.Add('a'));
+  EXPECT_THAT(r.LongestValidPrefix("aaaaaaaaaaa"), Optional(4));
 }
 
 TEST(RepeatedCharSetTest, LongestValidPrefixShouldFailForShorterStrings) {
   RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.SetRange(3, 4));
-  MORIARTY_ASSERT_OK(r.Add('a'));
-
-  EXPECT_THAT(r.LongestValidPrefix("aa"), Not(IsOk()));
+  r.SetRange(3, 4);
+  EXPECT_TRUE(r.Add('a'));
+  EXPECT_EQ(r.LongestValidPrefix("aa"), std::nullopt);
 }
 
 TEST(RepeatedCharSetTest, NegativeMinRangeShouldBeOk) {
   RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.Add('a'));
-  MORIARTY_EXPECT_OK(r.SetRange(-5, 3));
-  MORIARTY_EXPECT_OK(r.IsValid(""));
-  MORIARTY_EXPECT_OK(r.IsValid("aaa"));
+  EXPECT_TRUE(r.Add('a'));
+  r.SetRange(-5, 3);
+  EXPECT_EQ(r.MinLength(), 0);
+  EXPECT_EQ(r.MaxLength(), 3);
 }
 
-TEST(RepeatedCharSetTest, NegativeMaxRangeShouldFail) {
-  RepeatedCharSet r;
-
-  EXPECT_THAT(r.SetRange(-5, -3), StatusIs(absl::StatusCode::kInvalidArgument));
+TEST(RepeatedCharSetTest, InvalidRangesShouldFail) {
+  EXPECT_THAT([] { RepeatedCharSet().SetRange(10, 5); },
+              Throws<std::invalid_argument>());
+  // Min is clamped to 0, so this is invalid.
+  EXPECT_THAT([] { RepeatedCharSet().SetRange(-5, -3); },
+              Throws<std::invalid_argument>());
 }
 
 TEST(RepeatedCharSetTest, NegativeMinZeroMaxRangeShouldBeOk) {
   RepeatedCharSet r;
-  MORIARTY_EXPECT_OK(r.SetRange(-5, 0));
-  MORIARTY_EXPECT_OK(r.IsValid(""));
-}
-
-TEST(RepeatedCharSetTest, InvalidRangeShouldFail) {
-  RepeatedCharSet r;
-
-  EXPECT_THAT(r.SetRange(3, 2), StatusIs(absl::StatusCode::kInvalidArgument));
+  r.SetRange(-5, 0);
+  EXPECT_EQ(r.MinLength(), 0);
 }
 
 TEST(RepeatedCharSetTest, AddingANegativeCharShouldFail) {
   RepeatedCharSet r;
-  EXPECT_THAT(r.Add(static_cast<char>(-1)),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT([&] { (void)r.Add(static_cast<char>(-1)); },
+              Throws<std::invalid_argument>());
 }
 
 TEST(RepeatedCharSetTest, FlipShouldNotAcceptNegativeChars) {
   RepeatedCharSet r;
   r.FlipValidCharacters();
-
-  EXPECT_THAT(r.IsValid(std::string(1, static_cast<char>(-1))),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_FALSE(r.IsValidCharacter(static_cast<char>(-1)));
 }
 
 TEST(RepeatedCharSetTest, FlipShouldAcceptNullChar) {
   RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.SetRange(1, 1));
+  r.SetRange(1, 1);
   r.FlipValidCharacters();
-  MORIARTY_EXPECT_OK(r.IsValid(std::string(1, static_cast<char>(0))));
+  EXPECT_TRUE(r.IsValidCharacter(static_cast<char>(0)));
 }
 
-TEST(RepeatedCharSetTest, AddingCharactersMultipleTimesShouldFail) {
+TEST(RepeatedCharSetTest, AddingCharactersMultipleTimesShouldReturnFalse) {
   RepeatedCharSet r;
-  MORIARTY_ASSERT_OK(r.Add('a'));
-
-  EXPECT_THAT(r.Add('a'), StatusIs(absl::StatusCode::kAlreadyExists));
+  EXPECT_TRUE(r.Add('a'));
+  EXPECT_FALSE(r.Add('a'));
 }
 
 TEST(ParseCharSetTest, EmptyCharacterSetsShouldFail) {
-  EXPECT_THAT(CharacterSetPrefixLength(""),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength(""); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("Empty")));
 }
 
 TEST(ParseCharSetTest, SingleCharacterCharacterSetsShouldBeOk) {
-  EXPECT_THAT(CharacterSetPrefixLength("a"), IsOkAndHolds(1));
-  EXPECT_THAT(CharacterSetPrefixLength("ab"), IsOkAndHolds(1));
-  EXPECT_THAT(CharacterSetPrefixLength("a["), IsOkAndHolds(1));
+  EXPECT_EQ(CharacterSetPrefixLength("a"), 1);
+  EXPECT_EQ(CharacterSetPrefixLength("ab"), 1);
+  EXPECT_EQ(CharacterSetPrefixLength("a["), 1);
 }
 
 TEST(ParseCharSetTest, TypicalCasesShouldWork) {
-  EXPECT_THAT(CharacterSetPrefixLength("[a]"), IsOkAndHolds(3));
-  EXPECT_THAT(CharacterSetPrefixLength("[ab]"), IsOkAndHolds(4));
+  EXPECT_EQ(CharacterSetPrefixLength("[a]"), 3);
+  EXPECT_EQ(CharacterSetPrefixLength("[ab]"), 4);
 }
 
 TEST(ParseCharSetTest, CharactersAfterCloseShouldBeIgnored) {
-  EXPECT_THAT(CharacterSetPrefixLength("[a]xx"), IsOkAndHolds(3));
-  EXPECT_THAT(CharacterSetPrefixLength("[ab]xx"), IsOkAndHolds(4));
+  EXPECT_EQ(CharacterSetPrefixLength("[a]xx"), 3);
+  EXPECT_EQ(CharacterSetPrefixLength("[ab]xx"), 4);
 }
 
 TEST(ParseCharSetTest, OpenSquareBraceShouldBeAccepted) {
-  EXPECT_THAT(CharacterSetPrefixLength("[[]"), IsOkAndHolds(3));
+  EXPECT_EQ(CharacterSetPrefixLength("[[]"), 3);
 }
 
 TEST(ParseCharSetTest, CloseSquareBraceShouldBeAccepted) {
-  EXPECT_THAT(CharacterSetPrefixLength("[]]"), IsOkAndHolds(3));
+  EXPECT_EQ(CharacterSetPrefixLength("[]]"), 3);
 }
 
 TEST(ParseCharSetTest, OpenThenCloseSquareBraceShouldBeAccepted) {
-  EXPECT_THAT(CharacterSetPrefixLength("[[]]"), IsOkAndHolds(4));
+  EXPECT_EQ(CharacterSetPrefixLength("[[]]"), 4);
 }
 
 TEST(ParseCharSetTest, CloseThenOpenSquareBraceShouldTakeEarlierOne) {
-  EXPECT_THAT(CharacterSetPrefixLength("[][]"), IsOkAndHolds(2));
+  EXPECT_EQ(CharacterSetPrefixLength("[][]"), 2);
 }
 
 TEST(ParseCharSetTest, AnyDuplicateCharacterShouldForceTheEarlierOne) {
-  EXPECT_THAT(CharacterSetPrefixLength("[(][)][*][[][]][?][+]"),
-              IsOkAndHolds(3));
-  EXPECT_THAT(CharacterSetPrefixLength("[)][*][[][]][?][+]"), IsOkAndHolds(3));
-  EXPECT_THAT(CharacterSetPrefixLength("[*][[][]][?][+]"), IsOkAndHolds(3));
-  EXPECT_THAT(CharacterSetPrefixLength("[[][]][?][+]"), IsOkAndHolds(3));
-  EXPECT_THAT(CharacterSetPrefixLength("[]][?][+]"), IsOkAndHolds(3));
-  EXPECT_THAT(CharacterSetPrefixLength("[?][+]"), IsOkAndHolds(3));
-  EXPECT_THAT(CharacterSetPrefixLength("[+]"), IsOkAndHolds(3));
+  EXPECT_EQ(CharacterSetPrefixLength("[(][)][*][[][]][?][+]"), 3);
+  EXPECT_EQ(CharacterSetPrefixLength("[)][*][[][]][?][+]"), 3);
+  EXPECT_EQ(CharacterSetPrefixLength("[*][[][]][?][+]"), 3);
+  EXPECT_EQ(CharacterSetPrefixLength("[[][]][?][+]"), 3);
+  EXPECT_EQ(CharacterSetPrefixLength("[]][?][+]"), 3);
+  EXPECT_EQ(CharacterSetPrefixLength("[?][+]"), 3);
+  EXPECT_EQ(CharacterSetPrefixLength("[+]"), 3);
 }
 
 TEST(ParseCharSetTest, MissingCloseBraceShouldFail) {
-  EXPECT_THAT(CharacterSetPrefixLength("[hi"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength("[hi"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("]")));
 }
 
 TEST(ParseCharSetTest, SpecialCharacterAtStartShouldFail) {
-  EXPECT_THAT(CharacterSetPrefixLength("]"), Not(IsOk()));
-  EXPECT_THAT(CharacterSetPrefixLength("("), Not(IsOk()));
-  EXPECT_THAT(CharacterSetPrefixLength(")"), Not(IsOk()));
-  EXPECT_THAT(CharacterSetPrefixLength("{"), Not(IsOk()));
-  EXPECT_THAT(CharacterSetPrefixLength("}"), Not(IsOk()));
-  EXPECT_THAT(CharacterSetPrefixLength("^"), Not(IsOk()));
-  EXPECT_THAT(CharacterSetPrefixLength("?"), Not(IsOk()));
-  EXPECT_THAT(CharacterSetPrefixLength("*"), Not(IsOk()));
-  EXPECT_THAT(CharacterSetPrefixLength("+"), Not(IsOk()));
-  EXPECT_THAT(CharacterSetPrefixLength("-"), Not(IsOk()));
-  EXPECT_THAT(CharacterSetPrefixLength("|"), Not(IsOk()));
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength("]"); },
+              Throws<std::invalid_argument>());
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength("("); },
+              Throws<std::invalid_argument>());
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength(")"); },
+              Throws<std::invalid_argument>());
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength("{"); },
+              Throws<std::invalid_argument>());
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength("}"); },
+              Throws<std::invalid_argument>());
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength("^"); },
+              Throws<std::invalid_argument>());
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength("?"); },
+              Throws<std::invalid_argument>());
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength("*"); },
+              Throws<std::invalid_argument>());
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength("+"); },
+              Throws<std::invalid_argument>());
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength("-"); },
+              Throws<std::invalid_argument>());
+  EXPECT_THAT([] { (void)CharacterSetPrefixLength("|"); },
+              Throws<std::invalid_argument>());
 }
 
 TEST(ParseCharSetTest, EmptyCharSetBodyShouldFail) {
-  EXPECT_THAT(ParseCharacterSetBody(""),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT([] { (void)ParseCharacterSetBody(""); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("Empty")));
 }
 
 TEST(ParseCharSetTest, DuplicateCharactersInCharSetBodyShouldFail) {
-  EXPECT_THAT(ParseCharacterSetBody("aa"), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseCharacterSetBody("aa"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("multiple")));
 }
 
 TEST(ParseCharSetTest, SquareBracesShouldBeOk) {
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("]"));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("["));
+  EXPECT_THAT(ParseCharacterSetBody("]"), AcceptsOnly("]"));
+  EXPECT_THAT(ParseCharacterSetBody("["), AcceptsOnly("["));
 }
 
 TEST(ParseCharSetTest, SquareBracesShouldBeInTheRightOrder) {
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("[]"));
-  EXPECT_THAT(ParseCharacterSetBody("]["),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT(ParseCharacterSetBody("[]"), AcceptsOnly("[]"));
+  EXPECT_THAT([] { (void)ParseCharacterSetBody("]["); },
+              ThrowsMessage<std::invalid_argument>(
+                  testing::AllOf(HasSubstr("]"), HasSubstr("["))));
 }
 
 TEST(ParseCharSetTest, SpecialCharacterAsBodyShouldBeOk) {
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("["));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("]"));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("("));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody(")"));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("{"));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("}"));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("^"));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("?"));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("*"));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("+"));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("-"));
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("|"));
+  EXPECT_THAT(ParseCharacterSetBody("["), AcceptsOnly("["));
+  EXPECT_THAT(ParseCharacterSetBody("]"), AcceptsOnly("]"));
+  EXPECT_THAT(ParseCharacterSetBody("("), AcceptsOnly("("));
+  EXPECT_THAT(ParseCharacterSetBody(")"), AcceptsOnly(")"));
+  EXPECT_THAT(ParseCharacterSetBody("{"), AcceptsOnly("{"));
+  EXPECT_THAT(ParseCharacterSetBody("}"), AcceptsOnly("}"));
+  EXPECT_THAT(ParseCharacterSetBody("^"), AcceptsOnly("^"));
+  EXPECT_THAT(ParseCharacterSetBody("?"), AcceptsOnly("?"));
+  EXPECT_THAT(ParseCharacterSetBody("*"), AcceptsOnly("*"));
+  EXPECT_THAT(ParseCharacterSetBody("+"), AcceptsOnly("+"));
+  EXPECT_THAT(ParseCharacterSetBody("-"), AcceptsOnly("-"));
+  EXPECT_THAT(ParseCharacterSetBody("|"), AcceptsOnly("|"));
 }
 
 TEST(ParseCharSetTest, SingleCaretShouldNotBeTreatedAsNegation) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("^"));
-  MORIARTY_EXPECT_OK(r.IsValid("^"));
-  EXPECT_THAT(r.IsValid("a"), StatusIs(absl::StatusCode::kInvalidArgument));
+  RepeatedCharSet r = ParseCharacterSetBody("^");
+  EXPECT_TRUE(r.IsValidCharacter('^'));
+  EXPECT_FALSE(r.IsValidCharacter('a'));
 }
 
 TEST(ParseCharSetTest, StartingCaretShouldNotConsiderLaterCaretDuplicate) {
-  MORIARTY_EXPECT_OK(ParseCharacterSetBody("^^"));
-}
-
-TEST(ParseCharSetTest, StartingCaretShouldNotInterferWithLaterCaret) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("^^"));
-  MORIARTY_EXPECT_OK(r.IsValid("a"));
-  EXPECT_THAT(r.IsValid("^"), StatusIs(absl::StatusCode::kInvalidArgument));
-}
-
-TEST(ParseCharSetTest, StartingCaretShouldBeTreatedAsNegation) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("^a"));
-  MORIARTY_EXPECT_OK(r.IsValid("b"));
-  MORIARTY_EXPECT_OK(r.IsValid("^"));
-  EXPECT_THAT(r.IsValid("a"), StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT(ParseCharacterSetBody("^a"), AcceptsAllBut("a"));
+  EXPECT_THAT(ParseCharacterSetBody("^ac"), AcceptsAllBut("ac"));
+  EXPECT_THAT(ParseCharacterSetBody("^^"), AcceptsAllBut("^"));
 }
 
 TEST(ParseCharSetTest, TrailingNegativeSignShouldBeTreatedAsChar) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                ParseCharacterSetBody("abc-"));
-  MORIARTY_EXPECT_OK(r.IsValid("-"));
-}
-
-TEST(ParseCharSetTest, SingleNegativeSignShouldBeTreatedAsChar) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("-"));
-  MORIARTY_EXPECT_OK(r.IsValid("-"));
+  EXPECT_THAT(ParseCharacterSetBody("abc-"), AcceptsOnly("abc-"));
+  EXPECT_THAT(ParseCharacterSetBody("-"), AcceptsOnly("-"));
 }
 
 TEST(ParseCharSetTest, NegativeSignInMiddleShouldBeTreatedAsRange) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                ParseCharacterSetBody("a-z"));
-  MORIARTY_EXPECT_OK(r.IsValid("a"));
-  MORIARTY_EXPECT_OK(r.IsValid("b"));
-  EXPECT_THAT(r.IsValid("-"), StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT(ParseCharacterSetBody("m-q"), AcceptsOnly("mnopq"));
 }
 
-TEST(ParseCharSetTest, UpperCaseRangeShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                ParseCharacterSetBody("B-Z"));
-  MORIARTY_EXPECT_OK(r.IsValid("B"));
-  MORIARTY_EXPECT_OK(r.IsValid("Z"));
-  EXPECT_THAT(r.IsValid("A"), StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(r.IsValid("a"), StatusIs(absl::StatusCode::kInvalidArgument));
-}
+TEST(ParseCharSetTest, ValidRangeTypesShouldWork) {
+  EXPECT_THAT(ParseCharacterSetBody("a-z"),
+              AcceptsOnly("abcdefghijklmnopqrstuvwxyz"));
+  EXPECT_THAT(ParseCharacterSetBody("A-Z"),
+              AcceptsOnly("ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+  EXPECT_THAT(ParseCharacterSetBody("0-9"), AcceptsOnly("0123456789"));
+  EXPECT_THAT(
+      ParseCharacterSetBody("a-zA-Z"),
+      AcceptsOnly("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+  EXPECT_THAT(
+      ParseCharacterSetBody("0-9a-zA-Z"),
+      AcceptsOnly(
+          "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+  EXPECT_THAT(
+      ParseCharacterSetBody("a-zA-Z0-9"),
+      AcceptsOnly(
+          "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"));
 
-TEST(ParseCharSetTest, LowerCaseRangeShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                ParseCharacterSetBody("a-q"));
-  MORIARTY_EXPECT_OK(r.IsValid("a"));
-  MORIARTY_EXPECT_OK(r.IsValid("q"));
-  EXPECT_THAT(r.IsValid("r"), StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(r.IsValid("A"), StatusIs(absl::StatusCode::kInvalidArgument));
-}
-
-TEST(ParseCharSetTest, DigitRangeShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                ParseCharacterSetBody("0-5"));
-  MORIARTY_EXPECT_OK(r.IsValid("0"));
-  MORIARTY_EXPECT_OK(r.IsValid("5"));
-  EXPECT_THAT(r.IsValid("6"), StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(r.IsValid("a"), StatusIs(absl::StatusCode::kInvalidArgument));
+  // Some partial
+  EXPECT_THAT(ParseCharacterSetBody("d-g"), AcceptsOnly("defg"));
+  EXPECT_THAT(ParseCharacterSetBody("A-C"), AcceptsOnly("ABC"));
+  EXPECT_THAT(ParseCharacterSetBody("0-3"), AcceptsOnly("0123"));
 }
 
 TEST(ParseCharSetTest, InvalidRangeShouldFail) {
-  EXPECT_THAT(ParseCharacterSetBody("9-0"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(ParseCharacterSetBody("Z-A"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(ParseCharacterSetBody("z-a"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(ParseCharacterSetBody("a-A"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(ParseCharacterSetBody("A-a"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(ParseCharacterSetBody("A-z"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(ParseCharacterSetBody("A-?"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-}
-
-TEST(ParseCharSetTest, BackToBackRangesShouldWork) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                ParseCharacterSetBody("A-Za-z"));
-  MORIARTY_EXPECT_OK(r.IsValid("A"));
-  MORIARTY_EXPECT_OK(r.IsValid("B"));
-  MORIARTY_EXPECT_OK(r.IsValid("a"));
-  MORIARTY_EXPECT_OK(r.IsValid("b"));
+  EXPECT_THAT([] { (void)ParseCharacterSetBody("9-0"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+  EXPECT_THAT([] { (void)ParseCharacterSetBody("Z-A"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+  EXPECT_THAT([] { (void)ParseCharacterSetBody("z-a"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+  EXPECT_THAT([] { (void)ParseCharacterSetBody("a-A"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+  EXPECT_THAT([] { (void)ParseCharacterSetBody("A-a"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+  EXPECT_THAT([] { (void)ParseCharacterSetBody("A-z"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+  EXPECT_THAT([] { (void)ParseCharacterSetBody("A-?"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
 }
 
 TEST(ParseCharSetTest, DotsShouldNotBeTreatedAsWildcards) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("."));
-  MORIARTY_EXPECT_OK(r.IsValid("."));
-  EXPECT_THAT(r.IsValid("a"), StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT(ParseCharacterSetBody("."), AcceptsOnly("."));
+  EXPECT_THAT(ParseCharacterSetBody(".ab"), AcceptsOnly(".ab"));
 }
 
 TEST(ParseCharSetTest, NegativeAtTheEndPlusRangesShouldNotCountAsDuplicate) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r,
-                                ParseCharacterSetBody("a-z-"));
-  MORIARTY_EXPECT_OK(r.IsValid("a"));
-  MORIARTY_EXPECT_OK(r.IsValid("z"));
-  MORIARTY_EXPECT_OK(r.IsValid("-"));
-}
-
-TEST(ParseCharSetTest, NegativeAtTheEndPlusShouldNotBeConsideredForRange) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(RepeatedCharSet r, ParseCharacterSetBody("a-"));
-  MORIARTY_EXPECT_OK(r.IsValid("a"));
-  MORIARTY_EXPECT_OK(r.IsValid("-"));
-  EXPECT_THAT(r.IsValid("b"), StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT(ParseCharacterSetBody("a-"), AcceptsOnly("a-"));
+  EXPECT_THAT(ParseCharacterSetBody("a-d-"), AcceptsOnly("abcd-"));  // No dup
 }
 
 TEST(ParseCharSetTest, NegativeCharsShouldBeInvalid) {
-  EXPECT_THAT(ParseCharacterSetBody(std::string(1, static_cast<char>(-1))),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT(
+      [] {
+        (void)ParseCharacterSetBody(std::string(1, static_cast<char>(-1)));
+      },
+      Throws<std::invalid_argument>());
 }
 
 TEST(ParseRepetitionTest, EmptyRepetitionShouldPass) {
-  MORIARTY_EXPECT_OK(RepetitionPrefixLength(""));
+  EXPECT_EQ(RepetitionPrefixLength(""), 0);
 }
 
 TEST(ParseRepetitionTest, SingleRepetitionCharacterShouldReturnOne) {
-  EXPECT_THAT(RepetitionPrefixLength("*"), IsOkAndHolds(1));
-  EXPECT_THAT(RepetitionPrefixLength("?"), IsOkAndHolds(1));
-  EXPECT_THAT(RepetitionPrefixLength("+"), IsOkAndHolds(1));
+  EXPECT_EQ(RepetitionPrefixLength("*"), 1);
+  EXPECT_EQ(RepetitionPrefixLength("?"), 1);
+  EXPECT_EQ(RepetitionPrefixLength("+"), 1);
 }
 
 TEST(ParseRepetitionTest, SingleNonSpecialCharacterShouldReturnZero) {
-  EXPECT_THAT(RepetitionPrefixLength("a"), IsOkAndHolds(0));
-  EXPECT_THAT(RepetitionPrefixLength("abc"), IsOkAndHolds(0));
-  EXPECT_THAT(RepetitionPrefixLength("3"), IsOkAndHolds(0));
+  EXPECT_EQ(RepetitionPrefixLength("a"), 0);
+  EXPECT_EQ(RepetitionPrefixLength("abc"), 0);
+  EXPECT_EQ(RepetitionPrefixLength("3"), 0);
 }
 
 TEST(ParseRepetitionTest, TypicalCasesShouldWork) {
-  EXPECT_THAT(RepetitionPrefixLength("{1}"), IsOkAndHolds(3));
-  EXPECT_THAT(RepetitionPrefixLength("{1,2}"), IsOkAndHolds(5));
-  EXPECT_THAT(RepetitionPrefixLength("{1,}"), IsOkAndHolds(4));
-  EXPECT_THAT(RepetitionPrefixLength("{,2}"), IsOkAndHolds(4));
+  EXPECT_EQ(RepetitionPrefixLength("{1}"), 3);
+  EXPECT_EQ(RepetitionPrefixLength("{1,2}"), 5);
+  EXPECT_EQ(RepetitionPrefixLength("{1,}"), 4);
+  EXPECT_EQ(RepetitionPrefixLength("{,2}"), 4);
 }
 
 TEST(ParseRepetitionTest, CharactersAfterCloseShouldBeIgnored) {
-  EXPECT_THAT(RepetitionPrefixLength("{1}xx"), IsOkAndHolds(3));
-  EXPECT_THAT(RepetitionPrefixLength("{1,2}xx"), IsOkAndHolds(5));
+  EXPECT_EQ(RepetitionPrefixLength("{1}xx"), 3);
+  EXPECT_EQ(RepetitionPrefixLength("{1,2}xx"), 5);
 }
 
 TEST(ParseRepetitionTest, MissingCloseBraceShouldFail) {
-  EXPECT_THAT(RepetitionPrefixLength("{1"),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT([] { (void)RepetitionPrefixLength("{1"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("No '}' found")));
 }
 
 TEST(ParseRepetitionTest, SpecialCharacterAtStartShouldReturnZero) {
-  EXPECT_THAT(RepetitionPrefixLength("}"), IsOkAndHolds(0));
-  EXPECT_THAT(RepetitionPrefixLength("("), IsOkAndHolds(0));
-  EXPECT_THAT(RepetitionPrefixLength(")"), IsOkAndHolds(0));
-  EXPECT_THAT(RepetitionPrefixLength("["), IsOkAndHolds(0));
-  EXPECT_THAT(RepetitionPrefixLength("]"), IsOkAndHolds(0));
-  EXPECT_THAT(RepetitionPrefixLength("^"), IsOkAndHolds(0));
-  EXPECT_THAT(RepetitionPrefixLength("-"), IsOkAndHolds(0));
-  EXPECT_THAT(RepetitionPrefixLength("|"), IsOkAndHolds(0));
+  EXPECT_EQ(RepetitionPrefixLength("}"), 0);
+  EXPECT_EQ(RepetitionPrefixLength("("), 0);
+  EXPECT_EQ(RepetitionPrefixLength(")"), 0);
+  EXPECT_EQ(RepetitionPrefixLength("["), 0);
+  EXPECT_EQ(RepetitionPrefixLength("]"), 0);
+  EXPECT_EQ(RepetitionPrefixLength("^"), 0);
+  EXPECT_EQ(RepetitionPrefixLength("-"), 0);
+  EXPECT_EQ(RepetitionPrefixLength("|"), 0);
 }
 
 TEST(ParseRepetitionTest, EmptyRepetitionShouldGiveLengthOne) {
-  EXPECT_THAT(ParseRepetitionBody(""), IsOkAndHolds(FieldsAre(1, 1)));
+  EXPECT_THAT(ParseRepetitionBody(""), FieldsAre(1, 1));
 }
 
-TEST(ParseRepetitionTest, QuestionMarkGiveLengthZeroOrOne) {
-  EXPECT_THAT(ParseRepetitionBody("?"), IsOkAndHolds(FieldsAre(0, 1)));
-}
-
-TEST(ParseRepetitionTest, PlusShouldGiveLengthOneAndUp) {
+TEST(ParseRepetitionTest, SpecialCharactersShouldParseProperly) {
+  EXPECT_THAT(ParseRepetitionBody("?"), FieldsAre(0, 1));
   EXPECT_THAT(ParseRepetitionBody("+"),
-              IsOkAndHolds(FieldsAre(1, std::numeric_limits<int64_t>::max())));
-}
-
-TEST(ParseRepetitionTest, AsteriskShouldGiveLengthZeroAndUp) {
+              FieldsAre(1, std::numeric_limits<int64_t>::max()));
   EXPECT_THAT(ParseRepetitionBody("*"),
-              IsOkAndHolds(FieldsAre(0, std::numeric_limits<int64_t>::max())));
+              FieldsAre(0, std::numeric_limits<int64_t>::max()));
 }
 
-TEST(ParseRepetitionTest, OneNumberShouldReturnThatNumber) {
-  EXPECT_THAT(ParseRepetitionBody("{3}"), IsOkAndHolds(FieldsAre(3, 3)));
-}
-
-TEST(ParseRepetitionTest, TwoNumbersShouldReturnThoseNumbers) {
-  EXPECT_THAT(ParseRepetitionBody("{3,14}"), IsOkAndHolds(FieldsAre(3, 14)));
-}
-
-TEST(ParseRepetitionTest, LowerBoundShouldReturn) {
+TEST(ParseRepetitionTest, SimpleCasesShouldWork) {
+  EXPECT_THAT(ParseRepetitionBody("{3}"), FieldsAre(3, 3));
+  EXPECT_THAT(ParseRepetitionBody("{3,14}"), FieldsAre(3, 14));
   EXPECT_THAT(ParseRepetitionBody("{3,}"),
-              IsOkAndHolds(FieldsAre(3, std::numeric_limits<int64_t>::max())));
-}
-
-TEST(ParseRepetitionTest, UpperBoundShouldReturn) {
-  EXPECT_THAT(ParseRepetitionBody("{,3}"), IsOkAndHolds(FieldsAre(0, 3)));
-}
-
-TEST(ParseRepetitionTest, EmptyEmptyShouldGiveZeroAndUp) {
+              FieldsAre(3, std::numeric_limits<int64_t>::max()));
+  EXPECT_THAT(ParseRepetitionBody("{,3}"), FieldsAre(0, 3));
   EXPECT_THAT(ParseRepetitionBody("{,}"),
-              IsOkAndHolds(FieldsAre(0, std::numeric_limits<int64_t>::max())));
+              FieldsAre(0, std::numeric_limits<int64_t>::max()));
 }
 
 TEST(ParseRepetitionTest, MultipleCommasShouldFail) {
-  EXPECT_THAT(ParseRepetitionBody("{3,4,5}"), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("{3,4,5}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("max value")));
 }
 
 TEST(ParseRepetitionTest, MissingBracesShouldFail) {
-  EXPECT_THAT(ParseRepetitionBody("{1,2"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("1,2}"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody(",1}"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("{1,"), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("{1,2"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("}")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("1,2}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody(",1}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("{1,"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("}")));
 }
 
 TEST(ParseRepetitionTest, NonIntegerShouldFail) {
-  EXPECT_THAT(ParseRepetitionBody("{1.5,2}"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("{a,b}"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("{1,b}"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("{a,2}"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("{a,}"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("{,a}"), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("{1.5,2}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("min")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("{a,b}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("min")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("{1,b}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("max")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("{a,2}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("min")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("{a,}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("min")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("{,a}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("max")));
 }
 
 TEST(ParseRepetitionTest, HexShouldFail) {
-  EXPECT_THAT(ParseRepetitionBody("{0x00,0x10}"), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("{0x00,0x10}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("min")));
 }
 
 TEST(ParseRepetitionTest, SpecialCharacterAtStartShouldFail) {
-  EXPECT_THAT(ParseRepetitionBody("}"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("^"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("("), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("|"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("["), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody(")"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("]"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("-"), Not(IsOk()));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("}"); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("^"); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("("); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("|"); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("["); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody(")"); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("]"); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("-"); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
 }
 
 TEST(ParseRepetitionTest, OtherCharacterAtStartShouldFail) {
-  EXPECT_THAT(ParseRepetitionBody("a"), Not(IsOk()));
-  EXPECT_THAT(ParseRepetitionBody("abc"), Not(IsOk()));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("a"); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("abc"); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("Expected { and }")));
 }
 
 TEST(ParseRepeatedCharSetTest, EmptyStringShouldFail) {
-  EXPECT_THAT(ParseRepeatedCharSetPrefix(""), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix(""); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty")));
 }
 
 TEST(ParseRepeatedCharSetTest, SpecialCharacterAtStartShouldFail) {
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("{"), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("}"), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("^"), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("("), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix(")"), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("|"), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("["), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("]"), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("-"), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("?"), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("+"), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("*"), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("{"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("}")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("^"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("^")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("("); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("(")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix(")"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr(")")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("|"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("|")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("["); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("[")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("]"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("]")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("-"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("-")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("?"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("?")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("+"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("+")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("*"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("*")));
 }
 
 TEST(ParseRepeatedCharSetTest, RepetitionPartFirstShouldFail) {
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("{3,1}"), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("{,1}"), Not(IsOk()));
-  EXPECT_THAT(ParseRepeatedCharSetPrefix("*"), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("{3,1}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("{,1}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+  EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("*"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("*")));
 }
 
 TEST(ParseRepeatedCharSetTest,
      FirstCharacterWithoutRepetitionShouldReturnSingleItem) {
   EXPECT_THAT(ParseRepeatedCharSetPrefix("a"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "a")));
+              Field(&PatternNode::pattern, "a"));
   EXPECT_THAT(ParseRepeatedCharSetPrefix("abc"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "a")));
+              Field(&PatternNode::pattern, "a"));
 }
 
 TEST(ParseRepeatedCharSetTest,
      FirstCharacterWithRepetitionShouldReturnSingleItemWithRepetition) {
   EXPECT_THAT(ParseRepeatedCharSetPrefix("a*"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "a*")));
+              Field(&PatternNode::pattern, "a*"));
   EXPECT_THAT(ParseRepeatedCharSetPrefix("a+bc"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "a+")));
+              Field(&PatternNode::pattern, "a+"));
   EXPECT_THAT(ParseRepeatedCharSetPrefix("a{1,3}bc"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "a{1,3}")));
+              Field(&PatternNode::pattern, "a{1,3}"));
 }
 
 TEST(ParseRepeatedCharSetTest,
      FirstCharacterWithoutRepetitionShouldReturnJustCharSet) {
   EXPECT_THAT(ParseRepeatedCharSetPrefix("[a]"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "[a]")));
+              Field(&PatternNode::pattern, "[a]"));
   EXPECT_THAT(ParseRepeatedCharSetPrefix("[ab]c"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "[ab]")));
+              Field(&PatternNode::pattern, "[ab]"));
   EXPECT_THAT(ParseRepeatedCharSetPrefix("[ab]c*"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "[ab]")));
+              Field(&PatternNode::pattern, "[ab]"));
 }
 
 TEST(ParseRepeatedCharSetTest,
      CharacterSetWithRepetitionShouldReturnWithRepetition) {
   EXPECT_THAT(ParseRepeatedCharSetPrefix("[a]*"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "[a]*")));
+              Field(&PatternNode::pattern, "[a]*"));
   EXPECT_THAT(ParseRepeatedCharSetPrefix("[ab]?c"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "[ab]?")));
+              Field(&PatternNode::pattern, "[ab]?"));
   EXPECT_THAT(ParseRepeatedCharSetPrefix("[abc]{1,3}de"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "[abc]{1,3}")));
+              Field(&PatternNode::pattern, "[abc]{1,3}"));
 }
 
 TEST(ParseRepeatedCharSetTest, CharacterSetParserShouldNotSetSubpattern) {
   EXPECT_THAT(ParseRepeatedCharSetPrefix("a"),
-              IsOkAndHolds(Field(&PatternNode::subpatterns, IsEmpty())));
+              Field(&PatternNode::subpatterns, IsEmpty()));
   EXPECT_THAT(ParseRepeatedCharSetPrefix("[ab]"),
-              IsOkAndHolds(Field(&PatternNode::subpatterns, IsEmpty())));
+              Field(&PatternNode::subpatterns, IsEmpty()));
   EXPECT_THAT(ParseRepeatedCharSetPrefix("a*"),
-              IsOkAndHolds(Field(&PatternNode::subpatterns, IsEmpty())));
+              Field(&PatternNode::subpatterns, IsEmpty()));
   EXPECT_THAT(ParseRepeatedCharSetPrefix("[ab]?c"),
-              IsOkAndHolds(Field(&PatternNode::subpatterns, IsEmpty())));
+              Field(&PatternNode::subpatterns, IsEmpty()));
 }
 
 TEST(ParseRepeatedCharSetTest,
      CharacterSetShouldNotIncludeSquareBracketsByDefault) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(PatternNode p,
-                                ParseRepeatedCharSetPrefix("[a]"));
-  RepeatedCharSet r = p.repeated_character_set;
-  MORIARTY_EXPECT_OK(r.IsValid("a"));
-  EXPECT_THAT(r.IsValid("["), StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(r.IsValid("]"), StatusIs(absl::StatusCode::kInvalidArgument));
+  PatternNode p = ParseRepeatedCharSetPrefix("[a]");
+  EXPECT_THAT(p.repeated_character_set, AcceptsOnly("a"));
 }
 
 TEST(ParseScopePrefixTest, EmptyStringShouldFail) {
-  EXPECT_THAT(ParseScopePrefix(""), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseScopePrefix(""); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty")));
 }
 
 TEST(ParseScopePrefixTest, SingleCloseBracketShouldFail) {
-  EXPECT_THAT(ParseScopePrefix(")"), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseScopePrefix(")"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty scope")));
 }
 
 TEST(ParseScopePrefixTest, SpecialCharacterAtStartShouldFail) {
-  EXPECT_THAT(ParseScopePrefix("{"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("}"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("^"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("|"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("["), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("]"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("-"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("?"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("+"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("*"), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseScopePrefix("{"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("}"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("}")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("^"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("^")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("|"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("|")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("["); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("[")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("]"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("]")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("-"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("-")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("?"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("?")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("+"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("+")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("*"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("*")));
 }
 
 TEST(ParseScopePrefixTest, UnmatchedOpenBraceShouldFail) {
-  EXPECT_THAT(ParseScopePrefix("("), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("(abc"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("(a(bc)"), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseScopePrefix("("); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty scope")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("(abc"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("')'")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("(a(bc)"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("')'")));
 }
 
 TEST(ParseScopePrefixTest, NestedScopesShouldBeOk) {
-  MORIARTY_EXPECT_OK(ParseScopePrefix("(ab(cd))"));
-  MORIARTY_EXPECT_OK(ParseScopePrefix("a(b(cd))"));
+  EXPECT_THAT(ParseScopePrefix("(ab(cd))"),
+              Field(&PatternNode::pattern, "(ab(cd))"));
+  EXPECT_THAT(ParseScopePrefix("a(b(cd))"),
+              Field(&PatternNode::pattern, "a(b(cd))"));
 }
 
 TEST(ParseScopePrefixTest, SingleCharacterShouldWork) {
-  EXPECT_THAT(
-      ParseScopePrefix("a"),
-      IsOkAndHolds(SubpatternsAre(PatternNode::SubpatternType::kAllOf,
-                                  std::vector<std::string_view>({"a"}))));
+  EXPECT_THAT(ParseScopePrefix("a"),
+              SubpatternsAre(PatternNode::SubpatternType::kAllOf,
+                             std::vector<std::string_view>({"a"})));
 }
 
 TEST(ParseScopePrefixTest, ParsingFlatScopeShouldGetPatternCorrect) {
-  EXPECT_THAT(ParseScopePrefix("ab"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "ab")));
+  EXPECT_THAT(ParseScopePrefix("ab"), Field(&PatternNode::pattern, "ab"));
 
-  EXPECT_THAT(ParseScopePrefix("a*b+"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "a*b+")));
+  EXPECT_THAT(ParseScopePrefix("a*b+"), Field(&PatternNode::pattern, "a*b+"));
 }
 
 TEST(ParseScopePrefixTest,
      ParsingFlatScopeWithCloseBracketShouldGetPatternCorrect) {
-  EXPECT_THAT(ParseScopePrefix("ab)cd"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "ab")));
+  EXPECT_THAT(ParseScopePrefix("ab)cd"), Field(&PatternNode::pattern, "ab"));
 
   EXPECT_THAT(ParseScopePrefix("a*b+)c?d*"),
-              IsOkAndHolds(Field(&PatternNode::pattern, "a*b+")));
+              Field(&PatternNode::pattern, "a*b+"));
 }
 
 TEST(ParseScopePrefixTest, ParsingFlatScopeShouldGetSubpatternsCorrect) {
-  EXPECT_THAT(
-      ParseScopePrefix("ab"),
-      IsOkAndHolds(SubpatternsAre(PatternNode::SubpatternType::kAllOf,
-                                  std::vector<std::string_view>({"a", "b"}))));
+  EXPECT_THAT(ParseScopePrefix("ab"),
+              SubpatternsAre(PatternNode::SubpatternType::kAllOf,
+                             std::vector<std::string_view>({"a", "b"})));
 
   EXPECT_THAT(ParseScopePrefix("a*b+"),
-              IsOkAndHolds(
-                  SubpatternsAre(PatternNode::SubpatternType::kAllOf,
-                                 std::vector<std::string_view>({"a*", "b+"}))));
+              SubpatternsAre(PatternNode::SubpatternType::kAllOf,
+                             std::vector<std::string_view>({"a*", "b+"})));
 }
 
 TEST(ParseScopePrefixTest,
      ParsingFlatScopeWithEndBraceShouldGetSubpatternsCorrect) {
-  EXPECT_THAT(
-      ParseScopePrefix("ab)cd"),
-      IsOkAndHolds(SubpatternsAre(PatternNode::SubpatternType::kAllOf,
-                                  std::vector<std::string_view>({"a", "b"}))));
+  EXPECT_THAT(ParseScopePrefix("ab)cd"),
+              SubpatternsAre(PatternNode::SubpatternType::kAllOf,
+                             std::vector<std::string_view>({"a", "b"})));
 
   EXPECT_THAT(ParseScopePrefix("a*b+)c?d*"),
-              IsOkAndHolds(
-                  SubpatternsAre(PatternNode::SubpatternType::kAllOf,
-                                 std::vector<std::string_view>({"a*", "b+"}))));
+              SubpatternsAre(PatternNode::SubpatternType::kAllOf,
+                             std::vector<std::string_view>({"a*", "b+"})));
 }
 
 TEST(ParseScopePrefixTest, ParsingScopeWithOrClauseShouldGetPatternCorrect) {
   EXPECT_THAT(ParseScopePrefix("ab|cd"),
-              IsOkAndHolds(
-                  SubpatternsAre(PatternNode::SubpatternType::kAnyOf,
-                                 std::vector<std::string_view>({"ab", "cd"}))));
+              SubpatternsAre(PatternNode::SubpatternType::kAnyOf,
+                             std::vector<std::string_view>({"ab", "cd"})));
 
   EXPECT_THAT(ParseScopePrefix("a*b+|c?d*"),
-              IsOkAndHolds(SubpatternsAre(
-                  PatternNode::SubpatternType::kAnyOf,
-                  std::vector<std::string_view>({"a*b+", "c?d*"}))));
+              SubpatternsAre(PatternNode::SubpatternType::kAnyOf,
+                             std::vector<std::string_view>({"a*b+", "c?d*"})));
 }
 
 TEST(ParseScopePrefixTest, ParsingScopeWithEmptyOrClausesShouldFail) {
-  EXPECT_THAT(ParseScopePrefix("|"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("||"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("|a"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("a|"), Not(IsOk()));
-  EXPECT_THAT(ParseScopePrefix("a||b"), Not(IsOk()));
+  EXPECT_THAT([] { (void)ParseScopePrefix("|"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty or-block")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("||"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty or-block")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("|a"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty or-block")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("a|"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty or-block")));
+  EXPECT_THAT([] { (void)ParseScopePrefix("a||b"); },
+              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty or-block")));
 }
 
 TEST(ParseScopePrefixTest,
      ParsingScopeWithOrClauseAndEndBraceShouldGetSubpatternsCorrect) {
   EXPECT_THAT(ParseScopePrefix("ab|cd)ef"),
-              IsOkAndHolds(
-                  SubpatternsAre(PatternNode::SubpatternType::kAnyOf,
-                                 std::vector<std::string_view>({"ab", "cd"}))));
+              SubpatternsAre(PatternNode::SubpatternType::kAnyOf,
+                             std::vector<std::string_view>({"ab", "cd"})));
 
   EXPECT_THAT(ParseScopePrefix("a*b+|c?d*)ef"),
-              IsOkAndHolds(SubpatternsAre(
-                  PatternNode::SubpatternType::kAnyOf,
-                  std::vector<std::string_view>({"a*b+", "c?d*"}))));
+              SubpatternsAre(PatternNode::SubpatternType::kAnyOf,
+                             std::vector<std::string_view>({"a*b+", "c?d*"})));
 }
 
 TEST(ParseScopePrefixTest, SpecialCharactersCanBeUsedInsideSquareBrackets) {
-  EXPECT_THAT(ParseScopePrefix("[(][)][*][[][]][?][+]"),
-              IsOkAndHolds(SubpatternsAre(
-                  PatternNode::SubpatternType::kAllOf,
-                  std::vector<std::string_view>(
-                      {"[(]", "[)]", "[*]", "[[]", "[]]", "[?]", "[+]"}))));
+  EXPECT_THAT(
+      ParseScopePrefix("[(][)][*][[][]][?][+]"),
+      SubpatternsAre(PatternNode::SubpatternType::kAllOf,
+                     std::vector<std::string_view>(
+                         {"[(]", "[)]", "[*]", "[[]", "[]]", "[?]", "[+]"})));
 }
 
 TEST(ParseScopePrefixTest, NestingShouldGetSubpatternsCorrect) {
-  EXPECT_THAT(ParseScopePrefix("a(bc(de|fg))"),
-              IsOkAndHolds(SubpatternsAre(
-                  PatternNode::SubpatternType::kAllOf,
-                  std::vector<std::string_view>({"a", "(bc(de|fg))"}))));
+  EXPECT_THAT(
+      ParseScopePrefix("a(bc(de|fg))"),
+      SubpatternsAre(PatternNode::SubpatternType::kAllOf,
+                     std::vector<std::string_view>({"a", "(bc(de|fg))"})));
 
   EXPECT_THAT(ParseScopePrefix("(abc(de|fg))"),
-              IsOkAndHolds(SubpatternsAre(
-                  PatternNode::SubpatternType::kAllOf,
-                  std::vector<std::string_view>({"(abc(de|fg))"}))));
+              SubpatternsAre(PatternNode::SubpatternType::kAllOf,
+                             std::vector<std::string_view>({"(abc(de|fg))"})));
 }
 
 }  // namespace

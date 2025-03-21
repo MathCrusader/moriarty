@@ -25,9 +25,6 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-
 namespace moriarty {
 namespace moriarty_internal {
 
@@ -35,36 +32,35 @@ namespace moriarty_internal {
 // accepts any string which has length == 0.
 class RepeatedCharSet {
  public:
-  // Adds `character` to the set of valid characters. Returns
-  // `absl::kAlreadyExists` if `character` is already in the set and
-  // `absl::kInvalidArgument` if `character` is negative.
-  absl::Status Add(char character);
+  // Adds `character` to the set of valid characters. Returns `true` if the
+  // character was newly inserted into the set (false if it was already there).
+  //
+  // Throws if `character` is negative.
+  bool Add(char character);
 
   // Flip the characters which are valid and invalid. Negative characters are
   // still invalid.
   void FlipValidCharacters();
 
   // Sets the number of repetitions to be between `min` and `max`.
-  absl::Status SetRange(int64_t min, int64_t max);
-
-  // Returns if `str` is valid.
-  absl::Status IsValid(std::string_view str) const;
+  void SetRange(int64_t min, int64_t max);
 
   // Returns if `character` is a valid character.
-  bool IsValidCharacter(char character) const;
+  [[nodiscard]] bool IsValidCharacter(char character) const;
 
   // Returns the longest prefix of `str` that is valid. If no prefix is valid,
-  // returns `absl::kInvalidArgument`.
-  absl::StatusOr<int64_t> LongestValidPrefix(std::string_view str) const;
+  // returns `std::nullopt`.
+  [[nodiscard]] std::optional<int64_t> LongestValidPrefix(
+      std::string_view str) const;
 
   // Minimum length of repetition.
-  int64_t MinLength() const;
+  [[nodiscard]] int64_t MinLength() const;
 
   // Maximum length of repetition.
-  int64_t MaxLength() const;
+  [[nodiscard]] int64_t MaxLength() const;
 
   // Returns all valid characters.
-  std::vector<char> ValidCharacters() const;
+  [[nodiscard]] std::vector<char> ValidCharacters() const;
 
  private:
   std::bitset<128> valid_chars_;  // We only support non-negative signed char.
@@ -161,10 +157,10 @@ class SimplePattern {
   // Function that returns a random integer in the range [min, max] (inclusive).
   using RandFn = std::function<int64_t(int64_t, int64_t)>;
 
-  static absl::StatusOr<SimplePattern> Create(std::string_view pattern);
+  SimplePattern(std::string pattern);
 
   // Returns the underlying pattern.
-  std::string Pattern() const;
+  [[nodiscard]] std::string Pattern() const;
 
   // Matches()
   //
@@ -183,7 +179,7 @@ class SimplePattern {
   //
   //  patternC = "(hello|helloworld)"
   //  strC     = "helloworld"      <-- "hello" matches the left or-expression.
-  bool Matches(std::string_view str) const;
+  [[nodiscard]] bool Matches(std::string_view str) const;
 
   // Generate()
   //
@@ -194,8 +190,8 @@ class SimplePattern {
   // subcomponent, but no underlying distribution is guaranteed and may change
   // at any time.
   //
-  // All randomness comes from `random_engine`.
-  absl::StatusOr<std::string> Generate(const RandFn& rand) const;
+  // All randomness comes from `rand`.
+  [[nodiscard]] std::string Generate(const RandFn& rand) const;
 
   // GenerateWithRestrictions()
   //
@@ -204,13 +200,11 @@ class SimplePattern {
   //
   // If `restricted_alphabet` is set, the generated string will only contain
   // characters from that string.
-  absl::StatusOr<std::string> GenerateWithRestrictions(
+  [[nodiscard]] std::string GenerateWithRestrictions(
       std::optional<std::string_view> restricted_alphabet,
       const RandFn& rand) const;
 
  private:
-  explicit SimplePattern(std::string pattern);
-
   std::string pattern_;
   PatternNode pattern_node_;
 };
@@ -219,20 +213,20 @@ class SimplePattern {
 // does not check the validity of the characters inside the [].
 //
 // Assumes `pattern` has no escape-characters.
-absl::StatusOr<int> CharacterSetPrefixLength(std::string_view pattern);
+[[nodiscard]] int CharacterSetPrefixLength(std::string_view pattern);
 
 // Parses the character set body. `chars` should not contain the surrounding
 // square braces []. E.g., "[abc]" should just pass "abc". `SetRange(1, 1)` will
 // be called on the returned `RepeatedCharSet`.
 //
 // Assumes `chars` has no escape-characters.
-absl::StatusOr<RepeatedCharSet> ParseCharacterSetBody(std::string_view chars);
+[[nodiscard]] RepeatedCharSet ParseCharacterSetBody(std::string_view chars);
 
 // Returns the length of the prefix that corresponds to a repetition. This does
 // not check the validity of the characters inside the {}.
 //
 // Assumes `pattern` has no escape-characters.
-absl::StatusOr<int> RepetitionPrefixLength(std::string_view pattern);
+[[nodiscard]] int RepetitionPrefixLength(std::string_view pattern);
 
 // The return type for `ParseRepetitionBody`.
 struct RepetitionRange {
@@ -244,8 +238,7 @@ struct RepetitionRange {
 // or {_, _}, where each _ is either empty or an integer.
 //
 // Assumes `repetition` has no escape-characters.
-absl::StatusOr<RepetitionRange> ParseRepetitionBody(
-    std::string_view repetition);
+[[nodiscard]] RepetitionRange ParseRepetitionBody(std::string_view repetition);
 
 // Parses the prefix that corresponds to a repeated character set, ignoring any
 // suffix beyond the first repeated character set. E.g.,
@@ -254,8 +247,7 @@ absl::StatusOr<RepetitionRange> ParseRepetitionBody(
 //      "*", "", "(a)".
 //
 // Assumes `pattern` has no escape-characters.
-absl::StatusOr<PatternNode> ParseRepeatedCharSetPrefix(
-    std::string_view pattern);
+[[nodiscard]] PatternNode ParseRepeatedCharSetPrefix(std::string_view pattern);
 
 // Parses the prefix that corresponds to a scope. A scope ends at either
 // end-of-string or at the first unmatched ')'. E.g.,
@@ -265,7 +257,7 @@ absl::StatusOr<PatternNode> ParseRepeatedCharSetPrefix(
 // returned PatternNode. (i.e., `returned_pattern_node.pattern` == `pattern`).
 //
 // Assumes `pattern` has no escape-characters.
-absl::StatusOr<PatternNode> ParseScopePrefix(std::string_view pattern);
+[[nodiscard]] PatternNode ParseScopePrefix(std::string_view pattern);
 
 }  // namespace moriarty_internal
 }  // namespace moriarty
