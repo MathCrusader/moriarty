@@ -21,7 +21,6 @@
 #include <tuple>
 #include <utility>
 
-#include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/generation_bootstrap.h"
@@ -30,14 +29,11 @@
 #include "src/internal/variable_set.h"
 #include "src/testing/mtest_type.h"
 #include "src/testing/status_test_util.h"
-#include "src/util/status_macro/status_macros.h"
-#include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
 namespace {
 
-using ::moriarty::IsOkAndHolds;
 using ::moriarty::moriarty_internal::GenerateAllValues;
 using ::moriarty::moriarty_internal::RandomEngine;
 using ::moriarty::moriarty_internal::ValueSet;
@@ -58,7 +54,7 @@ T::value_type GetValue(const TestCase& test_case, std::string_view name) {
   return values.Get<T>(name);
 }
 
-absl::StatusOr<ValueSet> AssignAllValues(const TestCase& test_case) {
+ValueSet AssignAllValues(const TestCase& test_case) {
   auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
   RandomEngine rng({1, 2, 3}, "v0.1");
   return GenerateAllValues(variables, values, {rng, std::nullopt});
@@ -95,7 +91,7 @@ TEST(TestCaseTest, AssignAllValuesGivesSomeValueForEachVariable) {
   T.ConstrainVariable("A", MTestType());
   T.ConstrainVariable("B", MTestType());
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
+  ValueSet value_set = AssignAllValues(T);
 
   EXPECT_TRUE(value_set.Contains("A"));
   EXPECT_TRUE(value_set.Contains("B"));
@@ -107,7 +103,7 @@ TEST(TestCaseTest, ConstrainAnonymousVariableAndGetVariableWorkInGeneralCase) {
   T.ConstrainAnonymousVariable("A", MTestType());
   T.ConstrainAnonymousVariable("B", MTestType());
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
+  ValueSet value_set = AssignAllValues(T);
 
   EXPECT_TRUE(value_set.Contains("A"));
   EXPECT_TRUE(value_set.Contains("B"));
@@ -119,16 +115,16 @@ TEST(TestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
 
   // Generate the value for A, B, C in some order and return those values in the
   // order A, B, C.
-  auto gen = [](NameVariablePair first, NameVariablePair second,
-                NameVariablePair third)
-      -> absl::StatusOr<std::tuple<TestType, TestType, TestType>> {
+  auto gen =
+      [](NameVariablePair first, NameVariablePair second,
+         NameVariablePair third) -> std::tuple<TestType, TestType, TestType> {
     TestCase T;
     T.ConstrainVariable(first.first, first.second);
     T.ConstrainVariable(second.first, second.second);
     T.ConstrainVariable(third.first, third.second);
 
     RandomEngine rng({1, 2, 3}, "v0.1");
-    MORIARTY_ASSIGN_OR_RETURN(ValueSet value_set, AssignAllValues(T));
+    ValueSet value_set = AssignAllValues(T);
     return std::tuple<TestType, TestType, TestType>({
         value_set.Get<MTestType>("A"),
         value_set.Get<MTestType>("B"),
@@ -142,12 +138,12 @@ TEST(TestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
                         MTestType().SetMultiplier(MInteger(Between(1, 3)))};
   NameVariablePair c = {"C", MTestType().SetAdder("A")};
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(auto abc, gen(a, b, c));
-  EXPECT_THAT(gen(a, c, b), IsOkAndHolds(abc));
-  EXPECT_THAT(gen(b, a, c), IsOkAndHolds(abc));
-  EXPECT_THAT(gen(b, c, a), IsOkAndHolds(abc));
-  EXPECT_THAT(gen(c, b, a), IsOkAndHolds(abc));
-  EXPECT_THAT(gen(c, a, b), IsOkAndHolds(abc));
+  auto abc = gen(a, b, c);
+  EXPECT_EQ(gen(a, c, b), abc);
+  EXPECT_EQ(gen(b, a, c), abc);
+  EXPECT_EQ(gen(b, c, a), abc);
+  EXPECT_EQ(gen(c, b, a), abc);
+  EXPECT_EQ(gen(c, a, b), abc);
 }
 
 TEST(TestCaseTest, AssignAllValuesShouldRespectSpecificValuesSet) {
@@ -155,7 +151,7 @@ TEST(TestCaseTest, AssignAllValuesShouldRespectSpecificValuesSet) {
   T.SetValue<MTestType>("A", TestType(789));
   T.SetValue<MTestType>("B", TestType(654));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(ValueSet value_set, AssignAllValues(T));
+  ValueSet value_set = AssignAllValues(T);
 
   EXPECT_EQ(value_set.Get<MTestType>("A"), TestType(789));
   EXPECT_EQ(value_set.Get<MTestType>("B"), TestType(654));

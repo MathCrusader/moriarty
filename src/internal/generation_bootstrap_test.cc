@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,15 +22,12 @@
 #include <vector>
 
 #include "absl/algorithm/container.h"
-#include "absl/container/flat_hash_map.h"
-#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/test_utils.h"
-#include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
@@ -40,12 +38,9 @@ namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
-using ::moriarty::IsOkAndHolds;
-using ::moriarty::StatusIs;
 using ::moriarty_testing::Context;
 using ::testing::AllOf;
 using ::testing::AnyOf;
-using ::testing::ContainerEq;
 using ::testing::Each;
 using ::testing::Eq;
 using ::testing::Ge;
@@ -53,13 +48,14 @@ using ::testing::HasSubstr;
 using ::testing::Le;
 using ::testing::Property;
 using ::testing::SizeIs;
+using ::testing::ThrowsMessage;
 
 TEST(GenerationBootstrapTest,
      GenerateAllValuesWithNoVariablesOrKnownValuesGeneratesNoValues) {
   RandomEngine rng({1, 2, 3}, "");
 
   EXPECT_THAT(GenerateAllValues(VariableSet(), ValueSet(), {rng, std::nullopt}),
-              IsOkAndHolds(Property(&ValueSet::GetApproximateSize, 0)));
+              Property(&ValueSet::GetApproximateSize, 0));
 }
 
 TEST(GenerationBootstrapTest,
@@ -69,9 +65,8 @@ TEST(GenerationBootstrapTest,
   known_values.Set<MInteger>("A", 5);
   known_values.Set<MInteger>("B", 10);
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values,
-      GenerateAllValues(VariableSet(), known_values, {rng, std::nullopt}));
+  ValueSet values =
+      GenerateAllValues(VariableSet(), known_values, {rng, std::nullopt});
 
   EXPECT_EQ(values.Get<MInteger>("A"), 5);
   EXPECT_EQ(values.Get<MInteger>("B"), 10);
@@ -85,9 +80,8 @@ TEST(
                         .WithVariable("A", MInteger(Between(123, 456)))
                         .WithValue<MInteger>("B", 10);
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values, GenerateAllValues(context.Variables(), context.Values(),
-                                         {rng, std::nullopt}));
+  ValueSet values = GenerateAllValues(context.Variables(), context.Values(),
+                                      {rng, std::nullopt});
 
   EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(123), Le(456)));
   EXPECT_EQ(values.Get<MInteger>("B"), 10);
@@ -100,9 +94,8 @@ TEST(GenerationBootstrapTest, GenerateAllValuesGivesValuesToVariables) {
                         .WithVariable("A", MInteger(Between(123, 456)))
                         .WithVariable("B", MInteger(Between(777, 888)));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values,
-      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt}));
+  ValueSet values =
+      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
 
   EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(123), Le(456)));
   EXPECT_THAT(values.Get<MInteger>("B"), AllOf(Ge(777), Le(888)));
@@ -114,9 +107,8 @@ TEST(GenerationBootstrapTest, GenerateAllValuesRespectsKnownValues) {
                         .WithVariable("A", MInteger(Between(123, 456)))
                         .WithValue<MInteger>("A", 314);
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values, GenerateAllValues(context.Variables(), context.Values(),
-                                         {rng, std::nullopt}));
+  ValueSet values = GenerateAllValues(context.Variables(), context.Values(),
+                                      {rng, std::nullopt});
 
   EXPECT_EQ(values.Get<MInteger>("A"), 314);
 }
@@ -127,9 +119,8 @@ TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentVariablesSucceeds) {
                         .WithVariable("A", MInteger(Between("N", "3 * N")))
                         .WithVariable("N", MInteger(Between(50, 100)));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values,
-      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt}));
+  ValueSet values =
+      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
 
   EXPECT_THAT(values.Get<MInteger>("N"), AllOf(Ge(50), Le(100)));
   int64_t N = values.Get<MInteger>("N");
@@ -144,9 +135,8 @@ TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentValuesSucceeds) {
                         .WithVariable("B", MInteger(Exactly("2 * C")))
                         .WithValue<MInteger>("N", 53);
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values, GenerateAllValues(context.Variables(), context.Values(),
-                                         {rng, std::nullopt}));
+  ValueSet values = GenerateAllValues(context.Variables(), context.Values(),
+                                      {rng, std::nullopt});
 
   EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(53), Le(3 * 53)));
   EXPECT_EQ(values.Get<MInteger>("C"), 53);
@@ -160,9 +150,10 @@ TEST(GenerationBootstrapTest,
       Context().WithVariable("A", MInteger(Between("N", "3 * N")));
 
   EXPECT_THAT(
-      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt}),
-      StatusIs(absl::StatusCode::kFailedPrecondition,
-               HasSubstr("Unknown dependency")));
+      [&] {
+        GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
+      },
+      ThrowsMessage<std::runtime_error>(HasSubstr("unknown")));
 }
 
 TEST(GenerationBootstrapTest, GenerateAllValuesShouldRespectIsAndIsOneOf) {
@@ -171,9 +162,8 @@ TEST(GenerationBootstrapTest, GenerateAllValuesShouldRespectIsAndIsOneOf) {
                         .WithVariable("A", MInteger(Exactly(15)))
                         .WithVariable("B", MInteger(OneOf({111, 222, 333})));
 
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values,
-      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt}));
+  ValueSet values =
+      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
 
   EXPECT_THAT(values.Get<MInteger>("A"), 15);
   EXPECT_THAT(values.Get<MInteger>("B"), AnyOf(111, 222, 333));
@@ -188,9 +178,9 @@ TEST(GenerationBootstrapTest,
   // S could generate a string with a really long length. However, the soft
   // generation limit of 100 should stop a large string being generated.
   int generation_limit = 100;
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      ValueSet values, GenerateAllValues(context.Variables(), ValueSet(),
-                                         {rng, generation_limit}));
+
+  ValueSet values = GenerateAllValues(context.Variables(), ValueSet(),
+                                      {rng, generation_limit});
 
   EXPECT_THAT(values.Get<MString>("S"), SizeIs(AllOf(Ge(50), Le(100))));
 }
@@ -203,14 +193,16 @@ TEST(GenerationBootstrapTest,
                         .WithValue<MInteger>("A", 0);
 
   EXPECT_THAT(
-      GenerateAllValues(context.Variables(), context.Values(),
-                        {rng, std::nullopt}),
-      StatusIs(absl::StatusCode::kInvalidArgument, HasSubstr("between")));
+      [&] {
+        GenerateAllValues(context.Variables(), context.Values(),
+                          {rng, std::nullopt});
+      },
+      ThrowsMessage<std::runtime_error>(HasSubstr("A")));
 }
 
 TEST(GenerationBootstrapTest,
      GenerateAllValuesGivesStableResultsNoMatterTheInsertionOrder) {
-  absl::flat_hash_map<std::string, MInteger> named_variables = {
+  std::unordered_map<std::string, MInteger> named_variables = {
       {"A", MInteger(Between(111, 222))},
       {"B", MInteger(Between(333, 444))},
       {"C", MInteger(Between(555, 666))},
@@ -225,9 +217,9 @@ TEST(GenerationBootstrapTest,
     for (const std::string& name : names) {
       context.WithVariable(name, named_variables[name]);
     }
-    MORIARTY_ASSERT_OK_AND_ASSIGN(
-        ValueSet values, GenerateAllValues(context.Variables(), ValueSet(),
-                                           {rng, std::nullopt}));
+
+    ValueSet values =
+        GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
     results.push_back({
         values.Get<MInteger>("A"),
         values.Get<MInteger>("B"),
@@ -241,7 +233,7 @@ TEST(GenerationBootstrapTest,
 
 TEST(GenerationBootstrapTest,
      GenerateAllValuesGivesStableResultsWithDependentVariables) {
-  absl::flat_hash_map<std::string, MInteger> named_variables = {
+  std::unordered_map<std::string, MInteger> named_variables = {
       {"A", MInteger(Between(111, "B"))},  // Forwards in alphabet. A -> B
       {"B", MInteger(Between(222, 333))},  //
       {"C", MInteger(Between(444, 555))},  // Backwards in alphabet. D -> C
@@ -259,9 +251,9 @@ TEST(GenerationBootstrapTest,
     for (const std::string& name : names) {
       context.WithVariable(name, named_variables[name]);
     }
-    MORIARTY_ASSERT_OK_AND_ASSIGN(
-        ValueSet values, GenerateAllValues(context.Variables(), ValueSet(),
-                                           {rng, std::nullopt}));
+
+    ValueSet values =
+        GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
 
     results.push_back({
         values.Get<MInteger>("A"),
@@ -276,116 +268,6 @@ TEST(GenerationBootstrapTest,
 
   ASSERT_THAT(results, SizeIs(5040));
   EXPECT_THAT(results, Each(Eq(results[0])));
-}
-
-TEST(GenerationBootstrapTest, GetGenerationOrderSingleRoot) {
-  absl::flat_hash_map<std::string, std::vector<std::string>> deps_map = {
-      {"A", {"C"}}, {"X", {"Y"}},      {"C", {"D"}},
-      {"D", {}},    {"Y", {"A", "B"}}, {"B", {"C"}}};
-
-  std::vector<std::string> expected_result = {"X", "Y", "A", "B", "C", "D"};
-
-  EXPECT_THAT(GetGenerationOrder(deps_map, ValueSet()),
-              IsOkAndHolds(ContainerEq(expected_result)));
-}
-
-TEST(GenerationConfigTest, GetGenerationOrderMultiRoot) {
-  absl::flat_hash_map<std::string, std::vector<std::string>> deps_map = {
-      {"A", {"C"}}, {"F", {"X"}}, {"X", {"Y"}}, {"Y", {"A", "B"}}, {"T", {"C"}},
-      {"R", {"A"}}, {"C", {"W"}}, {"A", {"W"}}, {"W", {}},         {"B", {}}};
-
-  std::vector<std::string> expected_result = {"F", "R", "T", "X", "Y",
-                                              "A", "B", "C", "W"};
-
-  EXPECT_THAT(GetGenerationOrder(deps_map, ValueSet()),
-              IsOkAndHolds(ContainerEq(expected_result)));
-}
-
-TEST(GenerationConfigTest, GetGenerationOrderSingleNode) {
-  absl::flat_hash_map<std::string, std::vector<std::string>> deps_map = {
-      {"X", {}}};
-
-  std::vector<std::string> expected_result = {"X"};
-
-  EXPECT_THAT(GetGenerationOrder(deps_map, ValueSet()),
-              IsOkAndHolds(ContainerEq(expected_result)));
-}
-
-TEST(GenerationConfigTest, GetGenerationOrderMultiEdgesRemovesDuplicates) {
-  absl::flat_hash_map<std::string, std::vector<std::string>> deps_map = {
-      {"X", {"B", "B"}}, {"B", {}}};
-
-  std::vector<std::string> expected_result = {"X", "B"};
-
-  EXPECT_THAT(GetGenerationOrder(deps_map, ValueSet()),
-              IsOkAndHolds(ContainerEq(expected_result)));
-}
-
-TEST(GenerationConfigTest, GetGenerationOrderRemainsStable) {
-  std::vector<std::string> x_dependencies = {"A", "B", "C"};
-  std::vector<std::string> expected_result = {"X", "A", "B", "C"};
-
-  std::vector<std::vector<std::string>> results;
-  do {
-    absl::flat_hash_map<std::string, std::vector<std::string>> deps_map = {
-        {"A", {}}, {"B", {}}, {"C", {}}, {"X", x_dependencies}};
-    MORIARTY_ASSERT_OK_AND_ASSIGN(std::vector<std::string> ordered_vars,
-                                  GetGenerationOrder(deps_map, ValueSet()));
-    results.push_back(ordered_vars);
-  } while (absl::c_next_permutation(x_dependencies));
-
-  ASSERT_THAT(results, SizeIs(6));
-  EXPECT_THAT(results, Each(Eq(results[0])));
-}
-
-TEST(GenerationConfigTest, GetGenerationOrderNoElementsReturnsEmpty) {
-  absl::flat_hash_map<std::string, std::vector<std::string>> deps_map = {};
-
-  std::vector<std::string> expected_result = {};
-
-  EXPECT_THAT(GetGenerationOrder(deps_map, ValueSet()),
-              IsOkAndHolds(ContainerEq(expected_result)));
-}
-
-TEST(GenerationConfigTest, GetGenerationOrderIgnoresElementInValueSet) {
-  ValueSet vs;
-  vs.Set<MInteger>("N", 53);
-
-  absl::flat_hash_map<std::string, std::vector<std::string>> deps_map = {
-      {"X", {"N"}}};
-
-  std::vector<std::string> expected_result = {"X"};
-
-  EXPECT_THAT(GetGenerationOrder(deps_map, vs),
-              IsOkAndHolds(ContainerEq(expected_result)));
-}
-
-TEST(GenerationConfigTest, GetGenerationOrderFailsOnNonExistingDependency) {
-  absl::flat_hash_map<std::string, std::vector<std::string>> deps_map = {
-      {"X", {"N"}}};
-
-  EXPECT_THAT(GetGenerationOrder(deps_map, ValueSet()),
-              StatusIs(absl::StatusCode::kFailedPrecondition));
-}
-
-TEST(GenerationConfigTest, GetGenerationOrderFailsOnCycle) {
-  absl::flat_hash_map<std::string, std::vector<std::string>> deps_map = {
-      {"X", {"Y"}},
-      {"Y", {"A", "B", "X"}},
-      {"A", {"C"}},
-      {"B", {"C"}},
-      {"C", {"D"}}};
-
-  EXPECT_THAT(GetGenerationOrder(deps_map, ValueSet()),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-}
-
-TEST(GenerationConfigTest, GetGenerationOrderFailsOnItselfCycle) {
-  absl::flat_hash_map<std::string, std::vector<std::string>> deps_map = {
-      {"X", {"X"}}};
-
-  EXPECT_THAT(GetGenerationOrder(deps_map, ValueSet()),
-              StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
 }  // namespace

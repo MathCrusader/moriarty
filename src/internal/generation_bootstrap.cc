@@ -17,18 +17,16 @@
 
 #include <format>
 #include <functional>
-#include <memory>
 #include <optional>
 #include <queue>
+#include <ranges>
+#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "absl/container/flat_hash_map.h"
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/assignment_context.h"
 #include "src/contexts/librarian/resolver_context.h"
@@ -37,93 +35,69 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/test_case.h"
-#include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
 namespace {
 
+using DependencyMap = std::unordered_map<std::string, std::vector<std::string>>;
+using Heap = std::priority_queue<std::string, std::vector<std::string>,
+                                 std::greater<std::string>>;
+
 GenerationConfig CreateGenerationConfig(const GenerationOptions& options) {
   GenerationConfig generation_config;
-
   if (options.soft_generation_limit)
     generation_config.SetSoftGenerationLimit(*options.soft_generation_limit);
-
   return generation_config;
 }
 
-absl::StatusOr<absl::flat_hash_map<std::string, std::vector<std::string>>>
-GetDependenciesMap(const VariableSet& variables) {
-  absl::flat_hash_map<std::string, std::vector<std::string>> deps_map;
-  const absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>&
-      var_map = variables.ListVariables();
-
-  for (const auto& [var_name, var_ptr] : var_map)
-    deps_map[var_name] = var_ptr->GetDependencies();
-
-  return deps_map;
-}
-
-absl::flat_hash_map<std::string, int> CountIncomingEdges(
-    const absl::flat_hash_map<std::string, std::vector<std::string>>&
-        deps_map) {
-  absl::flat_hash_map<std::string, int> num_incoming_edges;
-  for (const auto& [var, deps] : deps_map) {
-    if (!num_incoming_edges.contains(var)) num_incoming_edges[var] = 0;
-
-    for (const std::string& dep : deps) {
-      num_incoming_edges[dep]++;
+DependencyMap CreateDependencyMap(const VariableSet& variables) {
+  DependencyMap deps;
+  for (const auto& [var_name, var_ptr] : variables.ListVariables()) {
+    deps[var_name] = var_ptr->GetDependencies();
+    for (std::string_view dep : deps[var_name]) {
+      if (!variables.Contains(dep)) {
+        throw std::runtime_error(std::format(
+            "Variable `{}` depends on unknown variable `{}`", var_name, dep));
+      }
     }
   }
-  return num_incoming_edges;
+  return deps;
 }
 
-std::priority_queue<std::string, std::vector<std::string>,
-                    std::greater<std::string>>
-GetNodesWithNoIncomingEdges(
-    const absl::flat_hash_map<std::string, int>& num_incoming_edges) {
-  std::priority_queue<std::string, std::vector<std::string>,
-                      std::greater<std::string>>
-      queue;
+std::vector<std::string> GetGenerationOrder(const VariableSet& variables) {
+  DependencyMap deps_map = CreateDependencyMap(variables);
+  std::unordered_map<std::string, int> in_degree;
+  for (const auto& [var, deps] : deps_map) {
+    in_degree.try_emplace(var, 0);
+    for (const std::string& dep : deps) in_degree[dep]++;
+  }
 
-  for (const auto& [v, e] : num_incoming_edges)
-    if (e == 0) queue.push(v);
-  return queue;
-}
-}  // namespace
+  Heap pq;
+  for (const auto& [v, e] : in_degree)
+    if (e == 0) pq.push(v);
 
-absl::StatusOr<std::vector<std::string>> GetGenerationOrder(
-    const absl::flat_hash_map<std::string, std::vector<std::string>>& deps_map,
-    const ValueSet& known_values) {
   std::vector<std::string> ordered_variables;
-  absl::flat_hash_map<std::string, int> num_incoming_edges =
-      CountIncomingEdges(deps_map);
-  std::priority_queue<std::string, std::vector<std::string>,
-                      std::greater<std::string>>
-      no_incoming_edges = GetNodesWithNoIncomingEdges(num_incoming_edges);
-  while (!no_incoming_edges.empty()) {
-    std::string current = no_incoming_edges.top();
-    no_incoming_edges.pop();
+  while (!pq.empty()) {
+    std::string current = pq.top();
+    pq.pop();
     ordered_variables.push_back(current);
 
     for (const std::string& dep : deps_map.at(current)) {
-      if (!deps_map.contains(dep)) {
-        if (!known_values.Contains(dep)) {
-          return absl::FailedPreconditionError(absl::Substitute(
-              "Unknown dependency '$0' for var '$1!'", dep, current));
-        }
-        continue;
-      }
-      num_incoming_edges[dep]--;
-      if (num_incoming_edges[dep] == 0) no_incoming_edges.push(dep);
+      if (--in_degree[dep] == 0) pq.push(dep);
     }
   }
+
   if (ordered_variables.size() != deps_map.size()) {
-    return absl::InvalidArgumentError("Cycle in the dependency order graph.");
+    throw std::runtime_error(
+        "There is a cycle in the MVariable dependency graph.");
   }
+
   return ordered_variables;
 }
+
+}  // namespace
 
 ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
                           const GenerationOptions& options) {
@@ -133,34 +107,25 @@ ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
     variables.AddOrMergeVariable(name, *constraints);
   }
 
-  auto generated_values = GenerateAllValues(variables, values, options);
-  if (!generated_values.ok())
-    throw std::runtime_error(generated_values.status().ToString());
-  return *generated_values;
+  return GenerateAllValues(variables, values, options);
 }
 
-absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
-                                           ValueSet known_values,
-                                           const GenerationOptions& options) {
+ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
+                           const GenerationOptions& options) {
   GenerationConfig generation_config = CreateGenerationConfig(options);
+  std::vector<std::string> order = GetGenerationOrder(variables);
 
-  MORIARTY_ASSIGN_OR_RETURN(
-      (absl::flat_hash_map<std::string, std::vector<std::string>> deps_map),
-      GetDependenciesMap(variables));
-
-  MORIARTY_ASSIGN_OR_RETURN(std::vector<std::string> variable_names,
-                            GetGenerationOrder(deps_map, known_values));
-
-  // First do a quick assignment of all known values.
-  // TODO: Do this in reverse and explain why.
-  for (std::string_view name : variable_names) {
+  // First do a quick assignment of all known values. We process these in
+  // reverse order so that everyone that a variable depends on is assigned
+  // before them.
+  for (std::string_view name : std::ranges::reverse_view(order)) {
     AbstractVariable* var = variables.GetAnonymousVariable(name);
     librarian::AssignmentContext ctx(name, variables, known_values);
     var->AssignUniqueValue(ctx);
   }
 
   // Now do a deep generation.
-  for (std::string_view name : variable_names) {
+  for (std::string_view name : order) {
     AbstractVariable* var = variables.GetAnonymousVariable(name);
     librarian::ResolverContext ctx(name, variables, known_values,
                                    options.random_engine, generation_config);
@@ -170,11 +135,11 @@ absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
   // We may have initially generated invalid values during the
   // AssignUniqueValues(). Let's check for those now...
   // TODO(darcybest): Determine if there's a better way of doing this...
-  for (std::string_view name : variable_names) {
+  for (std::string_view name : order) {
     AbstractVariable* var = variables.GetAnonymousVariable(name);
     librarian::AnalysisContext ctx(name, variables, known_values);
     if (!var->IsSatisfiedWithValue(ctx)) {
-      return absl::InvalidArgumentError(
+      throw std::runtime_error(
           std::format("Variable {} does not satisfy its constraints: {}", name,
                       var->UnsatisfiedWithValueReason(ctx)));
     }

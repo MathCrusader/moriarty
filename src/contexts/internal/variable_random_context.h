@@ -117,12 +117,9 @@ T::value_type VariableRandomContext::Random(T m) {
   VariableSet variables_copy = variables_.get();
   variables_copy.SetVariable(name, m);
 
-  auto set_values = GenerateAllValues(std::move(variables_copy), values_.get(),
+  ValueSet values = GenerateAllValues(std::move(variables_copy), values_.get(),
                                       {.random_engine = engine_.get()});
-  if (!set_values.ok())
-    throw std::runtime_error(set_values.status().ToString());
-
-  return set_values->Get<T>(name);
+  return values.Get<T>(name);
 }
 
 template <typename T>

@@ -122,7 +122,6 @@ cc_library(
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "//src/util/status_macro:status_macros",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/log:absl_check",
         "@abseil-cpp//absl/status",

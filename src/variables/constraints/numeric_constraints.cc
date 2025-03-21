@@ -32,7 +32,6 @@ namespace moriarty {
 // -----------------------------------------------------------------------------
 //  ExactlyIntegerExpression
 
-// TODO: These hide absl::StatusOr<>. We should consider alternatives.
 ExactlyIntegerExpression::ExactlyIntegerExpression(IntegerExpression value)
     : value_(value), dependencies_(value_.GetDependencies()) {}
 

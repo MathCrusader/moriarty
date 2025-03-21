@@ -332,10 +332,6 @@ cc_library(
         "//src/contexts/librarian:assignment_context",
         "//src/contexts/librarian:resolver_context",
         "//src/util/status_macro:status_macros",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -353,8 +349,6 @@ cc_test(
         "//src/variables:minteger",
         "//src/variables:mstring",
         "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
     ],
 )

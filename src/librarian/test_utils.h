@@ -117,7 +117,6 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/mvariable.h"
-#include "src/util/status_macro/status_macros.h"
 
 namespace moriarty_testing {
 
@@ -378,11 +377,10 @@ absl::StatusOr<typename T::value_type> Generate(T variable, Context context) {
   moriarty::moriarty_internal::RandomEngine rng({3, 4, 5}, "");
   moriarty::moriarty_internal::GenerationConfig generation_config;
 
-  MORIARTY_ASSIGN_OR_RETURN(
-      moriarty::moriarty_internal::ValueSet values,
+  moriarty::moriarty_internal::ValueSet values =
       moriarty::moriarty_internal::GenerateAllValues(
           context.Variables(), context.Values(),
-          {rng, /* soft_generation_limit = */ std::nullopt}));
+          {rng, /* soft_generation_limit = */ std::nullopt});
 
   return values.Get<T>(var_name);
 }
@@ -402,10 +400,10 @@ absl::StatusOr<std::vector<typename T::value_type>> GenerateN(T variable, int N,
   for (int i = 0; i < N; i++) {
     // We need to make a copy so that we don't set values for future `i` values.
     Context context_copy = context;
-    MORIARTY_ASSIGN_OR_RETURN(
-        moriarty::moriarty_internal::ValueSet values,
+
+    moriarty::moriarty_internal::ValueSet values =
         moriarty::moriarty_internal::GenerateAllValues(
-            context_copy.Variables(), context_copy.Values(), {rng}));
+            context_copy.Variables(), context_copy.Values(), {rng});
     res.push_back(values.Get<T>(var_name));
   }
   return res;

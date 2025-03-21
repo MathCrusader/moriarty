@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -19,11 +20,7 @@
 
 #include <cstdint>
 #include <optional>
-#include <string>
-#include <vector>
 
-#include "absl/container/flat_hash_map.h"
-#include "absl/status/statusor.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -51,19 +48,8 @@ ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
 //
 // All values in `known_values` will appear in the output (even if there is no
 // corresponding variable in `variables`).
-absl::StatusOr<ValueSet> GenerateAllValues(VariableSet variables,
-                                           ValueSet known_values,
-                                           const GenerationOptions& options);
-
-// GetGenerationOrder()
-//
-// Returns a list of the variables names by order of generation.
-//
-// The order is from parent to child. E.g., 'A' depends on 'C' and 'C'
-// depends on 'B'. The final order will be {A, B, C}.
-absl::StatusOr<std::vector<std::string>> GetGenerationOrder(
-    const absl::flat_hash_map<std::string, std::vector<std::string>>& deps_map,
-    const ValueSet& known_values);
+ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
+                           const GenerationOptions& options);
 
 }  // namespace moriarty_internal
 }  // namespace moriarty
