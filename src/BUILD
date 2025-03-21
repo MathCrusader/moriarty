@@ -70,7 +70,6 @@ cc_library(
         ":test_case",
         "//src/internal:analysis_bootstrap",
         "//src/internal:generation_bootstrap",
-        "//src/internal:status_utils",
         "//src/internal:value_set",
         "//src/internal:variable_name_utils",
         "//src/internal:variable_set",

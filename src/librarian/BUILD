@@ -80,7 +80,6 @@ cc_library(
         "//src/internal:abstract_variable",
         "//src/internal:generation_config",
         "//src/internal:random_engine",
-        "//src/internal:status_utils",
         "//src/internal:variable_name_utils",
         "//src/util/status_macro:status_macros",
         "//src/variables/constraints:custom_constraint",

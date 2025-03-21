@@ -126,19 +126,6 @@ cc_library(
 )
 
 cc_library(
-    name = "status_utils",
-    srcs = ["status_utils.cc"],
-    hdrs = ["status_utils.h"],
-    deps = [
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/log:absl_log",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-    ],
-)
-
-cc_library(
     name = "value_set",
     srcs = ["value_set.cc"],
     hdrs = ["value_set.h"],
@@ -263,17 +250,6 @@ cc_test(
         ":random_engine",
         ":simple_pattern",
         "//src/util/test_status_macro:status_testutil",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "status_utils_test",
-    srcs = ["status_utils_test.cc"],
-    deps = [
-        ":status_utils",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
         "@googletest//:gtest_main",
