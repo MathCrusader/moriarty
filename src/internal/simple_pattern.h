@@ -19,6 +19,7 @@
 
 #include <bitset>
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -26,7 +27,6 @@
 
 #include "absl/status/status.h"
 #include "absl/status/statusor.h"
-#include "src/internal/random_engine.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -158,6 +158,9 @@ struct PatternNode {
 //  * "\\", "\ " (quotes for clarity)
 class SimplePattern {
  public:
+  // Function that returns a random integer in the range [min, max] (inclusive).
+  using RandFn = std::function<int64_t(int64_t, int64_t)>;
+
   static absl::StatusOr<SimplePattern> Create(std::string_view pattern);
 
   // Returns the underlying pattern.
@@ -192,7 +195,7 @@ class SimplePattern {
   // at any time.
   //
   // All randomness comes from `random_engine`.
-  absl::StatusOr<std::string> Generate(RandomEngine& random_engine) const;
+  absl::StatusOr<std::string> Generate(const RandFn& rand) const;
 
   // GenerateWithRestrictions()
   //
@@ -203,7 +206,7 @@ class SimplePattern {
   // characters from that string.
   absl::StatusOr<std::string> GenerateWithRestrictions(
       std::optional<std::string_view> restricted_alphabet,
-      RandomEngine& random_engine) const;
+      const RandFn& rand) const;
 
  private:
   explicit SimplePattern(std::string pattern);

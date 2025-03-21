@@ -49,7 +49,5 @@ std::vector<int> BasicRandomContext::RandomPermutation(int n) {
   return RandomPermutation<int>(n, 0);
 }
 
-RandomEngine& BasicRandomContext::UnsafeGetRandomEngine() { return engine_; }
-
 }  // namespace moriarty_internal
 }  // namespace moriarty

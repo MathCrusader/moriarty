@@ -19,6 +19,7 @@
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_BASIC_RANDOM_CONTEXT_H_
 
 #include <cstdint>
+#include <format>
 #include <functional>
 #include <iterator>
 #include <span>
@@ -126,10 +127,6 @@ class BasicRandomContext {
     requires std::integral<T>
   [[nodiscard]] std::vector<T> RandomComposition(T n, int k,
                                                  T min_bucket_size = 1);
-
-  // FIXME: Remove
-  // Do not use this function unless you know what you are doing.
-  [[nodiscard]] RandomEngine& UnsafeGetRandomEngine();
 
  private:
   std::reference_wrapper<RandomEngine> engine_;

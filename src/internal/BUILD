@@ -114,7 +114,6 @@ cc_library(
     srcs = ["simple_pattern.cc"],
     hdrs = ["simple_pattern.h"],
     deps = [
-        ":random_engine",
         "//src/util/status_macro:status_macros",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",

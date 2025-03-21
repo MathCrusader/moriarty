@@ -31,7 +31,6 @@
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
 #include "absl/strings/substitute.h"
-#include "src/internal/random_engine.h"
 #include "src/util/status_macro/status_macros.h"
 
 namespace moriarty {
@@ -433,13 +432,12 @@ namespace {
 absl::StatusOr<std::string> GenerateRepeatedCharSet(
     const RepeatedCharSet& char_set,
     std::optional<std::string_view> restricted_alphabet,
-    RandomEngine& random_engine) {
+    const SimplePattern::RandFn& rand) {
   if (char_set.MaxLength() == std::numeric_limits<int64_t>::max()) {
     return absl::InvalidArgumentError(
         "Cannot generate with `*` or `+` or large lengths.");
   }
-  int64_t len =
-      random_engine.RandInt(char_set.MinLength(), char_set.MaxLength());
+  int64_t len = rand(char_set.MinLength(), char_set.MaxLength());
 
   RepeatedCharSet restricted_char_set;
   if (restricted_alphabet.has_value()) {
@@ -464,7 +462,7 @@ absl::StatusOr<std::string> GenerateRepeatedCharSet(
 
   std::string result;
   while (result.size() < len) {
-    int64_t idx = random_engine.RandInt(valid_chars.size());
+    int64_t idx = rand(0, (int)valid_chars.size() - 1);
     result.push_back(valid_chars[idx]);
   }
   return std::string(result.begin(), result.end());
@@ -473,27 +471,25 @@ absl::StatusOr<std::string> GenerateRepeatedCharSet(
 absl::StatusOr<std::string> GeneratePatternNode(
     const PatternNode& node,
     std::optional<std::string_view> restricted_alphabet,
-    RandomEngine& random_engine) {
-  MORIARTY_ASSIGN_OR_RETURN(
-      std::string result,
-      GenerateRepeatedCharSet(node.repeated_character_set, restricted_alphabet,
-                              random_engine));
+    const SimplePattern::RandFn& rand) {
+  MORIARTY_ASSIGN_OR_RETURN(std::string result,
+                            GenerateRepeatedCharSet(node.repeated_character_set,
+                                                    restricted_alphabet, rand));
 
   if (node.subpatterns.empty()) return result;
 
   if (node.subpattern_type == PatternNode::SubpatternType::kAnyOf) {
-    int64_t idx = random_engine.RandInt(node.subpatterns.size());
+    int64_t idx = rand(0, (int)node.subpatterns.size() - 1);
     MORIARTY_ASSIGN_OR_RETURN(
         std::string subresult,
-        GeneratePatternNode(node.subpatterns[idx], restricted_alphabet,
-                            random_engine));
+        GeneratePatternNode(node.subpatterns[idx], restricted_alphabet, rand));
     return absl::StrCat(result, subresult);
   }
 
   for (const PatternNode& subpattern : node.subpatterns) {
     MORIARTY_ASSIGN_OR_RETURN(
         std::string subresult,
-        GeneratePatternNode(subpattern, restricted_alphabet, random_engine));
+        GeneratePatternNode(subpattern, restricted_alphabet, rand));
     absl::StrAppend(&result, subresult);
   }
   return result;
@@ -501,16 +497,15 @@ absl::StatusOr<std::string> GeneratePatternNode(
 
 }  // namespace
 
-absl::StatusOr<std::string> SimplePattern::Generate(
-    RandomEngine& random_engine) const {
+absl::StatusOr<std::string> SimplePattern::Generate(const RandFn& rand) const {
   return GenerateWithRestrictions(/* restricted_alphabet = */ std::nullopt,
-                                  random_engine);
+                                  rand);
 }
 
 absl::StatusOr<std::string> SimplePattern::GenerateWithRestrictions(
     std::optional<std::string_view> restricted_alphabet,
-    RandomEngine& random_engine) const {
-  return GeneratePatternNode(pattern_node_, restricted_alphabet, random_engine);
+    const RandFn& rand) const {
+  return GeneratePatternNode(pattern_node_, restricted_alphabet, rand);
 }
 
 }  // namespace moriarty_internal

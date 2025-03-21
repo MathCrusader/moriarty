@@ -152,7 +152,8 @@ std::string MString::GenerateSimplePattern(
   // arbitrary since all patterns must be satisfied.
   absl::StatusOr<std::string> result =
       simple_patterns_.back().GenerateWithRestrictions(
-          maybe_alphabet, ctx.UnsafeGetRandomEngine());
+          maybe_alphabet,
+          [&](int min, int max) { return ctx.RandomInteger(min, max); });
   if (!result.ok()) {
     throw std::runtime_error(result.status().ToString());
   }

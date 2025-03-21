@@ -62,6 +62,13 @@ using ::testing::Matches;
 using ::testing::Not;
 using ::testing::SizeIs;
 
+SimplePattern::RandFn Random() {
+  RandomEngine random_engine({1, 2, 3, 4}, "v0.1");
+  return [random_engine](int64_t lo, int64_t hi) mutable {
+    return random_engine.RandInt(lo, hi);
+  };
+}
+
 TEST(SimplePatternTest, CreateShouldAcceptGoodPatterns) {
   MORIARTY_EXPECT_OK(SimplePattern::Create("abc"));
   MORIARTY_EXPECT_OK(SimplePattern::Create("a*"));
@@ -301,11 +308,9 @@ TEST(SimplePatternTest, SpecialCharactersCanBeUsedInsideSquareBrackets) {
 }
 
 TEST(SimplePatternTest, SimpleGenerationWorks) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p, SimplePattern::Create("a"));
   for (int tries = 0; tries < 10; tries++) {
-    EXPECT_THAT(p.Generate(engine), IsOkAndHolds("a"));
+    EXPECT_THAT(p.Generate(Random()), IsOkAndHolds("a"));
   }
 }
 
@@ -376,10 +381,9 @@ MATCHER_P(GeneratedValuesAre, matcher, "") {
     return false;
   }
   SimplePattern p = *arg;  // absl::StatusOr<SimplePattern> -> SimplePattern
-  RandomEngine engine({1, 2, 3, 4}, "v0.1");
 
   for (int tries = 0; tries < 10; tries++) {
-    absl::StatusOr<std::string> value = p.Generate(engine);
+    absl::StatusOr<std::string> value = p.Generate(Random());
     if (!value.ok()) {
       *result_listener << "Failed to generate value: " << value.status();
       return false;
@@ -401,11 +405,10 @@ MATCHER_P2(GeneratedValuesWithRestrictionsAre, matcher, restricted_alphabet,
     return false;
   }
   SimplePattern p = *arg;  // absl::StatusOr<SimplePattern> -> SimplePattern
-  RandomEngine engine({1, 2, 3, 4}, "v0.1");
 
   for (int tries = 0; tries < 10; tries++) {
     absl::StatusOr<std::string> value =
-        p.GenerateWithRestrictions(restricted_alphabet, engine);
+        p.GenerateWithRestrictions(restricted_alphabet, Random());
     if (!value.ok()) {
       *result_listener << "Failed to generate value: " << value.status();
       return false;
@@ -449,14 +452,12 @@ TEST(SimplePatternTest, GenerationWithNestedSubExpressionsShouldWork) {
 }
 
 TEST(SimplePatternTest, GenerationWithLargeWildcardShouldThrowError) {
-  RandomEngine engine({1, 2, 3, 4}, "v0.1");
-
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p1, SimplePattern::Create("a+"));
-  EXPECT_THAT(p1.Generate(engine),
+  EXPECT_THAT(p1.Generate(Random()),
               StatusIs(absl::StatusCode::kInvalidArgument));
 
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p2, SimplePattern::Create("a*"));
-  EXPECT_THAT(p2.Generate(engine),
+  EXPECT_THAT(p2.Generate(Random()),
               StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
@@ -484,11 +485,10 @@ TEST(SimplePatternTest,
               GeneratedValuesWithRestrictionsAre("", "x"));
 
   // If the pattern doesn't allow the empty string, ensure it fails.
-  RandomEngine engine({1, 2, 3, 4}, "v0.1");
   MORIARTY_ASSERT_OK_AND_ASSIGN(SimplePattern p,
                                 SimplePattern::Create("[a-f]{1, 10}"));
   EXPECT_THAT(
-      p.GenerateWithRestrictions(/*restricted_alphabet = */ "x", engine),
+      p.GenerateWithRestrictions(/*restricted_alphabet = */ "x", Random()),
       StatusIs(absl::StatusCode::kInvalidArgument));
 }
 
