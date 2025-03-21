@@ -71,7 +71,6 @@ cc_library(
     deps = [
         ":constraint_handler",
         ":conversions",
-        "//src:errors",
         "//src/contexts/librarian:analysis_context",
         "//src/contexts/librarian:assignment_context",
         "//src/contexts/librarian:printer_context",
@@ -81,7 +80,6 @@ cc_library(
         "//src/internal:generation_config",
         "//src/internal:random_engine",
         "//src/internal:variable_name_utils",
-        "//src/util/status_macro:status_macros",
         "//src/variables/constraints:custom_constraint",
     ],
 )

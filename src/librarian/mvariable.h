@@ -32,7 +32,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "absl/strings/str_cat.h"
 #include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/internal/view_only_context.h"
@@ -41,7 +40,6 @@
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
-#include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_config.h"
 #include "src/librarian/constraint_handler.h"
@@ -199,15 +197,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
       AnalysisContext ctx) const;
   // ---------------------------------------------------------------------------
 
-  // To be removed
-  virtual absl::Status IsSatisfiedWithImpl(AnalysisContext ctx,
-                                           const ValueType& value) const {
-    return absl::UnimplementedError("IsSatisfiedWith");
-  }
-  virtual absl::Status MergeFromImpl(const VariableType& other) {
-    return absl::UnimplementedError("MergeFrom");
-  }
-
   // InternalAddConstraint() [For Librarians]
   //
   // Adds a constraint to this variable. (E.g., Positive(), Even(), Length(5)).
@@ -285,12 +274,7 @@ std::string MVariable<V, G>::ToString() const {
 
 template <typename V, typename G>
 V& MVariable<V, G>::MergeFrom(const V& other) {
-  if (auto status = MergeFromImpl(other);
-      !status.ok() && !absl::IsUnimplemented(status)) {
-    throw std::runtime_error(status.ToString());
-  }
   other.constraints_.ApplyAllTo(UnderlyingVariableType());
-
   return UnderlyingVariableType();
 }
 
@@ -316,27 +300,13 @@ V& MVariable<V, G>::AddCustomConstraint(CustomConstraint<G> constraint) {
 template <typename V, typename G>
 bool MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
                                       const G& value) const {
-  if (!constraints_.IsSatisfiedWith(ctx, value)) return false;
-
-  // FIXME: Remove.
-  if (auto status = IsSatisfiedWithImpl(ctx, value);
-      !status.ok() && !absl::IsUnimplemented(status)) {
-    return false;
-  }
-
-  return true;
+  return constraints_.IsSatisfiedWith(ctx, value);
 }
 
 template <typename V, typename G>
 std::string MVariable<V, G>::UnsatisfiedReason(AnalysisContext ctx,
                                                const G& value) const {
-  std::string reason = constraints_.UnsatisfiedReason(ctx, value);
-  if (!reason.empty()) return reason;
-
-  // FIXME: Remove
-  auto status = IsSatisfiedWithImpl(ctx, value);
-  if (status.ok()) throw std::invalid_argument("Value satisfies constraints.");
-  return std::string(status.message());
+  return constraints_.UnsatisfiedReason(ctx, value);
 }
 
 template <typename V, typename G>
@@ -382,19 +352,9 @@ G MVariable<V, G>::Generate(ResolverContext ctx) const {
 
 template <typename V, typename G>
 std::optional<G> MVariable<V, G>::GetUniqueValue(AnalysisContext ctx) const {
-  try {
-    // FIXME: Placeholder until Context refactor is done.
-    std::optional<G> known = ctx.GetValueIfKnown<V>(ctx.GetVariableName());
-    if (known) return *known;
-
-    return GetUniqueValueImpl(ctx);
-  } catch (const VariableNotFound& e) {
-    // Explicitly re-throw an unknown variable. If it's unknown, we will
-    // never be able to do anything with it.
-    throw;
-  } catch (...) {  // FIXME: Only catch Moriarty errors.
-    return std::nullopt;
-  }
+  std::optional<G> known = ctx.GetValueIfKnown<V>(ctx.GetVariableName());
+  if (known) return known;
+  return GetUniqueValueImpl(ctx);
 }
 
 template <typename V, typename G>

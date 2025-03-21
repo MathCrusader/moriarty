@@ -25,8 +25,6 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
@@ -150,14 +148,9 @@ std::string MString::GenerateSimplePattern(
 
   // Use the last pattern, since it's probably the most specific. This choice is
   // arbitrary since all patterns must be satisfied.
-  absl::StatusOr<std::string> result =
-      simple_patterns_.back().GenerateWithRestrictions(
-          maybe_alphabet,
-          [&](int min, int max) { return ctx.RandomInteger(min, max); });
-  if (!result.ok()) {
-    throw std::runtime_error(result.status().ToString());
-  }
-  return *result;
+  return simple_patterns_.back().GenerateWithRestrictions(
+      maybe_alphabet,
+      [&](int min, int max) { return ctx.RandomInteger(min, max); });
 }
 
 std::string MString::GenerateImplWithDistinctCharacters(

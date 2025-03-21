@@ -124,7 +124,6 @@ std::vector<std::string> OneOfIntegerExpression::GetDependencies() const {
 // -----------------------------------------------------------------------------
 //  Between
 
-// TODO: These hide absl::StatusOr<>. We should consider alternatives.
 Between::Between(int64_t minimum, int64_t maximum)
     : minimum_(std::to_string(minimum)), maximum_(std::to_string(maximum)) {
   if (minimum > maximum) {

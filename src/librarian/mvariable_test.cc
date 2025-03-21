@@ -174,13 +174,12 @@ TEST(MVariableTest, BasingMyVariableOnANonexistentOneShouldFail) {
 }
 
 TEST(MVariableTest, DependentVariableOfTheWrongTypeShouldFail) {
-  EXPECT_THROW(
-      {
-        Generate(MTestType(LastDigit(MInteger(Exactly("x")))),
-                 Context().WithVariable("x", MTestType()))
-            .IgnoreError();
-      },  // Wrong type
-      std::runtime_error);
+  EXPECT_THAT(
+      [] {
+        (void)Generate(MTestType(LastDigit(MInteger(Exactly("x")))),
+                       Context().WithVariable("x", MTestType()));
+      },
+      ThrowsMVariableTypeMismatch("MTestType", "MInteger"));
 }
 
 TEST(MVariableTest, DependentVariablesInSubvariablesCanChain) {
