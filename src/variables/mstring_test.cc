@@ -15,8 +15,6 @@
 
 #include "src/variables/mstring.h"
 
-#include <algorithm>
-#include <string>
 #include <string_view>
 
 #include "absl/container/flat_hash_set.h"
@@ -42,6 +40,7 @@ using ::moriarty_testing::IsSatisfiedWith;
 using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::testing::AllOf;
+using ::testing::Contains;
 using ::testing::Ge;
 using ::testing::IsSupersetOf;
 using ::testing::Le;
@@ -237,9 +236,8 @@ TEST(MStringTest, DuplicateLettersInAlphabetAreIgnored) {
   // a appears 90% of the alphabet. We should still see ~50% of the time in the
   // input. With 100,000 samples, I'm putting the cutoff at 60%. Anything over
   // 60% is extremely unlikely to happen.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::string s, Generate(MString(Length(100000), Alphabet("aaaaaaaaab"))));
-  EXPECT_LE(std::count(s.begin(), s.end(), 'a'), 60000);
+  EXPECT_THAT(Generate(MString(Length(100000), Alphabet("aaaaaaaaab"))),
+              IsOkAndHolds(Contains('a').Times(Le(60000))));
 }
 
 TEST(MStringTest, IsSatisfiedWithShouldAcceptAllMStringsOfCorrectLength) {

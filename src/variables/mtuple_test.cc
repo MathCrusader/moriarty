@@ -113,27 +113,16 @@ TEST(MTupleTest, ReadingTheWrongTypeShouldFail) {
 }
 
 TEST(MTupleTest, SimpleGenerateCaseWorks) {
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      (std::tuple<int64_t, int64_t> t),
-      Generate(MTuple(MInteger(Between(1, 10)), MInteger(Between(30, 40)))));
+  EXPECT_THAT(MTuple(MInteger(Between(1, 10)), MInteger(Between(30, 40))),
+              GeneratedValuesAre(
+                  FieldsAre(AllOf(Ge(1), Le(10)), AllOf(Ge(30), Le(40)))));
 
-  EXPECT_THAT(std::get<0>(t), AllOf(Ge(1), Le(10)));
-  EXPECT_THAT(std::get<1>(t), AllOf(Ge(30), Le(40)));
-}
-
-TEST(MTupleTest, NestedMTupleWorksWithGenerate) {
-  MTuple A =
+  EXPECT_THAT(
       MTuple(MInteger(Between(0, 9)),
-             MTuple(MInteger(Between(10, 99)), MInteger(Between(100, 999))));
-
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      (std::tuple<int64_t, std::tuple<int64_t, int64_t>> t), Generate(A));
-  auto [x, yz] = t;
-  auto [y, z] = yz;
-
-  EXPECT_THAT(x, AllOf(Ge(0), Le(9)));
-  EXPECT_THAT(y, AllOf(Ge(10), Le(99)));
-  EXPECT_THAT(z, AllOf(Ge(100), Le(999)));
+             MTuple(MInteger(Between(10, 99)), MInteger(Between(100, 999)))),
+      GeneratedValuesAre(FieldsAre(
+          AllOf(Ge(0), Le(9)),
+          FieldsAre(AllOf(Ge(10), Le(99)), AllOf(Ge(100), Le(999))))));
 }
 
 TEST(MTupleTest, GenerateShouldSuccessfullyComplete) {

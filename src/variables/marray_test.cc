@@ -122,14 +122,14 @@ TEST(MArrayTest, NestedMArrayWorks) {
             Length(Between(4, 6))),
         Length(Between(5, 7)));
 
-    MORIARTY_ASSERT_OK_AND_ASSIGN(auto a, Generate(A));
-
-    EXPECT_THAT(a, SizeIs(AllOf(Ge(5), Le(7))));
-    EXPECT_THAT(a, Each(SizeIs(AllOf(Ge(4), Le(6)))));
-    EXPECT_THAT(a, Each(Each(SizeIs(AllOf(Ge(3), Le(5))))));
-    EXPECT_THAT(a, Each(Each(Each(SizeIs(AllOf(Ge(2), Le(4)))))));
-    EXPECT_THAT(a, Each(Each(Each(Each(SizeIs(AllOf(Ge(1), Le(3))))))));
-    EXPECT_THAT(a, Each(Each(Each(Each(Each(AllOf(Ge(1), Le(100))))))));
+    EXPECT_THAT(
+        Generate(A),
+        IsOkAndHolds(AllOf(
+            SizeIs(AllOf(Ge(5), Le(7))), Each(SizeIs(AllOf(Ge(4), Le(6)))),
+            Each(Each(SizeIs(AllOf(Ge(3), Le(5))))),
+            Each(Each(Each(SizeIs(AllOf(Ge(2), Le(4)))))),
+            Each(Each(Each(Each(SizeIs(AllOf(Ge(1), Le(3))))))),
+            Each(Each(Each(Each(Each(AllOf(Ge(1), Le(100))))))))));
   }
 }
 
