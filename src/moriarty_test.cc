@@ -181,7 +181,6 @@ TEST(MoriartyTest, AddVariableWorks) {
 
   M.AddVariable("A", MTestType());
   M.AddVariable("B", MTestType());
-
   M.AddVariable("C", MTestType()).AddVariable("D", MTestType());
 }
 

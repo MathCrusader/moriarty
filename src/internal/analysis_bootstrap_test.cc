@@ -46,12 +46,11 @@ TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsSucceedsInNormalCase) {
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
-  Context context =
-      Context()
-          .WithVariable("A", MTestType().AddConstraint(OneOf(options)))
-          .WithVariable("B", MTestType().AddConstraint(OneOf(options)))
-          .WithValue<MTestType>("A", options[4])
-          .WithValue<MTestType>("B", options[53]);
+  Context context = Context()
+                        .WithVariable("A", MTestType(OneOf(options)))
+                        .WithVariable("B", MTestType(OneOf(options)))
+                        .WithValue<MTestType>("A", options[4])
+                        .WithValue<MTestType>("B", options[53]);
 
   EXPECT_EQ(
       AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
@@ -65,8 +64,8 @@ TEST(AnalysisBootstrapTest,
 
   Context context =
       Context()
-          .WithVariable("A", MTestType().AddConstraint(OneOf(options)))
-          .WithVariable("B", MTestType().AddConstraint(OneOf(options)))
+          .WithVariable("A", MTestType(OneOf(options)))
+          .WithVariable("B", MTestType(OneOf(options)))
           .WithValue<MTestType>("A", options[4])
           .WithValue<MTestType>("B", TestType(100000));  // Not in the list!
 
@@ -79,11 +78,10 @@ TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsFailIfAnyValueIsMissing) {
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
-  Context context =
-      Context()
-          .WithVariable("A", MTestType().AddConstraint(OneOf(options)))
-          .WithVariable("B", MTestType().AddConstraint(OneOf(options)))
-          .WithValue<MTestType>("A", options[4]);
+  Context context = Context()
+                        .WithVariable("A", MTestType(OneOf(options)))
+                        .WithVariable("B", MTestType(OneOf(options)))
+                        .WithValue<MTestType>("A", options[4]);
 
   // FIXME: Determine semantics of satisfies constraints when a value is
   // missing.
@@ -99,13 +97,12 @@ TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsSucceedsIfThereAreExtraValues) {
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
-  Context context =
-      Context()
-          .WithVariable("A", MTestType().AddConstraint(OneOf(options)))
-          .WithVariable("B", MTestType().AddConstraint(OneOf(options)))
-          .WithValue<MTestType>("A", options[30])
-          .WithValue<MTestType>("B", options[40])
-          .WithValue<MTestType>("C", options[50]);
+  Context context = Context()
+                        .WithVariable("A", MTestType(OneOf(options)))
+                        .WithVariable("B", MTestType(OneOf(options)))
+                        .WithValue<MTestType>("A", options[30])
+                        .WithValue<MTestType>("B", options[40])
+                        .WithValue<MTestType>("C", options[50]);
 
   EXPECT_EQ(
       AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
@@ -114,13 +111,12 @@ TEST(AnalysisBootstrapTest,
 
 TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsWorksForDependentVariables) {
-  // B gets one by default, plus one from A
   Context context =
       Context()
-          .WithVariable("A", MTestType())
-          .WithVariable("B", MTestType().SetAdder("A"))
-          .WithValue<MTestType>("A", MTestType::kGeneratedValue)
-          .WithValue<MTestType>("B", 2 * MTestType::kGeneratedValue);
+          .WithVariable("A", MTestType(NumberOfDigits(1)))
+          .WithVariable("B", MTestType(LastDigit(MInteger(Exactly("A + 1")))))
+          .WithValue<MTestType>("A", 6)
+          .WithValue<MTestType>("B", 7);
 
   EXPECT_EQ(
       AllVariablesSatisfyConstraints(context.Variables(), context.Values()),

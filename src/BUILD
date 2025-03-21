@@ -168,7 +168,6 @@ cc_test(
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/testing:mtest_type",
-        "//src/testing:mtest_type2",
         "//src/testing:status_test_util",
         "//src/util/status_macro:status_macros",
         "//src/util/test_status_macro:status_testutil",

@@ -19,7 +19,6 @@
 #include "gtest/gtest.h"
 #include "src/librarian/test_utils.h"
 #include "src/testing/mtest_type.h"
-#include "src/testing/mtest_type2.h"
 #include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/base_constraints.h"
@@ -31,8 +30,8 @@ namespace {
 using ::moriarty::IsOkAndHolds;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::MTestType;
-using ::moriarty_testing::MTestType2;
 using ::moriarty_testing::TestType;
+using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsVariableNotFound;
 
 TEST(VariableSetTest, ContainsShouldWork) {
@@ -96,12 +95,18 @@ TEST(VariableSetTest, GetAnonymousVariableShouldWork) {
   VariableSet variables;
   variables.SetVariable("A", MTestType());
   variables.SetVariable("B", MTestType());
-  variables.SetVariable("C", MTestType2());
-  variables.SetVariable("D", MTestType2());
 
   (void)variables.GetAnonymousVariable("A");  // No crash = good.
   EXPECT_THAT([&] { (void)variables.GetAnonymousVariable("X"); },
               ThrowsVariableNotFound("X"));
+}
+
+TEST(VariableSetTest, GetVariableOfWrongTypeShouldThrow) {
+  VariableSet v;
+  v.SetVariable("A", MTestType());
+
+  EXPECT_THAT([&] { (void)v.GetVariable<MInteger>("A"); },
+              ThrowsMVariableTypeMismatch("MTestType", "MInteger"));
 }
 
 }  // namespace

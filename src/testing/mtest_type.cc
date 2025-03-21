@@ -24,7 +24,6 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
@@ -32,8 +31,6 @@
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/minteger.h"
-
-// LINT.IfChange
 
 namespace moriarty_testing {
 
@@ -45,6 +42,27 @@ MTestType& MTestType::AddConstraint(moriarty::Exactly<TestType> constraint) {
 MTestType& MTestType::AddConstraint(moriarty::OneOf<TestType> constraint) {
   one_of_.ConstrainOptions(constraint.GetOptions());
   return InternalAddConstraint(std::move(constraint));
+}
+
+MTestType& AddConstraint(LastDigit constraint) {
+  if (last_digit_) last_digit_ = moriarty::MInteger();
+  last_digit_.MergeFrom(constraint.GetDigit());
+  return InternalAddConstraint(std::move(constraint));
+}
+
+MTestType& AddConstraint(NumberOfDigits constraint) {
+  if (num_digits_) num_digits_ = moriarty::MInteger();
+  num_digits_.MergeFrom(constraint.GetDigit());
+  return InternalAddConstraint(std::move(constraint));
+}
+
+std::optional<TestType> MTestType::GetUniqueValueImpl(
+    moriarty::librarian::AnalysisContext ctx) const override {
+  if (one_of_.HasBeenConstrained()) return one_of_.GetUniqueValue();
+  if (!last_digit_ || !last_digit_.GetUniqueValue(ctx)) return std::nullopt;
+  if (!num_digits_ || !num_digits_.GetUniqueValue(ctx) != 1)
+    return std::nullopt;
+  return last_digit_.GetUniqueValue(ctx);  // A single digit number.
 }
 
 TestType MTestType::ReadImpl(moriarty::librarian::ReaderContext ctx) const {
@@ -61,86 +79,31 @@ void MTestType::PrintImpl(moriarty::librarian::PrinterContext ctx,
   ctx.PrintToken(std::to_string(value));
 }
 
-absl::Status MTestType::MergeFromImpl(const MTestType& other) {
-  merged_ = true;
-  // SetMultiplier(other.mu)
-  // multiplier_.MergeFrom(other.multiplier_);
-  return absl::OkStatus();
-}
-
-bool MTestType::WasMerged() const { return merged_; }
-
-MTestType& MTestType::SetAdder(std::string_view variable_name) {
-  adder_variable_name_ = variable_name;
-  return *this;
-}
-
-// My value is multiplied by this value
-MTestType& MTestType::SetMultiplier(moriarty::MInteger multiplier) {
-  multiplier_ = multiplier;
-  return *this;
-}
-
-// I am == "multiplier * value + other_variable", so to be valid,
-//   (valid - other_variable) / multiplier
-// must be an integer.
-absl::Status MTestType::IsSatisfiedWithImpl(
-    moriarty::librarian::AnalysisContext ctx, const TestType& value) const {
-  TestType val = value;
-  if (adder_variable_name_) {
-    TestType subtract_me = ctx.GetValue<MTestType>(*adder_variable_name_);
-    val = val - subtract_me;
-  }
-
-  // 0 is a multiple of all numbers!
-  if (val == 0) return absl::OkStatus();
-
-  {
-    // value must be a multiple of `multiplier`. So I'll go through all my
-    // factors and one of those must be in the range...
-    if (val < 0) val = -val;
-    bool found_divisor = false;
-    for (int div = 1; div * div <= val; div++) {
-      if (val % div == 0) {
-        if (multiplier_.IsSatisfiedWith(ctx, div) ||
-            multiplier_.IsSatisfiedWith(ctx, val / div)) {
-          found_divisor = true;
-        }
-      }
-    }
-    if (!found_divisor)
-      return absl::InvalidArgumentError(
-          absl::Substitute("$0 is not a multiple of any valid multiplier.",
-                           static_cast<int>(val)));
-  }
-
-  return absl::OkStatus();
-}
-
-// Always returns pi. Does not directly depend on `rng`, but we generate a
-// random number between 1 and 1 (aka, 1) to ensure the RandomEngine is
-// available for use if we wanted to.
+// By default, return 123456789, but maybe slightly modified.
 TestType MTestType::GenerateImpl(
     moriarty::librarian::ResolverContext ctx) const {
   if (one_of_.HasBeenConstrained())
     return one_of_.SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
 
-  TestType addition = 0;
-  if (adder_variable_name_) {
-    addition = ctx.GenerateVariable<MTestType>(*adder_variable_name_);
-  }
+  int x = 0;
+  if (ctx.RandomInteger(2) == 0) x++;  // Just to use the random engine.
 
-  int64_t multiplier = multiplier_.Generate(ctx.ForSubVariable("multiplier"));
-  return kGeneratedValue * multiplier + addition;
+  int last_digit = last_digit_ ? last_digit_.Generate(ctx) : 9;
+  int num_digits =
+      num_digits_
+          ? MInteger(num_digits_).AddConstraint(Between(1, 9)).Generate(ctx)
+          : 9;
+
+  int result = 123456780 + last_digit;
+  string s = std::to_string(result);
+  while (s.size() > num_digits) s = s.substr(1);
+  return TestType(std::stoll(s));
 }
 
 std::vector<MTestType> MTestType::ListEdgeCasesImpl(
     moriarty::librarian::AnalysisContext ctx) const {
-  return std::vector<MTestType>(
-      {MTestType().AddConstraint(moriarty::Exactly<TestType>(2)),
-       MTestType().AddConstraint(moriarty::Exactly<TestType>(3))});
+  return std::vector<MTestType>({MTestType(moriarty::Exactly<TestType>(2)),
+                                 MTestType(moriarty::Exactly<TestType>(3))});
 }
 
 }  // namespace moriarty_testing
-
-// LINT.ThenChange(mtest_type2.cc)

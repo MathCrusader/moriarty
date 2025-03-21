@@ -37,7 +37,9 @@ namespace {
 using ::moriarty::moriarty_internal::GenerateAllValues;
 using ::moriarty::moriarty_internal::RandomEngine;
 using ::moriarty::moriarty_internal::ValueSet;
+using ::moriarty_testing::LastDigit;
 using ::moriarty_testing::MTestType;
+using ::moriarty_testing::NumberOfDigits;
 using ::moriarty_testing::TestType;
 using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsVariableNotFound;
@@ -68,8 +70,8 @@ TEST(TestCaseTest, ConstrainVariableAndGetVariableWorkInGeneralCase) {
 
 TEST(TestCaseTest, SetValueWithSpecificValueAndGetVariableWorkInGeneralCase) {
   TestCase T;
-  T.SetValue<MTestType>("A", TestType());
-  EXPECT_EQ(GetValue<MTestType>(T, "A"), TestType());
+  T.SetValue<MTestType>("A", TestType(123));
+  EXPECT_EQ(GetValue<MTestType>(T, "A"), TestType(123));
 }
 
 TEST(TestCaseTest, GetVariableWithWrongTypeShouldFail) {
@@ -133,10 +135,10 @@ TEST(TestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
   };
 
   NameVariablePair a = {"A",
-                        MTestType().SetMultiplier(MInteger(Between(1, 10)))};
+                        MTestType(NumberOfDigits(MInteger(Between(2, 8))))};
   NameVariablePair b = {"B",
-                        MTestType().SetMultiplier(MInteger(Between(1, 3)))};
-  NameVariablePair c = {"C", MTestType().SetAdder("A")};
+                        MTestType(NumberOfDigits(MInteger(Between(1, "A"))))};
+  NameVariablePair c = {"C", MTestType(LastDigit(MInteger(Between(2, 7))))};
 
   auto abc = gen(a, b, c);
   EXPECT_EQ(gen(a, c, b), abc);

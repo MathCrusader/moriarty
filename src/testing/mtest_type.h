@@ -25,7 +25,6 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
@@ -34,11 +33,6 @@
 #include "src/librarian/one_of_handler.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/minteger.h"
-
-// TODO(darcybest): If we need more TestTypes, we should make this process more
-// general rather than having several nearly identical test types.
-
-// LINT.IfChange
 
 namespace moriarty_testing {
 
@@ -57,26 +51,61 @@ struct TestType {
   int value;
 };
 
+class LastDigit : public moriarty::MConstraint {
+ public:
+  explicit LastDigit(moriarty::MInteger digit) : digit_(std::move(digit)) {}
+  moriarty::MInteger GetDigit() const { return digit_; }
+  std::string ToString() const {
+    return std::format("the last digit {}",
+                       moriarty::librarian::DebugString(num_digits_));
+  }
+  bool IsSatisfiedWith(const T& value) const {
+    return digit_.IsSatisfiedWith(value.value % 10);
+  }
+  std::string UnsatisfiedReason(const T& value) const {
+    return std::format("the last digit of {} {}", value.value,
+                       moriarty::librarian::DebugString(digit_));
+  }
+  std::vector<std::string> GetDependencies() const {
+    return digit_.GetDependencies();
+  }
+
+ private:
+  moriarty::MInteger digit_;
+};
+
+class NumberOfDigits : public moriarty::MConstraint {
+ public:
+  explicit NumberOfDigits(moriarty::MInteger num_digits)
+      : num_digits_(num_digits) {}
+  moriarty::MInteger GetDigit() const { return num_digits_; }
+  std::string ToString() const {
+    return std::format("the number of digits {}",
+                       moriarty::librarian::DebugString(num_digits_));
+  }
+
+  bool IsSatisfiedWith(const T& value) const {
+    return digit_.IsSatisfiedWith(std::to_string(value.value).size());
+  }
+  std::string UnsatisfiedReason(const T& value) const {
+    return std::format("the number of digits in {} {}", value.value,
+                       moriarty::librarian::DebugString(digit_));
+  }
+  std::vector<std::string> GetDependencies() const {
+    return digit_.GetDependencies();
+  }
+
+ private:
+  moriarty::MInteger num_digits_;
+};
+
 // MTestType [for internal tests only]
 //
 // A bare bones Moriarty variable.
-//
-// Basics of this type:
-//   - Returns a single (pi-like) value when Generate is called.
-//   - Has the property "size" with "small" and "large".
-//   - Read/Print behave like integers.
-//   - You can depend on another MTestType, and be pi + that_value.
-//       (Example, if X's `adder` is Y, and the value of Y is 123, then X's
-//       value is the default plus 123)
-//   - Has a subvariable called `multiplier`. If X's `multiplier` is 3, then
-//     this value is 3 * (default_value + adder_value).
-//
-// Summary: The generated value is:
-//   multiplier * (default_value + adder_value)
 class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
  public:
   // This value is the default value returned from Generate.
-  static constexpr int64_t kGeneratedValue = 314159265;
+  static constexpr int64_t kGeneratedValue = 123456789;
   // This value is returned when Property size = "small"
   static constexpr int64_t kGeneratedValueSmallSize = 123;
   // This value is returned when Property size = "large"
@@ -85,57 +114,35 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   static constexpr int64_t kCorner1 = 99991;
   static constexpr int64_t kCorner2 = 99992;
 
+  template <typename... Constraints>
+  MTestType(Constraints&&... constraints) {
+    (AddConstraint(std::forward<Constraints>(constraints)), ...);
+  }
+
   MTestType& AddConstraint(moriarty::Exactly<TestType> constraint);
   MTestType& AddConstraint(moriarty::OneOf<TestType> constraint);
+  MTestType& AddConstraint(LastDigit constraint);
+  MTestType& AddConstraint(NumberOfDigits constraint);
 
   std::string Typename() const override { return "MTestType"; };
 
-  TestType ReadImpl(moriarty::librarian::ReaderContext ctx) const override;
-
-  void PrintImpl(moriarty::librarian::PrinterContext ctx,
-                 const TestType& value) const override;
-
-  absl::Status MergeFromImpl(const MTestType& other) override;
-
-  bool WasMerged() const;
-
-  // My value is increased by this other variable's value
-  MTestType& SetAdder(std::string_view variable_name);
-
-  // My value is multiplied by this value
-  MTestType& SetMultiplier(moriarty::MInteger multiplier);
-
-  // I am == "multiplier * value + other_variable", so to be valid,
-  //   (valid - other_variable) / multiplier
-  // must be an integer.
-  absl::Status IsSatisfiedWithImpl(moriarty::librarian::AnalysisContext ctx,
-                                   const TestType& value) const override;
-
-  std::vector<MTestType> ListEdgeCasesImpl(
-      moriarty::librarian::AnalysisContext ctx) const override;
-
  private:
   moriarty::librarian::OneOfHandler<TestType> one_of_;
-  moriarty::MInteger multiplier_ = moriarty::MInteger(moriarty::Between(1, 1));
-  std::optional<std::string> adder_variable_name_;
+  std::optional<moriarty::MInteger> last_digit_;
+  std::optional<moriarty::MInteger> num_digits_;
 
-  bool merged_ = false;
-
-  // Always returns pi. Does not directly depend on `rng`, but we generate a
-  // random number between 1 and 1 (aka, 1) to ensure the RandomEngine is
-  // available for use if we wanted to.
+  // Always returns 123456789, but maybe slightly modified.
   TestType GenerateImpl(
       moriarty::librarian::ResolverContext ctx) const override;
-
   std::optional<TestType> GetUniqueValueImpl(
-      moriarty::librarian::AnalysisContext ctx) const override {
-    if (one_of_.HasBeenConstrained()) return one_of_.GetUniqueValue();
-    return std::nullopt;
-  }
+      moriarty::librarian::AnalysisContext ctx) const override;
+  TestType ReadImpl(moriarty::librarian::ReaderContext ctx) const override;
+  void PrintImpl(moriarty::librarian::PrinterContext ctx,
+                 const TestType& value) const override;
+  std::vector<MTestType> ListEdgeCasesImpl(
+      moriarty::librarian::AnalysisContext ctx) const override;
 };
 
 }  // namespace moriarty_testing
-
-// LINT.ThenChange(mtest_type2.h)
 
 #endif  // MORIARTY_SRC_TESTING_MTEST_TYPE_H_

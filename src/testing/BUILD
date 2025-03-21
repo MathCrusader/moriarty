@@ -52,31 +52,6 @@ cc_library(
 )
 
 cc_library(
-    name = "mtest_type2",
-    testonly = True,
-    srcs = [
-        "mtest_type2.cc",
-    ],
-    hdrs = [
-        "mtest_type2.h",
-    ],
-    deps = [
-        "//src:errors",
-        "//src/contexts/librarian:analysis_context",
-        "//src/contexts/librarian:printer_context",
-        "//src/contexts/librarian:reader_context",
-        "//src/contexts/librarian:resolver_context",
-        "//src/librarian:mvariable",
-        "//src/util/status_macro:status_macros",
-        "//src/variables:minteger",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-    ],
-)
-
-cc_library(
     name = "status_test_util",
     testonly = True,
     hdrs = [
@@ -84,8 +59,6 @@ cc_library(
     ],
     deps = [
         "//src:errors",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
         "@googletest//:gtest",
     ],
