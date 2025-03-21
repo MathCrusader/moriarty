@@ -30,11 +30,7 @@ int64_t BasicRandomContext::RandomInteger(int64_t min, int64_t max) {
     throw std::runtime_error(std::format(
         "RandomInteger({}, {}) invalid (need min <= max)", min, max));
   }
-  absl::StatusOr<int64_t> value = engine_.get().RandInt(min, max);
-  if (!value.ok()) {
-    throw std::runtime_error(std::string(value.status().message()));
-  }
-  return *value;
+  return engine_.get().RandInt(min, max);
 }
 
 int64_t BasicRandomContext::RandomInteger(int64_t n) {

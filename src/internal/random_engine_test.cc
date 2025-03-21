@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,37 +17,37 @@
 
 #include <cstdint>
 #include <limits>
+#include <stdexcept>
 #include <vector>
 
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/util/status_macro/status_macros.h"
-#include "src/util/test_status_macro/status_testutil.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
-using ::moriarty::IsOk;
-using ::moriarty::StatusIs;
+using ::testing::AllOf;
+using ::testing::Ge;
+using ::testing::Le;
+using ::testing::Throws;
 
 TEST(RandomEngineTest, RandIntWithEmptySeedShouldReturnValue) {
   RandomEngine random({}, "v0.1");
 
-  EXPECT_THAT(random.RandInt(10), IsOk());
-  EXPECT_THAT(random.RandInt(5, 20), IsOk());
-  EXPECT_THAT(random.RandInt(-120, -50), IsOk());
+  EXPECT_THAT(random.RandInt(10), AllOf(Ge(0), Le(9)));
+  EXPECT_THAT(random.RandInt(5, 20), AllOf(Ge(5), Le(20)));
+  EXPECT_THAT(random.RandInt(-120, -50), AllOf(Ge(-120), Le(-50)));
 }
 
 TEST(RandomEngineTest, RandIntWithIntMaxReturnsAValue) {
   RandomEngine random({}, "v0.1");
 
-  EXPECT_THAT(random.RandInt(std::numeric_limits<int64_t>::max()), IsOk());
-  EXPECT_THAT(random.RandInt(std::numeric_limits<int64_t>::min(),
-                             std::numeric_limits<int64_t>::max()),
-              IsOk());
+  EXPECT_THAT(random.RandInt(std::numeric_limits<int64_t>::max()), Ge(0));
+
+  // Not crash = pass.
+  random.RandInt(std::numeric_limits<int64_t>::min(),
+                 std::numeric_limits<int64_t>::max());
 }
 
 TEST(RandomEngineTest, RandomShouldProduceReproducibleResults) {
@@ -57,13 +58,11 @@ TEST(RandomEngineTest, RandomShouldProduceReproducibleResults) {
   // bounds that pass over at least one power of two.
   int64_t hash = 0;
   for (int i = 0; i < 5000; i++) {
-    MORIARTY_ASSERT_OK_AND_ASSIGN(int64_t val,
-                                  random.RandInt((1LL << 60) - 1 + i));
+    int64_t val = random.RandInt((1LL << 60) - 1 + i);
     hash = (hash << 5) ^ val;
   }
   for (int i = 0; i < 5000; i++) {
-    MORIARTY_ASSERT_OK_AND_ASSIGN(
-        int64_t val, random.RandInt(-(1LL << 60) + 1, (1LL << 60) + i));
+    int64_t val = random.RandInt(-(1LL << 60) + 1, (1LL << 60) + i);
     hash = (hash << 5) ^ val;
   }
 
@@ -74,53 +73,47 @@ TEST(RandomEngineTest,
      RandIntWithOneArgumentWithNonpositiveShouldThrowStatusError) {
   RandomEngine random({}, "v0.1");
 
-  EXPECT_THAT(random.RandInt(0), StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(random.RandInt(-3), StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT([&] { random.RandInt(0); }, Throws<std::invalid_argument>());
+  EXPECT_THAT([&] { random.RandInt(-3); }, Throws<std::invalid_argument>());
 }
 
 TEST(RandomEngineTest, RandIntWithTwoInvalidArgumentsShouldThrowStatusError) {
   RandomEngine random({}, "v0.1");
 
-  EXPECT_THAT(random.RandInt(0, -1),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(random.RandInt(-3, -50),
-              StatusIs(absl::StatusCode::kInvalidArgument));
-  EXPECT_THAT(random.RandInt(std::numeric_limits<int64_t>::max(),
-                             std::numeric_limits<int64_t>::min()),
-              StatusIs(absl::StatusCode::kInvalidArgument));
+  EXPECT_THAT([&] { random.RandInt(0, -1); }, Throws<std::invalid_argument>());
+  EXPECT_THAT([&] { random.RandInt(-3, -50); },
+              Throws<std::invalid_argument>());
+  EXPECT_THAT(
+      [&] {
+        random.RandInt(std::numeric_limits<int64_t>::max(),
+                       std::numeric_limits<int64_t>::min());
+      },
+      Throws<std::invalid_argument>());
 }
 
-absl::StatusOr<std::vector<int64_t>> GetNRandomNumbersUnderK(RandomEngine rand,
-                                                             int N, int64_t K) {
+std::vector<int64_t> GetNRandomNumbersUnderK(RandomEngine rand, int N,
+                                             int64_t K) {
   std::vector<int64_t> values(N);
-  for (int64_t& val : values) {
-    MORIARTY_ASSIGN_OR_RETURN(val, rand.RandInt(K));
-  }
+  for (int64_t& val : values) val = rand.RandInt(K);
   return values;
 }
 
 TEST(RandomEngineTest, DifferentSeedsShouldProduceDifferentResults) {
   // This has a (1/123456)^10 chance of being equal.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<int64_t> values1,
-      GetNRandomNumbersUnderK(RandomEngine({1, 2, 3}, "v0.1"), 10, 123456));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<int64_t> values2,
-      GetNRandomNumbersUnderK(RandomEngine({2, 3, 5}, "v0.1"), 10, 123456));
+  std::vector<int64_t> values1 =
+      GetNRandomNumbersUnderK(RandomEngine({1, 2, 3}, "v0.1"), 10, 123456);
+  std::vector<int64_t> values2 =
+      GetNRandomNumbersUnderK(RandomEngine({2, 3, 5}, "v0.1"), 10, 123456);
 
   EXPECT_NE(values1, values2);
 }
 
 TEST(RandomEngineTest, SameSeedsProduceTheSameResults) {
   // This has a (1/123456)^10 chance of passing when it shouldn't.
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<int64_t> values1,
-      GetNRandomNumbersUnderK(RandomEngine({123, 456, 789}, "v0.1"), 10,
-                              123456));
-  MORIARTY_ASSERT_OK_AND_ASSIGN(
-      std::vector<int64_t> values2,
-      GetNRandomNumbersUnderK(RandomEngine({123, 456, 789}, "v0.1"), 10,
-                              123456));
+  std::vector<int64_t> values1 = GetNRandomNumbersUnderK(
+      RandomEngine({123, 456, 789}, "v0.1"), 10, 123456);
+  std::vector<int64_t> values2 = GetNRandomNumbersUnderK(
+      RandomEngine({123, 456, 789}, "v0.1"), 10, 123456);
 
   EXPECT_EQ(values1, values2);
 }

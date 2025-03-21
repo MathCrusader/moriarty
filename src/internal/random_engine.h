@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,8 +50,6 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/status/statusor.h"
-
 namespace moriarty {
 namespace moriarty_internal {
 
@@ -77,14 +76,13 @@ class RandomEngine {
   // [0, exclusive_upper_bound).
   //
   // Returns kInvalidArgument if exclusive_upper_bound is non-positive.
-  absl::StatusOr<int64_t> RandInt(int64_t exclusive_upper_bound);
+  int64_t RandInt(int64_t exclusive_upper_bound);
 
   // RandInt()
   //
   // Generates a uniformly random integer in the range:
   // [inclusive_lower_bound, inclusive_upper_bound].
-  absl::StatusOr<int64_t> RandInt(int64_t inclusive_lower_bound,
-                                  int64_t inclusive_upper_bound);
+  int64_t RandInt(int64_t inclusive_lower_bound, int64_t inclusive_upper_bound);
 
  private:
   // InitRandomEngine()

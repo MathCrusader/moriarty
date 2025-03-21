@@ -438,9 +438,8 @@ absl::StatusOr<std::string> GenerateRepeatedCharSet(
     return absl::InvalidArgumentError(
         "Cannot generate with `*` or `+` or large lengths.");
   }
-  MORIARTY_ASSIGN_OR_RETURN(
-      int64_t len,
-      random_engine.RandInt(char_set.MinLength(), char_set.MaxLength()));
+  int64_t len =
+      random_engine.RandInt(char_set.MinLength(), char_set.MaxLength());
 
   RepeatedCharSet restricted_char_set;
   if (restricted_alphabet.has_value()) {
@@ -465,8 +464,7 @@ absl::StatusOr<std::string> GenerateRepeatedCharSet(
 
   std::string result;
   while (result.size() < len) {
-    MORIARTY_ASSIGN_OR_RETURN(int idx,
-                              random_engine.RandInt(valid_chars.size()));
+    int64_t idx = random_engine.RandInt(valid_chars.size());
     result.push_back(valid_chars[idx]);
   }
   return std::string(result.begin(), result.end());
@@ -484,8 +482,7 @@ absl::StatusOr<std::string> GeneratePatternNode(
   if (node.subpatterns.empty()) return result;
 
   if (node.subpattern_type == PatternNode::SubpatternType::kAnyOf) {
-    MORIARTY_ASSIGN_OR_RETURN(int64_t idx,
-                              random_engine.RandInt(node.subpatterns.size()));
+    int64_t idx = random_engine.RandInt(node.subpatterns.size());
     MORIARTY_ASSIGN_OR_RETURN(
         std::string subresult,
         GeneratePatternNode(node.subpatterns[idx], restricted_alphabet,

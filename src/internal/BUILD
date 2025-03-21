@@ -92,9 +92,6 @@ cc_library(
         "random_engine.h",
     ],
     deps = [
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
     ],
 )
 

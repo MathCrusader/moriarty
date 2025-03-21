@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,15 +16,13 @@
 #include "src/internal/random_engine.h"
 
 #include <cstdint>
+#include <format>
 #include <limits>
 #include <random>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <string_view>
-
-#include "absl/status/status.h"
-#include "absl/status/statusor.h"
-#include "absl/strings/substitute.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -34,20 +33,20 @@ RandomEngine::RandomEngine(std::span<const int64_t> seed,
   InitRandomEngine(seed);
 }
 
-absl::StatusOr<int64_t> RandomEngine::RandInt(int64_t exclusive_upper_bound) {
+int64_t RandomEngine::RandInt(int64_t exclusive_upper_bound) {
   if (exclusive_upper_bound <= 0) {
-    return absl::InvalidArgumentError(absl::Substitute(
-        "RandInt(x) called with x <= 0 ($0)", exclusive_upper_bound));
+    throw std::invalid_argument(std::format(
+        "RandInt(x) called with x <= 0 ({})", exclusive_upper_bound));
   }
   return RandIntInclusive(exclusive_upper_bound - 1);
 }
 
-absl::StatusOr<int64_t> RandomEngine::RandInt(int64_t inclusive_lower_bound,
-                                              int64_t inclusive_upper_bound) {
+int64_t RandomEngine::RandInt(int64_t inclusive_lower_bound,
+                              int64_t inclusive_upper_bound) {
   if (inclusive_lower_bound > inclusive_upper_bound) {
-    return absl::InvalidArgumentError(
-        absl::Substitute("RandInt(x, y) called with x > y ($0, $1)",
-                         inclusive_lower_bound, inclusive_upper_bound));
+    throw std::invalid_argument(
+        std::format("RandInt(x, y) called with x > y ({}, {})",
+                    inclusive_lower_bound, inclusive_upper_bound));
   }
   // This static_cast from signed to unsigned was implementation-defined
   // behavior prior to C++20. Now should be okay, I think.
