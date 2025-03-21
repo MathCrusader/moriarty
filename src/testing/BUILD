@@ -59,6 +59,8 @@ cc_library(
     ],
     deps = [
         "//src:errors",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
         "@googletest//:gtest",
     ],

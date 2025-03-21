@@ -22,12 +22,14 @@
 #include "src/testing/mtest_type.h"
 #include "src/testing/status_test_util.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/minteger.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
 using ::moriarty_testing::Context;
+using ::moriarty_testing::LastDigit;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::TestType;
 using ::moriarty_testing::ThrowsValueNotFound;
@@ -113,10 +115,10 @@ TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsWorksForDependentVariables) {
   Context context =
       Context()
-          .WithVariable("A", MTestType(NumberOfDigits(1)))
-          .WithVariable("B", MTestType(LastDigit(MInteger(Exactly("A + 1")))))
-          .WithValue<MTestType>("A", 6)
-          .WithValue<MTestType>("B", 7);
+          .WithVariable("B", MTestType(LastDigit(MInteger(Exactly("N + 1")))))
+          .WithVariable("N", MInteger(Exactly(6)))
+          .WithValue<MTestType>("B", 27)
+          .WithValue<MInteger>("N", 6);
 
   EXPECT_EQ(
       AllVariablesSatisfyConstraints(context.Variables(), context.Values()),

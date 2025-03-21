@@ -74,6 +74,8 @@ class MArray : public librarian::MVariable<
   // Create an MArray with this set of constraints on each element.
   explicit MArray(MElementType element_constraints);
 
+  ~MArray() override = default;
+
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values
 

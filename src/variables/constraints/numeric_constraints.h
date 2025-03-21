@@ -35,6 +35,7 @@ class IntegerRangeMConstraint : public MConstraint {
   using LookupVariableFn = std::function<int64_t(std::string_view)>;
   using IntegerExpression = std::string_view;
 
+  virtual ~IntegerRangeMConstraint() = default;
   virtual std::string ToString() const = 0;
   virtual bool IsSatisfiedWith(LookupVariableFn lookup_variable,
                                int64_t value) const = 0;
@@ -84,23 +85,25 @@ class OneOfIntegerExpression : public IntegerRangeMConstraint {
   explicit OneOfIntegerExpression(
       std::initializer_list<IntegerExpression> options);
 
+  ~OneOfIntegerExpression() override = default;
+
   // Returns the options that this constraint represents.
   [[nodiscard]] std::vector<std::string> GetOptions() const;
 
   // Returns a human-readable representation of this constraint.
-  [[nodiscard]] std::string ToString() const;
+  [[nodiscard]] std::string ToString() const override;
 
   // Returns true if the given value satisfies this constraint.
   [[nodiscard]] bool IsSatisfiedWith(LookupVariableFn lookup_variable,
-                                     int64_t value) const;
+                                     int64_t value) const override;
 
   // Gives a human-readable explanation of why value does not satisfy the
   // constraints. Precondition: IsSatisfiedWith() == false;
   [[nodiscard]] std::string UnsatisfiedReason(LookupVariableFn lookup_variable,
-                                              int64_t value) const;
+                                              int64_t value) const override;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] std::vector<std::string> GetDependencies() const override;
 
  private:
   std::vector<Expression> options_;
@@ -123,23 +126,25 @@ class Between : public IntegerRangeMConstraint {
   // The numeric value must be in the inclusive range [minimum, maximum].
   explicit Between(IntegerExpression minimum, int64_t maximum);
 
+  ~Between() override = default;
+
   // Returns the range of values that this constraint represents.
   [[nodiscard]] Range GetRange() const;
 
   // Returns a human-readable representation of this constraint.
-  [[nodiscard]] std::string ToString() const;
+  [[nodiscard]] std::string ToString() const override;
 
   // Returns true if the given value satisfies this constraint.
   [[nodiscard]] bool IsSatisfiedWith(LookupVariableFn lookup_variable,
-                                     int64_t value) const;
+                                     int64_t value) const override;
 
   // Gives a human-readable explanation of why value does not satisfy the
   // constraints. Precondition: IsSatisfiedWith() == false;
   [[nodiscard]] std::string UnsatisfiedReason(LookupVariableFn lookup_variable,
-                                              int64_t value) const;
+                                              int64_t value) const override;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] std::vector<std::string> GetDependencies() const override;
 
  private:
   Expression minimum_;
@@ -159,23 +164,25 @@ class AtMost : public IntegerRangeMConstraint {
   // E.g., AtMost("10^9") or AtMost("3 * N + 1")
   explicit AtMost(IntegerExpression maximum);
 
+  ~AtMost() override = default;
+
   // Returns the range of values that this constraint represents.
   [[nodiscard]] Range GetRange() const;
 
   // Returns a string representation of this constraint.
-  [[nodiscard]] std::string ToString() const;
+  [[nodiscard]] std::string ToString() const override;
 
   // Returns true if the given value satisfies this constraint.
   [[nodiscard]] bool IsSatisfiedWith(LookupVariableFn lookup_variable,
-                                     int64_t value) const;
+                                     int64_t value) const override;
 
   // Gives a human-readable explanation of why value does not satisfy the
   // constraints. Precondition: IsSatisfiedWith() == false;
   [[nodiscard]] std::string UnsatisfiedReason(LookupVariableFn lookup_variable,
-                                              int64_t value) const;
+                                              int64_t value) const override;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] std::vector<std::string> GetDependencies() const override;
 
  private:
   Expression maximum_;
@@ -194,23 +201,25 @@ class AtLeast : public IntegerRangeMConstraint {
   // E.g., AtLeast("10^9") or AtLeast("3 * N + 1")
   explicit AtLeast(IntegerExpression minimum);
 
+  ~AtLeast() override = default;
+
   // Returns the range of values that this constraint represents.
   [[nodiscard]] Range GetRange() const;
 
   // Returns a string representation of this constraint.
-  [[nodiscard]] std::string ToString() const;
+  [[nodiscard]] std::string ToString() const override;
 
   // Returns true if the given value satisfies this constraint.
   [[nodiscard]] bool IsSatisfiedWith(LookupVariableFn lookup_variable,
-                                     int64_t value) const;
+                                     int64_t value) const override;
 
   // Gives a human-readable explanation of why value does not satisfy the
   // constraints. Precondition: IsSatisfiedWith() == false;
   [[nodiscard]] std::string UnsatisfiedReason(LookupVariableFn lookup_variable,
-                                              int64_t value) const;
+                                              int64_t value) const override;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] std::vector<std::string> GetDependencies() const override;
 
  private:
   Expression minimum_;

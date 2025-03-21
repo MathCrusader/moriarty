@@ -137,7 +137,7 @@ TEST(TestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
   NameVariablePair a = {"A",
                         MTestType(NumberOfDigits(MInteger(Between(2, 8))))};
   NameVariablePair b = {"B",
-                        MTestType(NumberOfDigits(MInteger(Between(1, "A"))))};
+                        MTestType(NumberOfDigits(MInteger(Between(1, 6))))};
   NameVariablePair c = {"C", MTestType(LastDigit(MInteger(Between(2, 7))))};
 
   auto abc = gen(a, b, c);

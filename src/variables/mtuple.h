@@ -79,6 +79,8 @@ class MTuple : public librarian::MVariable<
   //     MTuple(MInteger(Between(1, 10)), String(Length(15)));
   explicit MTuple(MElementTypes... values);
 
+  ~MTuple() override = default;
+
   // Typename()
   //
   // Returns a string representing the name of this type (for example,

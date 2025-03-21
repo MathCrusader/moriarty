@@ -17,14 +17,13 @@
 
 #include <stdint.h>
 
+#include <iostream>
 #include <optional>
 #include <sstream>
 #include <stdexcept>
 #include <string>
-#include <string_view>
 #include <vector>
 
-#include "absl/strings/substitute.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
@@ -44,25 +43,25 @@ MTestType& MTestType::AddConstraint(moriarty::OneOf<TestType> constraint) {
   return InternalAddConstraint(std::move(constraint));
 }
 
-MTestType& AddConstraint(LastDigit constraint) {
-  if (last_digit_) last_digit_ = moriarty::MInteger();
-  last_digit_.MergeFrom(constraint.GetDigit());
+MTestType& MTestType::AddConstraint(LastDigit constraint) {
+  if (!last_digit_) last_digit_ = moriarty::MInteger();
+  last_digit_->MergeFrom(constraint.GetDigit());
   return InternalAddConstraint(std::move(constraint));
 }
 
-MTestType& AddConstraint(NumberOfDigits constraint) {
-  if (num_digits_) num_digits_ = moriarty::MInteger();
-  num_digits_.MergeFrom(constraint.GetDigit());
+MTestType& MTestType::AddConstraint(NumberOfDigits constraint) {
+  if (!num_digits_) num_digits_ = moriarty::MInteger();
+  num_digits_->MergeFrom(constraint.GetDigit());
   return InternalAddConstraint(std::move(constraint));
 }
 
 std::optional<TestType> MTestType::GetUniqueValueImpl(
-    moriarty::librarian::AnalysisContext ctx) const override {
+    moriarty::librarian::AnalysisContext ctx) const {
   if (one_of_.HasBeenConstrained()) return one_of_.GetUniqueValue();
-  if (!last_digit_ || !last_digit_.GetUniqueValue(ctx)) return std::nullopt;
-  if (!num_digits_ || !num_digits_.GetUniqueValue(ctx) != 1)
+  if (!last_digit_ || !last_digit_->GetUniqueValue(ctx)) return std::nullopt;
+  if (!num_digits_ || !num_digits_->GetUniqueValue(ctx) != 1)
     return std::nullopt;
-  return last_digit_.GetUniqueValue(ctx);  // A single digit number.
+  return last_digit_->GetUniqueValue(ctx);  // A single digit number.
 }
 
 TestType MTestType::ReadImpl(moriarty::librarian::ReaderContext ctx) const {
@@ -84,18 +83,17 @@ TestType MTestType::GenerateImpl(
     moriarty::librarian::ResolverContext ctx) const {
   if (one_of_.HasBeenConstrained())
     return one_of_.SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
-
-  int x = 0;
+  [[maybe_unused]] int x = 0;
   if (ctx.RandomInteger(2) == 0) x++;  // Just to use the random engine.
 
-  int last_digit = last_digit_ ? last_digit_.Generate(ctx) : 9;
-  int num_digits =
-      num_digits_
-          ? MInteger(num_digits_).AddConstraint(Between(1, 9)).Generate(ctx)
-          : 9;
-
+  int last_digit =
+      last_digit_ ? last_digit_->Generate(ctx.ForSubVariable("last_digit")) : 9;
+  int num_digits = num_digits_ ? moriarty::MInteger(*num_digits_)
+                                     .AddConstraint(moriarty::Between(1, 9))
+                                     .Generate(ctx.ForSubVariable("num_digits"))
+                               : ctx.RandomInteger(1, 9);
   int result = 123456780 + last_digit;
-  string s = std::to_string(result);
+  std::string s = std::to_string(result);
   while (s.size() > num_digits) s = s.substr(1);
   return TestType(std::stoll(s));
 }

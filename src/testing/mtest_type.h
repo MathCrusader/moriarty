@@ -22,7 +22,6 @@
 
 #include <optional>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "src/contexts/librarian/analysis_context.h"
@@ -35,6 +34,10 @@
 #include "src/variables/minteger.h"
 
 namespace moriarty_testing {
+
+// This file contains a fake data type and a fake Moriarty variable. They aren't
+// meant to have interesting behaviours, just enough functionality that tests
+// can use them.
 
 // TestType [for internal tests only]
 //
@@ -56,15 +59,16 @@ class LastDigit : public moriarty::MConstraint {
   explicit LastDigit(moriarty::MInteger digit) : digit_(std::move(digit)) {}
   moriarty::MInteger GetDigit() const { return digit_; }
   std::string ToString() const {
-    return std::format("the last digit {}",
-                       moriarty::librarian::DebugString(num_digits_));
+    return std::format("the last digit {}", digit_.ToString());
   }
-  bool IsSatisfiedWith(const T& value) const {
-    return digit_.IsSatisfiedWith(value.value % 10);
+  bool IsSatisfiedWith(moriarty::librarian::AnalysisContext ctx,
+                       const TestType& value) const {
+    return digit_.IsSatisfiedWith(ctx, value.value % 10);
   }
-  std::string UnsatisfiedReason(const T& value) const {
+  std::string UnsatisfiedReason(moriarty::librarian::AnalysisContext ctx,
+                                const TestType& value) const {
     return std::format("the last digit of {} {}", value.value,
-                       moriarty::librarian::DebugString(digit_));
+                       digit_.UnsatisfiedReason(ctx, value.value));
   }
   std::vector<std::string> GetDependencies() const {
     return digit_.GetDependencies();
@@ -80,19 +84,20 @@ class NumberOfDigits : public moriarty::MConstraint {
       : num_digits_(num_digits) {}
   moriarty::MInteger GetDigit() const { return num_digits_; }
   std::string ToString() const {
-    return std::format("the number of digits {}",
-                       moriarty::librarian::DebugString(num_digits_));
+    return std::format("the number of digits {}", num_digits_.ToString());
   }
 
-  bool IsSatisfiedWith(const T& value) const {
-    return digit_.IsSatisfiedWith(std::to_string(value.value).size());
+  bool IsSatisfiedWith(moriarty::librarian::AnalysisContext ctx,
+                       const TestType& value) const {
+    return num_digits_.IsSatisfiedWith(ctx, std::to_string(value.value).size());
   }
-  std::string UnsatisfiedReason(const T& value) const {
+  std::string UnsatisfiedReason(moriarty::librarian::AnalysisContext ctx,
+                                const TestType& value) const {
     return std::format("the number of digits in {} {}", value.value,
-                       moriarty::librarian::DebugString(digit_));
+                       num_digits_.UnsatisfiedReason(ctx, value.value));
   }
   std::vector<std::string> GetDependencies() const {
-    return digit_.GetDependencies();
+    return num_digits_.GetDependencies();
   }
 
  private:
@@ -114,7 +119,12 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   static constexpr int64_t kCorner1 = 99991;
   static constexpr int64_t kCorner2 = 99992;
 
+  ~MTestType() override = default;
+
   template <typename... Constraints>
+    requires(
+        std::derived_from<std::decay_t<Constraints>, moriarty::MConstraint> &&
+        ...)
   MTestType(Constraints&&... constraints) {
     (AddConstraint(std::forward<Constraints>(constraints)), ...);
   }

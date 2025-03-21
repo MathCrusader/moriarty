@@ -58,6 +58,8 @@ class MString : public librarian::MVariable<MString, std::string> {
     requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
   explicit MString(Constraints&&... constraints);
 
+  ~MString() override = default;
+
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values
 

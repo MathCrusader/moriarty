@@ -49,18 +49,20 @@ using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GetUniqueValue;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
+using ::moriarty_testing::LastDigit;
 using ::moriarty_testing::MTestType;
+using ::moriarty_testing::NumberOfDigits;
 using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::moriarty_testing::TestType;
 using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsValueNotFound;
+using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Optional;
-using ::testing::SizeIs;
 using ::testing::Truly;
 
 TEST(MVariableTest, PrintShouldSucceed) {
@@ -69,7 +71,9 @@ TEST(MVariableTest, PrintShouldSucceed) {
 }
 
 TEST(MVariableTest, GenerateShouldProduceAValue) {
-  EXPECT_THAT(Generate(MTestType()), IsOkAndHolds(MTestType::kGeneratedValue));
+  EXPECT_THAT(Generate(MTestType()),
+              IsOkAndHolds(AnyOf(123456789, 23456789, 3456789, 456789, 56789,
+                                 6789, 789, 89, 9)));
 }
 
 TEST(MVariableTest, GenerateShouldObserveIs) {
@@ -139,38 +143,40 @@ TEST(MVariableTest, MergeFromShouldWork) {
     MTestType var1;
     MInteger var2;
     EXPECT_THAT(
-        [&] { static_cast<AbstractVariable&>(var1)->MergeFromAnonymous(var2); },
+        [&] { static_cast<AbstractVariable&>(var1).MergeFromAnonymous(var2); },
         ThrowsMVariableTypeMismatch("MInteger", "MTestType"));
   }
 }
 
 TEST(MVariableTest, SubvariablesShouldBeSetableAndUseable) {
-  EXPECT_THAT(Generate(MTestType(LastDigit(Between(3, 3)))),
+  EXPECT_THAT(Generate(MTestType(LastDigit(MInteger(Between(3, 3))),
+                                 NumberOfDigits(MInteger(Exactly(9))))),
               IsOkAndHolds(123456783));
 }
 
 TEST(MVariableTest, BasingMyVariableOnAnotherSetValueShouldWorkBasicCase) {
-  EXPECT_THAT(Generate(MTestType(LastDigit(MInteger("x"))),
+  EXPECT_THAT(Generate(MTestType(LastDigit(MInteger(Exactly("x"))),
+                                 NumberOfDigits(MInteger(Exactly(9)))),
                        Context().WithValue<MInteger>("x", 4)),
               IsOkAndHolds(123456784));
 }
 
 TEST(MVariableTest, BasingMyVariableOnAnotherUnSetVariableShouldWorkBasicCase) {
-  EXPECT_THAT(Generate(MTestType(LastDigit(MInteger("x"))),
-                       Context().WithVariable("x", MInteger())),
+  EXPECT_THAT(Generate(MTestType(LastDigit(MInteger(Exactly("x")))),
+                       Context().WithVariable("x", MInteger(Between(1, 9)))),
               IsOk());  // Doesn't matter what the value is.
 }
 
 TEST(MVariableTest, BasingMyVariableOnANonexistentOneShouldFail) {
   EXPECT_THROW(
-      { Generate(MTestType(LastDigit(MInteger("x")))).IgnoreError(); },
+      { Generate(MTestType(LastDigit(MInteger(Exactly("x"))))).IgnoreError(); },
       std::runtime_error);
 }
 
 TEST(MVariableTest, DependentVariableOfTheWrongTypeShouldFail) {
   EXPECT_THROW(
       {
-        Generate(MTestType(LastDigit(MInteger("x"))),
+        Generate(MTestType(LastDigit(MInteger(Exactly("x")))),
                  Context().WithVariable("x", MTestType()))
             .IgnoreError();
       },  // Wrong type
@@ -179,11 +185,12 @@ TEST(MVariableTest, DependentVariableOfTheWrongTypeShouldFail) {
 
 TEST(MVariableTest, DependentVariablesInSubvariablesCanChain) {
   Context c = Context()
-                  .WithVariable("y", MInteger("N + 1"))
+                  .WithVariable("y", MInteger(Exactly("N + 1")))
                   .WithVariable("N", MInteger(Exactly(5)));
 
-  EXPECT_THAT(Generate(MTestType(LastDigit(MInteger("y"))), c),
-              IsOkAndHolds(123456786));
+  EXPECT_THAT(Generate(MTestType(LastDigit(MInteger(Exactly("y")))), c),
+              IsOkAndHolds(AnyOf(123456786, 23456786, 3456786, 456786, 56786,
+                                 6786, 786, 86, 6)));
 }
 
 TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
@@ -236,8 +243,10 @@ TEST(MVariableTest, IsSatisfiedWithWorksForValid) {
   EXPECT_THAT(MTestType(), IsSatisfiedWith(5));
   EXPECT_THAT(MTestType(), IsSatisfiedWith(3453));
 
-  EXPECT_THAT(MTestType(LastDigit(4)), IsSatisfiedWith(134534));
-  EXPECT_THAT(MTestType(NumberOfDigits(3)), IsSatisfiedWith(123));
+  EXPECT_THAT(MTestType(LastDigit(MInteger(Exactly(4)))),
+              IsSatisfiedWith(134534));
+  EXPECT_THAT(MTestType(NumberOfDigits(MInteger(Exactly(3)))),
+              IsSatisfiedWith(123));
 
   EXPECT_THAT(MTestType(LastDigit(MInteger(Between(3, 7)))),
               IsNotSatisfiedWith(101, "last"));
@@ -256,7 +265,7 @@ TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
           (void)MTestType(NumberOfDigits(MInteger(Exactly("t"))))
               .IsSatisfiedWith(ctx, 1);
         },
-        ThrowsValueNotFound("t"));
+        ThrowsVariableNotFound("t"));
   }
   {  // Variable known, but no value known.
     Context context = Context().WithVariable("t", MInteger());

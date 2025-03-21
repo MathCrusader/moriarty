@@ -57,6 +57,8 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
     requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
   explicit MInteger(Constraints&&... constraints);
 
+  ~MInteger() override = default;
+
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values
 
