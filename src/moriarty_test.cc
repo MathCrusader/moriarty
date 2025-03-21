@@ -402,44 +402,6 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
               ThrowsValueNotFound("q"));
 }
 
-// TEST(MoriartyTest, ApproximateGenerationLimitStopsGenerationEarly) {
-//   Moriarty M;
-//   M.SetSeed("abcde0123456789");
-//   M.AddGenerator("Generator", TwoIntegerGenerator(1, 11), 50);
-
-//   // Each run of the generator creates 2 test cases, and each test case has 2
-//   // integers (thus, size of 4 per test case). On the 8th call to the
-//   generator,
-//   // we go from size 28 to size 32. Since 32 >= 30, we stop!
-//   M.SetApproximateGenerationLimit(30);
-//   M.GenerateTestCases();
-
-//   std::vector<std::pair<int64_t, int64_t>> result;
-//   M.ExportTestCases(
-//       [&result](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
-//         result = ExportTwoIntegersToVector(ctx, "R", "S", cases);
-//       });
-//   EXPECT_THAT(result, SizeIs(16));
-// }
-
-// TEST(MoriartyTest, ApproximateGenerationLimitTruncatesTheSizeOfArrays) {
-//   Moriarty M;
-//   M.SetSeed("abcde0123456789");
-//   M.AddGenerator("Generator", SingleStringGenerator(), 100);
-
-//   // This limits the total size of strings/arrays to be 30.
-//   M.SetApproximateGenerationLimit(30);
-//   M.GenerateTestCases();
-
-//   std::vector<std::string> result;
-//   M.ExportTestCases(
-//       [&result](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
-//         result = ExportSingleStringToVector(ctx, "str", cases);
-//       });
-
-//   EXPECT_THAT(result, Each(SizeIs(Le(30))));
-// }
-
 TEST(MoriartyTest, VariableNameValidationShouldWork) {
   Moriarty().AddVariable("good", MInteger());
   Moriarty().AddVariable("a1_b", MInteger());

@@ -64,7 +64,6 @@ using GenerateFn = std::function<std::vector<TestCase>(GenerateContext)>;
 
 // Possible future additions:
 //  - Make some generations non-fatal (aka, if they fail, it's okay)
-//  - Soft generation limit
 //  - GenerateUntil (aka, we'll keep generating until g(x) is true)
 struct GenerateOptions {
   // The descriptive name of this generator.

@@ -17,7 +17,6 @@
 
 #include <format>
 #include <functional>
-#include <optional>
 #include <queue>
 #include <ranges>
 #include <stdexcept>
@@ -44,13 +43,6 @@ namespace {
 using DependencyMap = std::unordered_map<std::string, std::vector<std::string>>;
 using Heap = std::priority_queue<std::string, std::vector<std::string>,
                                  std::greater<std::string>>;
-
-GenerationConfig CreateGenerationConfig(const GenerationOptions& options) {
-  GenerationConfig generation_config;
-  if (options.soft_generation_limit)
-    generation_config.SetSoftGenerationLimit(*options.soft_generation_limit);
-  return generation_config;
-}
 
 DependencyMap CreateDependencyMap(const VariableSet& variables) {
   DependencyMap deps;
@@ -112,7 +104,7 @@ ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
 
 ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
                            const GenerationOptions& options) {
-  GenerationConfig generation_config = CreateGenerationConfig(options);
+  GenerationConfig generation_config;
   std::vector<std::string> order = GetGenerationOrder(variables);
 
   // First do a quick assignment of all known values. We process these in

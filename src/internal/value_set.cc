@@ -15,8 +15,6 @@
 #include "src/internal/value_set.h"
 
 #include <any>
-#include <cstdint>
-#include <string>
 #include <string_view>
 #include <utility>
 
@@ -33,28 +31,18 @@ bool ValueSet::Contains(std::string_view variable_name) const {
 void ValueSet::Erase(std::string_view variable_name) {
   auto it = values_.find(variable_name);
   if (it == values_.end()) return;
-
-  // TODO(darcybest): If we need a better approximation, we should store the
-  // size of the objects as they are `Set` and subtract the proper size rather
-  // than just 1.
-  approximate_size_--;
   values_.erase(it);
 }
 
 // FIXME: Add tests
 void ValueSet::UnsafeSet(std::string_view variable_name, std::any value) {
-  auto [it, inserted] = values_.emplace(variable_name, std::move(value));
-  if (inserted) approximate_size_++;
+  values_.emplace(variable_name, std::move(value));
 }
 
 std::any ValueSet::UnsafeGet(std::string_view variable_name) const {
   auto it = values_.find(variable_name);
   if (it == values_.end()) throw ValueNotFound(variable_name);
   return it->second;
-}
-
-int64_t ValueSet::ApproximateSize(const std::string& value) const {
-  return value.size();
 }
 
 }  // namespace moriarty_internal

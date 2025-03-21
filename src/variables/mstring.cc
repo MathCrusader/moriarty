@@ -16,7 +16,6 @@
 #include "src/variables/mstring.h"
 
 #include <algorithm>
-#include <cstdint>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -121,9 +120,6 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
 
   // Negative string length is impossible.
   length_local.AddConstraint(AtLeast(0));
-
-  std::optional<int64_t> generation_limit = ctx.GetSoftGenerationLimit();
-  if (generation_limit) length_local.AddConstraint(AtMost(*generation_limit));
 
   if (distinct_characters_) return GenerateImplWithDistinctCharacters(ctx);
 

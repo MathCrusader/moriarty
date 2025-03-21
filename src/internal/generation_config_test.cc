@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,23 +15,21 @@
 
 #include "src/internal/generation_config.h"
 
-#include <optional>
 #include <string>
 #include <vector>
 
+#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/status/status.h"
 #include "src/util/test_status_macro/status_testutil.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
-using ::testing::HasSubstr;
-using ::testing::Optional;
-using ::testing::PrintToString;
 using ::moriarty::StatusIs;
+using ::testing::HasSubstr;
+using ::testing::PrintToString;
 
 MATCHER(IsRetry, "recommends to retry generation") {
   if (!arg.ok()) {
@@ -355,18 +354,6 @@ TEST(GenerationConfigTest, GenerationAttemptsWithoutCallingStartFails) {
               StatusIs(absl::StatusCode::kInvalidArgument));
   EXPECT_THAT(g.MarkSuccessfulGeneration("x"),
               StatusIs(absl::StatusCode::kInvalidArgument));
-}
-
-TEST(GenerationConfigTest, SoftGenerationLimitIsNulloptByDefault) {
-  EXPECT_EQ(GenerationConfig().GetSoftGenerationLimit(), std::nullopt);
-}
-
-TEST(GenerationConfigTest, SoftGenerationLimitIsUpdatedAppropriately) {
-  GenerationConfig g;
-
-  g.SetSoftGenerationLimit(123456);
-
-  EXPECT_THAT(g.GetSoftGenerationLimit(), Optional(123456));
 }
 
 TEST(GenerationConfigTest,

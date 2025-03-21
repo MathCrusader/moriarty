@@ -20,7 +20,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/testing/gtest_helpers.h"
-#include "src/variables/marray.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"
 
@@ -110,39 +109,6 @@ TEST(ValueSetTest, ContainsShouldWork) {
   EXPECT_TRUE(values.Contains("x"));
 
   EXPECT_FALSE(values.Contains("y"));
-}
-
-TEST(ValueSetTest, GetApproximateSizeWorksForIntegers) {
-  ValueSet values;
-  values.Set<MInteger>("x", 5);
-  EXPECT_EQ(values.GetApproximateSize(), 1);
-  values.Set<MInteger>("y", 10);
-  EXPECT_EQ(values.GetApproximateSize(), 2);
-}
-
-TEST(ValueSetTest, GetApproximateSizeWorksForStrings) {
-  ValueSet values;
-  values.Set<MString>("x", "hello");
-  EXPECT_EQ(values.GetApproximateSize(), 5);
-  values.Set<MString>("y", "world!");
-  EXPECT_EQ(values.GetApproximateSize(), 11);
-}
-
-TEST(ValueSetTest, GetApproximateSizeWorksForVectors) {
-  ValueSet values;
-  values.Set<MArray<MInteger>>("x", {1, 2, 3});
-  EXPECT_EQ(values.GetApproximateSize(), 3);
-  values.Set<MArray<MInteger>>("y", {4, 5, 6, 7});
-  EXPECT_EQ(values.GetApproximateSize(), 7);
-}
-
-TEST(ValueSetTest, GetApproximateSizeWorksForNestedVectorsAndMixedTypes) {
-  ValueSet values;
-  values.Set<MArray<MArray<MString>>>(
-      "x", {{"hello", "world"}, {"how", "are", "you?"}});
-  EXPECT_EQ(values.GetApproximateSize(), 5 + 5 + 3 + 3 + 4);
-  values.Set<MInteger>("y", 10);
-  EXPECT_EQ(values.GetApproximateSize(), 5 + 5 + 3 + 3 + 4 + 1);
 }
 
 TEST(ValueSetTest, EraseRemovesTheValueFromTheSet) {

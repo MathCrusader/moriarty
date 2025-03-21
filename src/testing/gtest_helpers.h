@@ -380,9 +380,8 @@ absl::StatusOr<typename T::value_type> Generate(T variable, Context context) {
   moriarty::moriarty_internal::GenerationConfig generation_config;
 
   moriarty::moriarty_internal::ValueSet values =
-      moriarty::moriarty_internal::GenerateAllValues(
-          context.Variables(), context.Values(),
-          {rng, /* soft_generation_limit = */ std::nullopt});
+      moriarty::moriarty_internal::GenerateAllValues(context.Variables(),
+                                                     context.Values(), {rng});
 
   return values.Get<T>(var_name);
 }

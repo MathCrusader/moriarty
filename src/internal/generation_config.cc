@@ -14,7 +14,6 @@
 
 #include "src/internal/generation_config.h"
 
-#include <cstdint>
 #include <iterator>
 #include <optional>
 #include <stack>
@@ -175,14 +174,6 @@ absl::Status GenerationConfig::GetGenerationStatus(
   }
 
   return *status;
-}
-
-void GenerationConfig::SetSoftGenerationLimit(int64_t limit) {
-  soft_generation_limit_ = limit;
-}
-
-std::optional<int64_t> GenerationConfig::GetSoftGenerationLimit() const {
-  return soft_generation_limit_;
 }
 
 }  // namespace moriarty_internal

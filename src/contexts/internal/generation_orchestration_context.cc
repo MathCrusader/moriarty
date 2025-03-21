@@ -1,7 +1,6 @@
 #include "src/contexts/internal/generation_orchestration_context.h"
 
 #include <functional>
-#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -43,11 +42,6 @@ GenerationOrchestrationContext::AddGenerationFailure(
   if (!recommendation.ok())
     throw std::runtime_error(std::string(recommendation.status().message()));
   return *recommendation;
-}
-
-std::optional<int64_t> GenerationOrchestrationContext::GetSoftGenerationLimit()
-    const {
-  return config_.get().GetSoftGenerationLimit();
 }
 
 }  // namespace moriarty_internal

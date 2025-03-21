@@ -110,27 +110,6 @@ class GenerationConfig {
   // `MarkStartGeneration(variable_name)` must have been called previously.
   absl::Status GetGenerationStatus(std::string_view variable_name);
 
-  // SetSoftGenerationLimit()
-  //
-  // The soft generation limit is the approximate upper bound on the total size
-  // of all objects generated. No type in Moriarty is required to adhere to this
-  // constraint. This limit is approximately weighted by the following basic
-  // heuristics:
-  //
-  // * The size of an array is the sum of the GenSizes of the elements.
-  // * The size of a string is the length of the string.
-  // * All others are of size 1.
-  //
-  // The exact values used here should not be depended on, they may change at
-  // any point.
-  void SetSoftGenerationLimit(int64_t limit);
-
-  // GetSoftGenerationLimit()
-  //
-  // Returns the soft generation limit. See SetSoftGenerationLimit for info.
-  // If there is no soft limit, returns `std::nullopt`.
-  std::optional<int64_t> GetSoftGenerationLimit() const;
-
  private:
   int64_t total_generate_calls_ = 0;
 
@@ -157,8 +136,6 @@ class GenerationConfig {
     int generated_variables_size_before_generation;
   };
   absl::flat_hash_map<std::string, GenerationInfo> generation_info_;
-
-  std::optional<int64_t> soft_generation_limit_;
 };
 
 }  // namespace moriarty_internal

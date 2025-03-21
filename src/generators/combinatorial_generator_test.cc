@@ -76,7 +76,7 @@ TEST(CombinatorialCoverage, GenerateShouldCreateCasesFromCoveringArray) {
   std::vector<ValueSet> generated_cases;
   for (const TestCase& test_case : test_cases) {
     generated_cases.push_back(
-        GenerateTestCase(test_case, context.Variables(), {rng, std::nullopt}));
+        GenerateTestCase(test_case, context.Variables(), {rng}));
   }
 
   EXPECT_THAT(CasesToCoveringArray(generated_cases),

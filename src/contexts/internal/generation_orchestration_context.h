@@ -18,7 +18,6 @@
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_GENERATION_ORCHESTRATION_CONTEXT_H_
 
 #include <functional>
-#include <optional>
 #include <string_view>
 
 #include "src/internal/generation_config.h"
@@ -67,21 +66,6 @@ class GenerationOrchestrationContext {
   // started must have already finished as well.
   [[nodiscard]] GenerationConfig::RetryRecommendation AddGenerationFailure(
       std::string_view variable_name);
-
-  // GetSoftGenerationLimit()
-  //
-  // The soft generation limit is the approximate upper bound on the total size
-  // of all objects generated. No type in Moriarty is required to adhere to this
-  // constraint. This limit is approximately weighted by the following basic
-  // heuristics:
-  //
-  // * The size of an array is the sum of the GenSizes of the elements.
-  // * The size of a string is the length of the string.
-  // * All others are of size 1.
-  //
-  // The exact values used here should not be depended on, they may change at
-  // any point.
-  std::optional<int64_t> GetSoftGenerationLimit() const;
 
  private:
   std::reference_wrapper<GenerationConfig> config_;

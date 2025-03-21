@@ -272,9 +272,6 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
   // Ensure that the size is non-negative.
   length_local.AddConstraint(AtLeast(0));
 
-  std::optional<int64_t> generation_limit = ctx.GetSoftGenerationLimit();
-  if (generation_limit) length_local.AddConstraint(AtMost(*generation_limit));
-
   int length = length_local.Generate(ctx.ForSubVariable("length"));
 
   if (distinct_elements_) return GenerateNDistinctImpl(ctx, length);

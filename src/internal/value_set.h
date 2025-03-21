@@ -20,11 +20,9 @@
 
 #include <any>
 #include <concepts>
-#include <cstdint>
 #include <string>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include "absl/container/flat_hash_map.h"
 #include "src/errors.h"
@@ -90,32 +88,8 @@ class ValueSet {
   // `variable_name` is non-existent, this is a no-op.
   void Erase(std::string_view variable_name);
 
-  // GetApproximateSize()
-  //
-  // The "size" of a value set is a rough approximation of how large the whole
-  // object is. In general, it is the number of integers, characters, etc. This
-  // only behaves as expected for primitive types. All other types have a "size"
-  // of 1. This may change in the future. Calling `Set()` on a variable multiple
-  // times will affect the size multiple times, which is probably not intended.
-  //
-  // TODO(darcybest): Currently, this only handles array and string separately.
-  // In the future, we may want to consider each MVariable type to have its own
-  // `ApproximateSize()`. I don't want to put this directly into MVariable yet
-  // since we are not sure if this is a long term solution.
-  [[nodiscard]] int64_t GetApproximateSize() const { return approximate_size_; }
-
  private:
   absl::flat_hash_map<std::string, std::any> values_;
-
-  int64_t approximate_size_ = 0;
-
-  template <typename T>
-  int64_t ApproximateSize(const T& value) const;
-
-  template <typename T>
-  int64_t ApproximateSize(const std::vector<T>& values) const;
-
-  int64_t ApproximateSize(const std::string& value) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -135,24 +109,10 @@ T::value_type ValueSet::Get(std::string_view variable_name) const {
 
   return *val;
 }
-
 template <typename T>
   requires std::derived_from<T, AbstractVariable>
 void ValueSet::Set(std::string_view variable_name, T::value_type value) {
-  approximate_size_ += ApproximateSize(value);
   values_[variable_name] = std::move(value);
-}
-
-template <typename T>
-int64_t ValueSet::ApproximateSize(const T& value) const {
-  return 1;
-}
-
-template <typename T>
-int64_t ValueSet::ApproximateSize(const std::vector<T>& values) const {
-  int64_t size = 0;
-  for (const T& x : values) size += ApproximateSize(x);
-  return size;
 }
 
 }  // namespace moriarty_internal

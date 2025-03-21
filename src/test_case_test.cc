@@ -15,7 +15,6 @@
 
 #include "src/test_case.h"
 
-#include <optional>
 #include <string>
 #include <string_view>
 #include <tuple>
@@ -59,7 +58,7 @@ T::value_type GetValue(const TestCase& test_case, std::string_view name) {
 ValueSet AssignAllValues(const TestCase& test_case) {
   auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
   RandomEngine rng({1, 2, 3}, "v0.1");
-  return GenerateAllValues(variables, values, {rng, std::nullopt});
+  return GenerateAllValues(variables, values, {rng});
 }
 
 TEST(TestCaseTest, ConstrainVariableAndGetVariableWorkInGeneralCase) {

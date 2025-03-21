@@ -18,9 +18,6 @@
 #ifndef MORIARTY_SRC_INTERNAL_GENERATION_BOOTSTRAP_H_
 #define MORIARTY_SRC_INTERNAL_GENERATION_BOOTSTRAP_H_
 
-#include <cstdint>
-#include <optional>
-
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -31,7 +28,6 @@ namespace moriarty_internal {
 
 struct GenerationOptions {
   RandomEngine& random_engine;
-  std::optional<int64_t> soft_generation_limit;
 };
 
 // GenerateTestCase()

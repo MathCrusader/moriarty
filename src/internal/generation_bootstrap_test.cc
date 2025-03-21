@@ -16,7 +16,6 @@
 #include "src/internal/generation_bootstrap.h"
 
 #include <cstdint>
-#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -29,10 +28,8 @@
 #include "src/internal/variable_set.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/base_constraints.h"
-#include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/minteger.h"
-#include "src/variables/mstring.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -46,17 +43,8 @@ using ::testing::Eq;
 using ::testing::Ge;
 using ::testing::HasSubstr;
 using ::testing::Le;
-using ::testing::Property;
 using ::testing::SizeIs;
 using ::testing::ThrowsMessage;
-
-TEST(GenerationBootstrapTest,
-     GenerateAllValuesWithNoVariablesOrKnownValuesGeneratesNoValues) {
-  RandomEngine rng({1, 2, 3}, "");
-
-  EXPECT_THAT(GenerateAllValues(VariableSet(), ValueSet(), {rng, std::nullopt}),
-              Property(&ValueSet::GetApproximateSize, 0));
-}
 
 TEST(GenerationBootstrapTest,
      GenerateAllValuesWithNoVariablesButSomeKnownValuesSucceeds) {
@@ -65,8 +53,7 @@ TEST(GenerationBootstrapTest,
   known_values.Set<MInteger>("A", 5);
   known_values.Set<MInteger>("B", 10);
 
-  ValueSet values =
-      GenerateAllValues(VariableSet(), known_values, {rng, std::nullopt});
+  ValueSet values = GenerateAllValues(VariableSet(), known_values, {rng});
 
   EXPECT_EQ(values.Get<MInteger>("A"), 5);
   EXPECT_EQ(values.Get<MInteger>("B"), 10);
@@ -80,8 +67,8 @@ TEST(
                         .WithVariable("A", MInteger(Between(123, 456)))
                         .WithValue<MInteger>("B", 10);
 
-  ValueSet values = GenerateAllValues(context.Variables(), context.Values(),
-                                      {rng, std::nullopt});
+  ValueSet values =
+      GenerateAllValues(context.Variables(), context.Values(), {rng});
 
   EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(123), Le(456)));
   EXPECT_EQ(values.Get<MInteger>("B"), 10);
@@ -94,8 +81,7 @@ TEST(GenerationBootstrapTest, GenerateAllValuesGivesValuesToVariables) {
                         .WithVariable("A", MInteger(Between(123, 456)))
                         .WithVariable("B", MInteger(Between(777, 888)));
 
-  ValueSet values =
-      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
+  ValueSet values = GenerateAllValues(context.Variables(), ValueSet(), {rng});
 
   EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(123), Le(456)));
   EXPECT_THAT(values.Get<MInteger>("B"), AllOf(Ge(777), Le(888)));
@@ -107,8 +93,8 @@ TEST(GenerationBootstrapTest, GenerateAllValuesRespectsKnownValues) {
                         .WithVariable("A", MInteger(Between(123, 456)))
                         .WithValue<MInteger>("A", 314);
 
-  ValueSet values = GenerateAllValues(context.Variables(), context.Values(),
-                                      {rng, std::nullopt});
+  ValueSet values =
+      GenerateAllValues(context.Variables(), context.Values(), {rng});
 
   EXPECT_EQ(values.Get<MInteger>("A"), 314);
 }
@@ -119,8 +105,7 @@ TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentVariablesSucceeds) {
                         .WithVariable("A", MInteger(Between("N", "3 * N")))
                         .WithVariable("N", MInteger(Between(50, 100)));
 
-  ValueSet values =
-      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
+  ValueSet values = GenerateAllValues(context.Variables(), ValueSet(), {rng});
 
   EXPECT_THAT(values.Get<MInteger>("N"), AllOf(Ge(50), Le(100)));
   int64_t N = values.Get<MInteger>("N");
@@ -135,8 +120,8 @@ TEST(GenerationBootstrapTest, GenerateAllValuesWithDependentValuesSucceeds) {
                         .WithVariable("B", MInteger(Exactly("2 * C")))
                         .WithValue<MInteger>("N", 53);
 
-  ValueSet values = GenerateAllValues(context.Variables(), context.Values(),
-                                      {rng, std::nullopt});
+  ValueSet values =
+      GenerateAllValues(context.Variables(), context.Values(), {rng});
 
   EXPECT_THAT(values.Get<MInteger>("A"), AllOf(Ge(53), Le(3 * 53)));
   EXPECT_EQ(values.Get<MInteger>("C"), 53);
@@ -150,9 +135,7 @@ TEST(GenerationBootstrapTest,
       Context().WithVariable("A", MInteger(Between("N", "3 * N")));
 
   EXPECT_THAT(
-      [&] {
-        GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
-      },
+      [&] { GenerateAllValues(context.Variables(), ValueSet(), {rng}); },
       ThrowsMessage<std::runtime_error>(HasSubstr("unknown")));
 }
 
@@ -162,27 +145,10 @@ TEST(GenerationBootstrapTest, GenerateAllValuesShouldRespectIsAndIsOneOf) {
                         .WithVariable("A", MInteger(Exactly(15)))
                         .WithVariable("B", MInteger(OneOf({111, 222, 333})));
 
-  ValueSet values =
-      GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
+  ValueSet values = GenerateAllValues(context.Variables(), ValueSet(), {rng});
 
   EXPECT_THAT(values.Get<MInteger>("A"), 15);
   EXPECT_THAT(values.Get<MInteger>("B"), AnyOf(111, 222, 333));
-}
-
-TEST(GenerationBootstrapTest,
-     GenerateAllValuesWithSoftGenerationLimitStopsEarly) {
-  RandomEngine rng({1, 2, 3}, "");
-  Context context = Context().WithVariable(
-      "S", MString(Alphabet("abc"), Length(Between(50, 10000))));
-
-  // S could generate a string with a really long length. However, the soft
-  // generation limit of 100 should stop a large string being generated.
-  int generation_limit = 100;
-
-  ValueSet values = GenerateAllValues(context.Variables(), ValueSet(),
-                                      {rng, generation_limit});
-
-  EXPECT_THAT(values.Get<MString>("S"), SizeIs(AllOf(Ge(50), Le(100))));
 }
 
 TEST(GenerationBootstrapTest,
@@ -193,10 +159,7 @@ TEST(GenerationBootstrapTest,
                         .WithValue<MInteger>("A", 0);
 
   EXPECT_THAT(
-      [&] {
-        GenerateAllValues(context.Variables(), context.Values(),
-                          {rng, std::nullopt});
-      },
+      [&] { GenerateAllValues(context.Variables(), context.Values(), {rng}); },
       ThrowsMessage<std::runtime_error>(HasSubstr("A")));
 }
 
@@ -218,8 +181,7 @@ TEST(GenerationBootstrapTest,
       context.WithVariable(name, named_variables[name]);
     }
 
-    ValueSet values =
-        GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
+    ValueSet values = GenerateAllValues(context.Variables(), ValueSet(), {rng});
     results.push_back({
         values.Get<MInteger>("A"),
         values.Get<MInteger>("B"),
@@ -252,8 +214,7 @@ TEST(GenerationBootstrapTest,
       context.WithVariable(name, named_variables[name]);
     }
 
-    ValueSet values =
-        GenerateAllValues(context.Variables(), ValueSet(), {rng, std::nullopt});
+    ValueSet values = GenerateAllValues(context.Variables(), ValueSet(), {rng});
 
     results.push_back({
         values.Get<MInteger>("A"),
