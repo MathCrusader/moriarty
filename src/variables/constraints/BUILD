@@ -111,7 +111,7 @@ cc_test(
     deps = [
         ":container_constraints",
         ":numeric_constraints",
-        "//src/librarian:test_utils",
+        "//src/testing:gtest_helpers",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
         "//src/variables:mstring",

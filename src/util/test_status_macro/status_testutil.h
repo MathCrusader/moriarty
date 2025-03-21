@@ -46,13 +46,26 @@
 #include <type_traits>
 #include <utility>
 
+#include "absl/status/status.h"
+#include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/status/status.h"
-#include "src/testing/status_test_util.h"
 #include "src/util/status_macro/status_macros.h"
 
+namespace moriarty_testing::moriarty_testing_internal {
+// Convenience functions to extract status from either absl::Status or
+// absl::StatusOr<>. Use this inside of MATCHER if you want to accept either
+// `absl::Status` or `absl::StatusOr`.
+inline absl::Status GetStatus(const absl::Status& status) { return status; }
+
+template <typename T>
+inline absl::Status GetStatus(const absl::StatusOr<T>& status_or) {
+  return status_or.status();
+}
+}  // namespace moriarty_testing::moriarty_testing_internal
+
 namespace moriarty {
+
 namespace moriarty_status {
 
 // Monomorphic implementation of matcher IsOkAndHolds(m).

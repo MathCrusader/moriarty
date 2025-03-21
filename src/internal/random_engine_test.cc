@@ -69,15 +69,14 @@ TEST(RandomEngineTest, RandomShouldProduceReproducibleResults) {
   EXPECT_EQ(hash, 6899628773667041596LL);
 }
 
-TEST(RandomEngineTest,
-     RandIntWithOneArgumentWithNonpositiveShouldThrowStatusError) {
+TEST(RandomEngineTest, RandIntWithOneArgumentWithNonpositiveShouldThrow) {
   RandomEngine random({}, "v0.1");
 
   EXPECT_THAT([&] { random.RandInt(0); }, Throws<std::invalid_argument>());
   EXPECT_THAT([&] { random.RandInt(-3); }, Throws<std::invalid_argument>());
 }
 
-TEST(RandomEngineTest, RandIntWithTwoInvalidArgumentsShouldThrowStatusError) {
+TEST(RandomEngineTest, RandIntWithTwoInvalidArgumentsShouldThrow) {
   RandomEngine random({}, "v0.1");
 
   EXPECT_THAT([&] { random.RandInt(0, -1); }, Throws<std::invalid_argument>());

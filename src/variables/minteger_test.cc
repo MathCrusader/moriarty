@@ -26,9 +26,7 @@
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/test_utils.h"
-#include "src/testing/status_test_util.h"
-#include "src/util/test_status_macro/status_testutil.h"
+#include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/constraints/size_constraints.h"
@@ -36,7 +34,6 @@
 namespace moriarty {
 namespace {
 
-using ::moriarty::IsOkAndHolds;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
@@ -97,11 +94,6 @@ TEST(MIntegerTest, InvalidReadShouldFail) {
   EXPECT_THROW({ (void)Read(MInteger(), "c123"); }, std::runtime_error);
   EXPECT_THROW({ (void)Read(MInteger(), "12c3"); }, std::runtime_error);
   EXPECT_THROW({ (void)Read(MInteger(), "123c"); }, std::runtime_error);
-}
-
-TEST(MIntegerTest, GenerateShouldSuccessfullyComplete) {
-  moriarty::MInteger variable;
-  MORIARTY_EXPECT_OK(Generate(variable));
 }
 
 TEST(MIntegerTest, ListEdgeCasesIncludesManyInterestingValues) {
@@ -326,9 +318,8 @@ TEST(MIntegerTest, AllOverloadsOfBetweenAreEffective) {
 }
 
 TEST(MIntegerTest, IsMIntegerExpressionShouldRestrictInput) {
-  EXPECT_THAT(Generate(MInteger(Exactly("3 * N + 1")),
-                       Context().WithValue<MInteger>("N", 10)),
-              IsOkAndHolds(31));
+  EXPECT_THAT(MInteger(Exactly("3 * N + 1")),
+              GeneratedValuesAre(31, Context().WithValue<MInteger>("N", 10)));
 }
 
 TEST(MIntegerTest, GetUniqueValueWorksWhenUniqueValueKnown) {

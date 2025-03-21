@@ -22,8 +22,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/mvariable.h"
-#include "src/librarian/test_utils.h"
-#include "src/util/test_status_macro/status_testutil.h"
+#include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/io_constraints.h"
@@ -34,7 +33,6 @@
 namespace moriarty {
 namespace {
 
-using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GenerateSameValues;
 using ::moriarty_testing::IsNotSatisfiedWith;
@@ -123,13 +121,6 @@ TEST(MTupleTest, SimpleGenerateCaseWorks) {
       GeneratedValuesAre(FieldsAre(
           AllOf(Ge(0), Le(9)),
           FieldsAre(AllOf(Ge(10), Le(99)), AllOf(Ge(100), Le(999))))));
-}
-
-TEST(MTupleTest, GenerateShouldSuccessfullyComplete) {
-  MORIARTY_EXPECT_OK(Generate(MTuple<MInteger>(MInteger())));
-  MORIARTY_EXPECT_OK(
-      Generate(MTuple<MInteger, MInteger, MTuple<MInteger, MInteger>,
-                      MTuple<MInteger>>()));
 }
 
 TEST(MTupleTest, MergeFromCorrectlyMergesEachArgument) {

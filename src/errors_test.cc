@@ -19,7 +19,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/testing/status_test_util.h"
+#include "src/testing/gtest_helpers.h"
 
 namespace moriarty {
 namespace {

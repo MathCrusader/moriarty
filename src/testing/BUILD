@@ -29,12 +29,8 @@ licenses(["notice"])
 cc_library(
     name = "mtest_type",
     testonly = True,
-    srcs = [
-        "mtest_type.cc",
-    ],
-    hdrs = [
-        "mtest_type.h",
-    ],
+    srcs = ["mtest_type.cc"],
+    hdrs = ["mtest_type.h"],
     deps = [
         "//src:errors",
         "//src/contexts/librarian:analysis_context",
@@ -44,24 +40,27 @@ cc_library(
         "//src/librarian:mvariable",
         "//src/util/status_macro:status_macros",
         "//src/variables:minteger",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
     ],
 )
 
 cc_library(
-    name = "status_test_util",
+    name = "gtest_helpers",
     testonly = True,
-    hdrs = [
-        "status_test_util.h",
-    ],
+    hdrs = ["gtest_helpers.h"],
     deps = [
         "//src:errors",
-        "@abseil-cpp//absl/status",
+        "//src/contexts/internal:mutable_values_context",
+        "//src/contexts/librarian:analysis_context",
+        "//src/contexts/librarian:printer_context",
+        "//src/contexts/librarian:reader_context",
+        "//src/internal:abstract_variable",
+        "//src/internal:generation_bootstrap",
+        "//src/internal:generation_config",
+        "//src/internal:random_engine",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
+        "//src/librarian:mvariable",
         "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "@googletest//:gtest",
     ],
 )

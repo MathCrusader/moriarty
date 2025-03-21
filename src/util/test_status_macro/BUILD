@@ -1,8 +1,11 @@
 # Test Macros used in Moriarty.
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+load("@rules_cc//cc:cc_test.bzl", "cc_test")
+
 package(
     default_visibility = [
-        "//visibility:public"
+        "//visibility:public",
     ],
 )
 
@@ -12,10 +15,10 @@ cc_library(
     srcs = ["status_testutil.cc"],
     hdrs = ["status_testutil.h"],
     deps = [
-        "@googletest//:gtest",
-        "@abseil-cpp//absl/status",
-        "//src/testing:status_test_util",
         "//src/util/status_macro:status_macros",
+        "@abseil-cpp//absl/status",
+        "@abseil-cpp//absl/status:statusor",
+        "@googletest//:gtest",
     ],
 )
 
@@ -26,8 +29,8 @@ cc_test(
     srcs = ["status_testutil_test.cc"],
     deps = [
         ":status_testutil",
-        "@googletest//:gtest_main",
         "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/status:statusor",
+        "@googletest//:gtest_main",
     ],
 )

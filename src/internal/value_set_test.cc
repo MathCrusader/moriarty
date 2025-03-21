@@ -19,7 +19,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/testing/status_test_util.h"
+#include "src/testing/gtest_helpers.h"
 #include "src/variables/marray.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"

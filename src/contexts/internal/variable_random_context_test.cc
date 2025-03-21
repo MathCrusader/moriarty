@@ -19,7 +19,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/random_engine.h"
-#include "src/librarian/test_utils.h"
+#include "src/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

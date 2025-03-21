@@ -38,27 +38,20 @@ cc_library(
         "//src/contexts/librarian:resolver_context",
         "//src/librarian:locked_optional",
         "//src/librarian:mvariable",
-        "//src/util/status_macro:status_macros",
         "//src/variables/constraints:base_constraints",
         "//src/variables/constraints:container_constraints",
         "//src/variables/constraints:io_constraints",
         "//src/variables/constraints:size_constraints",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
     ],
 )
 
 cc_library(
     name = "minteger",
-    srcs = [
-        "minteger.cc",
-    ],
-    hdrs = [
-        "minteger.h",
-    ],
+    srcs = ["minteger.cc"],
+    hdrs = ["minteger.h"],
     deps = [
         "//src:errors",
         "//src/contexts/librarian:analysis_context",
@@ -71,7 +64,6 @@ cc_library(
         "//src/librarian:mvariable",
         "//src/librarian:one_of_handler",
         "//src/librarian:size_property",
-        "//src/util/status_macro:status_macros",
         "//src/variables/constraints:base_constraints",
         "//src/variables/constraints:numeric_constraints",
         "//src/variables/constraints:size_constraints",
@@ -80,12 +72,8 @@ cc_library(
 
 cc_library(
     name = "mstring",
-    srcs = [
-        "mstring.cc",
-    ],
-    hdrs = [
-        "mstring.h",
-    ],
+    srcs = ["mstring.cc"],
+    hdrs = ["mstring.h"],
     deps = [
         ":minteger",
         "//src:errors",
@@ -96,7 +84,6 @@ cc_library(
         "//src/internal:random_engine",
         "//src/internal:simple_pattern",
         "//src/librarian:mvariable",
-        "//src/util/status_macro:status_macros",
         "//src/variables/constraints:base_constraints",
         "//src/variables/constraints:container_constraints",
         "//src/variables/constraints:numeric_constraints",
@@ -105,8 +92,6 @@ cc_library(
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -122,12 +107,9 @@ cc_library(
         "//src/contexts/librarian:resolver_context",
         "//src/librarian:locked_optional",
         "//src/librarian:mvariable",
-        "//src/util/status_macro:status_macros",
         "//src/variables/constraints:io_constraints",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/log:check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -141,14 +123,12 @@ cc_test(
         ":mstring",
         ":mtuple",
         "//src/librarian:mvariable",
-        "//src/librarian:test_utils",
-        "//src/util/test_status_macro:status_testutil",
+        "//src/testing:gtest_helpers",
         "//src/variables/constraints:base_constraints",
         "//src/variables/constraints:container_constraints",
         "//src/variables/constraints:io_constraints",
         "//src/variables/constraints:numeric_constraints",
         "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
     ],
 )
@@ -162,12 +142,10 @@ cc_test(
     deps = [
         ":minteger",
         "//src/librarian:size_property",
-        "//src/librarian:test_utils",
-        "//src/util/test_status_macro:status_testutil",
+        "//src/testing:gtest_helpers",
         "//src/variables/constraints:base_constraints",
         "//src/variables/constraints:numeric_constraints",
         "//src/variables/constraints:size_constraints",
-        "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
     ],
 )
@@ -183,8 +161,7 @@ cc_test(
         ":minteger",
         ":mstring",
         "//src/librarian:mvariable",
-        "//src/librarian:test_utils",
-        "//src/util/test_status_macro:status_testutil",
+        "//src/testing:gtest_helpers",
         "//src/variables/constraints:container_constraints",
         "//src/variables/constraints:numeric_constraints",
         "//src/variables/constraints:string_constraints",
@@ -203,8 +180,7 @@ cc_test(
         ":mstring",
         ":mtuple",
         "//src/librarian:mvariable",
-        "//src/librarian:test_utils",
-        "//src/util/test_status_macro:status_testutil",
+        "//src/testing:gtest_helpers",
         "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
     ],

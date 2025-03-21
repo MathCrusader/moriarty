@@ -21,8 +21,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/mvariable.h"
-#include "src/librarian/test_utils.h"
-#include "src/util/test_status_macro/status_testutil.h"
+#include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/constraints/string_constraints.h"
@@ -30,7 +29,6 @@
 namespace moriarty {
 namespace {
 
-using ::moriarty::IsOkAndHolds;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GenerateEdgeCases;
@@ -98,9 +96,10 @@ MATCHER(HasDuplicateLetter,
 }
 
 TEST(MStringTest, GenerateShouldSuccessfullyComplete) {
-  MORIARTY_EXPECT_OK(
-      Generate(MString(Length(Between(4, 11)), Alphabet("abc"))));
-  MORIARTY_EXPECT_OK(Generate(MString(Length(4), Alphabet("abc"))));
+  EXPECT_THAT(MString(Length(Between(4, 11)), Alphabet("abc")),
+              GeneratedValuesAre(SizeIs(AllOf(Ge(4), Le(11)))));
+  EXPECT_THAT(MString(Length(4), Alphabet("abc")),
+              GeneratedValuesAre(SizeIs(4)));
 }
 
 TEST(MStringTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
@@ -146,7 +145,8 @@ TEST(MStringTest, InvalidLengthShouldFail) {
 }
 
 TEST(MStringTest, LengthZeroProcudesTheEmptyString) {
-  EXPECT_THAT(Generate(MString(Length(0), Alphabet("abc"))), IsOkAndHolds(""));
+  EXPECT_THAT(MString(Length(0), Alphabet("abc")),
+              GeneratedValuesAre(SizeIs(0)));
 }
 
 TEST(MStringTest, AlphabetIsRequiredForGenerate) {
@@ -208,14 +208,12 @@ TEST(MStringTest, MergeFromCorrectlyMergesOnAlphabet) {
 TEST(MStringTest, LengthIsSatisfied) {
   // Includes small and large ranges
   for (int size = 0; size < 40; size++) {
-    EXPECT_THAT(
-        Generate(MString(Length(Between(size / 2, size)), Alphabet("abc"))),
-        IsOkAndHolds(SizeIs(AllOf(Ge(size / 2), Le(size)))));
+    EXPECT_THAT(MString(Length(Between(size / 2, size)), Alphabet("abc")),
+                GeneratedValuesAre(SizeIs(AllOf(Ge(size / 2), Le(size)))));
   }
   for (int size = 900; size < 940; size++) {
-    EXPECT_THAT(
-        Generate(MString(Length(Between(size / 2, size)), Alphabet("abc"))),
-        IsOkAndHolds(SizeIs(AllOf(Ge(size / 2), Le(size)))));
+    EXPECT_THAT(MString(Length(Between(size / 2, size)), Alphabet("abc")),
+                GeneratedValuesAre(SizeIs(AllOf(Ge(size / 2), Le(size)))));
   }
 }
 
@@ -234,10 +232,10 @@ TEST(MStringTest, AlphabetNotGivenInSortedOrderIsFine) {
 
 TEST(MStringTest, DuplicateLettersInAlphabetAreIgnored) {
   // a appears 90% of the alphabet. We should still see ~50% of the time in the
-  // input. With 100,000 samples, I'm putting the cutoff at 60%. Anything over
+  // input. With 10,000 samples, I'm putting the cutoff at 60%. Anything over
   // 60% is extremely unlikely to happen.
-  EXPECT_THAT(Generate(MString(Length(100000), Alphabet("aaaaaaaaab"))),
-              IsOkAndHolds(Contains('a').Times(Le(60000))));
+  EXPECT_THAT(MString(Length(10000), Alphabet("aaaaaaaaab")),
+              GeneratedValuesAre(Contains('a').Times(Le(6000))));
 }
 
 TEST(MStringTest, IsSatisfiedWithShouldAcceptAllMStringsOfCorrectLength) {
@@ -291,9 +289,9 @@ TEST(MStringTest, DistinctCharactersRequiresAShortLength) {
 
   // Most of the range is too large, the only way to succeed is for it to make a
   // string of length 10.
-  EXPECT_THAT(Generate(MString(Length(Between(10, 1000000)),
-                               Alphabet::Numbers(), DistinctCharacters())),
-              IsOkAndHolds(Not(HasDuplicateLetter())));
+  EXPECT_THAT(MString(Length(Between(10, 1000000)), Alphabet::Numbers(),
+                      DistinctCharacters()),
+              GeneratedValuesAre(Not(HasDuplicateLetter())));
 }
 
 TEST(MStringTest, MergingSimplePatternsIntoAnMStringWithoutShouldWork) {

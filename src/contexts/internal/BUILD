@@ -101,7 +101,6 @@ cc_library(
         "//src/internal:abstract_variable",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "@abseil-cpp//absl/status:statusor",
     ],
 )
 
@@ -115,7 +114,6 @@ cc_library(
         "//src/internal:abstract_variable",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "@abseil-cpp//absl/status:statusor",
     ],
 )
 
@@ -126,7 +124,6 @@ cc_library(
     deps = [
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "@abseil-cpp//absl/status:statusor",
     ],
 )
 
@@ -164,7 +161,6 @@ cc_test(
     srcs = ["mutable_values_context_test.cc"],
     deps = [
         "//src/internal:value_set",
-        "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
@@ -184,8 +180,7 @@ cc_test(
     srcs = ["variable_istream_context_test.cc"],
     deps = [
         ":variable_istream_context",
-        "//src/librarian:test_utils",
-        "//src/util/test_status_macro:status_testutil",
+        "//src/testing:gtest_helpers",
         "//src/variables:marray",
         "//src/variables:minteger",
         "//src/variables/constraints:container_constraints",
@@ -198,9 +193,7 @@ cc_test(
     srcs = ["variable_ostream_context_test.cc"],
     deps = [
         ":variable_ostream_context",
-        "//src/librarian:test_utils",
-        "//src/testing:status_test_util",
-        "//src/util/test_status_macro:status_testutil",
+        "//src/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
@@ -214,8 +207,7 @@ cc_test(
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "//src/librarian:test_utils",
-        "//src/util/test_status_macro:status_testutil",
+        "//src/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
@@ -226,8 +218,7 @@ cc_test(
     srcs = ["view_only_context_test.cc"],
     deps = [
         ":view_only_context",
-        "//src/librarian:test_utils",
-        "//src/testing:status_test_util",
+        "//src/testing:gtest_helpers",
         "//src/variables:marray",
         "//src/variables:minteger",
         "//src/variables:mstring",

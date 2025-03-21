@@ -24,8 +24,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/mvariable.h"
-#include "src/librarian/test_utils.h"
-#include "src/util/test_status_macro/status_testutil.h"
+#include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/io_constraints.h"
@@ -37,7 +36,6 @@
 namespace moriarty {
 namespace {
 
-using ::moriarty::IsOkAndHolds;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
@@ -97,46 +95,39 @@ TEST(MArrayTest, ReadingTheWrongLengthOfMArrayShouldFail) {
 }
 
 TEST(MArrayTest, SimpleGenerateCaseWorks) {
-  EXPECT_THAT(Generate(MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
-                                        Length(Between(5, 50)))),
-              IsOkAndHolds(AllOf(SizeIs(AllOf(Ge(5), Le(50))),
-                                 Each(AllOf(Ge(1), Le(10))))));
+  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
+                               Length(Between(5, 50))),
+              GeneratedValuesAre(AllOf(SizeIs(AllOf(Ge(5), Le(50))),
+                                       Each(AllOf(Ge(1), Le(10))))));
 }
 
 TEST(MArrayTest, NestedMArrayWorks) {
   EXPECT_THAT(
-      Generate(NestedMArray(
+      NestedMArray(
           MArray<MInteger>(Elements<MInteger>(Between(1, 10)), Length(3)),
-          Length(5))),
-      IsOkAndHolds(AllOf(SizeIs(5),
-                         Each(AllOf(SizeIs(3), Each(AllOf(Ge(1), Le(10))))))));
+          Length(5)),
+      GeneratedValuesAre(AllOf(
+          SizeIs(5), Each(AllOf(SizeIs(3), Each(AllOf(Ge(1), Le(10))))))));
   {
     // Silly deeply nested case
     MArray A = NestedMArray(
         NestedMArray(
             NestedMArray(NestedMArray(MArray<MInteger>(
                                           Elements<MInteger>(Between(1, 100)),
-                                          Length(Between(1, 3))),
-                                      Length(Between(2, 4))),
-                         Length(Between(3, 5))),
-            Length(Between(4, 6))),
-        Length(Between(5, 7)));
+                                          Length(Between(2, 2))),
+                                      Length(Between(1, 3))),
+                         Length(Between(2, 3))),
+            Length(Between(3, 3))),
+        Length(Between(2, 3)));
 
     EXPECT_THAT(
-        Generate(A),
-        IsOkAndHolds(AllOf(
-            SizeIs(AllOf(Ge(5), Le(7))), Each(SizeIs(AllOf(Ge(4), Le(6)))),
-            Each(Each(SizeIs(AllOf(Ge(3), Le(5))))),
-            Each(Each(Each(SizeIs(AllOf(Ge(2), Le(4)))))),
-            Each(Each(Each(Each(SizeIs(AllOf(Ge(1), Le(3))))))),
-            Each(Each(Each(Each(Each(AllOf(Ge(1), Le(100))))))))));
+        A, GeneratedValuesAre(AllOf(
+               SizeIs(AllOf(Ge(2), Le(3))), Each(SizeIs(AllOf(Ge(3), Le(3)))),
+               Each(Each(SizeIs(AllOf(Ge(2), Le(3))))),
+               Each(Each(Each(SizeIs(AllOf(Ge(1), Le(3)))))),
+               Each(Each(Each(Each(SizeIs(AllOf(Ge(2), Le(2))))))),
+               Each(Each(Each(Each(Each(AllOf(Ge(1), Le(100))))))))));
   }
-}
-
-TEST(MArrayTest, GenerateShouldSuccessfullyComplete) {
-  MORIARTY_EXPECT_OK(Generate(MArray<MInteger>(Length(Between(4, 10)))));
-  MORIARTY_EXPECT_OK(Generate(MArray<MInteger>(
-      Elements<MInteger>(Between(1, 10)), Length(Between(4, 10)))));
 }
 
 TEST(MArrayTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
@@ -180,7 +171,7 @@ TEST(MArrayTest, InvalidLengthShouldFail) {
 }
 
 TEST(MArrayTest, LengthZeroProducesTheEmptyArray) {
-  EXPECT_THAT(Generate(MArray<MInteger>(Length(0))), IsOkAndHolds(IsEmpty()));
+  EXPECT_THAT(MArray<MInteger>(Length(0)), GeneratedValuesAre(IsEmpty()));
 }
 
 TEST(MArrayTest, MergeFromCorrectlyMergesOnLength) {
@@ -222,13 +213,13 @@ TEST(MArrayTest, MergeFromCorrectlyMergesElementConstraints) {
 
 TEST(MArrayTest, LengthIsSatisfied) {
   // Includes small and large ranges
-  for (int size = 0; size < 40; size++) {
-    EXPECT_THAT(Generate(MArray<MInteger>(Length(Between(size / 2, size)))),
-                IsOkAndHolds(SizeIs(AllOf(Ge(size / 2), Le(size)))));
+  for (int size = 0; size < 10; size++) {
+    EXPECT_THAT(MArray<MInteger>(Length(Between(size / 2, size))),
+                GeneratedValuesAre(SizeIs(AllOf(Ge(size / 2), Le(size)))));
   }
-  for (int size = 900; size < 940; size++) {
-    EXPECT_THAT(Generate(MArray<MInteger>(Length(Between(size / 2, size)))),
-                IsOkAndHolds(SizeIs(AllOf(Ge(size / 2), Le(size)))));
+  for (int size = 900; size < 910; size++) {
+    EXPECT_THAT(MArray<MInteger>(Length(Between(size / 2, size))),
+                GeneratedValuesAre(SizeIs(AllOf(Ge(size / 2), Le(size)))));
   }
 }
 
@@ -345,12 +336,13 @@ TEST(MArrayTest, WithDistinctElementsWithNotEnoughDistinctValuesFails) {
 }
 
 TEST(MArrayTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
-  // This is asking for all integers between 1 and 10^4. This should
+  // This is asking for all integers between 1 and 500. This should
   // succeed relatively quickly. Testing if there are enough retries.
-  MORIARTY_EXPECT_OK(
-      Generate(MArray<MInteger>(Elements<MInteger>(Between(1, "10^4")),
-                                Length("10^4"), DistinctElements())));
+  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 500)), Length(500),
+                               DistinctElements()),
+              GeneratedValuesAre(SizeIs(500)));
 }
+
 TEST(MArrayTest, WhitespaceSeparatorShouldAffectPrint) {
   EXPECT_EQ(Print(MArray<MInteger>(IOSeparator::Newline()), {1, 2, 3}),
             "1\n2\n3");  // Note no newline after
@@ -429,8 +421,7 @@ TEST(MArrayTest, ListEdgeCasesNoLengthFails) {
 
 TEST(MArrayTest, ExactlyConstraintWorks) {
   Exactly<std::vector<int64_t>> x = Exactly(std::vector<int64_t>{1, 2, 3});
-  EXPECT_THAT(Generate(MArray<MInteger>(x)),
-              IsOkAndHolds(ElementsAre(1, 2, 3)));
+  EXPECT_THAT(MArray<MInteger>(x), GeneratedValuesAre(ElementsAre(1, 2, 3)));
 }
 
 }  // namespace

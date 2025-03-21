@@ -28,9 +28,7 @@ licenses(["notice"])
 
 cc_library(
     name = "constraint_handler",
-    hdrs = [
-        "constraint_handler.h",
-    ],
+    hdrs = ["constraint_handler.h"],
     deps = [
         ":cow_ptr",
         "//src/contexts/librarian:analysis_context",
@@ -47,9 +45,7 @@ cc_library(
 
 cc_library(
     name = "cow_ptr",
-    hdrs = [
-        "cow_ptr.h",
-    ],
+    hdrs = ["cow_ptr.h"],
 )
 
 cc_library(
@@ -65,9 +61,7 @@ cc_library(
 
 cc_library(
     name = "mvariable",
-    hdrs = [
-        "mvariable.h",
-    ],
+    hdrs = ["mvariable.h"],
     deps = [
         ":constraint_handler",
         ":conversions",
@@ -86,11 +80,7 @@ cc_library(
 
 cc_library(
     name = "one_of_handler",
-    hdrs = [
-        "one_of_handler.h",
-    ],
-    deps = [
-    ],
+    hdrs = ["one_of_handler.h"],
 )
 
 cc_library(
@@ -103,36 +93,9 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "test_utils",
-    testonly = True,
-    hdrs = ["test_utils.h"],
-    deps = [
-        ":mvariable",
-        "//src:errors",
-        "//src/contexts/librarian:analysis_context",
-        "//src/contexts/librarian:printer_context",
-        "//src/contexts/librarian:reader_context",
-        "//src/internal:abstract_variable",
-        "//src/internal:generation_bootstrap",
-        "//src/internal:generation_config",
-        "//src/internal:random_engine",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
-        "@googletest//:gtest",
-    ],
-)
-
 cc_test(
     name = "constraint_handler_test",
-    srcs = [
-        "constraint_handler_test.cc",
-    ],
+    srcs = ["constraint_handler_test.cc"],
     deps = [
         ":constraint_handler",
         "//src/contexts/librarian:analysis_context",
@@ -172,26 +135,19 @@ cc_test(
 cc_test(
     name = "mvariable_test",
     size = "small",
-    srcs = [
-        "mvariable_test.cc",
-    ],
+    srcs = ["mvariable_test.cc"],
     deps = [
         ":mvariable",
-        ":test_utils",
         "//src:errors",
         "//src/internal:abstract_variable",
         "//src/internal:generation_config",
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/testing:gtest_helpers",
         "//src/testing:mtest_type",
-        "//src/testing:status_test_util",
         "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
         "@googletest//:gtest_main",
     ],
 )

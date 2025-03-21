@@ -24,7 +24,7 @@
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/test_utils.h"
+#include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"

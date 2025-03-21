@@ -44,7 +44,7 @@ cc_test(
         "//src/internal:combinatorial_coverage_test_util",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "//src/librarian:test_utils",
+        "//src/testing:gtest_helpers",
         "//src/testing:mtest_type",
         "@googletest//:gtest_main",
     ],

@@ -17,9 +17,8 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/librarian/test_utils.h"
+#include "src/testing/gtest_helpers.h"
 #include "src/testing/mtest_type.h"
-#include "src/testing/status_test_util.h"
 #include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/base_constraints.h"
 

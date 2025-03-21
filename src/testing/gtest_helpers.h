@@ -86,11 +86,19 @@
 //    * AllGenerateSameValues({a, b, c, d})
 //        Same as GenerateSameValues, except checks that all variables generate
 //        the same values.
+//
+// Exceptions:
+//
+//    * ThrowsVariableNotFound(variable_name)
+//    * ThrowsValueNotFound(variable_name)
+//    * ThrowsMVariableTypeMismatch(type_from, type_to)
 
 #ifndef MORIARTY_SRC_LIBRARIAN_TEST_UTILS_H_
 #define MORIARTY_SRC_LIBRARIAN_TEST_UTILS_H_
 
+#include <algorithm>
 #include <concepts>
+#include <format>
 #include <iostream>
 #include <istream>
 #include <iterator>
@@ -102,14 +110,14 @@
 #include <utility>
 #include <vector>
 
-#include "absl/algorithm/container.h"
-#include "absl/log/absl_check.h"
 #include "absl/status/statusor.h"
-#include "absl/strings/substitute.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/librarian/printer_context.h"
+#include "src/contexts/librarian/reader_context.h"
+#include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_bootstrap.h"
 #include "src/internal/generation_config.h"
@@ -119,12 +127,6 @@
 #include "src/librarian/mvariable.h"
 
 namespace moriarty_testing {
-
-// TODO(darcybest): Add tests that test this test_utils file.
-
-namespace moriarty_testing_internal {
-class ContextManager;  // Forward declaring internal extended API.
-}  // namespace moriarty_testing_internal
 
 class Context {
  public:
@@ -315,8 +317,8 @@ testing::AssertionResult AllGenerateSameValues(std::vector<T> vars);
 // Generates several values from the variable and checks that all of them
 // satisfy the given matcher.
 MATCHER_P(GeneratedValuesAre, matcher,
-          absl::Substitute("generated values $0 satisfy constraints",
-                           negation ? "should not" : "should")) {
+          std::format("generated values {} satisfy constraints",
+                      negation ? "should not" : "should")) {
   // The `auto` is hiding an absl::StatusOr<std::vector<>> of the generated type
   auto values = GenerateLots(arg);
   if (!values.ok()) {
@@ -344,8 +346,8 @@ MATCHER_P(GeneratedValuesAre, matcher,
 //
 // Same as GeneratedValuesAre, but with a context.
 MATCHER_P2(GeneratedValuesAre, matcher, context,
-           absl::Substitute("generated values $0 satisfy constraints",
-                            negation ? "should not" : "should")) {
+           std::format("generated values {} satisfy constraints",
+                       negation ? "should not" : "should")) {
   // The `auto` is hiding an absl::StatusOr<std::vector<>> of the generated type
   auto values = GenerateLots(arg, context);
   if (!values.ok()) {
@@ -371,7 +373,7 @@ template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
 absl::StatusOr<typename T::value_type> Generate(T variable, Context context) {
-  std::string var_name = absl::Substitute("Generate($0)", variable.Typename());
+  std::string var_name = std::format("Generate({})", variable.Typename());
   context.WithVariable(var_name, variable);
 
   moriarty::moriarty_internal::RandomEngine rng({3, 4, 5}, "");
@@ -390,7 +392,7 @@ template <typename T>
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
 absl::StatusOr<std::vector<typename T::value_type>> GenerateN(T variable, int N,
                                                               Context context) {
-  std::string var_name = absl::Substitute("GenerateN($0)", variable.Typename());
+  std::string var_name = std::format("GenerateN({})", variable.Typename());
   context.WithVariable(var_name, variable);
 
   moriarty::moriarty_internal::RandomEngine rng({3, 4, 5}, "");
@@ -422,8 +424,7 @@ template <typename T>
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
 std::optional<typename T::value_type> GetUniqueValue(T variable,
                                                      Context context) {
-  std::string var_name =
-      absl::Substitute("GetUniqueValue($0)", variable.Typename());
+  std::string var_name = std::format("GetUniqueValue({})", variable.Typename());
   context.WithVariable(var_name, variable);
 
   moriarty::librarian::AnalysisContext ctx(var_name, context.Variables(),
@@ -435,7 +436,7 @@ template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
 T::value_type Read(T variable, std::istream& is, Context context) {
-  std::string var_name = absl::Substitute("Read($0)", variable.Typename());
+  std::string var_name = std::format("Read({})", variable.Typename());
   context.WithVariable(var_name, variable);
 
   moriarty::moriarty_internal::AbstractVariable* var =
@@ -463,7 +464,7 @@ template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
 std::string Print(T variable, typename T::value_type value, Context context) {
-  std::string var_name = absl::Substitute("Print($0)", variable.Typename());
+  std::string var_name = std::format("Print({})", variable.Typename());
   context.WithVariable(var_name, variable);
   context.WithValue<T>(var_name, value);
 
@@ -496,10 +497,7 @@ testing::AssertionResult GenerateSameValues(T a, T b) {
            << b_values.status();
   }
 
-  ABSL_CHECK_EQ(a_values->size(), b_values->size())
-      << "GenerateLots() should generate the same number of values every time.";
-
-  auto [it_a, it_b] = absl::c_mismatch(*a_values, *b_values);
+  auto [it_a, it_b] = std::ranges::mismatch(*a_values, *b_values);
   if (it_a != a_values->end()) {
     return testing::AssertionFailure()
            << "the two variables generate different values. Example: "
@@ -566,8 +564,7 @@ MATCHER_P2(IsSatisfiedWith, value, context, "") {
   // context is const& in MATCHERs, we need a non-const.
   Context context_copy = context;
 
-  std::string var_name =
-      absl::Substitute("$0::IsSatisfiedWith", arg.Typename());
+  std::string var_name = std::format("{}::IsSatisfiedWith", arg.Typename());
   moriarty::librarian::AnalysisContext ctx(var_name, context_copy.Variables(),
                                            context_copy.Values());
 
@@ -606,8 +603,7 @@ MATCHER_P3(IsNotSatisfiedWith, value, expected_reason, context, "") {
   // context is const& in MATCHERs, we need a non-const.
   Context context_copy = context;
 
-  std::string var_name =
-      absl::Substitute("$0::IsNotSatisfiedWith", arg.Typename());
+  std::string var_name = std::format("{}::IsNotSatisfiedWith", arg.Typename());
   moriarty::librarian::AnalysisContext ctx(var_name, context_copy.Variables(),
                                            context_copy.Values());
 
@@ -632,6 +628,151 @@ MATCHER_P2(IsNotSatisfiedWith, value, reason, "") {
   return testing::ExplainMatchResult(
       IsNotSatisfiedWith(ValueType(value), reason, Context()), arg,
       result_listener);
+}
+
+namespace moriarty_testing_internal {
+// https://github.com/google/googletest/issues/4073#issuecomment-1925047305
+template <class Function>
+std::function<void()> single_call(Function function) {
+  auto shared_exception_ptr = std::make_shared<std::exception_ptr>();
+  auto was_called = std::make_shared<bool>(false);
+  return [shared_exception_ptr, was_called, function]() {
+    if (*shared_exception_ptr) {
+      std::rethrow_exception(*shared_exception_ptr);
+    }
+    if (*was_called) {
+      return;
+    }
+    *was_called = true;
+    try {
+      std::invoke(function);
+    } catch (...) {
+      *shared_exception_ptr = std::current_exception();
+      std::rethrow_exception(*shared_exception_ptr);
+    }
+  };
+}
+}  // namespace moriarty_testing_internal
+
+MATCHER_P(ThrowsVariableNotFound, expected_variable_name,
+          std::format("{} a function that throws a VariableNotFound exception "
+                      "with the variable name `{}`",
+                      (negation ? "is not" : "is"), expected_variable_name)) {
+  // This first line is to get a better compile error message when arg is not of
+  // the expected type.
+  std::function<void()> fn = arg;
+
+  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  try {
+    function();
+    *result_listener << "did not throw";
+    return false;
+  } catch (const moriarty::VariableNotFound& e) {
+    if (e.VariableName() != expected_variable_name) {
+      *result_listener
+          << "threw the expected exception type, but the wrong variable name. `"
+          << e.VariableName() << "`";
+      return false;
+    }
+    *result_listener << "threw the expected exception";
+    return true;
+  } catch (...) {
+    // Call the built-in explainer to get a better message.
+    return ::testing::ExplainMatchResult(
+        ::testing::Throws<moriarty::VariableNotFound>(), function,
+        result_listener);
+  }
+}
+
+MATCHER_P(ThrowsValueNotFound, expected_variable_name,
+          std::format("{} a function that throws a ValueNotFound exception "
+                      "with the variable name `{}`",
+                      (negation ? "is not" : "is"), expected_variable_name)) {
+  // This first line is to get a better compile error message when arg is not of
+  // the expected type.
+  std::function<void()> fn = arg;
+
+  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  try {
+    function();
+    *result_listener << "did not throw";
+    return false;
+  } catch (const moriarty::ValueNotFound& e) {
+    if (e.VariableName() != expected_variable_name) {
+      *result_listener
+          << "threw the expected exception type, but the wrong variable name. `"
+          << e.VariableName() << "`";
+      return false;
+    }
+    *result_listener << "threw the expected exception";
+    return true;
+  } catch (...) {
+    // Call the built-in explainer to get a better message.
+    return ::testing::ExplainMatchResult(
+        ::testing::Throws<moriarty::ValueNotFound>(), function,
+        result_listener);
+  }
+}
+
+MATCHER_P2(ThrowsMVariableTypeMismatch, from_type, to_type,
+           std::format("{} a function that throws a MVariableTypeMismatch "
+                       "exception when trying to convert {} to {}",
+                       (negation ? "is not" : "is"), from_type, to_type)) {
+  // This first line is to get a better compile error message when arg is not of
+  // the expected type.
+  std::function<void()> fn = arg;
+
+  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  try {
+    function();
+    *result_listener << "did not throw";
+    return false;
+  } catch (const moriarty::MVariableTypeMismatch& e) {
+    if (e.ConvertingFrom() != from_type || e.ConvertingTo() != to_type) {
+      *result_listener
+          << "threw the expected exception type, but is converting "
+          << e.ConvertingFrom() << " to " << e.ConvertingTo();
+      return false;
+    }
+    *result_listener << "threw the expected exception";
+    return true;
+  } catch (...) {
+    // Call the built-in explainer to get a better message.
+    return ::testing::ExplainMatchResult(
+        ::testing::Throws<moriarty::MVariableTypeMismatch>(), function,
+        result_listener);
+  }
+}
+
+MATCHER_P2(
+    ThrowsValueTypeMismatch, name, type,
+    std::format("{} a function that throws a ValueTypeMismatch "
+                "exception when trying to convert the variable named {} to {}",
+                (negation ? "is not" : "is"), name, type)) {
+  // This first line is to get a better compile error message when arg is not of
+  // the expected type.
+  std::function<void()> fn = arg;
+
+  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  try {
+    function();
+    *result_listener << "did not throw";
+    return false;
+  } catch (const moriarty::ValueTypeMismatch& e) {
+    if (e.Name() != name || e.Type() != type) {
+      *result_listener
+          << "threw the expected exception type, but is converting " << e.Name()
+          << " to " << e.Type();
+      return false;
+    }
+    *result_listener << "threw the expected exception";
+    return true;
+  } catch (...) {
+    // Call the built-in explainer to get a better message.
+    return ::testing::ExplainMatchResult(
+        ::testing::Throws<moriarty::MVariableTypeMismatch>(), function,
+        result_listener);
+  }
 }
 
 }  // namespace moriarty_testing

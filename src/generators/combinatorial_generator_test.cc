@@ -25,7 +25,7 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/test_utils.h"
+#include "src/testing/gtest_helpers.h"
 #include "src/testing/mtest_type.h"
 
 namespace moriarty {

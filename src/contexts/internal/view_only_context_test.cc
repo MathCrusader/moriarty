@@ -17,8 +17,7 @@
 #include "src/contexts/internal/view_only_context.h"
 
 #include "gtest/gtest.h"
-#include "src/librarian/test_utils.h"
-#include "src/testing/status_test_util.h"
+#include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/marray.h"
 #include "src/variables/minteger.h"
