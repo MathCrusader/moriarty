@@ -134,12 +134,11 @@ TEST(MStringTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
 
 TEST(MStringTest, InvalidLengthShouldFail) {
   EXPECT_THROW(
-      { Generate(MString(Length(-1), Alphabet("a"))).IgnoreError(); },
+      { (void)Generate(MString(Length(-1), Alphabet("a"))); },
       std::runtime_error);
   EXPECT_THROW(
       {
-        Generate(MString(Length(AtMost(10), AtLeast(20)), Alphabet("a")))
-            .IgnoreError();
+        (void)Generate(MString(Length(AtMost(10), AtLeast(20)), Alphabet("a")));
       },
       std::runtime_error);
 }
@@ -150,10 +149,9 @@ TEST(MStringTest, LengthZeroProcudesTheEmptyString) {
 }
 
 TEST(MStringTest, AlphabetIsRequiredForGenerate) {
+  EXPECT_THROW({ (void)Generate(MString(Length(10))); }, std::runtime_error);
   EXPECT_THROW(
-      { Generate(MString(Length(10))).IgnoreError(); }, std::runtime_error);
-  EXPECT_THROW(
-      { Generate(MString(Length(10), Alphabet(""))).IgnoreError(); },
+      { (void)Generate(MString(Length(10), Alphabet(""))); },
       std::runtime_error);
 }
 
@@ -176,7 +174,7 @@ TEST(MStringTest, MergeFromCorrectlyMergesOnLength) {
                                  get_str(8, 8)));  // Singleton range
 
   EXPECT_THROW(
-      { Generate(get_str(1, 6).MergeFrom(get_str(10, 20))).IgnoreError(); },
+      { (void)Generate(get_str(1, 6).MergeFrom(get_str(10, 20))); },
       std::runtime_error);
 }
 
@@ -198,9 +196,8 @@ TEST(MStringTest, MergeFromCorrectlyMergesOnAlphabet) {
 
   EXPECT_THROW(
       {
-        Generate(
-            string_with_alphabet("ab").MergeFrom(string_with_alphabet("cd")))
-            .IgnoreError();
+        (void)Generate(
+            string_with_alphabet("ab").MergeFrom(string_with_alphabet("cd")));
       },
       std::runtime_error);
 }
@@ -281,9 +278,8 @@ TEST(MStringTest, DistinctCharactersWorksInTheSimpleCase) {
 TEST(MStringTest, DistinctCharactersRequiresAShortLength) {
   EXPECT_THROW(
       {
-        Generate(MString(Length(Between(5, 5)), Alphabet("abc"),
-                         DistinctCharacters()))
-            .IgnoreError();
+        (void)Generate(MString(Length(Between(5, 5)), Alphabet("abc"),
+                               DistinctCharacters()));
       },
       std::runtime_error);
 
@@ -320,23 +316,20 @@ TEST(MStringTest,
   // Note, we don't know which simple pattern the generated value doesn't match.
   EXPECT_THROW(
       {
-        Generate(
-            MString(SimplePattern("[abc]{1, 10}"), SimplePattern("[abc]{15}")))
-            .IgnoreError();
+        (void)Generate(
+            MString(SimplePattern("[abc]{1, 10}"), SimplePattern("[abc]{15}")));
       },
       std::runtime_error);
 }
 
 TEST(MStringTest, GenerateWithoutSimplePatternOrLengthOrAlphabetShouldFail) {
   // No simple pattern and no alphabet
-  EXPECT_THROW({ Generate(MString()).IgnoreError(); }, std::runtime_error);
-  EXPECT_THROW(
-      { Generate(MString(Alphabet(""))).IgnoreError(); }, std::runtime_error);
+  EXPECT_THROW({ (void)Generate(MString()); }, std::runtime_error);
+  EXPECT_THROW({ (void)Generate(MString(Alphabet(""))); }, std::runtime_error);
 
   // Has Alphabet, but not simple pattern or length.
   EXPECT_THROW(
-      { Generate(MString(Alphabet("abc"))).IgnoreError(); },
-      std::runtime_error);
+      { (void)Generate(MString(Alphabet("abc"))); }, std::runtime_error);
 }
 
 TEST(MStringTest, SimplePatternWorksForGeneration) {
@@ -353,11 +346,9 @@ TEST(MStringTest, IsSatisfiedWithShouldCheck) {
 
 TEST(MStringTest, SimplePatternWithWildcardsShouldFailGeneration) {
   EXPECT_THROW(
-      { Generate(MString(SimplePattern("a*"))).IgnoreError(); },
-      std::runtime_error);
+      { (void)Generate(MString(SimplePattern("a*"))); }, std::runtime_error);
   EXPECT_THROW(
-      { Generate(MString(SimplePattern("a+"))).IgnoreError(); },
-      std::runtime_error);
+      { (void)Generate(MString(SimplePattern("a+"))); }, std::runtime_error);
 }
 
 TEST(MStringTest, SimplePatternWithWildcardsShouldWorkForIsSatisfiedWith) {
@@ -382,7 +373,7 @@ TEST(MStringTest, ListEdgeCasesContainsLengthCases) {
 }
 
 TEST(MStringTest, ListEdgeCasesNoLengthFails) {
-  EXPECT_THAT([] { GenerateEdgeCases(MString()); },
+  EXPECT_THAT([] { (void)GenerateEdgeCases(MString()); },
               Throws<std::runtime_error>());
 }
 

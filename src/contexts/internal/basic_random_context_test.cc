@@ -320,7 +320,7 @@ TEST(BasicRandomContextTest, RandomPermutationOfNegativeSizeShouldFail) {
   EXPECT_THROW({ (void)ctx.RandomPermutation(-1); }, std::runtime_error);
 }
 
-TEST(BasicRandomContextTest, RandomPermutationOfSizeZeroIsOk) {
+TEST(BasicRandomContextTest, RandomPermutationOfSizeZeroShouldBeEmpty) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 

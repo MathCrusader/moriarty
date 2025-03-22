@@ -152,17 +152,17 @@ TEST(MIntegerTest, InvalidBoundsShouldCrash) {
   // Need to use AtMost/AtLeast here since Between will crash on its own.
   // Min > Max
   EXPECT_THROW(
-      { Generate(MInteger(AtLeast(0), AtMost(-1))).IgnoreError(); },
+      { (void)Generate(MInteger(AtLeast(0), AtMost(-1))); },
       std::runtime_error);
 
   // Empty intersection (First interval to the left)
   EXPECT_THROW(
-      { Generate(MInteger(Between(1, 10), Between(20, 30))).IgnoreError(); },
+      { (void)Generate(MInteger(Between(1, 10), Between(20, 30))); },
       std::runtime_error);
 
   // Empty intersection (First interval to the right)
   EXPECT_THROW(
-      { Generate(MInteger(Between(20, 30), Between(1, 10))).IgnoreError(); },
+      { (void)Generate(MInteger(Between(20, 30), Between(1, 10))); },
       std::runtime_error);
 }
 
@@ -244,14 +244,13 @@ TEST(MIntegerTest, AtMostAndAtLeastShouldLimitTheOutputRange) {
 
 TEST(MIntegerTest, AtMostLargerThanAtLeastShouldFail) {
   EXPECT_THROW(
-      { Generate(MInteger(AtLeast(10), AtMost(0))).IgnoreError(); },
+      { (void)Generate(MInteger(AtLeast(10), AtMost(0))); },
       std::runtime_error);
 
   EXPECT_THROW(
       {
-        Generate(MInteger(AtLeast(0), AtMost("3 * N + 1")),
-                 Context().WithValue<MInteger>("N", -3))
-            .IgnoreError();
+        (void)Generate(MInteger(AtLeast(0), AtMost("3 * N + 1")),
+                       Context().WithValue<MInteger>("N", -3));
       },
       std::runtime_error);
 }
@@ -343,7 +342,7 @@ TEST(MIntegerTest, GetUniqueValueWithNestedDependenciesShouldWork) {
 }
 
 TEST(MIntegerTest, GetUniqueValueFailsWhenAVariableIsUnknown) {
-  EXPECT_THAT([&] { GetUniqueValue(MInteger(Between("N", "N"))); },
+  EXPECT_THAT([&] { (void)GetUniqueValue(MInteger(Between("N", "N"))); },
               ThrowsVariableNotFound("N"));
 }
 
@@ -417,14 +416,14 @@ TEST(MIntegerTest, InvalidSizeCombinationsShouldThrow) {
 }
 
 TEST(MIntegerTest, InvalidExpressionsShouldFail) {
-  EXPECT_THAT([] { Generate(MInteger(Exactly("N + "))).IgnoreError(); },
+  EXPECT_THAT([] { (void)Generate(MInteger(Exactly("N + "))); },
               ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
-  EXPECT_THAT([] { Generate(MInteger(AtMost("N + "))).IgnoreError(); },
+  EXPECT_THAT([] { (void)Generate(MInteger(AtMost("N + "))); },
               ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
-  EXPECT_THAT([] { Generate(MInteger(AtLeast("N + "))).IgnoreError(); },
+  EXPECT_THAT([] { (void)Generate(MInteger(AtLeast("N + "))); },
               ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
   EXPECT_THAT(
-      [] { Generate(MInteger(Between("& x", "N + "))).IgnoreError(); },
+      [] { (void)Generate(MInteger(Between("& x", "N + "))); },
       ThrowsMessage<std::invalid_argument>(HasSubstr("Unknown character")));
 }
 

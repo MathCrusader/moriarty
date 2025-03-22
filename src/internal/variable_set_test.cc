@@ -19,14 +19,12 @@
 #include "gtest/gtest.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/testing/mtest_type.h"
-#include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/constraints/base_constraints.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
-using ::moriarty::IsOkAndHolds;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::TestType;
@@ -50,10 +48,10 @@ TEST(VariableSetTest, GetVariableShouldRetrieve) {
   v.SetVariable("B", MTestType().AddConstraint(Exactly<TestType>(222222)));
 
   MTestType A = v.GetVariable<MTestType>("A");
-  EXPECT_THAT(Generate(A), IsOkAndHolds(111111));
+  EXPECT_EQ(Generate(A), 111111);
 
   MTestType B = v.GetVariable<MTestType>("B");
-  EXPECT_THAT(Generate(B), IsOkAndHolds(222222));
+  EXPECT_EQ(Generate(B), 222222);
 }
 
 TEST(VariableSetTest, AddOrMergeVariableSetsProperlyWhenNotMerging) {
@@ -64,10 +62,10 @@ TEST(VariableSetTest, AddOrMergeVariableSetsProperlyWhenNotMerging) {
                        MTestType().AddConstraint(Exactly<TestType>(222222)));
 
   MTestType A = v.GetVariable<MTestType>("A");
-  EXPECT_THAT(Generate(A), IsOkAndHolds(111111));
+  EXPECT_EQ(Generate(A), 111111);
 
   MTestType B = v.GetVariable<MTestType>("B");
-  EXPECT_THAT(Generate(B), IsOkAndHolds(222222));
+  EXPECT_EQ(Generate(B), 222222);
 }
 
 TEST(VariableSetTest, AddOrMergeVariableSetsProperlyWhenMerging) {
@@ -78,7 +76,7 @@ TEST(VariableSetTest, AddOrMergeVariableSetsProperlyWhenMerging) {
                        MTestType().AddConstraint(OneOf<TestType>({22, 33})));
 
   MTestType A = v.GetVariable<MTestType>("A");
-  EXPECT_THAT(Generate(A), IsOkAndHolds(22));
+  EXPECT_EQ(Generate(A), 22);
 }
 
 TEST(VariableSetTest, GetVariableOnNonExistentVariableFails) {

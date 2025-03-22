@@ -160,13 +160,9 @@ TEST(MArrayTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
 
 TEST(MArrayTest, InvalidLengthShouldFail) {
   EXPECT_THROW(
-      { Generate(MArray<MInteger>(Length(-1))).IgnoreError(); },
-      std::runtime_error);
+      { (void)Generate(MArray<MInteger>(Length(-1))); }, std::runtime_error);
   EXPECT_THROW(
-      {
-        Generate(MArray<MInteger>(Length(AtMost(10), AtLeast(21))))
-            .IgnoreError();
-      },
+      { (void)Generate(MArray<MInteger>(Length(AtMost(10), AtLeast(21)))); },
       std::runtime_error);
 }
 
@@ -194,7 +190,7 @@ TEST(MArrayTest, MergeFromCorrectlyMergesOnLength) {
                                  get_arr(8, 8)));  // Singleton range
 
   EXPECT_THROW(
-      { Generate(get_arr(1, 6).MergeFrom(get_arr(10, 20))).IgnoreError(); },
+      { (void)Generate(get_arr(1, 6).MergeFrom(get_arr(10, 20))); },
       std::runtime_error);
 }
 
@@ -207,7 +203,7 @@ TEST(MArrayTest, MergeFromCorrectlyMergesElementConstraints) {
                                  int_array(6, 10)));
 
   EXPECT_THROW(
-      { Generate(int_array(1, 6).MergeFrom(int_array(10, 20))).IgnoreError(); },
+      { (void)Generate(int_array(1, 6).MergeFrom(int_array(10, 20))); },
       std::runtime_error);
 }
 
@@ -328,9 +324,8 @@ TEST(MArrayTest, WithDistinctElementsReturnsOnlyDistinctValues) {
 TEST(MArrayTest, WithDistinctElementsWithNotEnoughDistinctValuesFails) {
   EXPECT_THROW(
       {
-        Generate(MArray<MInteger>(Elements<MInteger>(Between(1, 5)), Length(10),
-                                  DistinctElements()))
-            .IgnoreError();
+        (void)Generate(MArray<MInteger>(Elements<MInteger>(Between(1, 5)),
+                                        Length(10), DistinctElements()));
       },
       std::runtime_error);
 }
@@ -415,7 +410,7 @@ TEST(MArrayTest, ListEdgeCasesContainsLengthCases) {
 }
 
 TEST(MArrayTest, ListEdgeCasesNoLengthFails) {
-  EXPECT_THAT([] { GenerateEdgeCases(MArray<MInteger>()); },
+  EXPECT_THAT([] { (void)GenerateEdgeCases(MArray<MInteger>()); },
               Throws<std::runtime_error>());
 }
 

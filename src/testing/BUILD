@@ -60,7 +60,6 @@ cc_library(
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:mvariable",
-        "@abseil-cpp//absl/status:statusor",
         "@googletest//:gtest",
     ],
 )

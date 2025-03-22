@@ -110,7 +110,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/status/statusor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/contexts/internal/mutable_values_context.h"
@@ -173,16 +172,15 @@ class Context {
 // dependent variables), then `context` provides that information.
 //
 // Example:
-//   EXPECT_THAT(Generate(MInteger()), IsOkAndHolds(5));
-//   EXPECT_THAT(Generate(MString().OfLength(10)), IsOkAndHolds(SizeIs(10)));
-//   EXPECT_THAT(Generate(MInteger(Exactly("3 * N + 1")),
+//   EXPECT_EQ(Generate(MInteger()), 5);
+//   EXPECT_THAT(Generate(MString().OfLength(10)), SizeIs(10));
+//   EXPECT_EQ(Generate(MInteger(Exactly("3 * N + 1")),
 //                        Context().WithValue("N", 3)),
-//               IsOkAndHolds(10));
+//               10);
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<typename T::value_type> Generate(T variable,
-                                                Context context = {});
+[[nodiscard]] T::value_type Generate(T variable, Context context = {});
 
 // GenerateN() [For tests only]
 //
@@ -193,16 +191,16 @@ absl::StatusOr<typename T::value_type> Generate(T variable,
 //
 // Examples: Each example generates 50 items.
 //   EXPECT_THAT(GenerateN(MInteger().AtLeast(2), 50),
-//               IsOkAndHolds(Each(Ge(2))));
+//               Each(Ge(2)));
 //   EXPECT_THAT(GenerateN(MString().OfLength(10), 50),
-//               IsOkAndHolds(Each(SizeIs(10))));
+//               Each(SizeIs(10)));
 //   EXPECT_THAT(Generate(MInteger().Between(1, "3 * N + 1"), 50,
 //                        Context().WithValue("N", 3)),
-//               IsOkAndHolds(Each(AllOf(Ge(1), Le(10)));
+//               Each(AllOf(Ge(1), Le(10));
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<std::vector<typename T::value_type>> GenerateN(
+[[nodiscard]] std::vector<typename T::value_type> GenerateN(
     T variable, int N, Context context = {});
 
 // GenerateLots() [For tests only]
@@ -216,7 +214,7 @@ absl::StatusOr<std::vector<typename T::value_type>> GenerateN(
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<std::vector<typename T::value_type>> GenerateLots(
+[[nodiscard]] std::vector<typename T::value_type> GenerateLots(
     T variable, Context context = {});
 
 // GetUniqueValue() [For tests only]
@@ -225,8 +223,8 @@ absl::StatusOr<std::vector<typename T::value_type>> GenerateLots(
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-std::optional<typename T::value_type> GetUniqueValue(T variable,
-                                                     Context context = {});
+[[nodiscard]] std::optional<typename T::value_type> GetUniqueValue(
+    T variable, Context context = {});
 
 // GenerateEdgeCases() [For tests only]
 //
@@ -235,7 +233,7 @@ std::optional<typename T::value_type> GetUniqueValue(T variable,
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-std::vector<typename T::value_type> GenerateEdgeCases(T variable);
+[[nodiscard]] std::vector<typename T::value_type> GenerateEdgeCases(T variable);
 
 // Read() [For tests only]
 //
@@ -318,15 +316,11 @@ testing::AssertionResult AllGenerateSameValues(std::vector<T> vars);
 MATCHER_P(GeneratedValuesAre, matcher,
           std::format("generated values {} satisfy constraints",
                       negation ? "should not" : "should")) {
-  // The `auto` is hiding an absl::StatusOr<std::vector<>> of the generated type
+  // The `auto` is hiding an std::vector<> of the generated type
   auto values = GenerateLots(arg);
-  if (!values.ok()) {
-    *result_listener << "Failed to generate values. " << values.status();
-    return false;
-  }
 
-  for (int i = 0; i < values->size(); i++) {
-    auto value = (*values)[i];  // `auto` is hiding the generated type
+  for (int i = 0; i < values.size(); i++) {
+    auto value = values[i];  // `auto` is hiding the generated type
     if (!testing::ExplainMatchResult(matcher, value, result_listener)) {
       *result_listener << "The " << i + 1 << "-th generated value ("
                        << testing::PrintToString(value)
@@ -347,15 +341,11 @@ MATCHER_P(GeneratedValuesAre, matcher,
 MATCHER_P2(GeneratedValuesAre, matcher, context,
            std::format("generated values {} satisfy constraints",
                        negation ? "should not" : "should")) {
-  // The `auto` is hiding an absl::StatusOr<std::vector<>> of the generated type
+  // The `auto` is hiding an std::vector<> of the generated type
   auto values = GenerateLots(arg, context);
-  if (!values.ok()) {
-    *result_listener << "Failed to generate values. " << values.status();
-    return false;
-  }
 
-  for (int i = 0; i < values->size(); i++) {
-    auto value = (*values)[i];  // `auto` is hiding the generated type
+  for (int i = 0; i < values.size(); i++) {
+    auto value = values[i];  // `auto` is hiding the generated type
     if (!testing::ExplainMatchResult(matcher, value, result_listener)) {
       *result_listener << "The " << i + 1 << "-th generated value ("
                        << testing::PrintToString(value)
@@ -371,7 +361,7 @@ MATCHER_P2(GeneratedValuesAre, matcher, context,
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<typename T::value_type> Generate(T variable, Context context) {
+T::value_type Generate(T variable, Context context) {
   std::string var_name = std::format("Generate({})", variable.Typename());
   context.WithVariable(var_name, variable);
 
@@ -387,8 +377,8 @@ absl::StatusOr<typename T::value_type> Generate(T variable, Context context) {
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<std::vector<typename T::value_type>> GenerateN(T variable, int N,
-                                                              Context context) {
+std::vector<typename T::value_type> GenerateN(T variable, int N,
+                                              Context context) {
   std::string var_name = std::format("GenerateN({})", variable.Typename());
   context.WithVariable(var_name, variable);
 
@@ -411,8 +401,7 @@ absl::StatusOr<std::vector<typename T::value_type>> GenerateN(T variable, int N,
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
-absl::StatusOr<std::vector<typename T::value_type>> GenerateLots(
-    T variable, Context context) {
+std::vector<typename T::value_type> GenerateLots(T variable, Context context) {
   return GenerateN(variable, 30, std::move(context));
 }
 
@@ -480,31 +469,20 @@ template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
 testing::AssertionResult GenerateSameValues(T a, T b) {
-  // The `auto` is hiding an absl::StatusOr<std::vector<>> of the generated type
   auto a_values = GenerateLots(a);
-  if (!a_values.ok()) {
-    return testing::AssertionFailure()
-           << "First parameter failed to generate values. "
-           << a_values.status();
-  }
   auto b_values = GenerateLots(b);
-  if (!b_values.ok()) {
-    return testing::AssertionFailure()
-           << "Second parameter failed to generate values. "
-           << b_values.status();
-  }
 
-  auto [it_a, it_b] = std::ranges::mismatch(*a_values, *b_values);
-  if (it_a != a_values->end()) {
+  auto [it_a, it_b] = std::ranges::mismatch(a_values, b_values);
+  if (it_a != a_values.end()) {
     return testing::AssertionFailure()
            << "the two variables generate different values. Example: "
            << testing::PrintToString(*it_a) << " vs "
            << testing::PrintToString(*it_b) << " (found after generating "
-           << std::distance(a_values->begin(), it_a) + 1 << " value(s) each)";
+           << std::distance(a_values.begin(), it_a) + 1 << " value(s) each)";
   }
 
   return testing::AssertionSuccess()
-         << "all " << a_values->size() << " generated values match";
+         << "all " << a_values.size() << " generated values match";
 }
 
 template <typename T>
@@ -537,8 +515,7 @@ std::vector<typename T::value_type> GenerateEdgeCases(T variable) {
 
   std::vector<typename T::value_type> values;
   for (T difficult_variable : instances) {
-    // TODO: Hides a StatusOr<>
-    typename T::value_type val = *Generate(std::move(difficult_variable));
+    typename T::value_type val = Generate(std::move(difficult_variable));
     values.push_back(std::move(val));
   }
   return values;

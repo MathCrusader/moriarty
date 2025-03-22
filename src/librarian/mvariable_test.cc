@@ -33,14 +33,12 @@
 #include "src/internal/variable_set.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/testing/mtest_type.h"
-#include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
 namespace librarian {
 namespace {
 
-using ::moriarty::IsOkAndHolds;
 using ::moriarty::moriarty_internal::AbstractVariable;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
@@ -57,9 +55,9 @@ using ::moriarty_testing::TestType;
 using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsValueNotFound;
 using ::moriarty_testing::ThrowsVariableNotFound;
+using ::testing::_;
 using ::testing::AllOf;
 using ::testing::AnyOf;
-using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Optional;
 using ::testing::Truly;
@@ -70,20 +68,20 @@ TEST(MVariableTest, PrintShouldSucceed) {
 }
 
 TEST(MVariableTest, GenerateShouldProduceAValue) {
-  EXPECT_THAT(Generate(MTestType()),
-              IsOkAndHolds(AnyOf(123456789, 23456789, 3456789, 456789, 56789,
-                                 6789, 789, 89, 9)));
+  EXPECT_THAT(MTestType(),
+              GeneratedValuesAre(AnyOf(123456789, 23456789, 3456789, 456789,
+                                       56789, 6789, 789, 89, 9)));
 }
 
 TEST(MVariableTest, GenerateShouldObserveIs) {
-  EXPECT_THAT(Generate(MTestType(Exactly<TestType>(10))), IsOkAndHolds(10));
+  EXPECT_THAT(MTestType(Exactly<TestType>(10)), GeneratedValuesAre(10));
 }
 
 TEST(MVariableTest, GenerateShouldObserveIsOneOf) {
   EXPECT_THAT(
-      GenerateN(MTestType(OneOf<TestType>({50, 60, 70, 80, 90, 100})), 100),
-      IsOkAndHolds(AllOf(Contains(50), Contains(60), Contains(70), Contains(80),
-                         Contains(90), Contains(100))));
+      MTestType(OneOf<TestType>({50, 60, 70, 80, 90, 100})),
+      GeneratedValuesAre(AnyOf(TestType(50), TestType(60), TestType(70),
+                               TestType(80), TestType(90), TestType(100))));
 }
 
 TEST(MVariableTest, MergeFromShouldRespectOneOf) {
@@ -112,13 +110,13 @@ TEST(MVariableTest, MergeFromShouldWork) {
     MTestType var1 = MTestType(Exactly<TestType>(10));
     MTestType var2;
     var1.MergeFrom(var2);
-    EXPECT_THAT(Generate(var1), IsOkAndHolds(10));
+    EXPECT_EQ(Generate(var1), 10);
   }
   {
     MTestType var1;
     MTestType var2 = MTestType(Exactly<TestType>(20));
     var1.MergeFrom(var2);
-    EXPECT_THAT(Generate(var1), IsOkAndHolds(20));
+    EXPECT_EQ(Generate(var1), 20);
   }
   {
     MTestType var1 = MTestType(Exactly<TestType>(10));
@@ -130,13 +128,13 @@ TEST(MVariableTest, MergeFromShouldWork) {
     MTestType var1 = MTestType(Exactly<TestType>(10));
     MTestType var2 = MTestType(OneOf<TestType>({40, 30, 20, 10}));
     var1.MergeFrom(var2);
-    EXPECT_THAT(Generate(var1), IsOkAndHolds(10));
+    EXPECT_EQ(Generate(var1), 10);
   }
   {
     MTestType var1 = MTestType(OneOf<TestType>({300, 17, 10, -1234}));
     MTestType var2 = MTestType(OneOf<TestType>({40, 30, 20, 10}));
     var1.MergeFrom(var2);
-    EXPECT_THAT(Generate(var1), IsOkAndHolds(10));
+    EXPECT_EQ(Generate(var1), 10);
   }
   {
     MTestType var1;
@@ -148,27 +146,28 @@ TEST(MVariableTest, MergeFromShouldWork) {
 }
 
 TEST(MVariableTest, SubvariablesShouldBeSetableAndUseable) {
-  EXPECT_THAT(Generate(MTestType(LastDigit(MInteger(Between(3, 3))),
-                                 NumberOfDigits(MInteger(Exactly(9))))),
-              IsOkAndHolds(123456783));
+  EXPECT_EQ(Generate(MTestType(LastDigit(MInteger(Between(3, 3))),
+                               NumberOfDigits(MInteger(Exactly(9))))),
+            123456783);
 }
 
 TEST(MVariableTest, BasingMyVariableOnAnotherSetValueShouldWorkBasicCase) {
-  EXPECT_THAT(Generate(MTestType(LastDigit(MInteger(Exactly("x"))),
-                                 NumberOfDigits(MInteger(Exactly(9)))),
-                       Context().WithValue<MInteger>("x", 4)),
-              IsOkAndHolds(123456784));
+  EXPECT_EQ(Generate(MTestType(LastDigit(MInteger(Exactly("x"))),
+                               NumberOfDigits(MInteger(Exactly(9)))),
+                     Context().WithValue<MInteger>("x", 4)),
+            123456784);
 }
 
 TEST(MVariableTest, BasingMyVariableOnAnotherUnSetVariableShouldWorkBasicCase) {
-  EXPECT_THAT(Generate(MTestType(LastDigit(MInteger(Exactly("x")))),
-                       Context().WithVariable("x", MInteger(Between(1, 9)))),
-              IsOk());  // Doesn't matter what the value is.
+  // Doesn't matter what the value is.
+  EXPECT_THAT(MTestType(LastDigit(MInteger(Exactly("x")))),
+              GeneratedValuesAre(
+                  _, Context().WithVariable("x", MInteger(Between(1, 9)))));
 }
 
 TEST(MVariableTest, BasingMyVariableOnANonexistentOneShouldFail) {
   EXPECT_THROW(
-      { Generate(MTestType(LastDigit(MInteger(Exactly("x"))))).IgnoreError(); },
+      { (void)Generate(MTestType(LastDigit(MInteger(Exactly("x"))))); },
       std::runtime_error);
 }
 
@@ -186,9 +185,10 @@ TEST(MVariableTest, DependentVariablesInSubvariablesCanChain) {
                   .WithVariable("y", MInteger(Exactly("N + 1")))
                   .WithVariable("N", MInteger(Exactly(5)));
 
-  EXPECT_THAT(Generate(MTestType(LastDigit(MInteger(Exactly("y")))), c),
-              IsOkAndHolds(AnyOf(123456786, 23456786, 3456786, 456786, 56786,
-                                 6786, 786, 86, 6)));
+  EXPECT_THAT(MTestType(LastDigit(MInteger(Exactly("y")))),
+              GeneratedValuesAre(AnyOf(123456786, 23456786, 3456786, 456786,
+                                       56786, 6786, 786, 86, 6),
+                                 c));
 }
 
 TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
@@ -218,20 +218,18 @@ TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
 TEST(MVariableTest, CyclicDependenciesShouldFail) {
   EXPECT_THROW(
       {
-        Generate(MInteger(AtLeast("x")),
-                 Context()
-                     .WithVariable("y", MInteger(Between("z", 4)))
-                     .WithVariable("z", MInteger(Between("y", 4))))
-            .IgnoreError();
+        (void)Generate(MInteger(AtLeast("x")),
+                       Context()
+                           .WithVariable("y", MInteger(Between("z", 4)))
+                           .WithVariable("z", MInteger(Between("y", 4))));
       },
       std::runtime_error);
 
   // Self-loop
   EXPECT_THROW(
       {
-        Generate(MInteger(Exactly("x + 1")),
-                 Context().WithVariable("x", MInteger(AtLeast("x"))))
-            .IgnoreError();
+        (void)Generate(MInteger(Exactly("x + 1")),
+                       Context().WithVariable("x", MInteger(AtLeast("x"))));
       },
       std::runtime_error);
 }
@@ -377,12 +375,11 @@ TEST(MVariableTest, CustomConstraintWithDependentVariablesShouldWork) {
 TEST(MVariableTest, UnsatisfiableCustomConstraintShouldThrow) {
   EXPECT_THROW(
       {
-        Generate(MTestType()
-                     .AddConstraint(LastDigit(MInteger(Exactly(1))))
-                     .AddCustomConstraint("Custom1", {"A"}, SameAsA),
-                 Context().WithVariable(
-                     "A", MTestType(LastDigit(MInteger(Exactly(2))))))
-            .IgnoreError();
+        (void)Generate(MTestType()
+                           .AddConstraint(LastDigit(MInteger(Exactly(1))))
+                           .AddCustomConstraint("Custom1", {"A"}, SameAsA),
+                       Context().WithVariable(
+                           "A", MTestType(LastDigit(MInteger(Exactly(2))))));
       },
       std::runtime_error);
 }
@@ -390,8 +387,7 @@ TEST(MVariableTest, UnsatisfiableCustomConstraintShouldThrow) {
 TEST(MVariableTest, CustomConstraintsWithWrongDependentVariableShouldThrow) {
   EXPECT_THROW(
       {
-        Generate(MTestType().AddCustomConstraint("Custom1", {}, SameAsA))
-            .IgnoreError();
+        (void)Generate(MTestType().AddCustomConstraint("Custom1", {}, SameAsA));
       },
       std::runtime_error);
 }
@@ -407,10 +403,9 @@ TEST(MVariableTest,
   // guaranteed to since the user didn't specify it as a constraint.
   EXPECT_THROW(
       {
-        Generate(MTestType().AddCustomConstraint("Custom1", {}, SameAsL),
-                 Context().WithVariable(
-                     "L", MTestType(LastDigit(MInteger(Exactly(2))))))
-            .IgnoreError();
+        (void)Generate(MTestType().AddCustomConstraint("Custom1", {}, SameAsL),
+                       Context().WithVariable(
+                           "L", MTestType(LastDigit(MInteger(Exactly(2))))));
       },
       std::runtime_error);
 }
