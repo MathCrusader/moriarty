@@ -21,7 +21,6 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/test_case.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -30,13 +29,15 @@ struct GenerationOptions {
   RandomEngine& random_engine;
 };
 
-// GenerateTestCase()
+// GenerateAllValues()
 //
-// Generates and returns a value for each variable in `variables`, using
-// test_case to provide extra constraints.
+// Generates and returns a value for each variable in `base_variables`, using
+// `extra_constraints` and `known_values`.
 // TODO: Add tests
-ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
-                          const GenerationOptions& options);
+ValueSet GenerateAllValues(VariableSet base_variables,
+                           const VariableSet& extra_constraints,
+                           ValueSet known_values,
+                           const GenerationOptions& options);
 
 // GenerateAllValues()
 //

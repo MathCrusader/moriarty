@@ -72,14 +72,11 @@ cc_library(
 )
 
 cc_library(
-    name = "generation_config",
-    srcs = ["generation_config.cc"],
-    hdrs = ["generation_config.h"],
+    name = "generation_handler",
+    srcs = ["generation_handler.cc"],
+    hdrs = ["generation_handler.h"],
     deps = [
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
-        "@abseil-cpp//absl/strings",
+        "//src:errors",
     ],
 )
 
@@ -195,12 +192,11 @@ cc_test(
 )
 
 cc_test(
-    name = "generation_config_test",
-    srcs = ["generation_config_test.cc"],
+    name = "generation_handler_test",
+    srcs = ["generation_handler_test.cc"],
     deps = [
-        ":generation_config",
-        "//src/util/test_status_macro:status_testutil",
-        "@abseil-cpp//absl/status",
+        ":generation_handler",
+        "//src/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],
 )
@@ -278,7 +274,7 @@ cc_library(
     hdrs = ["generation_bootstrap.h"],
     deps = [
         ":abstract_variable",
-        ":generation_config",
+        ":generation_handler",
         ":random_engine",
         ":value_set",
         ":variable_set",

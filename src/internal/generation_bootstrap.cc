@@ -30,10 +30,9 @@
 #include "src/contexts/librarian/assignment_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/internal/abstract_variable.h"
-#include "src/internal/generation_config.h"
+#include "src/internal/generation_handler.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/test_case.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -91,20 +90,20 @@ std::vector<std::string> GetGenerationOrder(const VariableSet& variables) {
 
 }  // namespace
 
-ValueSet GenerateTestCase(TestCase test_case, VariableSet variables,
-                          const GenerationOptions& options) {
-  auto [extra_constraints, values] = UnsafeExtractTestCaseInternals(test_case);
-
-  for (auto& [name, constraints] : extra_constraints.ListVariables()) {
-    variables.AddOrMergeVariable(name, *constraints);
+ValueSet GenerateAllValues(VariableSet base_variables,
+                           const VariableSet& extra_constraints,
+                           ValueSet known_values,
+                           const GenerationOptions& options) {
+  for (const auto& [name, constraints] : extra_constraints.ListVariables()) {
+    base_variables.AddOrMergeVariable(name, *constraints);
   }
 
-  return GenerateAllValues(variables, values, options);
+  return GenerateAllValues(base_variables, known_values, options);
 }
 
 ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
                            const GenerationOptions& options) {
-  GenerationConfig generation_config;
+  GenerationHandler generation_handler;
   std::vector<std::string> order = GetGenerationOrder(variables);
 
   // First do a quick assignment of all known values. We process these in
@@ -120,7 +119,7 @@ ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
   for (std::string_view name : order) {
     AbstractVariable* var = variables.GetAnonymousVariable(name);
     librarian::ResolverContext ctx(name, variables, known_values,
-                                   options.random_engine, generation_config);
+                                   options.random_engine, generation_handler);
     var->AssignValue(ctx);
   }
 

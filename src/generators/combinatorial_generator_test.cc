@@ -31,7 +31,6 @@
 namespace moriarty {
 
 using ::moriarty::CombinatorialCoverage;
-using ::moriarty::moriarty_internal::GenerateTestCase;
 using ::moriarty::moriarty_internal::ValueSet;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::MTestType;
@@ -75,8 +74,10 @@ TEST(CombinatorialCoverage, GenerateShouldCreateCasesFromCoveringArray) {
   std::vector<TestCase> test_cases = CombinatorialCoverage(ctx);
   std::vector<ValueSet> generated_cases;
   for (const TestCase& test_case : test_cases) {
-    generated_cases.push_back(
-        GenerateTestCase(test_case, context.Variables(), {rng}));
+    auto [extra_constraints, values] =
+        UnsafeExtractTestCaseInternals(test_case);
+    generated_cases.push_back(moriarty_internal::GenerateAllValues(
+        context.Variables(), extra_constraints, values, {rng}));
   }
 
   EXPECT_THAT(CasesToCoveringArray(generated_cases),

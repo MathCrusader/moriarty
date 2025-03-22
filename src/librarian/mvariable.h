@@ -41,7 +41,7 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/internal/abstract_variable.h"
-#include "src/internal/generation_config.h"
+#include "src/internal/generation_handler.h"
 #include "src/librarian/constraint_handler.h"
 #include "src/librarian/conversions.h"
 #include "src/variables/constraints/custom_constraint.h"
@@ -317,18 +317,18 @@ G MVariable<V, G>::Generate(ResolverContext ctx) const {
     return *value;
 
   ctx.MarkStartGeneration(name);
-  using Policy =
-      moriarty_internal::GenerationConfig::RetryRecommendation::Policy;
+  using Policy = moriarty_internal::RetryRecommendation::Policy;
 
   std::exception_ptr last_exception;
   while (true) {
     try {
       G value = GenerateOnce(ctx);
-      ctx.MarkSuccessfulGeneration(name);
+      ctx.MarkSuccessfulGeneration();
       return value;
     } catch (const std::exception& e) {
       last_exception = std::current_exception();
-      auto [should_retry, delete_variables] = ctx.AddGenerationFailure(name);
+      auto [should_retry, delete_variables] =
+          ctx.ReportGenerationFailure(e.what());
       for (std::string_view variable_name : delete_variables)
         ctx.EraseValue(variable_name);
 
@@ -336,7 +336,7 @@ G MVariable<V, G>::Generate(ResolverContext ctx) const {
     }
   }
 
-  ctx.MarkAbandonedGeneration(name);
+  ctx.MarkAbandonedGeneration();
 
   try {
     std::rethrow_exception(last_exception);

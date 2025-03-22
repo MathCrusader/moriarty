@@ -122,8 +122,11 @@ void Moriarty::GenerateTestCases(GenerateFn fn, GenerateOptions options) {
     std::vector<TestCase> test_cases = fn(ctx);
 
     for (const TestCase& test_case : test_cases) {
-      assigned_test_cases_.push_back(
-          moriarty_internal::GenerateTestCase(test_case, variables_, {rng}));
+      auto [extra_constraints, values] =
+          UnsafeExtractTestCaseInternals(test_case);
+
+      assigned_test_cases_.push_back(moriarty_internal::GenerateAllValues(
+          variables_, extra_constraints, values, {rng}));
     }
   }
 }

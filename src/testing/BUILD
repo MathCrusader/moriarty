@@ -55,7 +55,7 @@ cc_library(
         "//src/contexts/librarian:reader_context",
         "//src/internal:abstract_variable",
         "//src/internal:generation_bootstrap",
-        "//src/internal:generation_config",
+        "//src/internal:generation_handler",
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",

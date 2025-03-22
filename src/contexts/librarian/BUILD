@@ -77,7 +77,7 @@ cc_library(
         "//src/contexts/internal:mutable_values_context",
         "//src/contexts/internal:name_context",
         "//src/contexts/internal:view_only_context",
-        "//src/internal:generation_config",
+        "//src/internal:generation_handler",
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",

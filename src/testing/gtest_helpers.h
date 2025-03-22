@@ -120,7 +120,6 @@
 #include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_bootstrap.h"
-#include "src/internal/generation_config.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -377,7 +376,6 @@ absl::StatusOr<typename T::value_type> Generate(T variable, Context context) {
   context.WithVariable(var_name, variable);
 
   moriarty::moriarty_internal::RandomEngine rng({3, 4, 5}, "");
-  moriarty::moriarty_internal::GenerationConfig generation_config;
 
   moriarty::moriarty_internal::ValueSet values =
       moriarty::moriarty_internal::GenerateAllValues(context.Variables(),

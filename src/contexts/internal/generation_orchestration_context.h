@@ -20,7 +20,7 @@
 #include <functional>
 #include <string_view>
 
-#include "src/internal/generation_config.h"
+#include "src/internal/generation_handler.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -31,7 +31,7 @@ namespace moriarty_internal {
 class GenerationOrchestrationContext {
  public:
   explicit GenerationOrchestrationContext(
-      std::reference_wrapper<GenerationConfig> config);
+      std::reference_wrapper<GenerationHandler> handler);
 
   // MarkStartGeneration()
   //
@@ -43,16 +43,16 @@ class GenerationOrchestrationContext {
   // Informs the system that `variable_name` has succeeded in its generation.
   // All variables that have started their generation since this one started
   // must have already finished as well.
-  void MarkSuccessfulGeneration(std::string_view variable_name);
+  void MarkSuccessfulGeneration();
 
   // MarkAbandonedGeneration()
   //
   // Informs the system that `variable_name` has stopped attempting to generate
   // a value. All variables that have started their generation since this one
   // started must have already finished as well.
-  void MarkAbandonedGeneration(std::string_view variable_name);
+  void MarkAbandonedGeneration();
 
-  // AddGenerationFailure()
+  // ReportGenerationFailure()
   //
   // Informs the system that `variable_name` has failed to generate a value.
   // Returns a recommendation for if the variable should retry generation or
@@ -64,11 +64,11 @@ class GenerationOrchestrationContext {
   //
   // All variables that have started their generation since this one
   // started must have already finished as well.
-  [[nodiscard]] GenerationConfig::RetryRecommendation AddGenerationFailure(
-      std::string_view variable_name);
+  [[nodiscard]] RetryRecommendation ReportGenerationFailure(
+      std::string failure_reason);
 
  private:
-  std::reference_wrapper<GenerationConfig> config_;
+  std::reference_wrapper<GenerationHandler> handler_;
 };
 
 }  // namespace moriarty_internal

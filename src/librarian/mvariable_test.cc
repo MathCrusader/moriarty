@@ -27,7 +27,7 @@
 #include "gtest/gtest.h"
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/internal/abstract_variable.h"
-#include "src/internal/generation_config.h"
+#include "src/internal/generation_handler.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -197,17 +197,17 @@ TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
                         .WithVariable("B", MInteger(Between("N", "N")))
                         .WithVariable("N", MInteger(Between(1, 1000000000)));
 
-  moriarty_internal::GenerationConfig generation_config;
+  moriarty_internal::GenerationHandler generation_handler;
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
   AbstractVariable* var_A = context.Variables().GetAnonymousVariable("A");
   ResolverContext ctxA("A", context.Variables(), context.Values(), engine,
-                       generation_config);
+                       generation_handler);
   var_A->AssignValue(ctxA);  // By assigning A, we assigned N.
 
   AbstractVariable* var_B = context.Variables().GetAnonymousVariable("B");
   ResolverContext ctxB("B", context.Variables(), context.Values(), engine,
-                       generation_config);
+                       generation_handler);
   var_B->AssignValue(ctxB);  // Should use the already generated N.
   int N = context.Values().Get<MInteger>("N");
 
@@ -515,18 +515,18 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
                         .WithVariable("N", MInteger(Between(1, 1000000000)))
                         .WithVariable("A", MInteger(Between(1, "N")));
 
-  moriarty_internal::GenerationConfig generation_config;
+  moriarty_internal::GenerationHandler generation_handler;
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
   AbstractVariable* var_A = context.Variables().GetAnonymousVariable("A");
   ResolverContext ctxA("A", context.Variables(), context.Values(), engine,
-                       generation_config);
+                       generation_handler);
   var_A->AssignValue(ctxA);  // By assigning A, we assigned N.
   int N = context.Values().Get<MInteger>("N");
 
   // Attempt to re-assign N.
   ResolverContext ctxN("N", context.Variables(), context.Values(), engine,
-                       generation_config);
+                       generation_handler);
   AbstractVariable* var_N = context.Variables().GetAnonymousVariable("N");
   var_N->AssignValue(ctxN);
 

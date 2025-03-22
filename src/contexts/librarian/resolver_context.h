@@ -25,7 +25,7 @@
 #include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/internal/name_context.h"
 #include "src/contexts/internal/view_only_context.h"
-#include "src/internal/generation_config.h"
+#include "src/internal/generation_handler.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -56,12 +56,12 @@ class ResolverContext
                   const moriarty_internal::VariableSet& variables,
                   moriarty_internal::ValueSet& values,
                   moriarty_internal::RandomEngine& engine,
-                  moriarty_internal::GenerationConfig& config)
+                  moriarty_internal::GenerationHandler& handler)
       : NameContext(variable_name),
         ViewOnlyContext(variables, values),
         MutableValuesContext(values),
         BasicRandomContext(engine),
-        GenerationOrchestrationContext(config),
+        GenerationOrchestrationContext(handler),
         variables_(variables),
         values_(values) {}
 

@@ -64,7 +64,7 @@ cc_library(
     srcs = ["generation_orchestration_context.cc"],
     hdrs = ["generation_orchestration_context.h"],
     deps = [
-        "//src/internal:generation_config",
+        "//src/internal:generation_handler",
     ],
 )
 
