@@ -52,6 +52,7 @@ using ::moriarty_testing::NumberOfDigits;
 using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::moriarty_testing::TestType;
+using ::moriarty_testing::ThrowsImpossibleToSatisfy;
 using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsValueNotFound;
 using ::moriarty_testing::ThrowsVariableNotFound;
@@ -73,7 +74,7 @@ TEST(MVariableTest, GenerateShouldProduceAValue) {
                                        56789, 6789, 789, 89, 9)));
 }
 
-TEST(MVariableTest, GenerateShouldObserveIs) {
+TEST(MVariableTest, GenerateShouldObserveExactly) {
   EXPECT_THAT(MTestType(Exactly<TestType>(10)), GeneratedValuesAre(10));
 }
 
@@ -122,7 +123,8 @@ TEST(MVariableTest, MergeFromShouldWork) {
     MTestType var1 = MTestType(Exactly<TestType>(10));
     MTestType var2 = MTestType(Exactly<TestType>(20));
     // Can't be both 10 and 20.
-    EXPECT_THROW({ var1.MergeFrom(var2); }, std::runtime_error);
+    EXPECT_THAT([&] { var1.MergeFrom(var2); },
+                ThrowsImpossibleToSatisfy("exactly"));
   }
   {
     MTestType var1 = MTestType(Exactly<TestType>(10));

@@ -749,6 +749,36 @@ MATCHER_P2(
   }
 }
 
+MATCHER_P(ThrowsImpossibleToSatisfy, substr,
+          std::format("{} a function that throws ImpossibleToSatisfy "
+                      "exception that contains the substring {}",
+                      (negation ? "is not" : "is"), substr)) {
+  // This first line is to get a better compile error message when arg is not of
+  // the expected type.
+  std::function<void()> fn = arg;
+
+  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  try {
+    function();
+    *result_listener << "did not throw";
+    return false;
+  } catch (const moriarty::ImpossibleToSatisfy& e) {
+    if (!testing::Value(e.what(), testing::HasSubstr(substr))) {
+      *result_listener << "threw the expected exception type, but the message "
+                          "does not contain the expected substring; "
+                       << e.what();
+      return false;
+    }
+    *result_listener << "threw the expected exception";
+    return true;
+  } catch (...) {
+    // Call the built-in explainer to get a better message.
+    return ::testing::ExplainMatchResult(
+        ::testing::Throws<moriarty::ImpossibleToSatisfy>(), function,
+        result_listener);
+  }
+}
+
 }  // namespace moriarty_testing
 
 #endif  // MORIARTY_SRC_LIBRARIAN_TEST_UTILS_H_

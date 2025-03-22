@@ -14,7 +14,6 @@
 
 #include "src/librarian/one_of_handler.h"
 
-#include <stdexcept>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -34,7 +33,7 @@ TEST(OneOfHandler, HasBeenConstrainedReturnsFalseInitially) {
 
 TEST(OneOfHandler, HasBeenConstrainedReturnsTrueAfterAnyCall) {
   OneOfHandler<int> handler;
-  handler.ConstrainOptions(std::vector{1, 2, 3});
+  EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 2, 3}));
   EXPECT_TRUE(handler.HasBeenConstrained());
 }
 
@@ -47,13 +46,13 @@ TEST(OneOfHandler, IsSatisfiedWithReturnsIsSatisfiedWithAnythingInitially) {
 
 TEST(OneOfHandler, IsSatisfiedWithReturnsAsExpectedForConstrainedValue) {
   OneOfHandler<int> handler;
-  handler.ConstrainOptions(std::vector{1, 2, 3});
+  EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 2, 3}));
   EXPECT_TRUE(handler.IsSatisfiedWith(1));
   EXPECT_TRUE(handler.IsSatisfiedWith(2));
   EXPECT_TRUE(handler.IsSatisfiedWith(3));
   EXPECT_FALSE(handler.IsSatisfiedWith(4));
 
-  handler.ConstrainOptions(std::vector{1, 2});
+  EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 2}));
   EXPECT_TRUE(handler.IsSatisfiedWith(1));
   EXPECT_TRUE(handler.IsSatisfiedWith(2));
   EXPECT_FALSE(handler.IsSatisfiedWith(3));
@@ -62,7 +61,7 @@ TEST(OneOfHandler, IsSatisfiedWithReturnsAsExpectedForConstrainedValue) {
 
 TEST(OneOfHandler, SelectOneOfReturnsOneOfTheConstrainedValues) {
   OneOfHandler<int> handler;
-  handler.ConstrainOptions(std::vector{1, 2, 3});
+  EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 2, 3}));
   EXPECT_THAT(handler.SelectOneOf([](int n) { return n - 1; }), AnyOf(1, 2, 3));
 }
 
@@ -73,21 +72,21 @@ TEST(OneOfHandler, GetUniqueValueReturnsTheUniqueValueIfThereIsOne) {
   }
   {  // One value
     OneOfHandler<int> handler;
-    handler.ConstrainOptions(std::vector{1});
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{1}));
     EXPECT_EQ(handler.GetUniqueValue(), 1);
   }
   {  // One value after intersection
     OneOfHandler<int> handler;
-    handler.ConstrainOptions(std::vector{1, 3});
-    handler.ConstrainOptions(std::vector{2, 3});
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 3}));
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{2, 3}));
     EXPECT_EQ(handler.GetUniqueValue(), 3);
   }
   {  // Multiple values
 
     OneOfHandler<int> handler;
-    handler.ConstrainOptions(std::vector{1, 4, 7});
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 4, 7}));
     EXPECT_EQ(handler.GetUniqueValue(), std::nullopt);
-    handler.ConstrainOptions(std::vector{4, 7, 10});
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{4, 7, 10}));
     EXPECT_EQ(handler.GetUniqueValue(), std::nullopt);
   }
 }
@@ -95,17 +94,17 @@ TEST(OneOfHandler, GetUniqueValueReturnsTheUniqueValueIfThereIsOne) {
 TEST(OneOfHandler, GetOptionsReturnsAllValidOptions) {
   {
     OneOfHandler<int> handler;
-    handler.ConstrainOptions(std::vector{1, 2, 3});
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 2, 3}));
     EXPECT_THAT(handler.GetOptions(), UnorderedElementsAre(1, 2, 3));
-    handler.ConstrainOptions(std::vector{1, 2});
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 2}));
     EXPECT_THAT(handler.GetOptions(), UnorderedElementsAre(1, 2));
-    handler.ConstrainOptions(std::vector{2});
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{2}));
     EXPECT_THAT(handler.GetOptions(), UnorderedElementsAre(2));
   }
   {
     OneOfHandler<int> handler;
-    handler.ConstrainOptions(std::vector{1, 2, 3});
-    handler.ConstrainOptions(std::vector{2, 3, 4});
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 2, 3}));
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{2, 3, 4}));
     EXPECT_THAT(handler.GetOptions(), UnorderedElementsAre(2, 3));
   }
 }
@@ -113,22 +112,18 @@ TEST(OneOfHandler, GetOptionsReturnsAllValidOptions) {
 TEST(OneOfHandler, ConstrainOptionsLeftWithNoValidOptionsShouldThrow) {
   {  // No options initially
     OneOfHandler<int> handler;
-    EXPECT_THROW(
-        { handler.ConstrainOptions(std::vector<int>()); }, std::runtime_error);
+    EXPECT_FALSE(handler.ConstrainOptions(std::vector<int>()));
   }
   {  // No options after intersection
     OneOfHandler<int> handler;
-    handler.ConstrainOptions(std::vector{1, 2, 3});
-    EXPECT_THROW(
-        { handler.ConstrainOptions(std::vector{4, 5, 6}); },
-        std::runtime_error);
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 2, 3}));
+    EXPECT_FALSE(handler.ConstrainOptions(std::vector{4, 5, 6}));
   }
   {  // No options after multiple intersections
     OneOfHandler<int> handler;
-    handler.ConstrainOptions(std::vector{1, 2, 3});
-    handler.ConstrainOptions(std::vector{2, 3, 4});
-    EXPECT_THROW(
-        { handler.ConstrainOptions(std::vector{1, 4}); }, std::runtime_error);
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 2, 3}));
+    EXPECT_TRUE(handler.ConstrainOptions(std::vector{2, 3, 4}));
+    EXPECT_FALSE(handler.ConstrainOptions(std::vector{1, 4}));
   }
 }
 

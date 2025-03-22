@@ -73,6 +73,11 @@ class AbstractVariable {
   // of the returned pointer is passed to the caller.
   virtual std::unique_ptr<AbstractVariable> Clone() const = 0;
 
+  // ToString() [pure virtual]
+  //
+  // Returns a string representation of the constraints this variable has.
+  virtual std::string ToString() const = 0;
+
   // AssignValue() [pure virtual]
   //
   // Given all current constraints, assigns a specific value to this variable

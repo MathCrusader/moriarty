@@ -66,7 +66,8 @@ bool Alphabet::IsSatisfiedWith(std::string_view value) const {
 }
 
 std::string Alphabet::ToString() const {
-  return std::format("contains only {}", librarian::DebugString(alphabet_));
+  return std::format("contains only the characters {}",
+                     librarian::DebugString(alphabet_));
 }
 
 std::string Alphabet::UnsatisfiedReason(std::string_view value) const {

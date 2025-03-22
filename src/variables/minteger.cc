@@ -66,11 +66,8 @@ MInteger& MInteger::AddConstraint(OneOf<int64_t> constraint) {
 }
 
 MInteger& MInteger::AddConstraint(OneOfIntegerExpression constraint) {
-  if (!one_of_expr_.Mutable().ConstrainOptions(constraint.GetOptions())) {
-    throw std::runtime_error(
-        std::format("Adding this constraint left no valid options: {}",
-                    constraint.ToString()));
-  }
+  if (!one_of_expr_.Mutable().ConstrainOptions(constraint.GetOptions()))
+    throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<OneOfIntegerExpression>(std::move(constraint)),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
@@ -139,9 +136,7 @@ Range::ExtremeValues MInteger::GetExtremeValues(
       bounds_->Extremes([&](std::string_view var) {
         return ctx.GenerateVariable<MInteger>(var);
       });
-  if (!extremes)
-    throw std::runtime_error(
-        "Attempting to generate an integer, but no valid integers available");
+  if (!extremes) throw ImpossibleToSatisfy(ToString());
   return *extremes;
 }
 

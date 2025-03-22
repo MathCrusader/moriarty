@@ -55,7 +55,7 @@ MTestType& MTestType::AddConstraint(NumberOfDigits constraint) {
 
 std::optional<TestType> MTestType::GetUniqueValueImpl(
     moriarty::librarian::AnalysisContext ctx) const {
-  if (one_of_.HasBeenConstrained()) return one_of_.GetUniqueValue();
+  if (GetOneOf().HasBeenConstrained()) return GetOneOf().GetUniqueValue();
   if (!last_digit_ || !last_digit_->GetUniqueValue(ctx)) return std::nullopt;
   if (!num_digits_ || !num_digits_->GetUniqueValue(ctx) != 1)
     return std::nullopt;
@@ -79,8 +79,8 @@ void MTestType::PrintImpl(moriarty::librarian::PrinterContext ctx,
 // By default, return 123456789, but maybe slightly modified.
 TestType MTestType::GenerateImpl(
     moriarty::librarian::ResolverContext ctx) const {
-  if (one_of_.HasBeenConstrained())
-    return one_of_.SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
+  if (GetOneOf().HasBeenConstrained())
+    return GetOneOf().SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
   [[maybe_unused]] int x = 0;
   if (ctx.RandomInteger(2) == 0) x++;  // Just to use the random engine.
 

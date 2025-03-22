@@ -44,6 +44,7 @@ using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
 using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
+using ::moriarty_testing::ThrowsImpossibleToSatisfy;
 using ::moriarty_testing::ThrowsVariableNotFound;
 using ::testing::AllOf;
 using ::testing::AnyOf;
@@ -442,8 +443,8 @@ TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithNoVariablesShouldWork) {
                 IsSatisfiedWith(5));
     EXPECT_THAT(MInteger(Exactly(5), OneOf({5, 6, 7})),
                 IsNotSatisfiedWith(6, "exactly"));
-    EXPECT_THAT(MInteger(Exactly(5), OneOf({6, 7, 8})),
-                IsNotSatisfiedWith(5, "one of"));
+    EXPECT_THAT([] { MInteger(Exactly(5), OneOf({6, 7, 8})); },
+                ThrowsImpossibleToSatisfy("one of"));
   }
   {  // Generate
     EXPECT_THAT(MInteger(Exactly(5)), GeneratedValuesAre(5));

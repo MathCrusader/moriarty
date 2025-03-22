@@ -37,6 +37,7 @@ using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
 using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
+using ::moriarty_testing::ThrowsImpossibleToSatisfy;
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::Ge;
@@ -150,9 +151,6 @@ TEST(MStringTest, LengthZeroProcudesTheEmptyString) {
 
 TEST(MStringTest, AlphabetIsRequiredForGenerate) {
   EXPECT_THROW({ (void)Generate(MString(Length(10))); }, std::runtime_error);
-  EXPECT_THROW(
-      { (void)Generate(MString(Length(10), Alphabet(""))); },
-      std::runtime_error);
 }
 
 TEST(MStringTest, MergeFromCorrectlyMergesOnLength) {
@@ -194,12 +192,9 @@ TEST(MStringTest, MergeFromCorrectlyMergesOnAlphabet) {
       string_with_alphabet("ab").MergeFrom(string_with_alphabet("bc")),
       string_with_alphabet("b")));  // Non-empty intersection
 
-  EXPECT_THROW(
-      {
-        (void)Generate(
-            string_with_alphabet("ab").MergeFrom(string_with_alphabet("cd")));
-      },
-      std::runtime_error);
+  EXPECT_THAT(
+      [&] { string_with_alphabet("ab").MergeFrom(string_with_alphabet("cd")); },
+      ThrowsImpossibleToSatisfy("ab"));
 }
 
 TEST(MStringTest, LengthIsSatisfied) {
@@ -325,7 +320,8 @@ TEST(MStringTest,
 TEST(MStringTest, GenerateWithoutSimplePatternOrLengthOrAlphabetShouldFail) {
   // No simple pattern and no alphabet
   EXPECT_THROW({ (void)Generate(MString()); }, std::runtime_error);
-  EXPECT_THROW({ (void)Generate(MString(Alphabet(""))); }, std::runtime_error);
+  EXPECT_THAT([] { MString(Alphabet("")); },
+              ThrowsImpossibleToSatisfy("only the characters ``"));
 
   // Has Alphabet, but not simple pattern or length.
   EXPECT_THROW(

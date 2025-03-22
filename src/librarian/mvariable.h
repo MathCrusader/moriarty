@@ -44,6 +44,7 @@
 #include "src/internal/generation_handler.h"
 #include "src/librarian/constraint_handler.h"
 #include "src/librarian/conversions.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/one_of_handler.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/custom_constraint.h"
@@ -92,7 +93,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // ToString()
   //
   // Returns a string representation of the constraints this MVariable has.
-  [[nodiscard]] std::string ToString() const;
+  [[nodiscard]] std::string ToString() const override;
 
   // MergeFrom()
   //
@@ -465,19 +466,15 @@ V& MVariable<V, G>::InternalAddConstraint(Constraint c) {
 
 template <typename V, typename G>
 V& MVariable<V, G>::InternalAddExactlyConstraint(Exactly<G> c) {
-  if (!one_of_.ConstrainOptions(std::vector<G>{c.GetValue()})) {
-    throw std::runtime_error(std::format(
-        "Adding this constraint left no valid options: {}", c.ToString()));
-  }
+  if (!one_of_.ConstrainOptions(std::vector<G>{c.GetValue()}))
+    throw ImpossibleToSatisfy(ToString(), c.ToString());
   return InternalAddConstraint(std::move(c));
 }
 
 template <typename V, typename G>
 V& MVariable<V, G>::InternalAddOneOfConstraint(OneOf<G> c) {
-  if (!one_of_.ConstrainOptions(c.GetOptions())) {
-    throw std::runtime_error(std::format(
-        "Adding this constraint left no valid options: {}", c.ToString()));
-  }
+  if (!one_of_.ConstrainOptions(c.GetOptions()))
+    throw ImpossibleToSatisfy(ToString(), c.ToString());
   return InternalAddConstraint(std::move(c));
 }
 

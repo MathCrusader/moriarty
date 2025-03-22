@@ -1,4 +1,5 @@
 /*
+ * Copyright 2025 Darcy Best
  * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -120,11 +121,11 @@ TEST(AlphabetTest, IsSatisfiedWithShouldWork) {
 }
 
 TEST(AlphabetTest, ToStringShouldWork) {
-  EXPECT_EQ(Alphabet("abc").ToString(), "contains only `abc`");
-  EXPECT_EQ(Alphabet("AbC").ToString(), "contains only `AbC`");
+  EXPECT_EQ(Alphabet("abc").ToString(), "contains only the characters `abc`");
+  EXPECT_EQ(Alphabet("AbC").ToString(), "contains only the characters `AbC`");
   // TODO(darcybest): Consider escaping whitespace characters in string.
-  EXPECT_EQ(Alphabet("A\tC").ToString(), "contains only `A\tC`");
-  EXPECT_EQ(Alphabet("AAA").ToString(), "contains only `AAA`");
+  EXPECT_EQ(Alphabet("A\tC").ToString(), "contains only the characters `A\tC`");
+  EXPECT_EQ(Alphabet("AAA").ToString(), "contains only the characters `AAA`");
 }
 
 TEST(AlphabetTest, UnsatisfiedReasonShouldWork) {

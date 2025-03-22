@@ -16,7 +16,6 @@
 #include "src/variables/mstring.h"
 
 #include <algorithm>
-#include <format>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -29,6 +28,7 @@
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
+#include "src/librarian/errors.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
@@ -59,12 +59,8 @@ MString& MString::AddConstraint(Alphabet constraint) {
   auto last = std::unique(options.begin(), options.end());
   options.erase(last, options.end());
 
-  if (!alphabet_.ConstrainOptions(options)) {
-    throw std::runtime_error(
-        std::format("No valid character left after constraining alphabet to {}",
-                    constraint.GetAlphabet()));
-  }
-
+  if (!alphabet_.ConstrainOptions(options))
+    throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   return InternalAddConstraint(std::move(constraint));
 }
 

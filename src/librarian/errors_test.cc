@@ -25,6 +25,7 @@ namespace moriarty {
 namespace {
 
 using ::moriarty::ValueTypeMismatch;
+using ::moriarty_testing::ThrowsImpossibleToSatisfy;
 using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsValueNotFound;
 using ::moriarty_testing::ThrowsValueTypeMismatch;
@@ -166,6 +167,40 @@ TEST(ErrorsTest, ThrowsValueTypeMismatchMatcherShouldWorkCorrectly) {
           throw std::runtime_error("words");
         },
         ThrowsValueTypeMismatch("X", "Y"));
+  }
+}
+
+TEST(ErrorsTest, ThrowsImpossibleToSatisfyMatcherShouldWorkCorrectly) {
+  {  // Happy path
+    EXPECT_THAT([] { throw ImpossibleToSatisfy("x", "y"); },
+                ThrowsImpossibleToSatisfy("x"));
+    EXPECT_THAT([] { throw ImpossibleToSatisfy("x", "y"); },
+                ThrowsImpossibleToSatisfy("y"));
+  }
+  {  // Wrong name
+    EXPECT_THAT([] { throw ImpossibleToSatisfy("x", "y"); },
+                Not(ThrowsImpossibleToSatisfy("zz")));
+  }
+  {  // Wrong exception
+    EXPECT_THAT([] { throw std::runtime_error("words"); },
+                Not(ThrowsImpossibleToSatisfy("words")));
+  }
+  {  // No exception
+    EXPECT_THAT([] {}, Not(ThrowsImpossibleToSatisfy("")));
+  }
+  {  // Multiple throws (::testing::ThrowsMessage gets these wrong)
+    EXPECT_THAT(
+        [] {
+          throw std::runtime_error("words");
+          throw ImpossibleToSatisfy("X", "Y");
+        },
+        Not(ThrowsImpossibleToSatisfy("X")));
+    EXPECT_THAT(
+        [] {
+          throw ImpossibleToSatisfy("X", "Y");
+          throw std::runtime_error("words");
+        },
+        ThrowsImpossibleToSatisfy("X"));
   }
 }
 

@@ -29,7 +29,6 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/librarian/mvariable.h"
-#include "src/librarian/one_of_handler.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/minteger.h"
 
@@ -137,7 +136,6 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   std::string Typename() const override { return "MTestType"; };
 
  private:
-  moriarty::librarian::OneOfHandler<TestType> one_of_;
   std::optional<moriarty::MInteger> last_digit_;
   std::optional<moriarty::MInteger> num_digits_;
 

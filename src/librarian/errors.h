@@ -1,6 +1,5 @@
 /*
  * Copyright 2025 Darcy Best
- * Copyright 2024 Google LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -98,6 +97,38 @@ class ValueTypeMismatch : public std::logic_error {
  private:
   std::string name_;
   std::string type_;
+};
+
+// ImpossibleToSatisfy()
+//
+// Thrown when a constraint is added to a variable, which makes it impossible
+// for any value to satisfy.
+class ImpossibleToSatisfy : public std::logic_error {
+ public:
+  explicit ImpossibleToSatisfy(std::string_view variable_str,
+                               std::string_view constraint_str)
+      : std::logic_error(
+            std::format("Adding this constraint left the variable in a state "
+                        "where no value can possibly be generated:"
+                        "\n * New Constraint : {}\n * All constraints: {}",
+                        constraint_str, variable_str)),
+        variable_(variable_str),
+        constraint_(constraint_str) {}
+
+  explicit ImpossibleToSatisfy(std::string_view variable_str)
+      : std::logic_error(std::format("This constraint is in a state "
+                                     "where no value can possibly be generated:"
+                                     "\n * All constraints: {}",
+                                     variable_str)),
+        variable_(variable_str),
+        constraint_("") {}
+
+  const std::string& VariableStr() const { return variable_; }
+  const std::string& ConstraintStr() const { return constraint_; }
+
+ private:
+  std::string variable_;
+  std::string constraint_;
 };
 
 }  // namespace moriarty
