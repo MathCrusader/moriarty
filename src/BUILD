@@ -27,13 +27,6 @@ package(
 licenses(["notice"])
 
 cc_library(
-    name = "errors",
-    hdrs = ["errors.h"],
-    deps = [
-    ],
-)
-
-cc_library(
     name = "context",
     srcs = ["context.cc"],
     hdrs = ["context.h"],
@@ -52,10 +45,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "io_config",
-    hdrs = ["io_config.h"],
-)
 
 cc_library(
     name = "moriarty",
@@ -107,15 +96,7 @@ cc_library(
     ],
 )
 
-cc_test(
-    name = "errors_test",
-    srcs = ["errors_test.cc"],
-    deps = [
-        ":errors",
-        "//src/testing:gtest_helpers",
-        "@googletest//:gtest_main",
-    ],
-)
+
 
 cc_test(
     name = "moriarty_test",

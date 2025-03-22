@@ -24,7 +24,7 @@
 #include <string_view>
 
 #include "src/internal/simple_pattern.h"
-#include "src/librarian/debug_print.h"
+#include "src/util/debug_string.h"
 
 namespace moriarty {
 

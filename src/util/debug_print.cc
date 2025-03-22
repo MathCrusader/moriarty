@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "src/librarian/debug_print.h"
-
 #include <cctype>
 #include <format>
+
+#include "src/util/debug_string.h"
 
 namespace moriarty {
 namespace librarian {

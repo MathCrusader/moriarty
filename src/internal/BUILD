@@ -110,7 +110,7 @@ cc_library(
     srcs = ["simple_pattern.cc"],
     hdrs = ["simple_pattern.h"],
     deps = [
-        "//src/librarian:debug_print",
+        "//src/util:debug_string",
         "@abseil-cpp//absl/strings",
     ],
 )

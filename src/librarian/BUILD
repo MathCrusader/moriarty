@@ -30,8 +30,8 @@ cc_library(
     name = "constraint_handler",
     hdrs = ["constraint_handler.h"],
     deps = [
-        ":cow_ptr",
         "//src/contexts/librarian:analysis_context",
+        "//src/util:cow_ptr",
     ],
 )
 
@@ -44,19 +44,13 @@ cc_library(
 )
 
 cc_library(
-    name = "cow_ptr",
-    hdrs = ["cow_ptr.h"],
+    name = "errors",
+    hdrs = ["errors.h"],
 )
 
 cc_library(
-    name = "debug_print",
-    srcs = ["debug_print.cc"],
-    hdrs = ["debug_print.h"],
-)
-
-cc_library(
-    name = "locked_optional",
-    hdrs = ["locked_optional.h"],
+    name = "io_config",
+    hdrs = ["io_config.h"],
 )
 
 cc_library(
@@ -106,28 +100,11 @@ cc_test(
 )
 
 cc_test(
-    name = "cow_ptr_test",
-    srcs = ["cow_ptr_test.cc"],
+    name = "errors_test",
+    srcs = ["errors_test.cc"],
     deps = [
-        ":cow_ptr",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "debug_print_test",
-    srcs = ["debug_print_test.cc"],
-    deps = [
-        ":debug_print",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "locked_optional_test",
-    srcs = ["locked_optional_test.cc"],
-    deps = [
-        ":locked_optional",
+        ":errors",
+        "//src/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],
 )

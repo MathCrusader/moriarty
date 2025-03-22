@@ -30,7 +30,7 @@
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
 #include "absl/strings/str_cat.h"
-#include "src/librarian/debug_print.h"
+#include "src/util/debug_string.h"
 
 namespace moriarty {
 namespace moriarty_internal {

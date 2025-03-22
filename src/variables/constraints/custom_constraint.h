@@ -24,7 +24,7 @@
 #include <vector>
 
 #include "src/contexts/librarian/analysis_context.h"
-#include "src/librarian/debug_print.h"
+#include "src/util/debug_string.h"
 #include "src/variables/constraints/base_constraints.h"
 
 namespace moriarty {

@@ -30,7 +30,7 @@
 #include <utility>
 #include <vector>
 
-#include "src/librarian/debug_print.h"
+#include "src/util/debug_string.h"
 
 namespace moriarty {
 
