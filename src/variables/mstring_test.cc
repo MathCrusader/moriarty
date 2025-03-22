@@ -29,10 +29,11 @@
 namespace moriarty {
 namespace {
 
-using ::moriarty_testing::Generate;
+using ::moriarty_testing::Context;
 using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GenerateEdgeCases;
 using ::moriarty_testing::GenerateSameValues;
+using ::moriarty_testing::GenerateThrowsGenerationError;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
 using ::moriarty_testing::Print;
@@ -134,14 +135,10 @@ TEST(MStringTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
 }
 
 TEST(MStringTest, InvalidLengthShouldFail) {
-  EXPECT_THROW(
-      { (void)Generate(MString(Length(-1), Alphabet("a"))); },
-      std::runtime_error);
-  EXPECT_THROW(
-      {
-        (void)Generate(MString(Length(AtMost(10), AtLeast(20)), Alphabet("a")));
-      },
-      std::runtime_error);
+  EXPECT_THAT(MString(Length(-1), Alphabet("a")),
+              GenerateThrowsGenerationError(".length", Context()));
+  EXPECT_THAT(MString(Length(AtMost(10), AtLeast(20)), Alphabet("a")),
+              GenerateThrowsGenerationError(".length", Context()));
 }
 
 TEST(MStringTest, LengthZeroProcudesTheEmptyString) {
@@ -150,7 +147,8 @@ TEST(MStringTest, LengthZeroProcudesTheEmptyString) {
 }
 
 TEST(MStringTest, AlphabetIsRequiredForGenerate) {
-  EXPECT_THROW({ (void)Generate(MString(Length(10))); }, std::runtime_error);
+  EXPECT_THAT(MString(Length(10)),
+              GenerateThrowsGenerationError("", Context()));
 }
 
 TEST(MStringTest, MergeFromCorrectlyMergesOnLength) {
@@ -171,9 +169,8 @@ TEST(MStringTest, MergeFromCorrectlyMergesOnLength) {
   EXPECT_TRUE(GenerateSameValues(get_str(1, 8).MergeFrom(get_str(8, 10)),
                                  get_str(8, 8)));  // Singleton range
 
-  EXPECT_THROW(
-      { (void)Generate(get_str(1, 6).MergeFrom(get_str(10, 20))); },
-      std::runtime_error);
+  EXPECT_THAT(get_str(1, 6).MergeFrom(get_str(10, 20)),
+              GenerateThrowsGenerationError(".length", Context()));
 }
 
 TEST(MStringTest, MergeFromCorrectlyMergesOnAlphabet) {
@@ -271,12 +268,9 @@ TEST(MStringTest, DistinctCharactersWorksInTheSimpleCase) {
 }
 
 TEST(MStringTest, DistinctCharactersRequiresAShortLength) {
-  EXPECT_THROW(
-      {
-        (void)Generate(MString(Length(Between(5, 5)), Alphabet("abc"),
-                               DistinctCharacters()));
-      },
-      std::runtime_error);
+  EXPECT_THAT(
+      MString(Length(Between(5, 5)), Alphabet("abc"), DistinctCharacters()),
+      GenerateThrowsGenerationError(".length", Context()));
 
   // Most of the range is too large, the only way to succeed is for it to make a
   // string of length 10.
@@ -309,23 +303,19 @@ TEST(MStringTest,
       GeneratedValuesAre(MatchesRegex("[cd]{10,15}")));
 
   // Note, we don't know which simple pattern the generated value doesn't match.
-  EXPECT_THROW(
-      {
-        (void)Generate(
-            MString(SimplePattern("[abc]{1, 10}"), SimplePattern("[abc]{15}")));
-      },
-      std::runtime_error);
+  EXPECT_THAT(
+      MString(SimplePattern("[abc]{1, 10}"), SimplePattern("[abc]{15}")),
+      GenerateThrowsGenerationError("", Context()));
 }
 
 TEST(MStringTest, GenerateWithoutSimplePatternOrLengthOrAlphabetShouldFail) {
   // No simple pattern and no alphabet
-  EXPECT_THROW({ (void)Generate(MString()); }, std::runtime_error);
+  EXPECT_THAT(MString(), GenerateThrowsGenerationError("", Context()));
   EXPECT_THAT([] { MString(Alphabet("")); },
               ThrowsImpossibleToSatisfy("only the characters ``"));
 
   // Has Alphabet, but not simple pattern or length.
-  EXPECT_THROW(
-      { (void)Generate(MString(Alphabet("abc"))); }, std::runtime_error);
+  EXPECT_THAT(MString(), GenerateThrowsGenerationError("", Context()));
 }
 
 TEST(MStringTest, SimplePatternWorksForGeneration) {
@@ -341,10 +331,10 @@ TEST(MStringTest, IsSatisfiedWithShouldCheck) {
 }
 
 TEST(MStringTest, SimplePatternWithWildcardsShouldFailGeneration) {
-  EXPECT_THROW(
-      { (void)Generate(MString(SimplePattern("a*"))); }, std::runtime_error);
-  EXPECT_THROW(
-      { (void)Generate(MString(SimplePattern("a+"))); }, std::runtime_error);
+  EXPECT_THAT(MString(SimplePattern("a*")),
+              GenerateThrowsGenerationError("", Context()));
+  EXPECT_THAT(MString(SimplePattern("a+")),
+              GenerateThrowsGenerationError("", Context()));
 }
 
 TEST(MStringTest, SimplePatternWithWildcardsShouldWorkForIsSatisfiedWith) {

@@ -41,11 +41,11 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/internal/abstract_variable.h"
-#include "src/internal/generation_handler.h"
 #include "src/librarian/constraint_handler.h"
 #include "src/librarian/conversions.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/one_of_handler.h"
+#include "src/librarian/policies.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/custom_constraint.h"
 
@@ -343,7 +343,14 @@ G MVariable<V, G>::Generate(ResolverContext ctx) const {
     return *value;
 
   ctx.MarkStartGeneration(name);
-  using Policy = moriarty_internal::RetryRecommendation::Policy;
+
+  auto report_and_clean = [&](std::string_view failure_reason) {
+    auto [should_retry, delete_variables] =
+        ctx.ReportGenerationFailure(std::string(failure_reason));
+    for (std::string_view variable_name : delete_variables)
+      ctx.EraseValue(variable_name);
+    return should_retry;
+  };
 
   std::exception_ptr last_exception;
   while (true) {
@@ -351,29 +358,20 @@ G MVariable<V, G>::Generate(ResolverContext ctx) const {
       G value = GenerateOnce(ctx);
       ctx.MarkSuccessfulGeneration();
       return value;
-    } catch (const std::exception& e) {
+    } catch (const GenerationError& e) {
       last_exception = std::current_exception();
-      auto [should_retry, delete_variables] =
-          ctx.ReportGenerationFailure(e.what());
-      for (std::string_view variable_name : delete_variables)
-        ctx.EraseValue(variable_name);
-
-      if (should_retry == Policy::kAbort) break;
+      RetryPolicy retry = report_and_clean(e.Message());
+      if (retry == RetryPolicy::kAbort) break;
+      if (e.IsRetryable() == RetryPolicy::kAbort) break;
+    } catch (const std::exception& e) {
+      report_and_clean(e.what());
+      ctx.MarkAbandonedGeneration();
+      throw;  // Re-throw unknown messages.
     }
   }
 
   ctx.MarkAbandonedGeneration();
-
-  try {
-    std::rethrow_exception(last_exception);
-  } catch (const std::exception& e) {
-    throw std::runtime_error(
-        std::format("Error generating '{}' (even with retries). Last error: {}",
-                    name, e.what()));
-  }
-
-  throw std::runtime_error(std::format(
-      "Error generating '{}' (even with retries). Last error: unknown", name));
+  std::rethrow_exception(last_exception);
 }
 
 template <typename V, typename G>
@@ -517,9 +515,11 @@ G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
   for (std::string_view dep : dependencies_) ctx.AssignVariable(dep);
 
   if (!IsSatisfiedWith(ctx, potential_value))
-    throw std::runtime_error(
+    throw moriarty::GenerationError(
+        ctx.GetVariableName(),
         std::format("Generated value does not satisfy constraints: {}",
-                    UnsatisfiedReason(ctx, potential_value)));
+                    UnsatisfiedReason(ctx, potential_value)),
+        RetryPolicy::kRetry);
 
   return potential_value;
 }

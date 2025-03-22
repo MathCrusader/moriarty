@@ -67,6 +67,12 @@ class GenerationOrchestrationContext {
   [[nodiscard]] RetryRecommendation ReportGenerationFailure(
       std::string failure_reason);
 
+  // GetFailureReason()
+  //
+  // Returns the most recent failure reason for `variable_name`.
+  [[nodiscard]] std::optional<std::string> GetFailureReason(
+      std::string variable_name) const;
+
  private:
   std::reference_wrapper<GenerationHandler> handler_;
 };

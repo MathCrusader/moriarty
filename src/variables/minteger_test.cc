@@ -39,6 +39,7 @@ using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GenerateEdgeCases;
 using ::moriarty_testing::GenerateSameValues;
+using ::moriarty_testing::GenerateThrowsGenerationError;
 using ::moriarty_testing::GetUniqueValue;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
@@ -152,19 +153,16 @@ TEST(MIntegerTest, RepeatedBetweenCallsShouldBeIntersectedTogether) {
 TEST(MIntegerTest, InvalidBoundsShouldCrash) {
   // Need to use AtMost/AtLeast here since Between will crash on its own.
   // Min > Max
-  EXPECT_THROW(
-      { (void)Generate(MInteger(AtLeast(0), AtMost(-1))); },
-      std::runtime_error);
+  EXPECT_THAT(MInteger(AtLeast(0), AtMost(-1)),
+              GenerateThrowsGenerationError("", Context()));
 
   // Empty intersection (First interval to the left)
-  EXPECT_THROW(
-      { (void)Generate(MInteger(Between(1, 10), Between(20, 30))); },
-      std::runtime_error);
+  EXPECT_THAT(MInteger(Between(1, 10), Between(20, 30)),
+              GenerateThrowsGenerationError("", Context()));
 
   // Empty intersection (First interval to the right)
-  EXPECT_THROW(
-      { (void)Generate(MInteger(Between(20, 30), Between(1, 10))); },
-      std::runtime_error);
+  EXPECT_THAT(MInteger(Between(20, 30), Between(1, 10)),
+              GenerateThrowsGenerationError("", Context()));
 }
 
 // TODO(darcybest): MInteger should have an equality operator instead of this.
@@ -244,16 +242,11 @@ TEST(MIntegerTest, AtMostAndAtLeastShouldLimitTheOutputRange) {
 }
 
 TEST(MIntegerTest, AtMostLargerThanAtLeastShouldFail) {
-  EXPECT_THROW(
-      { (void)Generate(MInteger(AtLeast(10), AtMost(0))); },
-      std::runtime_error);
-
-  EXPECT_THROW(
-      {
-        (void)Generate(MInteger(AtLeast(0), AtMost("3 * N + 1")),
-                       Context().WithValue<MInteger>("N", -3));
-      },
-      std::runtime_error);
+  EXPECT_THAT(MInteger(AtLeast(10), AtMost(0)),
+              GenerateThrowsGenerationError("", Context()));
+  EXPECT_THAT(MInteger(AtLeast(10), AtMost("3 * N + 1")),
+              GenerateThrowsGenerationError(
+                  "", Context().WithValue<MInteger>("N", -3)));
 }
 
 TEST(MIntegerTest, AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {

@@ -21,14 +21,15 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/librarian/policies.h"
 #include "src/testing/gtest_helpers.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
-using RetryRecommendation::kAbort;
-using RetryRecommendation::kRetry;
+using RetryPolicy::kAbort;
+using RetryPolicy::kRetry;
 
 using moriarty_testing::ThrowsVariableNotFound;
 using testing::ElementsAre;

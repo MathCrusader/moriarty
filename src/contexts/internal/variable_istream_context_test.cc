@@ -21,6 +21,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/value_set.h"
+#include "src/librarian/policies.h"
 #include "src/test_case.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/container_constraints.h"

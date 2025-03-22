@@ -14,14 +14,21 @@
  * limitations under the License.
  */
 
-#ifndef MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
-#define MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
+#ifndef MORIARTY_SRC_LIBRARIAN_POLICIES_H_
+#define MORIARTY_SRC_LIBRARIAN_POLICIES_H_
 
 namespace moriarty {
 
-// Various kinds of whitespace characters.
-enum class Whitespace { kSpace, kTab, kNewline };
+// How to handle whitespace when reading from an input stream.
+//
+// * Precise means that the whitespace must be exactly as expected.
+// * Flexible treats all whitespace characters as the same, and collapses all
+//   back-to-back whitespace together.
+enum class WhitespaceStrictness { kPrecise, kFlexible };
+
+// Determines if a generation should be retried or not.
+enum class RetryPolicy { kRetry, kAbort };
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
+#endif  // MORIARTY_SRC_LIBRARIAN_POLICIES_H_

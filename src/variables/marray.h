@@ -35,8 +35,10 @@
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
+#include "src/librarian/policies.h"
 #include "src/util/locked_optional.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
@@ -253,8 +255,10 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
         [&](int n) { return ctx.RandomInteger(n); });
 
   if (!length_) {
-    throw std::runtime_error(
-        "Attempting to generate an array with no length parameter given.");
+    throw moriarty::GenerationError(ctx.GetVariableName(),
+                                    "Attempting to generate an array with no "
+                                    "length parameter given.",
+                                    RetryPolicy::kAbort);
   }
 
   MInteger length_local = *length_;

@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <format>
 #include <functional>
 #include <limits>
 #include <memory>
@@ -37,6 +38,7 @@
 #include "src/internal/range.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/one_of_handler.h"
+#include "src/librarian/policies.h"
 #include "src/librarian/size_property.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
@@ -136,7 +138,11 @@ Range::ExtremeValues MInteger::GetExtremeValues(
       bounds_->Extremes([&](std::string_view var) {
         return ctx.GenerateVariable<MInteger>(var);
       });
-  if (!extremes) throw ImpossibleToSatisfy(ToString());
+  if (!extremes) {
+    throw GenerationError(ctx.GetVariableName(),
+                          std::format("No integer satisfies: {}", ToString()),
+                          RetryPolicy::kAbort);
+  }
   return *extremes;
 }
 
@@ -194,6 +200,10 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
     std::erase_if(options, [&](int64_t value) {
       return !(extremes.min <= value && value <= extremes.max);
     });
+    if (options.empty()) {
+      throw GenerationError(ctx.GetVariableName(), ToString(),
+                            RetryPolicy::kAbort);
+    }
     return ctx.RandomElement(options);
   }
 
@@ -222,12 +232,7 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
     // [1, N].
     rng_extremes->min += extremes.min - 1;
     rng_extremes->max += extremes.min - 1;
-
-    try {
-      return ctx.RandomInteger(rng_extremes->min, rng_extremes->max);
-    } catch (const std::exception& e) {
-      // If the special size fails, simply pass through.
-    }
+    return ctx.RandomInteger(rng_extremes->min, rng_extremes->max);
   }
 
   return ctx.RandomInteger(extremes.min, extremes.max);

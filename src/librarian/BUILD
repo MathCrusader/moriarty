@@ -46,6 +46,9 @@ cc_library(
 cc_library(
     name = "errors",
     hdrs = ["errors.h"],
+    deps = [
+        "//src/librarian:policies",
+    ],
 )
 
 cc_library(
@@ -79,6 +82,11 @@ cc_library(
 )
 
 cc_library(
+    name = "policies",
+    hdrs = ["policies.h"],
+)
+
+cc_library(
     name = "size_property",
     srcs = ["size_property.cc"],
     hdrs = ["size_property.h"],
@@ -105,6 +113,7 @@ cc_test(
     srcs = ["errors_test.cc"],
     deps = [
         ":errors",
+        "//src/librarian:policies",
         "//src/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],

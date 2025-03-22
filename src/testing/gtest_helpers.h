@@ -374,6 +374,61 @@ T::value_type Generate(T variable, Context context) {
   return values.Get<T>(var_name);
 }
 
+MATCHER_P2(GenerateThrowsGenerationError, variable_name, context,
+           std::format("when generating, throws a GenerationError exception "
+                       "that originated from the variable {}",
+                       variable_name)) {
+  std::string name = std::string(variable_name).empty()
+                         ? std::format("Generate({})", arg.Typename())
+                         : variable_name;
+  if (name[0] == '.')
+    name = std::format("Generate({}){}", arg.Typename(), name);
+
+  try {
+    (void)Generate(arg, context);
+    *result_listener << "Successfully generated a value";
+    return false;
+  } catch (const moriarty::GenerationError& e) {
+    if (e.VariableName() != name) {
+      *result_listener << "; is a GenerationError, but for the wrong variable: "
+                       << e.VariableName() << "; message: " << e.Message();
+      return false;
+    }
+    return true;
+  } catch (const std::exception& e) {
+    *result_listener << "Unexpected exception: " << e.what();
+    return false;
+  }
+}
+
+MATCHER_P2(GenerateThrowsNotFoundError, variable_name, context,
+           std::format("when generating, throws either a ValueNotFound or "
+                       "VariableNotFound exception for the variable `{}`",
+                       variable_name)) {
+  try {
+    (void)Generate(arg, context);
+    *result_listener << "Successfully generated a value";
+    return false;
+  } catch (const moriarty::ValueNotFound& e) {
+    if (e.VariableName() != variable_name) {
+      *result_listener << "ValueNotFound, but for the wrong variable: "
+                       << e.VariableName();
+      return false;
+    }
+    return true;
+  } catch (const moriarty::VariableNotFound& e) {
+    if (e.VariableName() != variable_name) {
+      *result_listener << "ValueNotFound, but for the wrong variable: "
+                       << e.VariableName();
+      return false;
+    }
+    return true;
+  } catch (const std::exception& e) {
+    *result_listener << "Unexpected exception: " << e.what();
+    return false;
+  }
+}
+
 template <typename T>
   requires std::derived_from<
       T, moriarty::librarian::MVariable<T, typename T::value_type>>
@@ -775,6 +830,43 @@ MATCHER_P(ThrowsImpossibleToSatisfy, substr,
     // Call the built-in explainer to get a better message.
     return ::testing::ExplainMatchResult(
         ::testing::Throws<moriarty::ImpossibleToSatisfy>(), function,
+        result_listener);
+  }
+}
+
+MATCHER_P2(
+    ThrowsGenerationError, variable, substr,
+    std::format("{} a function that throws a GenerationError "
+                "exception from the variable {} that contains the substring {}",
+                (negation ? "is not" : "is"), variable, substr)) {
+  // This first line is to get a better compile error message when arg is not of
+  // the expected type.
+  std::function<void()> fn = arg;
+
+  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  try {
+    function();
+    *result_listener << "did not throw";
+    return false;
+  } catch (const moriarty::GenerationError& e) {
+    if (e.VariableName() != variable) {
+      *result_listener
+          << "threw the expected exception type, but the wrong variable name. `"
+          << e.VariableName() << "`";
+      return false;
+    }
+    if (!testing::Value(e.Message(), testing::HasSubstr(substr))) {
+      *result_listener << "threw the expected exception type, but the message "
+                          "does not contain the expected substring; "
+                       << e.what();
+      return false;
+    }
+    *result_listener << "threw the expected exception";
+    return true;
+  } catch (...) {
+    // Call the built-in explainer to get a better message.
+    return ::testing::ExplainMatchResult(
+        ::testing::Throws<moriarty::GenerationError>(), function,
         result_listener);
   }
 }

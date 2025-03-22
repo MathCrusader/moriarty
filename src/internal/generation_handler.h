@@ -25,6 +25,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "src/librarian/policies.h"
+
 // FIXME: Should this fail if you Start() a variable that was Complete()d?
 
 namespace moriarty {
@@ -36,11 +38,7 @@ namespace moriarty_internal {
 // Also, provides information about values of variables that should be
 // deleted.
 struct RetryRecommendation {
-  enum Policy {
-    kAbort,  // Do not continue retrying
-    kRetry   // Retry generation
-  };
-  Policy policy;
+  RetryPolicy policy;
   std::vector<std::string> variable_names_to_delete;
 };
 

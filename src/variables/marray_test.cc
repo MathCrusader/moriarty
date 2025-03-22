@@ -41,6 +41,7 @@ using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GenerateEdgeCases;
 using ::moriarty_testing::GenerateSameValues;
+using ::moriarty_testing::GenerateThrowsGenerationError;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
 using ::moriarty_testing::Print;
@@ -159,11 +160,10 @@ TEST(MArrayTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
 }
 
 TEST(MArrayTest, InvalidLengthShouldFail) {
-  EXPECT_THROW(
-      { (void)Generate(MArray<MInteger>(Length(-1))); }, std::runtime_error);
-  EXPECT_THROW(
-      { (void)Generate(MArray<MInteger>(Length(AtMost(10), AtLeast(21)))); },
-      std::runtime_error);
+  EXPECT_THAT(MArray<MInteger>(Length(-1)),
+              GenerateThrowsGenerationError(".length", Context()));
+  EXPECT_THAT(MArray<MInteger>(Length(AtMost(10), AtLeast(21))),
+              GenerateThrowsGenerationError(".length", Context()));
 }
 
 TEST(MArrayTest, LengthZeroProducesTheEmptyArray) {
@@ -189,9 +189,8 @@ TEST(MArrayTest, MergeFromCorrectlyMergesOnLength) {
   EXPECT_TRUE(GenerateSameValues(get_arr(1, 8).MergeFrom(get_arr(8, 10)),
                                  get_arr(8, 8)));  // Singleton range
 
-  EXPECT_THROW(
-      { (void)Generate(get_arr(1, 6).MergeFrom(get_arr(10, 20))); },
-      std::runtime_error);
+  EXPECT_THAT(get_arr(1, 6).MergeFrom(get_arr(10, 20)),
+              GenerateThrowsGenerationError(".length", Context()));
 }
 
 TEST(MArrayTest, MergeFromCorrectlyMergesElementConstraints) {
@@ -202,9 +201,8 @@ TEST(MArrayTest, MergeFromCorrectlyMergesElementConstraints) {
   EXPECT_TRUE(GenerateSameValues(int_array(1, 10).MergeFrom(int_array(6, 12)),
                                  int_array(6, 10)));
 
-  EXPECT_THROW(
-      { (void)Generate(int_array(1, 6).MergeFrom(int_array(10, 20))); },
-      std::runtime_error);
+  EXPECT_THAT(int_array(1, 6).MergeFrom(int_array(10, 20)),
+              GenerateThrowsGenerationError(".elem[0]", Context()));
 }
 
 TEST(MArrayTest, LengthIsSatisfied) {

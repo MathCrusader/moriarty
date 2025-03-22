@@ -16,6 +16,7 @@
 #include "src/variables/mstring.h"
 
 #include <algorithm>
+#include <format>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -29,6 +30,7 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/librarian/errors.h"
+#include "src/librarian/policies.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
@@ -103,14 +105,16 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
     return GetOneOf().SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
 
   if (simple_patterns_.empty() && !alphabet_.HasBeenConstrained()) {
-    throw std::runtime_error(
-        "Cannot generate a string with an empty alphabet and no simple "
-        "pattern.");
+    throw moriarty::GenerationError(
+        ctx.GetVariableName(),
+        "Need either Alphabet() or SimplePattern() to generate a string",
+        RetryPolicy::kAbort);
   }
   if (simple_patterns_.empty() && !length_) {
-    throw std::runtime_error(
-        "Cannot generate a string with no length parameter or simple "
-        "pattern given.");
+    throw moriarty::GenerationError(
+        ctx.GetVariableName(),
+        "Need either Length() or SimplePattern() to generate a string",
+        RetryPolicy::kAbort);
   }
 
   if (!simple_patterns_.empty()) return GenerateSimplePattern(ctx);
@@ -141,11 +145,18 @@ std::string MString::GenerateSimplePattern(
     return std::string(alphabet.begin(), alphabet.end());
   }();
 
-  // Use the last pattern, since it's probably the most specific. This choice is
-  // arbitrary since all patterns must be satisfied.
-  return simple_patterns_.back().GenerateWithRestrictions(
-      maybe_alphabet,
-      [&](int min, int max) { return ctx.RandomInteger(min, max); });
+  try {
+    // Use the last pattern, since it's probably the most specific. This choice
+    // is arbitrary since all patterns must be satisfied.
+    return simple_patterns_.back().GenerateWithRestrictions(
+        maybe_alphabet,
+        [&](int min, int max) { return ctx.RandomInteger(min, max); });
+  } catch (const std::runtime_error& e) {
+    throw moriarty::GenerationError(
+        ctx.GetVariableName(),
+        std::format("Failed to generate SimplePattern: ", e.what()),
+        RetryPolicy::kAbort);
+  }
 }
 
 std::string MString::GenerateImplWithDistinctCharacters(

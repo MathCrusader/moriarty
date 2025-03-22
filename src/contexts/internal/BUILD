@@ -29,6 +29,7 @@ cc_library(
     hdrs = ["basic_istream_context.h"],
     deps = [
         "//src/librarian:io_config",
+        "//src/librarian:policies",
     ],
 )
 
@@ -101,6 +102,7 @@ cc_library(
         "//src/internal:abstract_variable",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/librarian:policies",
     ],
 )
 
@@ -133,6 +135,7 @@ cc_test(
     deps = [
         ":basic_istream_context",
         "//src/librarian:io_config",
+        "//src/librarian:policies",
         "@googletest//:gtest_main",
     ],
 )
@@ -180,6 +183,7 @@ cc_test(
     srcs = ["variable_istream_context_test.cc"],
     deps = [
         ":variable_istream_context",
+        "//src/librarian:policies",
         "//src/testing:gtest_helpers",
         "//src/variables:marray",
         "//src/variables:minteger",

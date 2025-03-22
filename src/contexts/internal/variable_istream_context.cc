@@ -4,7 +4,7 @@
 
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
+#include "src/librarian/policies.h"
 
 namespace moriarty {
 namespace moriarty_internal {

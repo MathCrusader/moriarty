@@ -22,6 +22,8 @@
 #include <string>
 #include <string_view>
 
+#include "src/librarian/policies.h"
+
 namespace moriarty {
 
 // ValueNotFound
@@ -129,6 +131,29 @@ class ImpossibleToSatisfy : public std::logic_error {
  private:
   std::string variable_;
   std::string constraint_;
+};
+
+// GenerationError()
+//
+// Thrown when a variable is unable to generate a value.
+class GenerationError : public std::logic_error {
+ public:
+  explicit GenerationError(std::string_view variable_name,
+                           std::string_view message, RetryPolicy retryable)
+      : std::logic_error(std::format("Error while generating variable `{}`: {}",
+                                     variable_name, message)),
+        variable_name_(variable_name),
+        message_(message),
+        retryable_(retryable) {}
+
+  const std::string& VariableName() const { return variable_name_; }
+  const std::string& Message() const { return message_; }
+  RetryPolicy IsRetryable() const { return retryable_; }
+
+ private:
+  std::string variable_name_;
+  std::string message_;
+  RetryPolicy retryable_;
 };
 
 }  // namespace moriarty

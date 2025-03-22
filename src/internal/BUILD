@@ -76,6 +76,7 @@ cc_library(
     hdrs = ["generation_handler.h"],
     deps = [
         "//src/librarian:errors",
+        "//src/librarian:policies",
     ],
 )
 
@@ -194,6 +195,7 @@ cc_test(
     srcs = ["generation_handler_test.cc"],
     deps = [
         ":generation_handler",
+        "//src/librarian:policies",
         "//src/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],

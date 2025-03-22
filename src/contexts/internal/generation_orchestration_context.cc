@@ -1,6 +1,7 @@
 #include "src/contexts/internal/generation_orchestration_context.h"
 
 #include <functional>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -27,6 +28,11 @@ void GenerationOrchestrationContext::MarkAbandonedGeneration() {
 RetryRecommendation GenerationOrchestrationContext::ReportGenerationFailure(
     std::string failure_reason) {
   return handler_.get().ReportFailure(failure_reason);
+}
+
+std::optional<std::string> GenerationOrchestrationContext::GetFailureReason(
+    std::string variable_name) const {
+  return handler_.get().GetFailureReason(variable_name);
 }
 
 }  // namespace moriarty_internal

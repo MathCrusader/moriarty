@@ -43,6 +43,8 @@ using ::moriarty::moriarty_internal::AbstractVariable;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
+using ::moriarty_testing::GenerateThrowsGenerationError;
+using ::moriarty_testing::GenerateThrowsNotFoundError;
 using ::moriarty_testing::GetUniqueValue;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
@@ -375,23 +377,17 @@ TEST(MVariableTest, CustomConstraintWithDependentVariablesShouldWork) {
 }
 
 TEST(MVariableTest, UnsatisfiableCustomConstraintShouldThrow) {
-  EXPECT_THROW(
-      {
-        (void)Generate(MTestType()
-                           .AddConstraint(LastDigit(MInteger(Exactly(1))))
-                           .AddCustomConstraint("Custom1", {"A"}, SameAsA),
-                       Context().WithVariable(
-                           "A", MTestType(LastDigit(MInteger(Exactly(2))))));
-      },
-      std::runtime_error);
+  EXPECT_THAT(MTestType()
+                  .AddConstraint(LastDigit(MInteger(Exactly(1))))
+                  .AddCustomConstraint("Custom1", {"A"}, SameAsA),
+              GenerateThrowsGenerationError(
+                  "", Context().WithVariable(
+                          "A", MTestType(LastDigit(MInteger(Exactly(2)))))));
 }
 
 TEST(MVariableTest, CustomConstraintsWithWrongDependentVariableShouldThrow) {
-  EXPECT_THROW(
-      {
-        (void)Generate(MTestType().AddCustomConstraint("Custom1", {}, SameAsA));
-      },
-      std::runtime_error);
+  EXPECT_THAT(MTestType().AddCustomConstraint("Custom1", {}, SameAsA),
+              GenerateThrowsNotFoundError("A", Context()));
 }
 
 TEST(MVariableTest,
@@ -403,13 +399,10 @@ TEST(MVariableTest,
   // "Generate(MTestType)" -- which comes before "L" alphabetically. If the
   // dependent's name was "A" instead of "L", this would pass, but it is not
   // guaranteed to since the user didn't specify it as a constraint.
-  EXPECT_THROW(
-      {
-        (void)Generate(MTestType().AddCustomConstraint("Custom1", {}, SameAsL),
-                       Context().WithVariable(
-                           "L", MTestType(LastDigit(MInteger(Exactly(2))))));
-      },
-      std::runtime_error);
+  EXPECT_THAT(MTestType().AddCustomConstraint("Custom1", {}, SameAsL),
+              GenerateThrowsNotFoundError(
+                  "L", Context().WithVariable(
+                           "L", MTestType(LastDigit(MInteger(Exactly(2)))))));
 }
 
 // TODO(hivini): Test that by default, nothing is returned from

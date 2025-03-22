@@ -19,12 +19,14 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/librarian/policies.h"
 #include "src/testing/gtest_helpers.h"
 
 namespace moriarty {
 namespace {
 
 using ::moriarty::ValueTypeMismatch;
+using ::moriarty_testing::ThrowsGenerationError;
 using ::moriarty_testing::ThrowsImpossibleToSatisfy;
 using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsValueNotFound;
@@ -201,6 +203,44 @@ TEST(ErrorsTest, ThrowsImpossibleToSatisfyMatcherShouldWorkCorrectly) {
           throw std::runtime_error("words");
         },
         ThrowsImpossibleToSatisfy("X"));
+  }
+}
+
+TEST(ErrorsTest, ThrowsGenerationErrorMatcherShouldWorkCorrectly) {
+  using RetryPolicy::kAbort;
+  using RetryPolicy::kRetry;
+  {  // Happy path
+    EXPECT_THAT([] { throw GenerationError("x", "y", kAbort); },
+                ThrowsGenerationError("x", "y"));
+    EXPECT_THAT([] { throw GenerationError("x", "y", kRetry); },
+                ThrowsGenerationError("x", "y"));
+  }
+  {  // Wrong name / message
+    EXPECT_THAT([] { throw GenerationError("x", "y", kRetry); },
+                Not(ThrowsGenerationError("zz", "y")));
+    EXPECT_THAT([] { throw GenerationError("x", "y", kRetry); },
+                Not(ThrowsGenerationError("x", "zz")));
+  }
+  {  // Wrong exception
+    EXPECT_THAT([] { throw std::runtime_error("words"); },
+                Not(ThrowsGenerationError("words", "words")));
+  }
+  {  // No exception
+    EXPECT_THAT([] {}, Not(ThrowsGenerationError("", "")));
+  }
+  {  // Multiple throws (::testing::ThrowsMessage gets these wrong)
+    EXPECT_THAT(
+        [] {
+          throw std::runtime_error("words");
+          throw GenerationError("X", "Y", kRetry);
+        },
+        Not(ThrowsGenerationError("X", "Y")));
+    EXPECT_THAT(
+        [] {
+          throw GenerationError("X", "Y", kRetry);
+          throw std::runtime_error("words");
+        },
+        ThrowsGenerationError("X", "Y"));
   }
 }
 

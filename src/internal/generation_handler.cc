@@ -24,6 +24,7 @@
 #include <vector>
 
 #include "src/librarian/errors.h"
+#include "src/librarian/policies.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -111,8 +112,8 @@ RetryRecommendation GenerationHandler::ReportFailure(
   auto should_retry = (info.active_retry_count > max_active_retries_ ||
                        info.total_retry_count > max_total_retries_ ||
                        total_generate_calls_ > max_total_generate_calls_)
-                          ? RetryRecommendation::kAbort
-                          : RetryRecommendation::kRetry;
+                          ? RetryPolicy::kAbort
+                          : RetryPolicy::kRetry;
 
   return {should_retry, variables_to_delete};
 }
