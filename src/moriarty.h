@@ -27,12 +27,12 @@
 
 #include <concepts>
 #include <cstdint>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "src/context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
@@ -120,11 +120,12 @@ class Moriarty {
   void ImportTestCases(ImportFn fn, ImportOptions options = {});
   void ExportTestCases(ExportFn fn, ExportOptions options = {}) const;
 
-  // TryValidateTestCases()
+  // ValidateTestCases()
   //
   // Checks if all variables in all test cases are valid. If there are
-  // multiple failures, this will return one of them.
-  absl::Status TryValidateTestCases();
+  // any failures, this will return one of them. If this return std::nullopt,
+  // then the test cases are valid.
+  [[nodiscard]] std::optional<std::string> ValidateTestCases();
 
  private:
   // Seed info

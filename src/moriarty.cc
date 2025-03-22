@@ -24,7 +24,6 @@
 #include <string_view>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "src/context.h"
 #include "src/internal/analysis_bootstrap.h"
 #include "src/internal/generation_bootstrap.h"
@@ -71,23 +70,19 @@ std::span<const int64_t> Moriarty::GetSeedForGenerator(int index) {
   return seed_;
 }
 
-absl::Status Moriarty::TryValidateTestCases() {
-  if (assigned_test_cases_.empty()) {
-    return absl::FailedPreconditionError("No TestCases to validate.");
-  }
+std::optional<std::string> Moriarty::ValidateTestCases() {
+  if (assigned_test_cases_.empty()) return "No TestCases.";
 
   int case_num = 1;
   for (const moriarty_internal::ValueSet& test_case : assigned_test_cases_) {
     std::optional<std::string> failure =
         moriarty_internal::AllVariablesSatisfyConstraints(variables_,
                                                           test_case);
-    if (failure.has_value()) {
-      return absl::FailedPreconditionError(
-          std::format("Case {} invalid: {}", case_num, *failure));
-    }
+    if (failure.has_value())
+      return std::format("Case {} invalid: {}", case_num, *failure);
     case_num++;
   }
-  return absl::OkStatus();
+  return std::nullopt;
 }
 
 void Moriarty::ImportTestCases(ImportFn fn, ImportOptions options) {

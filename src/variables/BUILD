@@ -166,7 +166,6 @@ cc_test(
         "//src/variables/constraints:numeric_constraints",
         "//src/variables/constraints:string_constraints",
         "@abseil-cpp//absl/container:flat_hash_set",
-        "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/strings",
         "@googletest//:gtest_main",
     ],
@@ -181,7 +180,6 @@ cc_test(
         ":mtuple",
         "//src/librarian:mvariable",
         "//src/testing:gtest_helpers",
-        "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
     ],
 )

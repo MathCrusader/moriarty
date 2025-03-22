@@ -74,9 +74,6 @@ cc_library(
         "//src/internal:variable_name_utils",
         "//src/internal:variable_set",
         "//src/librarian:mvariable",
-        "//src/util/status_macro:status_macros",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -106,7 +103,6 @@ cc_library(
         "//src/internal:variable_set",
         "//src/librarian:mvariable",
         "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/status",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -118,8 +114,6 @@ cc_test(
         ":errors",
         "//src/testing:gtest_helpers",
         "//src/util/test_status_macro:status_testutil",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "@googletest//:gtest_main",
     ],
 )
@@ -136,10 +130,8 @@ cc_test(
         ":test_case",
         "//src/testing:gtest_helpers",
         "//src/testing:mtest_type",
-        "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
         "//src/variables:mstring",
-        "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
     ],
 )
@@ -170,10 +162,7 @@ cc_test(
         "//src/testing:gtest_helpers",
         "//src/testing:mtest_type",
         "//src/util/status_macro:status_macros",
-        "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
-        "@abseil-cpp//absl/status",
-        "@abseil-cpp//absl/status:statusor",
         "@googletest//:gtest_main",
     ],
 )

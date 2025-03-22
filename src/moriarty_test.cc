@@ -21,7 +21,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/status/status.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/context.h"
@@ -29,7 +28,6 @@
 #include "src/test_case.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/testing/mtest_type.h"
-#include "src/util/test_status_macro/status_testutil.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"
 
@@ -47,6 +45,7 @@ using ::testing::ElementsAre;
 using ::testing::Ge;
 using ::testing::HasSubstr;
 using ::testing::Le;
+using ::testing::Optional;
 using ::testing::Pair;
 using ::testing::SizeIs;
 using ::testing::ThrowsMessage;
@@ -369,16 +368,14 @@ TEST(MoriartyTest, ValidateAllTestCasesWorksWhenAllVariablesAreValid) {
   Moriarty M;
   M.AddVariable("X", MInteger(Between(1, 5)));
   M.ImportTestCases([](ImportContext ctx) { return ImportIota(ctx, "X", 5); });
-  MORIARTY_EXPECT_OK(M.TryValidateTestCases());
+  EXPECT_EQ(M.ValidateTestCases(), std::nullopt);
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSingleVariableInvalid) {
   Moriarty M;
   M.AddVariable("X", MInteger(Between(1, 3)));
   M.ImportTestCases([](ImportContext ctx) { return ImportIota(ctx, "X", 5); });
-  EXPECT_THAT(
-      M.TryValidateTestCases(),
-      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("Case 4")));
+  EXPECT_THAT(M.ValidateTestCases(), Optional(HasSubstr("Case 4")));
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSomeVariableInvalid) {
@@ -387,9 +384,7 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSomeVariableInvalid) {
       .AddVariable("S", MInteger(Between(10, 30)));
   M.ImportTestCases(
       [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); });
-  EXPECT_THAT(
-      M.TryValidateTestCases(),
-      StatusIs(absl::StatusCode::kFailedPrecondition, HasSubstr("Case 3")));
+  EXPECT_THAT(M.ValidateTestCases(), Optional(HasSubstr("Case 3")));
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
@@ -398,8 +393,7 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
       .AddVariable("q", MInteger(Between(10, 30)));  // Importer uses S, not q
   M.ImportTestCases(
       [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); });
-  EXPECT_THAT([&] { M.TryValidateTestCases().IgnoreError(); },
-              ThrowsValueNotFound("q"));
+  EXPECT_THAT([&] { (void)M.ValidateTestCases(); }, ThrowsValueNotFound("q"));
 }
 
 TEST(MoriartyTest, VariableNameValidationShouldWork) {

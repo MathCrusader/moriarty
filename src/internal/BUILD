@@ -43,7 +43,6 @@ cc_library(
         ":value_set",
         ":variable_set",
         "//src/contexts/librarian:analysis_context",
-        "@abseil-cpp//absl/status",
     ],
 )
 
@@ -152,7 +151,6 @@ cc_test(
         "//src/testing:gtest_helpers",
         "//src/testing:mtest_type",
         "//src/variables:minteger",
-        "@abseil-cpp//absl/status",
         "@googletest//:gtest_main",
     ],
 )
@@ -282,7 +280,6 @@ cc_library(
         "//src/contexts/librarian:analysis_context",
         "//src/contexts/librarian:assignment_context",
         "//src/contexts/librarian:resolver_context",
-        "//src/util/status_macro:status_macros",
     ],
 )
 
