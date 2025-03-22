@@ -22,7 +22,7 @@
 #include <vector>
 
 #include "src/contexts/librarian/analysis_context.h"
-#include "src/librarian/cow_ptr.h"
+#include "src/util/cow_ptr.h"
 
 namespace moriarty {
 namespace librarian {

@@ -61,10 +61,10 @@ cc_library(
     name = "reader_context",
     hdrs = ["reader_context.h"],
     deps = [
-        "//src:io_config",
         "//src/contexts/internal:basic_istream_context",
         "//src/contexts/internal:name_context",
         "//src/contexts/internal:view_only_context",
+        "//src/librarian:io_config",
     ],
 )
 

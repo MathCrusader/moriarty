@@ -32,11 +32,11 @@ cc_library(
     srcs = ["mtest_type.cc"],
     hdrs = ["mtest_type.h"],
     deps = [
-        "//src:errors",
         "//src/contexts/librarian:analysis_context",
         "//src/contexts/librarian:printer_context",
         "//src/contexts/librarian:reader_context",
         "//src/contexts/librarian:resolver_context",
+        "//src/librarian:errors",
         "//src/librarian:mvariable",
         "//src/variables:minteger",
     ],
@@ -47,7 +47,6 @@ cc_library(
     testonly = True,
     hdrs = ["gtest_helpers.h"],
     deps = [
-        "//src:errors",
         "//src/contexts/internal:mutable_values_context",
         "//src/contexts/librarian:analysis_context",
         "//src/contexts/librarian:printer_context",
@@ -58,6 +57,7 @@ cc_library(
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/librarian:errors",
         "//src/librarian:mvariable",
         "@googletest//:gtest",
     ],

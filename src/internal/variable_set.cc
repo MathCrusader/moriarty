@@ -21,8 +21,8 @@
 #include <utility>
 
 #include "absl/container/flat_hash_map.h"
-#include "src/errors.h"
 #include "src/internal/abstract_variable.h"
+#include "src/librarian/errors.h"
 
 namespace moriarty {
 namespace moriarty_internal {

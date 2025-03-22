@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "src/internal/generation_handler.h"
+
 #include <format>
 #include <optional>
 #include <stack>
@@ -21,8 +23,7 @@
 #include <utility>
 #include <vector>
 
-#include "src/errors.h"
-#include "src/internal/generation_handler.h"
+#include "src/librarian/errors.h"
 
 namespace moriarty {
 namespace moriarty_internal {

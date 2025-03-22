@@ -39,7 +39,7 @@ cc_library(
     name = "conversions",
     hdrs = ["conversions.h"],
     deps = [
-        "//src:errors",
+        ":errors",
     ],
 )
 
@@ -114,8 +114,8 @@ cc_test(
     size = "small",
     srcs = ["mvariable_test.cc"],
     deps = [
+        ":errors",
         ":mvariable",
-        "//src:errors",
         "//src/internal:abstract_variable",
         "//src/internal:generation_handler",
         "//src/internal:random_engine",

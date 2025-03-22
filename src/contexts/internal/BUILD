@@ -28,7 +28,7 @@ cc_library(
     srcs = ["basic_istream_context.cc"],
     hdrs = ["basic_istream_context.h"],
     deps = [
-        "//src:io_config",
+        "//src/librarian:io_config",
     ],
 )
 
@@ -37,7 +37,7 @@ cc_library(
     srcs = ["basic_ostream_context.cc"],
     hdrs = ["basic_ostream_context.h"],
     deps = [
-        "//src:io_config",
+        "//src/librarian:io_config",
     ],
 )
 
@@ -132,7 +132,7 @@ cc_test(
     srcs = ["basic_istream_context_test.cc"],
     deps = [
         ":basic_istream_context",
-        "//src:io_config",
+        "//src/librarian:io_config",
         "@googletest//:gtest_main",
     ],
 )

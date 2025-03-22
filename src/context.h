@@ -32,7 +32,7 @@
 #include "src/contexts/internal/variable_random_context.h"
 #include "src/contexts/internal/view_only_context.h"
 #include "src/internal/value_set.h"
-#include "src/io_config.h"
+#include "src/librarian/io_config.h"
 #include "test_case.h"
 
 namespace moriarty {

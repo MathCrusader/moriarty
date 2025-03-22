@@ -31,7 +31,6 @@ cc_library(
     srcs = ["context.cc"],
     hdrs = ["context.h"],
     deps = [
-        ":io_config",
         "//src/contexts/internal:basic_istream_context",
         "//src/contexts/internal:basic_ostream_context",
         "//src/contexts/internal:basic_random_context",
@@ -42,9 +41,9 @@ cc_library(
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/librarian:io_config",
     ],
 )
-
 
 cc_library(
     name = "moriarty",
@@ -96,8 +95,6 @@ cc_library(
     ],
 )
 
-
-
 cc_test(
     name = "moriarty_test",
     size = "small",
@@ -121,9 +118,9 @@ cc_test(
     srcs = ["simple_io_test.cc"],
     deps = [
         ":context",
-        ":io_config",
         ":simple_io",
         ":test_case",
+        "//src/librarian:io_config",
         "//src/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",

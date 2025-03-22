@@ -17,8 +17,8 @@
 #ifndef MORIARTY_SRC_LIBRARIAN_CONVERSIONS_H_
 #define MORIARTY_SRC_LIBRARIAN_CONVERSIONS_H_
 
-#include "src/errors.h"
 #include "src/internal/abstract_variable.h"
+#include "src/librarian/errors.h"
 
 namespace moriarty {
 namespace librarian {

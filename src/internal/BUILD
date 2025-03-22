@@ -75,7 +75,7 @@ cc_library(
     srcs = ["generation_handler.cc"],
     hdrs = ["generation_handler.h"],
     deps = [
-        "//src:errors",
+        "//src/librarian:errors",
     ],
 )
 
@@ -121,7 +121,7 @@ cc_library(
     hdrs = ["value_set.h"],
     deps = [
         ":abstract_variable",
-        "//src:errors",
+        "//src/librarian:errors",
         "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/strings",
     ],
@@ -137,8 +137,8 @@ cc_library(
     ],
     deps = [
         ":abstract_variable",
-        "//src:errors",
         "//src/librarian:conversions",
+        "//src/librarian:errors",
         "@abseil-cpp//absl/container:flat_hash_map",
     ],
 )

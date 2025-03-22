@@ -29,9 +29,9 @@ cc_library(
 )
 
 cc_library(
-    name = "debug_print",
-    srcs = ["debug_print.cc"],
-    hdrs = ["debug_print.h"],
+    name = "debug_string",
+    srcs = ["debug_string.cc"],
+    hdrs = ["debug_string.h"],
 )
 
 cc_library(
@@ -49,10 +49,10 @@ cc_test(
 )
 
 cc_test(
-    name = "debug_print_test",
-    srcs = ["debug_print_test.cc"],
+    name = "debug_string_test",
+    srcs = ["debug_string_test.cc"],
     deps = [
-        ":debug_print",
+        ":debug_string",
         "@googletest//:gtest_main",
     ],
 )

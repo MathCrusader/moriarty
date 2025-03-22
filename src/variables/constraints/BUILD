@@ -71,7 +71,7 @@ cc_library(
     hdrs = ["io_constraints.h"],
     deps = [
         ":base_constraints",
-        "//src:io_config",
+        "//src/librarian:io_config",
     ],
 )
 
@@ -135,7 +135,7 @@ cc_test(
     srcs = ["io_constraints_test.cc"],
     deps = [
         ":io_constraints",
-        "//src:io_config",
+        "//src/librarian:io_config",
         "@googletest//:gtest_main",
     ],
 )

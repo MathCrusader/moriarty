@@ -23,7 +23,7 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/io_config.h"
+#include "src/librarian/io_config.h"
 
 namespace moriarty {
 

@@ -24,7 +24,7 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/io_config.h"
+#include "src/librarian/io_config.h"
 #include "src/test_case.h"
 
 namespace moriarty {

@@ -116,12 +116,12 @@
 #include "src/contexts/librarian/analysis_context.h"
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
-#include "src/errors.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_bootstrap.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/mvariable.h"
 
 namespace moriarty_testing {

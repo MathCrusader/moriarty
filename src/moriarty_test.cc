@@ -24,7 +24,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/context.h"
-#include "src/io_config.h"
+#include "src/librarian/io_config.h"
 #include "src/test_case.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/testing/mtest_type.h"

@@ -19,7 +19,7 @@
 #include <stdexcept>
 #include <string>
 
-#include "src/io_config.h"
+#include "src/librarian/io_config.h"
 
 namespace moriarty {
 

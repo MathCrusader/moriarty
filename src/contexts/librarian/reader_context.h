@@ -23,7 +23,7 @@
 #include "src/contexts/internal/basic_istream_context.h"
 #include "src/contexts/internal/name_context.h"
 #include "src/contexts/internal/view_only_context.h"
-#include "src/io_config.h"
+#include "src/librarian/io_config.h"
 
 namespace moriarty {
 namespace librarian {
