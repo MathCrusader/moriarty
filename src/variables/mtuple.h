@@ -33,7 +33,6 @@
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
-#include "src/librarian/one_of_handler.h"
 #include "src/util/locked_optional.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
@@ -97,7 +96,6 @@ class MTuple : public librarian::MVariable<
   MTuple& AddConstraint(Element<I, MElementType> constraint);
 
  private:
-  librarian::OneOfHandler<tuple_value_type> one_of_;
   std::tuple<MElementTypes...> elements_;
   librarian::LockedOptional<Whitespace> separator_ =
       librarian::LockedOptional<Whitespace>{Whitespace::kSpace};
@@ -187,17 +185,12 @@ std::string MTuple<T...>::Typename() const {
 template <typename... T>
 MTuple<T...>& MTuple<T...>::AddConstraint(
     Exactly<tuple_value_type> constraint) {
-  one_of_.ConstrainOptions(
-      std::vector<tuple_value_type>{constraint.GetValue()});
-  this->InternalAddConstraint(std::move(constraint));
-  return *this;
+  return this->InternalAddExactlyConstraint(std::move(constraint));
 }
 
 template <typename... T>
 MTuple<T...>& MTuple<T...>::AddConstraint(OneOf<tuple_value_type> constraint) {
-  one_of_.ConstrainOptions(constraint.GetOptions());
-  this->InternalAddConstraint(std::move(constraint));
-  return *this;
+  return this->InternalAddOneOfConstraint(std::move(constraint));
 }
 
 template <typename... T>
@@ -206,8 +199,7 @@ MTuple<T...>& MTuple<T...>::AddConstraint(IOSeparator constraint) {
     throw std::runtime_error(
         "Attempting to set multiple I/O separators for the same MTuple.");
   }
-  this->InternalAddConstraint(std::move(constraint));
-  return *this;
+  return this->InternalAddConstraint(std::move(constraint));
 }
 
 template <typename... T>
@@ -220,15 +212,16 @@ MTuple<T...>& MTuple<T...>::AddConstraint(Element<I, MElementType> constraint) {
       "constraint");
 
   std::get<I>(elements_).MergeFrom(constraint.GetConstraints());
-  this->InternalAddConstraint(ElementConstraintWrapper(std::move(constraint)));
-  return *this;
+  return this->InternalAddConstraint(
+      ElementConstraintWrapper(std::move(constraint)));
 }
 
 template <typename... T>
 MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
     librarian::ResolverContext ctx) const {
-  if (one_of_.HasBeenConstrained())
-    return one_of_.SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
+  if (this->GetOneOf().HasBeenConstrained())
+    return this->GetOneOf().SelectOneOf(
+        [&](int n) { return ctx.RandomInteger(n); });
 
   auto generate_one = [&]<std::size_t I>() {
     return std::get<I>(elements_).Generate(

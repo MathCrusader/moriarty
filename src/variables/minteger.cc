@@ -47,16 +47,14 @@ namespace moriarty {
 MInteger& MInteger::AddConstraint(Exactly<int64_t> constraint) {
   bounds_.Mutable().Intersect(
       Range(constraint.GetValue(), constraint.GetValue()));
-  InternalAddConstraint(std::move(constraint));
-  return *this;
+  return InternalAddExactlyConstraint(std::move(constraint));
 }
 
 MInteger& MInteger::AddConstraint(ExactlyIntegerExpression constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  InternalAddConstraint(RangeConstraint(
+  return InternalAddConstraint(RangeConstraint(
       std::make_unique<ExactlyIntegerExpression>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
-  return *this;
 }
 
 MInteger& MInteger::AddConstraint(Exactly<std::string> constraint) {
@@ -64,17 +62,18 @@ MInteger& MInteger::AddConstraint(Exactly<std::string> constraint) {
 }
 
 MInteger& MInteger::AddConstraint(OneOf<int64_t> constraint) {
-  one_of_int_.Mutable().ConstrainOptions(constraint.GetOptions());
-  InternalAddConstraint(std::move(constraint));
-  return *this;
+  return InternalAddOneOfConstraint(std::move(constraint));
 }
 
 MInteger& MInteger::AddConstraint(OneOfIntegerExpression constraint) {
-  one_of_expr_.Mutable().ConstrainOptions(constraint.GetOptions());
-  InternalAddConstraint(RangeConstraint(
+  if (!one_of_expr_.Mutable().ConstrainOptions(constraint.GetOptions())) {
+    throw std::runtime_error(
+        std::format("Adding this constraint left no valid options: {}",
+                    constraint.ToString()));
+  }
+  return InternalAddConstraint(RangeConstraint(
       std::make_unique<OneOfIntegerExpression>(std::move(constraint)),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
-  return *this;
 }
 
 MInteger& MInteger::AddConstraint(OneOf<std::string> constraint) {
@@ -83,37 +82,33 @@ MInteger& MInteger::AddConstraint(OneOf<std::string> constraint) {
 
 MInteger& MInteger::AddConstraint(Between constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  InternalAddConstraint(RangeConstraint(
+  return InternalAddConstraint(RangeConstraint(
       std::make_unique<Between>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
-  return *this;
 }
 
 MInteger& MInteger::AddConstraint(AtMost constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  InternalAddConstraint(RangeConstraint(
+  return InternalAddConstraint(RangeConstraint(
       std::make_unique<AtMost>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
-  return *this;
 }
 
 MInteger& MInteger::AddConstraint(AtLeast constraint) {
   bounds_.Mutable().Intersect(constraint.GetRange());
-  InternalAddConstraint(RangeConstraint(
+  return InternalAddConstraint(RangeConstraint(
       std::make_unique<AtLeast>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
-  return *this;
 }
 
 MInteger& MInteger::AddConstraint(SizeCategory constraint) {
   size_handler_.Mutable().ConstrainSize(constraint.GetCommonSize());
-  InternalAddConstraint(std::move(constraint));
-  return *this;
+  return InternalAddConstraint(std::move(constraint));
 }
 
 std::optional<int64_t> MInteger::GetUniqueValueImpl(
     librarian::AnalysisContext ctx) const {
-  auto option1 = one_of_int_->GetUniqueValue();
+  auto option1 = GetOneOf().GetUniqueValue();
   if (option1) return *option1;
 
   // FIXME: This is silly to recompile the expression every time.
@@ -198,9 +193,9 @@ namespace {
 int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
   Range::ExtremeValues extremes = GetExtremeValues(ctx);
 
-  if (one_of_int_->HasBeenConstrained() || one_of_expr_->HasBeenConstrained()) {
+  if (GetOneOf().HasBeenConstrained() || one_of_expr_->HasBeenConstrained()) {
     std::vector<int64_t> options =
-        ExtractOneOfOptions(ctx, *one_of_int_, *one_of_expr_);
+        ExtractOneOfOptions(ctx, GetOneOf(), *one_of_expr_);
     std::erase_if(options, [&](int64_t value) {
       return !(extremes.min <= value && value <= extremes.max);
     });

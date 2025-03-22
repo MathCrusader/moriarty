@@ -30,7 +30,6 @@
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/librarian/mvariable.h"
-#include "src/librarian/one_of_handler.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/size_constraints.h"
@@ -93,7 +92,6 @@ class MString : public librarian::MVariable<MString, std::string> {
   [[nodiscard]] std::string Typename() const override { return "MString"; }
 
  private:
-  librarian::OneOfHandler<std::string> one_of_;
   std::optional<MInteger> length_;
   librarian::OneOfHandler<char> alphabet_;
   bool distinct_characters_ = false;

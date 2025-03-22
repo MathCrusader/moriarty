@@ -34,13 +34,11 @@
 namespace moriarty_testing {
 
 MTestType& MTestType::AddConstraint(moriarty::Exactly<TestType> constraint) {
-  one_of_.ConstrainOptions(std::vector{constraint.GetValue()});
-  return InternalAddConstraint(std::move(constraint));
+  return InternalAddExactlyConstraint(std::move(constraint));
 }
 
 MTestType& MTestType::AddConstraint(moriarty::OneOf<TestType> constraint) {
-  one_of_.ConstrainOptions(constraint.GetOptions());
-  return InternalAddConstraint(std::move(constraint));
+  return InternalAddOneOfConstraint(std::move(constraint));
 }
 
 MTestType& MTestType::AddConstraint(LastDigit constraint) {

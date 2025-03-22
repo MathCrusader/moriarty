@@ -59,6 +59,7 @@ cc_library(
     deps = [
         ":constraint_handler",
         ":conversions",
+        ":one_of_handler",
         "//src/contexts/librarian:analysis_context",
         "//src/contexts/librarian:assignment_context",
         "//src/contexts/librarian:printer_context",

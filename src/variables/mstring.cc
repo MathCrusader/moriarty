@@ -16,6 +16,7 @@
 #include "src/variables/mstring.h"
 
 #include <algorithm>
+#include <format>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -38,16 +39,17 @@
 namespace moriarty {
 
 MString& MString::AddConstraint(Exactly<std::string> constraint) {
-  one_of_.ConstrainOptions(std::vector{constraint.GetValue()});
-  InternalAddConstraint(std::move(constraint));
-  return *this;
+  return InternalAddExactlyConstraint(std::move(constraint));
+}
+
+MString& MString::AddConstraint(OneOf<std::string> constraint) {
+  return InternalAddOneOfConstraint(std::move(constraint));
 }
 
 MString& MString::AddConstraint(Length constraint) {
   if (!length_) length_ = MInteger();
   length_->MergeFrom(constraint.GetConstraints());
-  InternalAddConstraint(std::move(constraint));
-  return *this;
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MString& MString::AddConstraint(Alphabet constraint) {
@@ -57,22 +59,23 @@ MString& MString::AddConstraint(Alphabet constraint) {
   auto last = std::unique(options.begin(), options.end());
   options.erase(last, options.end());
 
-  alphabet_.ConstrainOptions(options);
+  if (!alphabet_.ConstrainOptions(options)) {
+    throw std::runtime_error(
+        std::format("No valid character left after constraining alphabet to {}",
+                    constraint.GetAlphabet()));
+  }
 
-  InternalAddConstraint(std::move(constraint));
-  return *this;
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MString& MString::AddConstraint(DistinctCharacters constraint) {
   distinct_characters_ = true;
-  InternalAddConstraint(std::move(constraint));
-  return *this;
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MString& MString::AddConstraint(SimplePattern constraint) {
   simple_patterns_.push_back(constraint.GetCompiledPattern());
-  InternalAddConstraint(std::move(constraint));
-  return *this;
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MString& MString::AddConstraint(SizeCategory constraint) {
@@ -100,8 +103,8 @@ std::vector<MString> MString::ListEdgeCasesImpl(
 }
 
 std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
-  if (one_of_.HasBeenConstrained())
-    return one_of_.SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
+  if (GetOneOf().HasBeenConstrained())
+    return GetOneOf().SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
 
   if (simple_patterns_.empty() && !alphabet_.HasBeenConstrained()) {
     throw std::runtime_error(

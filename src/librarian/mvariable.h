@@ -44,6 +44,8 @@
 #include "src/internal/generation_handler.h"
 #include "src/librarian/constraint_handler.h"
 #include "src/librarian/conversions.h"
+#include "src/librarian/one_of_handler.h"
+#include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/custom_constraint.h"
 
 namespace moriarty {
@@ -206,8 +208,31 @@ class MVariable : public moriarty_internal::AbstractVariable {
   template <typename Constraint>
   VariableType& InternalAddConstraint(Constraint c);
 
+  // InternalAddExactlyConstraint() [For Librarians]
+  //
+  // Adds an `Exactly<ValueType>` constraint to this variable. This will
+  // call InternalAddConstraint(), so you don't need to.
+  VariableType& InternalAddExactlyConstraint(Exactly<ValueType> c);
+
+  // InternalAddOneOfConstraint() [For Librarians]
+  //
+  // Adds an `OneOf<ValueType>` constraint to this variable. This will
+  // call InternalAddConstraint(), so you don't need to.
+  VariableType& InternalAddOneOfConstraint(OneOf<ValueType> c);
+
+  // GetOneOf()
+  //
+  // Returns the OneOfHandler for this variable.
+  [[nodiscard]] OneOfHandler<ValueType>& GetOneOf();
+
+  // GetOneOf()
+  //
+  // Returns the OneOfHandler for this variable.
+  [[nodiscard]] const OneOfHandler<ValueType>& GetOneOf() const;
+
  private:
   ConstraintHandler<VariableType, ValueType> constraints_;
+  OneOfHandler<ValueType> one_of_;
   std::vector<std::string> dependencies_;
 
   // Helper function that casts *this to `VariableType`.
@@ -436,6 +461,34 @@ V& MVariable<V, G>::InternalAddConstraint(Constraint c) {
 
   constraints_.AddConstraint(std::move(c));
   return UnderlyingVariableType();
+}
+
+template <typename V, typename G>
+V& MVariable<V, G>::InternalAddExactlyConstraint(Exactly<G> c) {
+  if (!one_of_.ConstrainOptions(std::vector<G>{c.GetValue()})) {
+    throw std::runtime_error(std::format(
+        "Adding this constraint left no valid options: {}", c.ToString()));
+  }
+  return InternalAddConstraint(std::move(c));
+}
+
+template <typename V, typename G>
+V& MVariable<V, G>::InternalAddOneOfConstraint(OneOf<G> c) {
+  if (!one_of_.ConstrainOptions(c.GetOptions())) {
+    throw std::runtime_error(std::format(
+        "Adding this constraint left no valid options: {}", c.ToString()));
+  }
+  return InternalAddConstraint(std::move(c));
+}
+
+template <typename V, typename G>
+OneOfHandler<G>& MVariable<V, G>::GetOneOf() {
+  return one_of_;
+}
+
+template <typename V, typename G>
+const OneOfHandler<G>& MVariable<V, G>::GetOneOf() const {
+  return one_of_;
 }
 
 // -----------------------------------------------------------------------------

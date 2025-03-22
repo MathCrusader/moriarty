@@ -96,7 +96,6 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
 
  private:
   librarian::CowPtr<Range> bounds_;
-  librarian::CowPtr<librarian::OneOfHandler<int64_t>> one_of_int_;
   librarian::CowPtr<librarian::OneOfHandler<std::string>> one_of_expr_;
   librarian::CowPtr<librarian::SizeHandler> size_handler_;
 

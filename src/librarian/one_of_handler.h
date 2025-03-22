@@ -19,7 +19,6 @@
 
 #include <algorithm>
 #include <optional>
-#include <stdexcept>
 #include <vector>
 
 namespace moriarty {
@@ -43,10 +42,10 @@ class OneOfHandler {
   // Adds additional constraints that this object must be one of `one_of`. This
   // will intersect these values with any existing options.
   //
-  // If there are no valid options remaining after the intersection, this will
-  // throw an exception.
+  // Returns a boolean indicating if there are any valid options that remain
+  // after constraining.
   template <typename Container>
-  void ConstrainOptions(Container&& one_of);
+  [[nodiscard]] bool ConstrainOptions(Container&& one_of);
 
   // IsSatisfiedWith()
   //
@@ -112,7 +111,7 @@ const std::vector<T>& OneOfHandler<T>::GetOptions() const {
 
 template <typename T>
 template <typename Container>
-void OneOfHandler<T>::ConstrainOptions(Container&& one_of) {
+bool OneOfHandler<T>::ConstrainOptions(Container&& one_of) {
   if (!valid_options_.has_value()) {
     valid_options_ = std::vector<T>();
     std::ranges::copy(one_of, std::back_inserter(*valid_options_));
@@ -122,12 +121,7 @@ void OneOfHandler<T>::ConstrainOptions(Container&& one_of) {
     });
   }
 
-  // FIXME: We use this for non-Exactly/OneOf constraints (e.g.,
-  // MString::Alphabet). We need to update this message to be clearer.
-  if (valid_options_->empty()) {
-    throw std::runtime_error(
-        "No valid options remaining after calls to Exactly/OneOf.");
-  }
+  return !valid_options_->empty();
 }
 
 }  // namespace librarian
