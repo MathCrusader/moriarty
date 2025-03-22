@@ -112,7 +112,6 @@ cc_test(
         ":container_constraints",
         ":numeric_constraints",
         "//src/testing:gtest_helpers",
-        "//src/util/test_status_macro:status_testutil",
         "//src/variables:minteger",
         "//src/variables:mstring",
         "@googletest//:gtest_main",

@@ -113,7 +113,6 @@ cc_test(
     deps = [
         ":errors",
         "//src/testing:gtest_helpers",
-        "//src/util/test_status_macro:status_testutil",
         "@googletest//:gtest_main",
     ],
 )
@@ -161,7 +160,6 @@ cc_test(
         "//src/internal:variable_set",
         "//src/testing:gtest_helpers",
         "//src/testing:mtest_type",
-        "//src/util/status_macro:status_macros",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],

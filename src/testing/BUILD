@@ -38,7 +38,6 @@ cc_library(
         "//src/contexts/librarian:reader_context",
         "//src/contexts/librarian:resolver_context",
         "//src/librarian:mvariable",
-        "//src/util/status_macro:status_macros",
         "//src/variables:minteger",
     ],
 )
