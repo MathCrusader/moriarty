@@ -4,7 +4,6 @@
 #include <ostream>
 #include <string_view>
 
-#include "src/contexts/librarian/printer_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -23,8 +22,7 @@ void VariableOStreamContext::PrintVariable(std::string_view variable_name) {
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
 
-  librarian::PrinterContext ctx(variable_name, os_, variables_, values_);
-  variable->PrintValue(ctx);
+  variable->PrintValue(variable_name, os_, variables_, values_);
 }
 
 void VariableOStreamContext::PrintVariableFrom(
@@ -33,8 +31,7 @@ void VariableOStreamContext::PrintVariableFrom(
       variables_.get().GetAnonymousVariable(variable_name);
 
   ValueSet values = UnsafeExtractConcreteTestCaseInternals(test_case);
-  librarian::PrinterContext ctx(variable_name, os_, variables_, values);
-  variable->PrintValue(ctx);
+  variable->PrintValue(variable_name, os_, variables_, values);
 }
 
 }  // namespace moriarty_internal

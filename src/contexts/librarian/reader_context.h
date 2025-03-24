@@ -23,7 +23,7 @@
 #include "src/contexts/internal/basic_istream_context.h"
 #include "src/contexts/internal/name_context.h"
 #include "src/contexts/internal/view_only_context.h"
-#include "src/librarian/io_config.h"
+#include "src/librarian/policies.h"
 
 namespace moriarty {
 namespace librarian {
@@ -34,17 +34,14 @@ namespace librarian {
 class ReaderContext : public moriarty_internal::NameContext,
                       public moriarty_internal::ViewOnlyContext,
                       public moriarty_internal::BasicIStreamContext {
-  using NameContext = moriarty_internal::NameContext;
-  using ViewOnlyContext = moriarty_internal::ViewOnlyContext;
-  using BasicIStreamContext = moriarty_internal::BasicIStreamContext;
-
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
   // See `src/Moriarty.h` for entry points.
-  ReaderContext(std::string_view variable_name, std::istream& is,
-                WhitespaceStrictness whitespace_strictness,
-                const moriarty_internal::VariableSet& variables,
-                const moriarty_internal::ValueSet& values)
+  ReaderContext(
+      std::string_view variable_name, std::reference_wrapper<std::istream> is,
+      WhitespaceStrictness whitespace_strictness,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<const moriarty_internal::ValueSet> values)
       : NameContext(variable_name),
         ViewOnlyContext(variables, values),
         BasicIStreamContext(is, whitespace_strictness) {}

@@ -40,6 +40,8 @@ namespace librarian {
 namespace {
 
 using ::moriarty::moriarty_internal::AbstractVariable;
+using ::moriarty::moriarty_internal::ValueSet;
+using ::moriarty::moriarty_internal::VariableSet;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
@@ -220,14 +222,13 @@ TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
   AbstractVariable* var_A = context.Variables().GetAnonymousVariable("A");
-  ResolverContext ctxA("A", context.Variables(), context.Values(), engine,
-                       generation_handler);
-  var_A->AssignValue(ctxA);  // By assigning A, we assigned N.
+  var_A->AssignValue("A", context.Variables(), context.Values(), engine,
+                     generation_handler);  // By assigning A, we assigned N.
 
   AbstractVariable* var_B = context.Variables().GetAnonymousVariable("B");
-  ResolverContext ctxB("B", context.Variables(), context.Values(), engine,
-                       generation_handler);
-  var_B->AssignValue(ctxB);  // Should use the already generated N.
+  var_B->AssignValue(
+      "B", context.Variables(), context.Values(), engine,
+      generation_handler);  // Should use the already generated N.
   int N = context.Values().Get<MInteger>("N");
 
   EXPECT_EQ(context.Values().Get<MInteger>("A"), N);
@@ -426,7 +427,9 @@ TEST(MVariableTest,
 // TODO: Test that ListEdgeCases returns values which have been merged with the
 // existing constraints.
 TEST(MVariableTest, ListEdgeCasesReturnsMVariablesThatCanBeGenerated) {
-  AnalysisContext ctx("test", {}, {});
+  VariableSet variables;
+  ValueSet values;
+  AnalysisContext ctx("test", variables, values);
   EXPECT_THAT(MTestType().ListEdgeCases(ctx),
               ElementsAre(GeneratedValuesAre(2), GeneratedValuesAre(3)));
 }
@@ -475,9 +478,8 @@ TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {
 
   std::stringstream ss;
 
-  PrinterContext ctx("x", ss, context.Variables(), context.Values());
   AbstractVariable* var = context.Variables().GetAnonymousVariable("x");
-  var->PrintValue(ctx);
+  var->PrintValue("x", ss, context.Variables(), context.Values());
   EXPECT_EQ(ss.str(), "12345");
 }
 
@@ -524,16 +526,14 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
   moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
   AbstractVariable* var_A = context.Variables().GetAnonymousVariable("A");
-  ResolverContext ctxA("A", context.Variables(), context.Values(), engine,
-                       generation_handler);
-  var_A->AssignValue(ctxA);  // By assigning A, we assigned N.
+  var_A->AssignValue("A", context.Variables(), context.Values(), engine,
+                     generation_handler);  // By assigning A, we assigned N.
   int N = context.Values().Get<MInteger>("N");
 
   // Attempt to re-assign N.
-  ResolverContext ctxN("N", context.Variables(), context.Values(), engine,
-                       generation_handler);
   AbstractVariable* var_N = context.Variables().GetAnonymousVariable("N");
-  var_N->AssignValue(ctxN);
+  var_N->AssignValue("N", context.Variables(), context.Values(), engine,
+                     generation_handler);
 
   // Should not have changed.
   EXPECT_EQ(context.Values().Get<MInteger>("N"), N);

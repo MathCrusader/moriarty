@@ -34,16 +34,13 @@ namespace librarian {
 class AssignmentContext : public moriarty_internal::NameContext,
                           public moriarty_internal::ViewOnlyContext,
                           public moriarty_internal::MutableValuesContext {
-  using NameContext = moriarty_internal::NameContext;
-  using ViewOnlyContext = moriarty_internal::ViewOnlyContext;
-  using MutableValuesContext = moriarty_internal::MutableValuesContext;
-
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
   // See `src/Moriarty.h` for entry points.
-  explicit AssignmentContext(std::string_view variable_name,
-                             const moriarty_internal::VariableSet& variables,
-                             moriarty_internal::ValueSet& values)
+  explicit AssignmentContext(
+      std::string_view variable_name,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<moriarty_internal::ValueSet> values)
       : NameContext(variable_name),
         ViewOnlyContext(variables, values),
         MutableValuesContext(values) {}

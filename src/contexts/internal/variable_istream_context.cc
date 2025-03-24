@@ -2,7 +2,6 @@
 
 #include <istream>
 
-#include "src/contexts/internal/mutable_values_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/policies.h"
@@ -23,15 +22,10 @@ VariableIStreamContext::VariableIStreamContext(
 void VariableIStreamContext::ReadVariableTo(std::string_view variable_name,
                                             ConcreteTestCase& test_case) {
   ValueSet values = values_;
-  MutableValuesContext mutable_values_ctx(values);
-  librarian::ReaderContext reader_ctx(
-      variable_name, is_, whitespace_strictness_, variables_, values);
-
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
-
-  variable->ReadValue(reader_ctx, mutable_values_ctx);
-
+  variable->ReadValue(variable_name, is_, whitespace_strictness_, variables_,
+                      values);
   test_case.UnsafeSetAnonymousValue(variable_name,
                                     values.UnsafeGet(variable_name));
 }

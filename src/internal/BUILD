@@ -42,7 +42,6 @@ cc_library(
     deps = [
         ":value_set",
         ":variable_set",
-        "//src/contexts/librarian:analysis_context",
     ],
 )
 
@@ -278,9 +277,6 @@ cc_library(
         ":value_set",
         ":variable_set",
         "//src:test_case",
-        "//src/contexts/librarian:analysis_context",
-        "//src/contexts/librarian:assignment_context",
-        "//src/contexts/librarian:resolver_context",
     ],
 )
 

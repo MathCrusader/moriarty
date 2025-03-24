@@ -33,24 +33,21 @@ namespace librarian {
 class PrinterContext : public moriarty_internal::NameContext,
                        public moriarty_internal::ViewOnlyContext,
                        public moriarty_internal::BasicOStreamContext {
-  using NameContext = moriarty_internal::NameContext;
-  using ViewOnlyContext = moriarty_internal::ViewOnlyContext;
-  using OStreamBase = moriarty_internal::BasicOStreamContext;
-
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
   // See `src/Moriarty.h` for entry points.
-  PrinterContext(std::string_view variable_name, std::ostream& os,
-                 const moriarty_internal::VariableSet& variables,
-                 const moriarty_internal::ValueSet& values)
+  PrinterContext(
+      std::string_view variable_name, std::reference_wrapper<std::ostream> os,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<const moriarty_internal::ValueSet> values)
       : NameContext(variable_name),
         ViewOnlyContext(variables, values),
-        OStreamBase(os) {}
+        BasicOStreamContext(os) {}
   PrinterContext(NameContext name_context, ViewOnlyContext view_context,
-                 OStreamBase stream_context)
+                 BasicOStreamContext stream_context)
       : NameContext(name_context),
         ViewOnlyContext(view_context),
-        OStreamBase(stream_context) {}
+        BasicOStreamContext(stream_context) {}
 
   // ********************************************
   // ** See parent classes for more functions. **

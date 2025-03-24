@@ -111,10 +111,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/librarian/analysis_context.h"
-#include "src/contexts/librarian/printer_context.h"
-#include "src/contexts/librarian/reader_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_bootstrap.h"
 #include "src/internal/random_engine.h"
@@ -447,13 +444,8 @@ T::value_type Read(T variable, std::istream& is, Context context) {
   moriarty::moriarty_internal::AbstractVariable* var =
       context.Variables().GetAnonymousVariable(var_name);
 
-  moriarty::librarian::ReaderContext reader_context(
-      var_name, is, moriarty::WhitespaceStrictness::kPrecise,
-      context.Variables(), context.Values());
-  moriarty::moriarty_internal::MutableValuesContext values_context(
-      context.Values());
-
-  var->ReadValue(reader_context, values_context);
+  var->ReadValue(var_name, is, moriarty::WhitespaceStrictness::kPrecise,
+                 context.Variables(), context.Values());
   return context.Values().Get<T>(var_name);
 }
 
@@ -473,10 +465,7 @@ std::string Print(T variable, typename T::value_type value, Context context) {
 
   moriarty::moriarty_internal::AbstractVariable* var =
       context.Variables().GetAnonymousVariable(var_name);
-
-  moriarty::librarian::PrinterContext printer_context(
-      var_name, ss, context.Variables(), context.Values());
-  var->PrintValue(printer_context);
+  var->PrintValue(var_name, ss, context.Variables(), context.Values());
   return ss.str();
 }
 
@@ -519,15 +508,17 @@ testing::AssertionResult AllGenerateSameValues(std::vector<T> vars) {
 
 template <MoriartyVariable T>
 std::vector<typename T::value_type> GenerateEdgeCases(T variable) {
-  moriarty::librarian::AnalysisContext ctx("test", {}, {});
+  moriarty::moriarty_internal::VariableSet variables;
+  moriarty::moriarty_internal::ValueSet values;
+  moriarty::librarian::AnalysisContext ctx("test", variables, values);
   std::vector<T> instances = variable.ListEdgeCases(ctx);
 
-  std::vector<typename T::value_type> values;
+  std::vector<typename T::value_type> tricky_values;
   for (T difficult_variable : instances) {
     typename T::value_type val = Generate(std::move(difficult_variable));
-    values.push_back(std::move(val));
+    tricky_values.push_back(std::move(val));
   }
-  return values;
+  return tricky_values;
 }
 
 // IsSatisfiedWith() [for use with GoogleTest]

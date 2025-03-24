@@ -104,36 +104,24 @@ class ViewOnlyContext {
                                           std::unique_ptr<AbstractVariable>>&
   ListVariables() const;
 
+  // UnsafeGetVariables()
+  //
+  // Advanced usage only. Normal users should not use this function.
+  //
+  // Returns a reference to the internal variable set.
+  [[nodiscard]] const VariableSet& UnsafeGetVariables() const;
+
+  // UnsafeGetValues()
+  //
+  // Advanced usage only. Normal users should not use this function.
+  //
+  // Returns a reference to the internal value set.
+  [[nodiscard]] const ValueSet& UnsafeGetValues() const;
+
  private:
   std::reference_wrapper<const VariableSet> variables_;
   std::reference_wrapper<const ValueSet> values_;
 };
-
-}  // namespace moriarty_internal
-}  // namespace moriarty
-
-// ----------------------------------------------------------------------------
-// Forward declarations
-
-namespace moriarty::librarian {
-template <typename V, typename G>
-class MVariable;  // Forward declaring MVariable
-}
-
-namespace moriarty::moriarty_internal {
-class ViewOnlyContext;  // Forward declaring
-// Forward declaring GetUniqueValue
-template <typename V, typename G>
-std::optional<G> GetUniqueValue(const librarian::MVariable<V, G>&,
-                                std::string_view, ViewOnlyContext);
-// Forward declaring IsSatisfiedWith
-template <typename V, typename G>
-bool IsSatisfiedWith(const librarian::MVariable<V, G>&, std::string_view,
-                     ViewOnlyContext, const G&);
-}  // namespace moriarty::moriarty_internal
-
-namespace moriarty {
-namespace moriarty_internal {
 
 template <MoriartyVariable T>
 T ViewOnlyContext::GetVariable(std::string_view variable_name) const {
@@ -160,15 +148,15 @@ std::optional<typename T::value_type> ViewOnlyContext::GetUniqueValue(
   auto stored_value = GetValueIfKnown<T>(variable_name);
   if (stored_value) return *stored_value;
 
-  return moriarty_internal::GetUniqueValue(GetVariable<T>(variable_name),
-                                           variable_name, *this);
+  T variable = GetVariable<T>(variable_name);
+  return variable.GetUniqueValue({variable_name, variables_, values_});
 }
 
 template <MoriartyVariable T>
 bool ViewOnlyContext::IsSatisfiedWith(T variable,
                                       const T::value_type& value) const {
-  return moriarty_internal::IsSatisfiedWith(
-      std::move(variable), "Context::IsSatisfiedWith()", *this, value);
+  return variable.IsSatisfiedWith({"IsSatisfiedWith()", variables_, values_},
+                                  value);
 }
 
 }  // namespace moriarty_internal

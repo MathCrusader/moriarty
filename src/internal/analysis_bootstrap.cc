@@ -17,7 +17,6 @@
 #include <format>
 #include <optional>
 
-#include "src/contexts/librarian/analysis_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 
@@ -27,10 +26,10 @@ namespace moriarty_internal {
 std::optional<std::string> AllVariablesSatisfyConstraints(
     const VariableSet& variables, const ValueSet& values) {
   for (const auto& [name, var] : variables.ListVariables()) {
-    librarian::AnalysisContext ctx(name, variables, values);
-    if (!var->IsSatisfiedWithValue(ctx))
-      return std::format("Variable {} does not satisfy its constraints: {}",
-                         name, var->UnsatisfiedWithValueReason(ctx));
+    if (!var->IsSatisfiedWithValue(name, variables, values))
+      return std::format(
+          "Variable {} does not satisfy its constraints: {}", name,
+          var->UnsatisfiedWithValueReason(name, variables, values));
   }
   return std::nullopt;
 }

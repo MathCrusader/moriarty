@@ -36,15 +36,13 @@ namespace librarian {
 // Note: All Librarian contexts can be implicitly converted to this type.
 class AnalysisContext : public moriarty_internal::NameContext,
                         public moriarty_internal::ViewOnlyContext {
-  using NameContext = moriarty_internal::NameContext;
-  using ViewOnlyContext = moriarty_internal::ViewOnlyContext;
-
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
   // See `src/Moriarty.h` for entry points.
-  explicit AnalysisContext(std::string_view variable_name,
-                           const moriarty_internal::VariableSet& variables,
-                           const moriarty_internal::ValueSet& values)
+  AnalysisContext(
+      std::string_view variable_name,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<const moriarty_internal::ValueSet> values)
       : NameContext(variable_name), ViewOnlyContext(variables, values) {}
   AnalysisContext(std::string_view name, const ViewOnlyContext& other)
       : NameContext(name), ViewOnlyContext(other) {}

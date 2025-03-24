@@ -25,13 +25,6 @@
 #include "src/internal/variable_set.h"
 #include "src/test_case.h"
 
-namespace moriarty::moriarty_internal {
-template <typename V, typename G>
-void Print(const librarian::MVariable<V, G>& variable, const G& value,
-           std::string_view variable_name, std::ostream& os,
-           const VariableSet& variables, const ValueSet& values);
-}
-
 namespace moriarty {
 namespace moriarty_internal {
 
@@ -73,8 +66,7 @@ class VariableOStreamContext {
 
 template <MoriartyVariable T>
 void VariableOStreamContext::PrintVariable(T variable, T::value_type value) {
-  Print(variable, value, "PrintVariable()", os_.get(), variables_.get(),
-        values_.get());
+  variable.Print({"PrintVariable", os_, variables_, values_}, value);
 }
 
 }  // namespace moriarty_internal

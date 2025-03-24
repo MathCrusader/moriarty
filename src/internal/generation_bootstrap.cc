@@ -26,9 +26,6 @@
 #include <utility>
 #include <vector>
 
-#include "src/contexts/librarian/analysis_context.h"
-#include "src/contexts/librarian/assignment_context.h"
-#include "src/contexts/librarian/resolver_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_handler.h"
 #include "src/internal/value_set.h"
@@ -111,16 +108,14 @@ ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
   // before them.
   for (std::string_view name : std::ranges::reverse_view(order)) {
     AbstractVariable* var = variables.GetAnonymousVariable(name);
-    librarian::AssignmentContext ctx(name, variables, known_values);
-    var->AssignUniqueValue(ctx);
+    var->AssignUniqueValue(name, variables, known_values);
   }
 
   // Now do a deep generation.
   for (std::string_view name : order) {
     AbstractVariable* var = variables.GetAnonymousVariable(name);
-    librarian::ResolverContext ctx(name, variables, known_values,
-                                   options.random_engine, generation_handler);
-    var->AssignValue(ctx);
+    var->AssignValue(name, variables, known_values, options.random_engine,
+                     generation_handler);
   }
 
   // We may have initially generated invalid values during the
@@ -128,11 +123,10 @@ ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
   // TODO(darcybest): Determine if there's a better way of doing this...
   for (std::string_view name : order) {
     AbstractVariable* var = variables.GetAnonymousVariable(name);
-    librarian::AnalysisContext ctx(name, variables, known_values);
-    if (!var->IsSatisfiedWithValue(ctx)) {
-      throw std::runtime_error(
-          std::format("Variable {} does not satisfy its constraints: {}", name,
-                      var->UnsatisfiedWithValueReason(ctx)));
+    if (!var->IsSatisfiedWithValue(name, variables, known_values)) {
+      throw std::runtime_error(std::format(
+          "Variable {} does not satisfy its constraints: {}", name,
+          var->UnsatisfiedWithValueReason(name, variables, known_values)));
     }
   }
 

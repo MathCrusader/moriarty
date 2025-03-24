@@ -42,28 +42,24 @@ class ResolverContext
       public moriarty_internal::MutableValuesContext,
       public moriarty_internal::BasicRandomContext,
       public moriarty_internal::GenerationOrchestrationContext {
-  using NameContext = moriarty_internal::NameContext;
-  using ViewOnlyContext = moriarty_internal::ViewOnlyContext;
-  using MutableValuesContext = moriarty_internal::MutableValuesContext;
-  using BasicRandomContext = moriarty_internal::BasicRandomContext;
-  using GenerationOrchestrationContext =
-      moriarty_internal::GenerationOrchestrationContext;
-
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
   // See `src/Moriarty.h` for entry points.
-  ResolverContext(std::string_view variable_name,
-                  const moriarty_internal::VariableSet& variables,
-                  moriarty_internal::ValueSet& values,
-                  moriarty_internal::RandomEngine& engine,
-                  moriarty_internal::GenerationHandler& handler)
+  ResolverContext(
+      std::string_view variable_name,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<moriarty_internal::ValueSet> values,
+      std::reference_wrapper<moriarty_internal::RandomEngine> engine,
+      std::reference_wrapper<moriarty_internal::GenerationHandler> handler)
       : NameContext(variable_name),
         ViewOnlyContext(variables, values),
         MutableValuesContext(values),
         BasicRandomContext(engine),
         GenerationOrchestrationContext(handler),
         variables_(variables),
-        values_(values) {}
+        values_(values),
+        engine_(engine),
+        handler_(handler) {}
 
   // ********************************************
   // ** See parent classes for more functions. **
@@ -108,12 +104,14 @@ class ResolverContext
   void AssignVariable(std::string_view variable_name) {
     const moriarty_internal::AbstractVariable& variable =
         GetAnonymousVariable(variable_name);
-    variable.AssignValue(ForVariable(variable_name));
+    variable.AssignValue(variable_name, variables_, values_, engine_, handler_);
   }
 
  private:
   std::reference_wrapper<const moriarty_internal::VariableSet> variables_;
   std::reference_wrapper<moriarty_internal::ValueSet> values_;
+  std::reference_wrapper<moriarty_internal::RandomEngine> engine_;
+  std::reference_wrapper<moriarty_internal::GenerationHandler> handler_;
 
   ResolverContext(std::string_view new_variable_name,
                   const ResolverContext& other)
@@ -123,7 +121,9 @@ class ResolverContext
         BasicRandomContext(other),
         GenerationOrchestrationContext(other),
         variables_(other.variables_),
-        values_(other.values_) {}
+        values_(other.values_),
+        engine_(other.engine_),
+        handler_(other.handler_) {}
 };
 
 }  // namespace librarian

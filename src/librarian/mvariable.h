@@ -258,16 +258,44 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //  AbstractVariable overrides
   [[nodiscard]] std::unique_ptr<moriarty_internal::AbstractVariable> Clone()
       const override;
-  void AssignValue(ResolverContext ctx) const override;
-  void AssignUniqueValue(AssignmentContext ctx) const override;
-  void PrintValue(librarian::PrinterContext ctx) const override;
+  void AssignValue(
+      std::string_view variable_name,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<moriarty_internal::ValueSet> values,
+      std::reference_wrapper<moriarty_internal::RandomEngine> engine,
+      std::reference_wrapper<moriarty_internal::GenerationHandler> handler)
+      const override;
+  void AssignUniqueValue(
+      std::string_view variable_name,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<moriarty_internal::ValueSet> values)
+      const override;
   void ReadValue(
-      ReaderContext ctx,
-      moriarty_internal::MutableValuesContext values_ctx) const override;
-  bool IsSatisfiedWithValue(AnalysisContext ctx) const override;
-  std::string UnsatisfiedWithValueReason(AnalysisContext ctx) const override;
-  std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
-  ListAnonymousEdgeCases(AnalysisContext ctx) const override;
+      std::string_view variable_name, std::reference_wrapper<std::istream> is,
+      WhitespaceStrictness whitespace_strictness,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<moriarty_internal::ValueSet> values)
+      const override;
+  void PrintValue(
+      std::string_view variable_name, std::reference_wrapper<std::ostream> os,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<const moriarty_internal::ValueSet> values)
+      const override;
+  bool IsSatisfiedWithValue(
+      std::string_view variable_name,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<const moriarty_internal::ValueSet> values)
+      const override;
+  std::string UnsatisfiedWithValueReason(
+      std::string_view variable_name,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<const moriarty_internal::ValueSet> values)
+      const override;
+  std::vector<std::unique_ptr<AbstractVariable>> ListAnonymousEdgeCases(
+      std::string_view variable_name,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<const moriarty_internal::ValueSet> values)
+      const override;
   // ---------------------------------------------------------------------------
 
   class CustomConstraintWrapper {
@@ -537,7 +565,15 @@ G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
 }
 
 template <typename V, typename G>
-void MVariable<V, G>::AssignValue(ResolverContext ctx) const {
+void MVariable<V, G>::AssignValue(
+    std::string_view variable_name,
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<moriarty_internal::ValueSet> values,
+    std::reference_wrapper<moriarty_internal::RandomEngine> engine,
+    std::reference_wrapper<moriarty_internal::GenerationHandler> handler)
+    const {
+  ResolverContext ctx(variable_name, variables, values, engine, handler);
+
   if (ctx.ValueIsKnown(ctx.GetVariableName())) return;
 
   G value = Generate(ctx);
@@ -545,7 +581,11 @@ void MVariable<V, G>::AssignValue(ResolverContext ctx) const {
 }
 
 template <typename V, typename G>
-void MVariable<V, G>::AssignUniqueValue(AssignmentContext ctx) const {
+void MVariable<V, G>::AssignUniqueValue(
+    std::string_view variable_name,
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<moriarty_internal::ValueSet> values) const {
+  AssignmentContext ctx(variable_name, variables, values);
   if (ctx.ValueIsKnown(ctx.GetVariableName())) return;
 
   std::optional<G> value = GetUniqueValue(ctx);
@@ -553,31 +593,51 @@ void MVariable<V, G>::AssignUniqueValue(AssignmentContext ctx) const {
 }
 
 template <typename V, typename G>
-bool MVariable<V, G>::IsSatisfiedWithValue(AnalysisContext ctx) const {
+void MVariable<V, G>::ReadValue(
+    std::string_view variable_name, std::reference_wrapper<std::istream> is,
+    WhitespaceStrictness whitespace_strictness,
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<moriarty_internal::ValueSet> values) const {
+  ReaderContext ctx(variable_name, is, whitespace_strictness, variables,
+                    values);
+  moriarty_internal::MutableValuesContext mut_ctx(values);
+  mut_ctx.SetValue<V>(ctx.GetVariableName(), Read(ctx));
+}
+
+template <typename V, typename G>
+void MVariable<V, G>::PrintValue(
+    std::string_view variable_name, std::reference_wrapper<std::ostream> os,
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<const moriarty_internal::ValueSet> values) const {
+  PrinterContext ctx(variable_name, os, variables, values);
+  Print(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
+}
+
+template <typename V, typename G>
+bool MVariable<V, G>::IsSatisfiedWithValue(
+    std::string_view variable_name,
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<const moriarty_internal::ValueSet> values) const {
+  AnalysisContext ctx(variable_name, variables, values);
   return IsSatisfiedWith(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
 
 template <typename V, typename G>
 std::string MVariable<V, G>::UnsatisfiedWithValueReason(
-    AnalysisContext ctx) const {
+    std::string_view variable_name,
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<const moriarty_internal::ValueSet> values) const {
+  AnalysisContext ctx(variable_name, variables, values);
   return UnsatisfiedReason(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
 
 template <typename V, typename G>
-void MVariable<V, G>::ReadValue(
-    ReaderContext ctx,
-    moriarty_internal::MutableValuesContext values_ctx) const {
-  values_ctx.SetValue<V>(ctx.GetVariableName(), Read(ctx));
-}
-
-template <typename V, typename G>
-void MVariable<V, G>::PrintValue(PrinterContext ctx) const {
-  Print(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
-}
-
-template <typename V, typename G>
 std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
-MVariable<V, G>::ListAnonymousEdgeCases(AnalysisContext ctx) const {
+MVariable<V, G>::ListAnonymousEdgeCases(
+    std::string_view variable_name,
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<const moriarty_internal::ValueSet> values) const {
+  AnalysisContext ctx(variable_name, variables, values);
   std::vector<V> instances = ListEdgeCases(ctx);
   std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>> new_vec;
   new_vec.reserve(instances.size());
@@ -622,41 +682,5 @@ void MVariable<V, G>::CustomConstraintWrapper::ApplyTo(V& other) const {
 
 }  // namespace librarian
 }  // namespace moriarty
-
-namespace moriarty::moriarty_internal {
-// Convenience functions for internal use only.
-
-template <typename V, typename G>
-[[nodiscard]] std::optional<G> GetUniqueValue(
-    const librarian::MVariable<V, G>& variable, std::string_view variable_name,
-    moriarty::moriarty_internal::ViewOnlyContext ctx) {
-  return variable.GetUniqueValue(
-      librarian::AnalysisContext(variable_name, ctx));
-}
-
-template <typename V, typename G>
-bool IsSatisfiedWith(const librarian::MVariable<V, G>& variable,
-                     std::string_view variable_name,
-                     moriarty::moriarty_internal::ViewOnlyContext ctx,
-                     const G& value) {
-  return variable.IsSatisfiedWith(
-      librarian::AnalysisContext(variable_name, ctx), value);
-}
-
-template <typename... T>
-  requires std::constructible_from<librarian::PrinterContext, T...>
-void PrintValue(const AbstractVariable& variable, T... args) {
-  variable.PrintValue(librarian::PrinterContext(args...));
-}
-
-template <typename V, typename G>
-void Print(const librarian::MVariable<V, G>& variable, const G& value,
-           std::string_view variable_name, std::ostream& os,
-           const VariableSet& variables, const ValueSet& values) {
-  return variable.Print(
-      librarian::PrinterContext(variable_name, os, variables, values), value);
-}
-
-}  // namespace moriarty::moriarty_internal
 
 #endif  // MORIARTY_SRC_LIBRARIAN_MVARIABLE_H_

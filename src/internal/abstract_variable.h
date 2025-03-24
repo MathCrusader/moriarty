@@ -18,25 +18,25 @@
 #ifndef MORIARTY_SRC_INTERNAL_ABSTRACT_VARIABLE_H_
 #define MORIARTY_SRC_INTERNAL_ABSTRACT_VARIABLE_H_
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
-namespace moriarty::librarian {
-class AnalysisContext;    // Forward declaring AnalysisContext
-class AssignmentContext;  // Forward declaring AssignmentContext
-class PrinterContext;     // Forward declaring PrinterContext
-class ReaderContext;      // Forward declaring ReaderContext
-class ResolverContext;    // Forward declaring ResolverContext
-}  // namespace moriarty::librarian
-
 namespace moriarty::moriarty_internal {
-class MutableValuesContext;  // Forward declaring MutableValuesContext
+class ValueSet;           // Forward declaration
+class VariableSet;        // Forward declaration
+class RandomEngine;       // Forward declaration
+class GenerationHandler;  // Forward declaration
 }  // namespace moriarty::moriarty_internal
+
+namespace moriarty {
+enum class WhitespaceStrictness;  // Forward declaration
+}
 
 namespace moriarty::librarian {
 template <typename V, typename G>
-class MVariable;  // Forward declaring MVariable
+class MVariable;  // Forward declaration
 }
 
 // Determines if T is a Moriarty Variable. Examples: MInteger, MString, etc.
@@ -97,7 +97,12 @@ class AbstractVariable {
   //
   // Note that the variable stored in `ctx` with the same name may or may not be
   // identically `this` variable, but it should be assumed to be equivalent.
-  virtual void AssignValue(librarian::ResolverContext ctx) const = 0;
+  virtual void AssignValue(
+      std::string_view variable_name,
+      std::reference_wrapper<const VariableSet> variables,
+      std::reference_wrapper<ValueSet> values,
+      std::reference_wrapper<RandomEngine> engine,
+      std::reference_wrapper<GenerationHandler> handler) const = 0;
 
   // AssignUniqueValue() [pure virtual]
   //
@@ -109,21 +114,29 @@ class AbstractVariable {
   //
   // Example: MInteger(Between(7, 7)) might be able to determine that its
   // unique value is 7.
-  virtual void AssignUniqueValue(librarian::AssignmentContext ctx) const = 0;
+  virtual void AssignUniqueValue(
+      std::string_view variable_name,
+      std::reference_wrapper<const VariableSet> variables,
+      std::reference_wrapper<ValueSet> values) const = 0;
 
   // ReadValue() [pure virtual]
   //
   // Reads a value from `ctx` using the constraints of this variable to
   // determine formatting, etc. Stores the value in `values_ctx`.
-  virtual void ReadValue(
-      librarian::ReaderContext ctx,
-      moriarty_internal::MutableValuesContext values_ctx) const = 0;
+  virtual void ReadValue(std::string_view variable_name,
+                         std::reference_wrapper<std::istream> is,
+                         WhitespaceStrictness whitespace_strictness,
+                         std::reference_wrapper<const VariableSet> variables,
+                         std::reference_wrapper<ValueSet> values) const = 0;
 
   // PrintValue() [pure virtual]
   //
   // Prints the value of this variable to `ctx` using the constraints on this
   // variable to determine formatting, etc.
-  virtual void PrintValue(librarian::PrinterContext ctx) const = 0;
+  virtual void PrintValue(
+      std::string_view variable_name, std::reference_wrapper<std::ostream> os,
+      std::reference_wrapper<const VariableSet> variables,
+      std::reference_wrapper<const ValueSet> values) const = 0;
 
   // MergeFromAnonymous() [pure virtual]
   //
@@ -140,7 +153,10 @@ class AbstractVariable {
   //
   // If a variable does not have a value, this will return false.
   // If a value does not have a variable, this will return true.
-  virtual bool IsSatisfiedWithValue(librarian::AnalysisContext ctx) const = 0;
+  virtual bool IsSatisfiedWithValue(
+      std::string_view variable_name,
+      std::reference_wrapper<const VariableSet> variables,
+      std::reference_wrapper<const ValueSet> values) const = 0;
 
   // UnsatisfiedWithValueReason() [pure virtual]
   //
@@ -150,13 +166,17 @@ class AbstractVariable {
   // If a variable does not have a value, this will return not ok.
   // If a value does not have a variable, this will return ok.
   virtual std::string UnsatisfiedWithValueReason(
-      librarian::AnalysisContext ctx) const = 0;
+      std::string_view variable_name,
+      std::reference_wrapper<const VariableSet> variables,
+      std::reference_wrapper<const ValueSet> values) const = 0;
 
   // ListAnonymousEdgeCases() [pure virtual]
   //
   // Returns a list of pointers to the edge cases of this variable.
   virtual std::vector<std::unique_ptr<AbstractVariable>> ListAnonymousEdgeCases(
-      librarian::AnalysisContext ctx) const = 0;
+      std::string_view variable_name,
+      std::reference_wrapper<const VariableSet> variables,
+      std::reference_wrapper<const ValueSet> values) const = 0;
 
   // GetDependencies() [pure virtual]
   //

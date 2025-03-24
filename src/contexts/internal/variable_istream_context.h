@@ -21,7 +21,6 @@
 #include <istream>
 #include <string_view>
 
-#include "src/contexts/librarian/reader_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/policies.h"
@@ -75,16 +74,14 @@ T::value_type VariableIStreamContext::ReadVariable(
     std::string_view variable_name) {
   T variable = variables_.get().GetVariable<T>(variable_name);
 
-  librarian::ReaderContext ctx(variable_name, is_, whitespace_strictness_,
-                               variables_, values_);
-  return variable.Read(ctx);
+  return variable.Read(
+      {variable_name, is_, whitespace_strictness_, variables_, values_});
 }
 
 template <MoriartyVariable T>
 T::value_type VariableIStreamContext::ReadVariable(const T& variable) {
-  librarian::ReaderContext ctx("ReadVariable()", is_, whitespace_strictness_,
-                               variables_, values_);
-  return variable.Read(ctx);
+  return variable.Read(
+      {"ReadVariable()", is_, whitespace_strictness_, variables_, values_});
 }
 
 }  // namespace moriarty_internal
