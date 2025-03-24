@@ -32,10 +32,7 @@ cc_library(
     srcs = ["mtest_type.cc"],
     hdrs = ["mtest_type.h"],
     deps = [
-        "//src/contexts/librarian:analysis_context",
-        "//src/contexts/librarian:printer_context",
-        "//src/contexts/librarian:reader_context",
-        "//src/contexts/librarian:resolver_context",
+        "//src/contexts:librarian_context",
         "//src/librarian:errors",
         "//src/librarian:mvariable",
         "//src/variables:minteger",
@@ -47,10 +44,8 @@ cc_library(
     testonly = True,
     hdrs = ["gtest_helpers.h"],
     deps = [
+        "//src/contexts:librarian_context",
         "//src/contexts/internal:mutable_values_context",
-        "//src/contexts/librarian:analysis_context",
-        "//src/contexts/librarian:printer_context",
-        "//src/contexts/librarian:reader_context",
         "//src/internal:abstract_variable",
         "//src/internal:generation_bootstrap",
         "//src/internal:generation_handler",

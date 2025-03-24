@@ -30,10 +30,7 @@
 #include <utility>
 #include <vector>
 
-#include "src/contexts/librarian/analysis_context.h"
-#include "src/contexts/librarian/printer_context.h"
-#include "src/contexts/librarian/reader_context.h"
-#include "src/contexts/librarian/resolver_context.h"
+#include "src/contexts/librarian_context.h"
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
 #include "src/librarian/errors.h"

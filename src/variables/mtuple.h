@@ -27,10 +27,7 @@
 #include <vector>
 
 #include "absl/strings/str_join.h"
-#include "src/contexts/librarian/analysis_context.h"
-#include "src/contexts/librarian/printer_context.h"
-#include "src/contexts/librarian/reader_context.h"
-#include "src/contexts/librarian/resolver_context.h"
+#include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"

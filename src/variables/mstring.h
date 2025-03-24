@@ -22,10 +22,7 @@
 #include <string>
 #include <vector>
 
-#include "src/contexts/librarian/analysis_context.h"
-#include "src/contexts/librarian/printer_context.h"
-#include "src/contexts/librarian/reader_context.h"
-#include "src/contexts/librarian/resolver_context.h"
+#include "src/contexts/librarian_context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/librarian/mvariable.h"
 #include "src/variables/constraints/base_constraints.h"

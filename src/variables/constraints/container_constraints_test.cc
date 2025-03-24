@@ -21,7 +21,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/librarian_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/testing/gtest_helpers.h"

@@ -21,7 +21,7 @@
 #include <utility>
 #include <vector>
 
-#include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/librarian_context.h"
 #include "src/util/cow_ptr.h"
 
 namespace moriarty {

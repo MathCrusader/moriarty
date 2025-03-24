@@ -30,10 +30,7 @@
 
 #include "absl/container/flat_hash_set.h"
 #include "absl/strings/str_cat.h"
-#include "src/contexts/librarian/analysis_context.h"
-#include "src/contexts/librarian/printer_context.h"
-#include "src/contexts/librarian/reader_context.h"
-#include "src/contexts/librarian/resolver_context.h"
+#include "src/contexts/librarian_context.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"

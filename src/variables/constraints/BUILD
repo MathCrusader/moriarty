@@ -49,7 +49,7 @@ cc_library(
     hdrs = ["container_constraints.h"],
     deps = [
         ":base_constraints",
-        "//src/contexts/librarian:analysis_context",
+        "//src/contexts:librarian_context",
         "//src/util:debug_string",
         "//src/variables:minteger",
     ],
@@ -60,7 +60,7 @@ cc_library(
     hdrs = ["custom_constraint.h"],
     deps = [
         ":base_constraints",
-        "//src/contexts/librarian:analysis_context",
+        "//src/contexts:librarian_context",
         "//src/util:debug_string",
     ],
 )

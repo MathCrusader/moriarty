@@ -25,7 +25,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_handler.h"
 #include "src/internal/random_engine.h"

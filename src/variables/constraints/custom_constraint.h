@@ -23,7 +23,7 @@
 #include <string_view>
 #include <vector>
 
-#include "src/contexts/librarian/analysis_context.h"
+#include "src/contexts/librarian_context.h"
 #include "src/util/debug_string.h"
 #include "src/variables/constraints/base_constraints.h"
 

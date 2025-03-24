@@ -30,7 +30,7 @@ cc_library(
     name = "constraint_handler",
     hdrs = ["constraint_handler.h"],
     deps = [
-        "//src/contexts/librarian:analysis_context",
+        "//src/contexts:librarian_context",
         "//src/util:cow_ptr",
     ],
 )
@@ -63,11 +63,7 @@ cc_library(
         ":constraint_handler",
         ":conversions",
         ":one_of_handler",
-        "//src/contexts/librarian:analysis_context",
-        "//src/contexts/librarian:assignment_context",
-        "//src/contexts/librarian:printer_context",
-        "//src/contexts/librarian:reader_context",
-        "//src/contexts/librarian:resolver_context",
+        "//src/contexts:librarian_context",
         "//src/internal:abstract_variable",
         "//src/internal:generation_handler",
         "//src/internal:random_engine",
@@ -101,7 +97,7 @@ cc_test(
     srcs = ["constraint_handler_test.cc"],
     deps = [
         ":constraint_handler",
-        "//src/contexts/librarian:analysis_context",
+        "//src/contexts:librarian_context",
         "//src/variables:minteger",
         "//src/variables:mstring",
         "@googletest//:gtest_main",

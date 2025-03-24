@@ -52,15 +52,6 @@ cc_library(
 )
 
 cc_library(
-    name = "mutable_values_context",
-    srcs = ["mutable_values_context.cc"],
-    hdrs = ["mutable_values_context.h"],
-    deps = [
-        "//src/internal:value_set",
-    ],
-)
-
-cc_library(
     name = "generation_orchestration_context",
     srcs = ["generation_orchestration_context.cc"],
     hdrs = ["generation_orchestration_context.h"],
@@ -70,10 +61,32 @@ cc_library(
 )
 
 cc_library(
+    name = "mutable_values_context",
+    srcs = ["mutable_values_context.cc"],
+    hdrs = ["mutable_values_context.h"],
+    deps = [
+        "//src/internal:value_set",
+    ],
+)
+
+cc_library(
     name = "name_context",
     srcs = ["name_context.cc"],
     hdrs = ["name_context.h"],
     deps = [
+    ],
+)
+
+cc_library(
+    name = "resolve_values_context",
+    srcs = ["resolve_values_context.cc"],
+    hdrs = ["resolve_values_context.h"],
+    deps = [
+        "//src/internal:abstract_variable",
+        "//src/internal:generation_handler",
+        "//src/internal:random_engine",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
     ],
 )
 
@@ -97,8 +110,6 @@ cc_library(
     hdrs = ["variable_istream_context.h"],
     deps = [
         "//src:test_case",
-        "//src/contexts/internal:mutable_values_context",
-        "//src/contexts/librarian:reader_context",
         "//src/internal:abstract_variable",
         "//src/internal:value_set",
         "//src/internal:variable_set",
@@ -112,7 +123,6 @@ cc_library(
     hdrs = ["variable_ostream_context.h"],
     deps = [
         "//src:test_case",
-        "//src/contexts/librarian:printer_context",
         "//src/internal:abstract_variable",
         "//src/internal:value_set",
         "//src/internal:variable_set",
@@ -174,6 +184,22 @@ cc_test(
     srcs = ["name_context_test.cc"],
     deps = [
         ":name_context",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "resolve_values_context_test",
+    srcs = ["resolve_values_context_test.cc"],
+    deps = [
+        ":resolve_values_context",
+        "//src/internal:abstract_variable",
+        "//src/internal:generation_handler",
+        "//src/internal:random_engine",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
+        "//src/testing:gtest_helpers",
+        "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
 )

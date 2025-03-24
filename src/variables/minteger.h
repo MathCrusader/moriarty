@@ -25,10 +25,7 @@
 #include <string>
 #include <vector>
 
-#include "src/contexts/librarian/analysis_context.h"
-#include "src/contexts/librarian/printer_context.h"
-#include "src/contexts/librarian/reader_context.h"
-#include "src/contexts/librarian/resolver_context.h"
+#include "src/contexts/librarian_context.h"
 #include "src/internal/range.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/one_of_handler.h"

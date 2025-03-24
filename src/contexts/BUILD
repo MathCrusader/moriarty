@@ -1,4 +1,4 @@
-# Copyright 2024 Google LLC
+# Copyright 2025 Darcy Best
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,39 +13,33 @@
 # limitations under the License.
 
 load("@rules_cc//cc:cc_library.bzl", "cc_library")
-load("@rules_cc//cc:cc_test.bzl", "cc_test")
 
 package(
     default_visibility = [
-        "//visibility:public",
+        "//:internal",
     ],
 )
 
 licenses(["notice"])
 
 cc_library(
-    name = "combinatorial_generator",
-    srcs = ["combinatorial_generator.cc"],
-    hdrs = ["combinatorial_generator.h"],
+    name = "librarian_context",
+    srcs = ["librarian_context.cc"],
+    hdrs = ["librarian_context.h"],
     deps = [
-        "//src:context",
-        "//src:test_case",
+        "//src/contexts/internal:basic_istream_context",
+        "//src/contexts/internal:basic_ostream_context",
+        "//src/contexts/internal:basic_random_context",
+        "//src/contexts/internal:generation_orchestration_context",
+        "//src/contexts/internal:mutable_values_context",
+        "//src/contexts/internal:name_context",
+        "//src/contexts/internal:resolve_values_context",
+        "//src/contexts/internal:view_only_context",
         "//src/internal:abstract_variable",
-        "//src/internal:combinatorial_coverage",
-    ],
-)
-
-cc_test(
-    name = "combinatorial_generator_test",
-    srcs = ["combinatorial_generator_test.cc"],
-    deps = [
-        ":combinatorial_generator",
-        "//src/internal:combinatorial_coverage",
-        "//src/internal:combinatorial_coverage_test_util",
+        "//src/internal:generation_handler",
+        "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "//src/testing:gtest_helpers",
-        "//src/testing:mtest_type",
-        "@googletest//:gtest_main",
+        "//src/librarian:io_config",
     ],
 )
