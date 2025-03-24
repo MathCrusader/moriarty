@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "src/context.h"
+#include "src/contexts/librarian/analysis_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/combinatorial_coverage.h"
 #include "src/test_case.h"
@@ -41,7 +42,7 @@ struct InitializeCasesInfo {
 InitializeCasesInfo InitializeCases(GenerateContext ctx) {
   InitializeCasesInfo info;
   for (const auto& [name, var_ptr] : ctx.ListVariables()) {
-    moriarty::librarian::AnalysisContext analysis_ctx(name, ctx);
+    librarian::AnalysisContext analysis_ctx(name, ctx);
     std::vector<VarPtr> difficult_vars =
         var_ptr->ListAnonymousEdgeCases(analysis_ctx);
     info.dimension_sizes.push_back(difficult_vars.size());

@@ -25,7 +25,6 @@
 #ifndef MORIARTY_SRC_MORIARTY_H_
 #define MORIARTY_SRC_MORIARTY_H_
 
-#include <concepts>
 #include <cstdint>
 #include <optional>
 #include <span>
@@ -37,7 +36,6 @@
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/mvariable.h"
 
 namespace moriarty {
 
@@ -103,9 +101,7 @@ class Moriarty {
   //
   // Variable names must start with a letter (A-Za-z), and then only contain
   // letters, numbers, and underscores (A-Za-z0-9_).
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
+  template <MoriartyVariable T>
   Moriarty& AddVariable(std::string_view name, T variable);
 
   // AddAnonymousVariable()
@@ -150,8 +146,7 @@ class Moriarty {
 // -----------------------------------------------------------------------------
 //  Template implementation below
 
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 Moriarty& Moriarty::AddVariable(std::string_view name, T variable) {
   return AddAnonymousVariable(name, variable);
 }

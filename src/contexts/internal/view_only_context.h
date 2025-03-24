@@ -43,8 +43,7 @@ class ViewOnlyContext {
   // GetVariable()
   //
   // Returns the stored variable with the name `variable_name`.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] T GetVariable(std::string_view variable_name) const;
 
   // GetAnonymousVariable()
@@ -58,16 +57,14 @@ class ViewOnlyContext {
   // GetValue()
   //
   // Returns the stored value for the variable with the name `variable_name`.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] T::value_type GetValue(std::string_view variable_name) const;
 
   // GetValueIfKnown()
   //
   // Returns the stored value for the variable with the name `variable_name` if
   // it has been set previously.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] std::optional<typename T::value_type> GetValueIfKnown(
       std::string_view variable_name) const;
 
@@ -78,8 +75,7 @@ class ViewOnlyContext {
   // hard to determine that there is a unique value), returns `std::nullopt`.
   // Returning `std::nullopt` does not guarantee there is not a unique value,
   // it may just be too hard to determine it.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] std::optional<typename T::value_type> GetUniqueValue(
       std::string_view variable_name) const;
 
@@ -96,8 +92,7 @@ class ViewOnlyContext {
   //
   //   bool s1 = IsSatisfiedWith(MInteger(AtMost("N")), 25);
   //   bool s2 = IsSatisfiedWith(MString(Length(5)), "hello");
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] bool IsSatisfiedWith(T variable,
                                      const T::value_type& value) const;
 
@@ -140,20 +135,17 @@ bool IsSatisfiedWith(const librarian::MVariable<V, G>&, std::string_view,
 namespace moriarty {
 namespace moriarty_internal {
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 T ViewOnlyContext::GetVariable(std::string_view variable_name) const {
   return variables_.get().GetVariable<T>(variable_name);
 }
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 T::value_type ViewOnlyContext::GetValue(std::string_view variable_name) const {
   return values_.get().Get<T>(variable_name);
 }
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 std::optional<typename T::value_type> ViewOnlyContext::GetValueIfKnown(
     std::string_view variable_name) const {
   if (values_.get().Contains(variable_name)) {
@@ -162,8 +154,7 @@ std::optional<typename T::value_type> ViewOnlyContext::GetValueIfKnown(
   return std::nullopt;
 }
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 std::optional<typename T::value_type> ViewOnlyContext::GetUniqueValue(
     std::string_view variable_name) const {
   auto stored_value = GetValueIfKnown<T>(variable_name);
@@ -173,8 +164,7 @@ std::optional<typename T::value_type> ViewOnlyContext::GetUniqueValue(
                                            variable_name, *this);
 }
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 bool ViewOnlyContext::IsSatisfiedWith(T variable,
                                       const T::value_type& value) const {
   return moriarty_internal::IsSatisfiedWith(

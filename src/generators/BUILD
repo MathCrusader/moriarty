@@ -30,6 +30,7 @@ cc_library(
     deps = [
         "//src:context",
         "//src:test_case",
+        "//src/contexts/librarian:analysis_context",
         "//src/internal:abstract_variable",
         "//src/internal:combinatorial_coverage",
     ],

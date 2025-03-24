@@ -18,10 +18,8 @@
 #ifndef MORIARTY_SRC_VARIABLES_MSTRING_H_
 #define MORIARTY_SRC_VARIABLES_MSTRING_H_
 
-#include <concepts>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <vector>
 
 #include "src/contexts/librarian/analysis_context.h"
@@ -54,7 +52,7 @@ class MString : public librarian::MVariable<MString, std::string> {
   //
   // E.g., MString(Length(10), Alphabet("abc")).
   template <typename... Constraints>
-    requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
+    requires(ConstraintFor<MString, Constraints> && ...)
   explicit MString(Constraints&&... constraints);
 
   ~MString() override = default;
@@ -117,7 +115,7 @@ class MString : public librarian::MVariable<MString, std::string> {
 // -----------------------------------------------------------------------------
 
 template <typename... Constraints>
-  requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
+  requires(ConstraintFor<MString, Constraints> && ...)
 MString::MString(Constraints&&... constraints) {
   (AddConstraint(std::forward<Constraints>(constraints)), ...);
 }

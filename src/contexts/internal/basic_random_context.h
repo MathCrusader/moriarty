@@ -96,8 +96,7 @@ class BasicRandomContext {
   // Returns a random permutation of {min, min + 1, ... , min + (n-1)}.
   //
   // Requires min + (n-1) to not overflow T.
-  template <typename T>
-    requires std::integral<T>
+  template <std::integral T>
   [[nodiscard]] std::vector<T> RandomPermutation(int n, T min);
 
   // DistinctIntegers()
@@ -106,8 +105,7 @@ class BasicRandomContext {
   // {min, min + 1, ... , min + (n-1)}.
   //
   // Requires min + (n-1) to not overflow T.
-  template <typename T>
-    requires std::integral<T>
+  template <std::integral T>
   [[nodiscard]] std::vector<T> DistinctIntegers(T n, int k, T min = 0);
 
   // RandomComposition()
@@ -123,8 +121,7 @@ class BasicRandomContext {
   // common that this is 0 or 1.
   //
   // Requires n + (k - 1) to not overflow T.
-  template <typename T>
-    requires std::integral<T>
+  template <std::integral T>
   [[nodiscard]] std::vector<T> RandomComposition(T n, int k,
                                                  T min_bucket_size = 1);
 
@@ -222,8 +219,7 @@ BasicRandomContext::RandomElementsWithoutReplacement(const Container& container,
   return result;
 }
 
-template <typename T>
-  requires std::integral<T>
+template <std::integral T>
 std::vector<T> BasicRandomContext::RandomPermutation(int n, T min) {
   if (n < 0) {
     throw std::runtime_error(std::format(
@@ -232,8 +228,7 @@ std::vector<T> BasicRandomContext::RandomPermutation(int n, T min) {
   return DistinctIntegers(n, n, min);
 }
 
-template <typename T>
-  requires std::integral<T>
+template <std::integral T>
 std::vector<T> BasicRandomContext::DistinctIntegers(T n, int k, T min) {
   if (!(0 <= k && k <= n)) {
     throw std::runtime_error(std::format(
@@ -269,8 +264,7 @@ std::vector<T> BasicRandomContext::DistinctIntegers(T n, int k, T min) {
   return result;
 }
 
-template <typename T>
-  requires std::integral<T>
+template <std::integral T>
 std::vector<T> BasicRandomContext::RandomComposition(T n, int k,
                                                      T min_bucket_size) {
   if (n == 0 && k == 0 && min_bucket_size == 0) return std::vector<T>();

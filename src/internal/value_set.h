@@ -19,7 +19,6 @@
 #define MORIARTY_SRC_INTERNAL_VALUE_SET_H_
 
 #include <any>
-#include <concepts>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -43,8 +42,7 @@ class ValueSet {
   //
   // Sets variable_name to `value`. If this was set previously, it will be
   // overwritten.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   void Set(std::string_view variable_name, T::value_type value);
 
   // UnsafeSet()
@@ -65,8 +63,7 @@ class ValueSet {
   //
   //  * If `variable_name` is non-existent, throws `ValueNotFound`.
   //  * If the value cannot be converted to T, returns kFailedPrecondition.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] T::value_type Get(std::string_view variable_name) const;
 
   // UnsafeGet()
@@ -95,8 +92,7 @@ class ValueSet {
 // -----------------------------------------------------------------------------
 //  Template implementation below
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 T::value_type ValueSet::Get(std::string_view variable_name) const {
   auto it = values_.find(variable_name);
   if (it == values_.end()) throw ValueNotFound(variable_name);
@@ -109,8 +105,7 @@ T::value_type ValueSet::Get(std::string_view variable_name) const {
 
   return *val;
 }
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 void ValueSet::Set(std::string_view variable_name, T::value_type value) {
   values_[variable_name] = std::move(value);
 }

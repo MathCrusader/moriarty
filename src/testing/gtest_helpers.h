@@ -97,7 +97,6 @@
 #define MORIARTY_SRC_LIBRARIAN_TEST_UTILS_H_
 
 #include <algorithm>
-#include <concepts>
 #include <format>
 #include <iostream>
 #include <istream>
@@ -122,7 +121,6 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/errors.h"
-#include "src/librarian/mvariable.h"
 
 namespace moriarty_testing {
 
@@ -131,9 +129,7 @@ class Context {
   // WithValue()
   //
   // Sets a known value in the global context.
-  template <typename T>
-    requires std::derived_from<
-        T, moriarty::librarian::MVariable<T, typename T::value_type>>
+  template <MoriartyVariable T>
   Context& WithValue(std::string_view variable_name, T::value_type value) {
     values_.Set<T>(variable_name, value);
     variables_.AddOrMergeVariable(variable_name, T());
@@ -143,9 +139,7 @@ class Context {
   // WithVariable()
   //
   // Sets a variable in the global context.
-  template <typename T>
-    requires std::derived_from<
-        T, moriarty::librarian::MVariable<T, typename T::value_type>>
+  template <MoriartyVariable T>
   Context& WithVariable(std::string_view variable_name, T variable) {
     variables_.AddOrMergeVariable(variable_name, variable);
     return *this;
@@ -177,9 +171,7 @@ class Context {
 //   EXPECT_EQ(Generate(MInteger(Exactly("3 * N + 1")),
 //                        Context().WithValue("N", 3)),
 //               10);
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 [[nodiscard]] T::value_type Generate(T variable, Context context = {});
 
 // GenerateN() [For tests only]
@@ -197,9 +189,7 @@ template <typename T>
 //   EXPECT_THAT(Generate(MInteger().Between(1, "3 * N + 1"), 50,
 //                        Context().WithValue("N", 3)),
 //               Each(AllOf(Ge(1), Le(10));
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 [[nodiscard]] std::vector<typename T::value_type> GenerateN(
     T variable, int N, Context context = {});
 
@@ -211,18 +201,14 @@ template <typename T>
 // Generates 30 values from `variable` after seeding the variable with all
 // needed information. Convenience wrapper for `GenerateN(var, 30)` so the
 // magic number 30 doesn't appear all over tests.
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 [[nodiscard]] std::vector<typename T::value_type> GenerateLots(
     T variable, Context context = {});
 
 // GetUniqueValue() [For tests only]
 //
 // Returns the unique value for this variable.
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 [[nodiscard]] std::optional<typename T::value_type> GetUniqueValue(
     T variable, Context context = {});
 
@@ -230,18 +216,14 @@ template <typename T>
 //
 // Generates values for all the merged `variable` instances obtained from
 // `MVariable::ListEdgeCases` for the specific type provided.
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 [[nodiscard]] std::vector<typename T::value_type> GenerateEdgeCases(T variable);
 
 // Read() [For tests only]
 //
 // Reads a value from the input stream and returns that value. (see version
 // below for a string input)
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 [[nodiscard]] T::value_type Read(T variable, std::istream& is,
                                  Context context = {});
 
@@ -250,9 +232,7 @@ template <typename T>
 // Reads a value from the string and returns that value. (see version
 // below for an input stream, especially if the state of the stream is important
 // after the read)
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 [[nodiscard]] T::value_type Read(T variable, std::string_view read_from,
                                  Context context = {});
 
@@ -260,9 +240,7 @@ template <typename T>
 //
 // Prints `value` using constraints from an MVariable `x` to a string and
 // returns that string.
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 [[nodiscard]] std::string Print(T variable, typename T::value_type value,
                                 Context context = {});
 
@@ -278,9 +256,7 @@ template <typename T>
 // How it works? (do not depend on this behavior described below)
 // Seeds both variables with the same random seed, then generates several values
 // and checks that the same values are generated in the same order.
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 testing::AssertionResult GenerateSameValues(T a, T b);
 
 // AllGenerateSameValues() [for use with GoogleTest]
@@ -297,9 +273,7 @@ testing::AssertionResult GenerateSameValues(T a, T b);
 // How it works? (do not depend on this behavior described below)
 // Seeds all variables with the same random seed, then generates several values
 // and checks that the same values are generated in the same order.
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 testing::AssertionResult AllGenerateSameValues(std::vector<T> vars);
 
 // GeneratedValuesAre() [for use with GoogleTest]
@@ -358,9 +332,7 @@ MATCHER_P2(GeneratedValuesAre, matcher, context,
   return true;
 }
 
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 T::value_type Generate(T variable, Context context) {
   std::string var_name = std::format("Generate({})", variable.Typename());
   context.WithVariable(var_name, variable);
@@ -429,9 +401,7 @@ MATCHER_P2(GenerateThrowsNotFoundError, variable_name, context,
   }
 }
 
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 std::vector<typename T::value_type> GenerateN(T variable, int N,
                                               Context context) {
   std::string var_name = std::format("GenerateN({})", variable.Typename());
@@ -453,16 +423,12 @@ std::vector<typename T::value_type> GenerateN(T variable, int N,
   return res;
 }
 
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 std::vector<typename T::value_type> GenerateLots(T variable, Context context) {
   return GenerateN(variable, 30, std::move(context));
 }
 
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 std::optional<typename T::value_type> GetUniqueValue(T variable,
                                                      Context context) {
   std::string var_name = std::format("GetUniqueValue({})", variable.Typename());
@@ -473,9 +439,7 @@ std::optional<typename T::value_type> GetUniqueValue(T variable,
   return ctx.GetUniqueValue<T>(var_name);
 }
 
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 T::value_type Read(T variable, std::istream& is, Context context) {
   std::string var_name = std::format("Read({})", variable.Typename());
   context.WithVariable(var_name, variable);
@@ -493,17 +457,13 @@ T::value_type Read(T variable, std::istream& is, Context context) {
   return context.Values().Get<T>(var_name);
 }
 
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 T::value_type Read(T variable, std::string_view read_from, Context context) {
   std::istringstream ss((std::string(read_from)));
   return Read(variable, ss, std::move(context));
 }
 
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 std::string Print(T variable, typename T::value_type value, Context context) {
   std::string var_name = std::format("Print({})", variable.Typename());
   context.WithVariable(var_name, variable);
@@ -520,9 +480,7 @@ std::string Print(T variable, typename T::value_type value, Context context) {
   return ss.str();
 }
 
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 testing::AssertionResult GenerateSameValues(T a, T b) {
   auto a_values = GenerateLots(a);
   auto b_values = GenerateLots(b);
@@ -540,9 +498,7 @@ testing::AssertionResult GenerateSameValues(T a, T b) {
          << "all " << a_values.size() << " generated values match";
 }
 
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 testing::AssertionResult AllGenerateSameValues(std::vector<T> vars) {
   if (vars.empty()) {
     return testing::AssertionFailure()
@@ -561,9 +517,7 @@ testing::AssertionResult AllGenerateSameValues(std::vector<T> vars) {
   return testing::AssertionSuccess() << "all generated values match";
 }
 
-template <typename T>
-  requires std::derived_from<
-      T, moriarty::librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 std::vector<typename T::value_type> GenerateEdgeCases(T variable) {
   moriarty::librarian::AnalysisContext ctx("test", {}, {});
   std::vector<T> instances = variable.ListEdgeCases(ctx);

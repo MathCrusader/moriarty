@@ -2,6 +2,7 @@
 
 #include <istream>
 
+#include "src/contexts/internal/mutable_values_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/policies.h"

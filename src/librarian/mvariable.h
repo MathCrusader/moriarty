@@ -41,6 +41,7 @@
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
 #include "src/internal/abstract_variable.h"
+#include "src/internal/variable_set.h"
 #include "src/librarian/constraint_handler.h"
 #include "src/librarian/conversions.h"
 #include "src/librarian/errors.h"
@@ -50,6 +51,17 @@
 #include "src/variables/constraints/custom_constraint.h"
 
 namespace moriarty {
+
+// Determines if ConstraintType is a valid constraint to be applied to
+// MVariableType.
+template <typename MVariableType, typename ConstraintType>
+concept ConstraintFor =
+    MoriartyVariable<MVariableType> &&
+    std::derived_from<std::decay_t<ConstraintType>, MConstraint> && requires {
+      std::declval<MVariableType>().AddConstraint(
+          std::declval<ConstraintType>());
+    };
+
 namespace librarian {
 
 // MVariable<>
@@ -70,6 +82,7 @@ namespace librarian {
 template <typename VariableType, typename ValueType>
 class MVariable : public moriarty_internal::AbstractVariable {
  public:
+  static constexpr bool is_moriarty_variable = true;
   using value_type = ValueType;
 
   ~MVariable() override = default;
@@ -415,8 +428,7 @@ void MVariable<V, G>::MergeFromAnonymous(
   MergeFrom(typed_other);
 }
 
-template <typename VariableType>
-  requires std::derived_from<VariableType, moriarty_internal::AbstractVariable>
+template <MoriartyVariable VariableType>
 std::ostream& operator<<(std::ostream& os, const VariableType& var) {
   return os << var.ToString();
 }
@@ -635,6 +647,14 @@ template <typename... T>
   requires std::constructible_from<librarian::PrinterContext, T...>
 void PrintValue(const AbstractVariable& variable, T... args) {
   variable.PrintValue(librarian::PrinterContext(args...));
+}
+
+template <typename V, typename G>
+void Print(const librarian::MVariable<V, G>& variable, const G& value,
+           std::string_view variable_name, std::ostream& os,
+           const VariableSet& variables, const ValueSet& values) {
+  return variable.Print(
+      librarian::PrinterContext(variable_name, os, variables, values), value);
 }
 
 }  // namespace moriarty::moriarty_internal

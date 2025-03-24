@@ -18,7 +18,6 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_RANDOM_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_RANDOM_CONTEXT_H_
 
-#include <concepts>
 #include <format>
 #include <functional>
 
@@ -50,8 +49,7 @@ class VariableRandomContext {
   // Example:
   //   int64_t x = RandomMVariable(MInteger(Between(1, "N"), Prime()));
   //   std::string S = RandomMVariable(MString(SimplePattern("[a-z]{5}")));
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] T::value_type Random(T m);
 
   // RandomValue()
@@ -59,8 +57,7 @@ class VariableRandomContext {
   // Returns a random value for the variable named `variable_name`.
   //
   // Throws if the variable is not known.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] T::value_type RandomValue(std::string_view variable_name);
 
   // RandomValue()
@@ -70,8 +67,7 @@ class VariableRandomContext {
   //
   // Throws if the variable is not known. If a value for the variable is already
   // known, then `extra_constraints` is ignored.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] T::value_type RandomValue(std::string_view variable_name,
                                           T extra_constraints);
 
@@ -84,8 +80,7 @@ class VariableRandomContext {
   //
   // Example:
   //   int64_t x = MinValue<MInteger>("x");
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] T::value_type MinValue(std::string_view variable_name);
 
   // MaxValue()
@@ -97,8 +92,7 @@ class VariableRandomContext {
   //
   // Example:
   //   int64_t x = MaxValue<MInteger>("x");
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] T::value_type MaxValue(std::string_view variable_name);
 
  private:
@@ -110,8 +104,7 @@ class VariableRandomContext {
 // --------------------------------------------------------------------------
 //  Template implementation below
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 T::value_type VariableRandomContext::Random(T m) {
   std::string name = std::format("Random({})", m.Typename());
   VariableSet variables_copy = variables_.get();
@@ -122,8 +115,7 @@ T::value_type VariableRandomContext::Random(T m) {
   return values.Get<T>(name);
 }
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 T::value_type VariableRandomContext::RandomValue(
     std::string_view variable_name) {
   if (values_.get().Contains(variable_name))
@@ -132,8 +124,7 @@ T::value_type VariableRandomContext::RandomValue(
   return Random<T>(variables_.get().GetVariable<T>(variable_name));
 }
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 T::value_type VariableRandomContext::RandomValue(std::string_view variable_name,
                                                  T extra_constraints) {
   if (values_.get().Contains(variable_name))
@@ -144,14 +135,12 @@ T::value_type VariableRandomContext::RandomValue(std::string_view variable_name,
   return Random<T>(std::move(variable));
 }
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 T::value_type VariableRandomContext::MinValue(std::string_view variable_name) {
   return RandomValue<T>(variable_name, T(SizeCategory::Min()));
 }
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 T::value_type VariableRandomContext::MaxValue(std::string_view variable_name) {
   return RandomValue<T>(variable_name, T(SizeCategory::Max()));
 }

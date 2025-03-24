@@ -58,7 +58,6 @@ cc_library(
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:errors",
-        "//src/librarian:mvariable",
         "@googletest//:gtest",
     ],
 )

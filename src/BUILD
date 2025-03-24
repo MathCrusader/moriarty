@@ -56,13 +56,13 @@ cc_library(
     deps = [
         ":context",
         ":test_case",
+        "//src/internal:abstract_variable",
         "//src/internal:analysis_bootstrap",
         "//src/internal:generation_bootstrap",
+        "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_name_utils",
         "//src/internal:variable_set",
-        "//src/librarian:mvariable",
-        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -89,9 +89,6 @@ cc_library(
         "//src/internal:abstract_variable",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "//src/librarian:mvariable",
-        "@abseil-cpp//absl/log:absl_check",
-        "@abseil-cpp//absl/strings",
     ],
 )
 

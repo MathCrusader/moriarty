@@ -31,6 +31,7 @@
 #include "src/contexts/librarian/printer_context.h"
 #include "src/contexts/librarian/reader_context.h"
 #include "src/contexts/librarian/resolver_context.h"
+#include "src/internal/abstract_variable.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/util/locked_optional.h"
@@ -69,7 +70,7 @@ class MTuple : public librarian::MVariable<
   //          Element<0, MInteger>(Between(1, 10)),
   //          Element<1, MString>(Length(15)));
   template <typename... Constraints>
-    requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
+    requires(ConstraintFor<MTuple, Constraints> && ...)
   explicit MTuple(Constraints&&... constraints);
 
   // Create an MTuple by specifying the MVariables directly.
@@ -137,8 +138,7 @@ MTuple(MElementTypes...) -> MTuple<MElementTypes...>;
 template <typename... T>
 MTuple<T...>::MTuple(T... values) {
   static_assert(
-      (std::derived_from<T, librarian::MVariable<T, typename T::value_type>> &&
-       ...),
+      (MoriartyVariable<T> && ...),
       "MTuple<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
       "MString).");
 
@@ -155,11 +155,10 @@ MTuple<T...>::MTuple(T... values) {
 
 template <typename... T>
 template <typename... Constraints>
-  requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
+  requires(ConstraintFor<MTuple<T...>, Constraints> && ...)
 MTuple<T...>::MTuple(Constraints&&... constraints) {
   static_assert(
-      (std::derived_from<T, librarian::MVariable<T, typename T::value_type>> &&
-       ...),
+      (MoriartyVariable<T> && ...),
       "MTuple<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
       "MString).");
   (AddConstraint(std::forward<Constraints>(constraints)), ...);

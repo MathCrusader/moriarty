@@ -19,14 +19,12 @@
 #define MORIARTY_SRC_TEST_CASE_H_
 
 #include <any>
-#include <concepts>
 #include <string_view>
 #include <utility>
 
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/mvariable.h"
 
 namespace moriarty {
 
@@ -56,9 +54,7 @@ class TestCase {
   //  * ConstrainVariable("X", Exactly(value));
   //
   // See `ConstrainVariable()`.
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
+  template <MoriartyVariable T>
   TestCase& SetValue(std::string_view variable_name, T::value_type value);
 
   // ConstrainVariable()
@@ -79,9 +75,7 @@ class TestCase {
   // TC.ConstrainVariable("X", MInteger(Between(10, 20)));
   //
   // See `SetValue()`.
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
+  template <MoriartyVariable T>
   TestCase& ConstrainVariable(std::string_view variable_name, T constraints);
 
   // Adds extra constraints to a variable. This version is for when you do not
@@ -123,18 +117,14 @@ class ConcreteTestCase {
   // ConcreteTestCase()
   //    .SetValue<MString>("X", "hello")
   //    .SetValue<MInteger>("Y", 3);
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
+  template <MoriartyVariable T>
   ConcreteTestCase& SetValue(std::string_view variable_name,
                              T::value_type value);
 
   // GetValue()
   //
   // Returns the value of the variable `variable_name`.
-  template <typename T>
-    requires std::derived_from<T,
-                               librarian::MVariable<T, typename T::value_type>>
+  template <MoriartyVariable T>
   T::value_type GetValue(std::string_view variable_name) const {
     return values_.Get<T>(variable_name);
   }
@@ -159,24 +149,21 @@ class ConcreteTestCase {
 // -----------------------------------------------------------------------------
 //  Template implementation below
 
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 TestCase& TestCase::SetValue(std::string_view variable_name,
                              T::value_type value) {
   values_.Set<T>(variable_name, std::move(value));
   return *this;
 }
 
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 TestCase& TestCase::ConstrainVariable(std::string_view variable_name,
                                       T constraints) {
   variables_.AddOrMergeVariable(variable_name, std::move(constraints));
   return *this;
 }
 
-template <typename T>
-  requires std::derived_from<T, librarian::MVariable<T, typename T::value_type>>
+template <MoriartyVariable T>
 ConcreteTestCase& ConcreteTestCase::SetValue(std::string_view variable_name,
                                              T::value_type value) {
   values_.Set<T>(variable_name, std::move(value));

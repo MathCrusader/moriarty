@@ -25,7 +25,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -69,7 +68,7 @@ class MArray : public librarian::MVariable<
   //
   // E.g., MArray<MInteger>(Elements<MInteger>(Between(1, 10)), Length(15))
   template <typename... Constraints>
-    requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
+    requires(ConstraintFor<MArray, Constraints> && ...)
   explicit MArray(Constraints&&... constraints);
 
   // Create an MArray with this set of constraints on each element.
@@ -190,10 +189,10 @@ MArray<T>::MArray(T element_constraints)
 
 template <typename T>
 template <typename... Constraints>
-  requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
+  requires(ConstraintFor<MArray<T>, Constraints> && ...)
 MArray<T>::MArray(Constraints&&... constraints) {
   static_assert(
-      std::derived_from<T, librarian::MVariable<T, typename T::value_type>>,
+      MoriartyVariable<T>,
       "The T used in MArray<T> must be a Moriarty variable. For example, "
       "MArray<MInteger> or MArray<MCustomType>.");
   (AddConstraint(std::forward<Constraints>(constraints)), ...);

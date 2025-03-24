@@ -121,9 +121,7 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
   ~MTestType() override = default;
 
   template <typename... Constraints>
-    requires(
-        std::derived_from<std::decay_t<Constraints>, moriarty::MConstraint> &&
-        ...)
+    requires(moriarty::ConstraintFor<MTestType, Constraints> && ...)
   MTestType(Constraints&&... constraints) {
     (AddConstraint(std::forward<Constraints>(constraints)), ...);
   }

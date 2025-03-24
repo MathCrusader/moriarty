@@ -65,6 +65,21 @@ using ::testing::ElementsAre;
 using ::testing::Optional;
 using ::testing::Truly;
 
+class MissingValueType {
+  static constexpr bool is_moriarty_variable = true;
+};
+class MissingBoolean {
+  using value_type = int;
+};
+TEST(MVariableTest, MoriartyVariableConceptShouldWork) {
+  static_assert(!MoriartyVariable<moriarty_internal::AbstractVariable>);
+  static_assert(MoriartyVariable<MTestType>);
+  static_assert(!MoriartyVariable<TestType>);
+  static_assert(!MoriartyVariable<int>);
+  static_assert(!MoriartyVariable<MissingValueType>);
+  static_assert(!MoriartyVariable<MissingBoolean>);
+}
+
 TEST(MVariableTest, PrintShouldSucceed) {
   EXPECT_EQ(Print(MTestType(), -1), "-1");
   EXPECT_EQ(Print(MTestType(), 153), "153");

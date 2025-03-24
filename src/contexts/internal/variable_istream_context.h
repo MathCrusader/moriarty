@@ -43,16 +43,14 @@ class VariableIStreamContext {
   // ReadVariable()
   //
   // Reads a known variable from the input stream and returns what was read.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] T::value_type ReadVariable(std::string_view variable_name);
 
   // ReadVariable()
   //
   // Reads something from the input stream, using `variable` to define how to
   // read it, and returns what was read.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   [[nodiscard]] T::value_type ReadVariable(const T& variable);
 
   // ReadVariableTo()
@@ -72,8 +70,7 @@ class VariableIStreamContext {
 // ----------------------------------------------------------------------------
 //  Template implementation below
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 T::value_type VariableIStreamContext::ReadVariable(
     std::string_view variable_name) {
   T variable = variables_.get().GetVariable<T>(variable_name);
@@ -83,8 +80,7 @@ T::value_type VariableIStreamContext::ReadVariable(
   return variable.Read(ctx);
 }
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 T::value_type VariableIStreamContext::ReadVariable(const T& variable) {
   librarian::ReaderContext ctx("ReadVariable()", is_, whitespace_strictness_,
                                variables_, values_);

@@ -18,13 +18,11 @@
 #ifndef MORIARTY_SRC_VARIABLES_MINTEGER_H_
 #define MORIARTY_SRC_VARIABLES_MINTEGER_H_
 
-#include <concepts>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
 #include <vector>
 
 #include "src/contexts/librarian/analysis_context.h"
@@ -54,7 +52,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   //
   // E.g., MInteger(Between(1, "3 * N + 1"), SizeCategory::Small())
   template <typename... Constraints>
-    requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
+    requires(ConstraintFor<MInteger, Constraints> && ...)
   explicit MInteger(Constraints&&... constraints);
 
   ~MInteger() override = default;
@@ -141,7 +139,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
 // -----------------------------------------------------------------------------
 
 template <typename... Constraints>
-  requires(std::derived_from<std::decay_t<Constraints>, MConstraint> && ...)
+  requires(ConstraintFor<MInteger, Constraints> && ...)
 MInteger::MInteger(Constraints&&... constraints) {
   (AddConstraint(std::forward<Constraints>(constraints)), ...);
 }

@@ -21,7 +21,6 @@
 #ifndef MORIARTY_SRC_INTERNAL_VARIABLE_SET_H_
 #define MORIARTY_SRC_INTERNAL_VARIABLE_SET_H_
 
-#include <concepts>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -84,11 +83,8 @@ class VariableSet {
   //
   // Throws:
   //  * moriarty::VariableNotFound if the variable does not exist.
-  //
-  // Returns: // FIXME: Should throw std::invalid_argument instead of returning
-  //  * kInvalidArgument if it is not convertible to `T`
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  //  * moriarty::MVariableTypeMismatch if the variable is not of type `T`.
+  template <MoriartyVariable T>
   [[nodiscard]] T GetVariable(std::string_view name) const;
 
   // ListVariables()
@@ -112,8 +108,7 @@ class VariableSet {
 // -----------------------------------------------------------------------------
 //  Template implementation below
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 T VariableSet::GetVariable(std::string_view name) const {
   const AbstractVariable* var = GetAnonymousVariableOrNull(name);
   if (var == nullptr) throw VariableNotFound(name);

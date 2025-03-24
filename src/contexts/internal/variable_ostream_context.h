@@ -17,7 +17,6 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_OSTREAM_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_OSTREAM_CONTEXT_H_
 
-#include <concepts>
 #include <functional>
 #include <ostream>
 
@@ -25,6 +24,13 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/test_case.h"
+
+namespace moriarty::moriarty_internal {
+template <typename V, typename G>
+void Print(const librarian::MVariable<V, G>& variable, const G& value,
+           std::string_view variable_name, std::ostream& os,
+           const VariableSet& variables, const ValueSet& values);
+}
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -47,8 +53,7 @@ class VariableOStreamContext {
   //
   // Prints `value` to the output stream using `variable` to determine how to do
   // so.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   void PrintVariable(T variable, T::value_type value);
 
   // PrintVariableFrom()
@@ -66,11 +71,10 @@ class VariableOStreamContext {
 // -----------------------------------------------------------------------------
 //  Template implementation below
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 void VariableOStreamContext::PrintVariable(T variable, T::value_type value) {
-  librarian::PrinterContext ctx("PrintVariable()", os_, variables_, values_);
-  variable.Print(ctx, value);
+  Print(variable, value, "PrintVariable()", os_.get(), variables_.get(),
+        values_.get());
 }
 
 }  // namespace moriarty_internal

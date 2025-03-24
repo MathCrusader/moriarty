@@ -36,8 +36,7 @@ class MutableValuesContext {
   // SetValue()
   //
   // Sets the value of `variable_name` to be `value`.
-  template <typename T>
-    requires std::derived_from<T, AbstractVariable>
+  template <MoriartyVariable T>
   void SetValue(std::string_view variable_name, T::value_type value);
 
   // EraseValue()
@@ -52,8 +51,7 @@ class MutableValuesContext {
 // -----------------------------------------------------------------------------
 //  Template implementation below
 
-template <typename T>
-  requires std::derived_from<T, AbstractVariable>
+template <MoriartyVariable T>
 void MutableValuesContext::SetValue(std::string_view variable_name,
                                     T::value_type value) {
   values_.get().Set<T>(variable_name, std::move(value));

@@ -34,6 +34,18 @@ namespace moriarty::moriarty_internal {
 class MutableValuesContext;  // Forward declaring MutableValuesContext
 }  // namespace moriarty::moriarty_internal
 
+namespace moriarty::librarian {
+template <typename V, typename G>
+class MVariable;  // Forward declaring MVariable
+}
+
+// Determines if T is a Moriarty Variable. Examples: MInteger, MString, etc.
+template <typename T>
+concept MoriartyVariable = requires {
+  requires T::is_moriarty_variable;
+  typename T::value_type;
+};
+
 namespace moriarty {
 namespace moriarty_internal {
 
