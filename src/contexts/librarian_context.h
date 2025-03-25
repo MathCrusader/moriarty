@@ -45,7 +45,7 @@ namespace librarian {
 // AnalysisContext is read-only. It does not allow you to modify the variables
 // or values.
 //
-// Note: All Librarian contexts can be implicitly converted to this type.
+// Note: All Librarian contexts can be converted to this type.
 class AnalysisContext : public moriarty_internal::NameContext,
                         public moriarty_internal::ViewOnlyContext {
  public:
@@ -133,17 +133,11 @@ class ResolverContext
       std::reference_wrapper<moriarty_internal::RandomEngine> engine,
       std::reference_wrapper<moriarty_internal::GenerationHandler> handler);
 
-  // ********************************************
-  // ** See parent classes for more functions. **
-  // ********************************************
-
   // ForVariable()
   //
   // Creates a copy of this context, except the variable name is replaced with
   // `variable_name`.
-  [[nodiscard]] ResolverContext ForVariable(std::string_view new_name) const {
-    return ResolverContext(new_name, variables_, values_, engine_, handler_);
-  }
+  [[nodiscard]] ResolverContext ForVariable(std::string_view new_name) const;
 
   // ForSubVariable()
   //
@@ -151,11 +145,11 @@ class ResolverContext
   // the name of a subvariable of the current one. (E.g., if the current
   // variable is A, then ForSubVariable("length") will set the new variable to
   // be "A.length")
-  [[nodiscard]] ResolverContext ForSubVariable(
-      std::string_view new_name) const {
-    return ResolverContext(std::format("{}.{}", GetVariableName(), new_name),
-                           variables_, values_, engine_, handler_);
-  }
+  [[nodiscard]] ResolverContext ForSubVariable(std::string_view new_name) const;
+
+  // ********************************************
+  // ** See parent classes for more functions. **
+  // ********************************************
 
  private:
   std::reference_wrapper<const moriarty_internal::VariableSet> variables_;

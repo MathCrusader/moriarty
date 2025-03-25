@@ -131,7 +131,7 @@ TEST(MArrayTest, NestedMArrayWorks) {
   }
 }
 
-TEST(MArrayTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
+TEST(MArrayTest, RepeatedLengthCallsShouldBeIntersectedTogether) {
   auto gen_given_length1 = [](int lo, int hi) {
     return MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
                             Length(Between(lo, hi)));

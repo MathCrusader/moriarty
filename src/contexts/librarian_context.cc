@@ -82,5 +82,15 @@ ResolverContext::ResolverContext(
       engine_(engine),
       handler_(handler) {}
 
+ResolverContext ResolverContext::ForVariable(std::string_view new_name) const {
+  return ResolverContext(new_name, variables_, values_, engine_, handler_);
+}
+
+ResolverContext ResolverContext::ForSubVariable(
+    std::string_view new_name) const {
+  return ResolverContext(std::format("{}.{}", GetVariableName(), new_name),
+                         variables_, values_, engine_, handler_);
+}
+
 }  // namespace librarian
 }  // namespace moriarty

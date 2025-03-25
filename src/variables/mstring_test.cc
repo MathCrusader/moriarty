@@ -104,7 +104,7 @@ TEST(MStringTest, GenerateShouldSuccessfullyComplete) {
               GeneratedValuesAre(SizeIs(4)));
 }
 
-TEST(MStringTest, RepeatedOfLengthCallsShouldBeIntersectedTogether) {
+TEST(MStringTest, RepeatedLengthCallsShouldBeIntersectedTogether) {
   auto gen_given_length1 = [](int lo, int hi) {
     return MString(Length(Between(lo, hi)), Alphabet("abcdef"));
   };

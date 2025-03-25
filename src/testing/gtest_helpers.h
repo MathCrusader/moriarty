@@ -35,17 +35,17 @@
 //    * GeneratedValuesAre(M, [optional] context)
 //        Generates several values from an MVariable and checks that each one
 //        satisfies another googletest matcher M. Example:
-//             EXPECT_THAT(MInteger().Between(1, 10), GeneratedValuesAre(Ge(1)))
+//             EXPECT_THAT(MInteger(Between(1, 10)), GeneratedValuesAre(Ge(1)))
 //
 //     * IsSatisfiedWith(x, [optional] context)
 //         Determines if `x` satisfies the constraints of the variable. Example:
-//             EXPECT_THAT(MInteger().Between(1, 10), IsSatisfiedWith(6))
+//             EXPECT_THAT(MInteger(Between(1, 10)), IsSatisfiedWith(6))
 //
 //     * IsNotSatisfiedWith(x, reason, [optional] context)
 //         Determines if `x` does not satisfy the constraints of the variable.
 //         Prefer this over Not(IsSatisfiedWith()).
 //         Example:
-//             EXPECT_THAT(MInteger().Between(1, 10),
+//             EXPECT_THAT(MInteger(Between(1, 10)),
 //                         IsNotSatisfiedWith(60, "range"))
 //
 // Input / Output Helpers:
@@ -80,8 +80,8 @@
 //
 //    * GenerateSameValues(a, b)
 //        Checks that MVariables `a` and `b` generate the same stream of values.
-//             EXPECT_TRUE(GenerateSameValues(MInteger().Between(1, 10),
-//                                            MInteger().AtLeast(1).AtMost(1)));
+//            EXPECT_TRUE(GenerateSameValues(MInteger(Between(1, 10)),
+//                                           MInteger(AtLeast(1), AtMost(10))));
 //
 //    * AllGenerateSameValues({a, b, c, d})
 //        Same as GenerateSameValues, except checks that all variables generate
@@ -164,9 +164,9 @@ class Context {
 //
 // Example:
 //   EXPECT_EQ(Generate(MInteger()), 5);
-//   EXPECT_THAT(Generate(MString().OfLength(10)), SizeIs(10));
+//   EXPECT_THAT(Generate(MString(Length(10))), SizeIs(10));
 //   EXPECT_EQ(Generate(MInteger(Exactly("3 * N + 1")),
-//                        Context().WithValue("N", 3)),
+//                      Context().WithValue("N", 3)),
 //               10);
 template <MoriartyVariable T>
 [[nodiscard]] T::value_type Generate(T variable, Context context = {});
@@ -179,11 +179,11 @@ template <MoriartyVariable T>
 // Note: `context` may (and likely will) be modified. Including values stored.
 //
 // Examples: Each example generates 50 items.
-//   EXPECT_THAT(GenerateN(MInteger().AtLeast(2), 50),
+//   EXPECT_THAT(GenerateN(MInteger(AtLeast(2)), 50),
 //               Each(Ge(2)));
-//   EXPECT_THAT(GenerateN(MString().OfLength(10), 50),
+//   EXPECT_THAT(GenerateN(MString(Length(10)), 50),
 //               Each(SizeIs(10)));
-//   EXPECT_THAT(Generate(MInteger().Between(1, "3 * N + 1"), 50,
+//   EXPECT_THAT(Generate(MInteger(Between(1, "3 * N + 1")), 50,
 //                        Context().WithValue("N", 3)),
 //               Each(AllOf(Ge(1), Le(10));
 template <MoriartyVariable T>
@@ -279,7 +279,7 @@ testing::AssertionResult AllGenerateSameValues(std::vector<T> vars);
 //
 // Example usage:
 //
-//  EXPECT_THAT(MInteger().Between(1, 10), GeneratedValuesAre(Ge(1)));
+//  EXPECT_THAT(MInteger(Between(1, 10)), GeneratedValuesAre(Ge(1)));
 //
 // How it works? (do not depend on this behavior described below)
 // Generates several values from the variable and checks that all of them
@@ -528,8 +528,8 @@ std::vector<typename T::value_type> GenerateEdgeCases(T variable) {
 //
 // Example usage:
 //
-//  EXPECT_THAT(MInteger().Between(1, 10), IsSatisfiedWith(6))
-//  EXPECT_THAT(MInteger().AtMost("N"),
+//  EXPECT_THAT(MInteger(Between(1, 10)), IsSatisfiedWith(6))
+//  EXPECT_THAT(MInteger(AtMost("N")),
 //              IsSatisfiedWith(5, Context().WithValue("N", 10)));
 MATCHER_P2(IsSatisfiedWith, value, context, "") {
   // We cast `value` to the appropriate generated type for the test. So
@@ -566,9 +566,9 @@ MATCHER_P(IsSatisfiedWith, value, "") {
 //
 // Example usage:
 //
-//  EXPECT_THAT(MInteger().Between(1, 10), IsNotSatisfiedWith(0, "range"))
+//  EXPECT_THAT(MInteger(Between(1, 10)), IsNotSatisfiedWith(0, "between"))
 //  EXPECT_THAT(MInteger().AtMost("N"),
-//              IsNotSatisfiedWith(50, "range", Context().WithValue("N",
+//              IsNotSatisfiedWith(50, "between", Context().WithValue("N",
 //              10)));
 MATCHER_P3(IsNotSatisfiedWith, value, expected_reason, context, "") {
   // We cast `value` to the appropriate generated type for the test. So

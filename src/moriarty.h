@@ -49,12 +49,13 @@ namespace moriarty {
 //
 //   Moriarty M;
 //   M.SetName("Example Constraints")
-//     .AddVariable("N", MInteger().Between(1, 100))
-//     .AddVariable("A", MArray(MInteger().Between(3, 5)).OfLength("3 * N + 1"))
-//     .AddVariable("S", MString().WithAlphabet("abc").OfLength("N"))
-//   M.GenerateTestCases(CustomCornerCaseGenerator());
+//     .AddVariable("N", MInteger(Between(1, 100)))
+//     .AddVariable("A", MArray<MInteger>(Elements<MInteger>(Between(3, 5)),
+//                                        Length("3 * N + 1")))
+//     .AddVariable("S", MString(Alphabet("abc"), Length("N")));
+//   M.GenerateTestCases(FancyGenerator);
 //   M.GenerateTestCases(SmallCaseGenerator(), {.call_n_times = 5});
-//   M.ExportTestCase(Print());
+//   M.ExportTestCase(FancyPrinter);
 class Moriarty {
  public:
   // SetName() [required]
@@ -90,7 +91,7 @@ class Moriarty {
   // Adds a variable to Moriarty with all global constraints applied to it. For
   // example:
   //
-  //  `M.AddVariable("N", MInteger().Between(1, 10));`
+  //   M.AddVariable("N", MInteger(Between(1, 10)));
   //
   // means that *all* instances of N that are generated will be between 1
   // and 10. Additional local constraints can be added to this in specific
@@ -112,8 +113,23 @@ class Moriarty {
       std::string_view name,
       const moriarty_internal::AbstractVariable& variable);
 
+  // GenerateTestCases()
+  //
+  // Generates test cases using the provided generator. The generator will be
+  // called `num_calls` times. If `num_calls` is not provided, it will be
+  // called once.
   void GenerateTestCases(GenerateFn fn, GenerateOptions options = {});
+
+  // ImportTestCases()
+  //
+  // Imports test cases using the provided importer. The importer will be called
+  // once.
   void ImportTestCases(ImportFn fn, ImportOptions options = {});
+
+  // ExportTestCases()
+  //
+  // Exports test cases using the provided exporter. The exporter will be called
+  // once.
   void ExportTestCases(ExportFn fn, ExportOptions options = {}) const;
 
   // ValidateTestCases()

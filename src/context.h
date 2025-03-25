@@ -20,7 +20,6 @@
 #include <functional>
 #include <iostream>
 #include <optional>
-#include <ostream>
 #include <span>
 #include <vector>
 
@@ -109,7 +108,7 @@ using ImportFn = std::function<std::vector<ConcreteTestCase>(ImportContext)>;
 // TODO: Auto-Validate?
 struct ImportOptions {
   // The input stream to read from.
-  std::istream& is = std::cin;
+  std::reference_wrapper<std::istream> is = std::cin;
 
   // How strict the importer should be about whitespace.
   WhitespaceStrictness whitespace_strictness = WhitespaceStrictness::kPrecise;
@@ -143,7 +142,7 @@ using ExportFn =
 
 struct ExportOptions {
   // The output stream to write to.
-  std::ostream& os = std::cout;
+  std::reference_wrapper<std::ostream> os = std::cout;
 };
 
 }  // namespace moriarty
