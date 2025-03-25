@@ -32,7 +32,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/strings/str_cat.h"
 #include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/internal/view_only_context.h"
 #include "src/contexts/librarian_context.h"
@@ -463,13 +462,13 @@ std::ostream& operator<<(std::ostream& os, const VariableType& var) {
 template <typename V, typename G>
 G MVariable<V, G>::ReadImpl(ReaderContext ctx) const {
   throw std::runtime_error(
-      absl::StrCat("Read() not implemented for ", Typename()));
+      std::format("Read() not implemented for {}", Typename()));
 }
 
 template <typename V, typename G>
 void MVariable<V, G>::PrintImpl(PrinterContext ctx, const G& value) const {
   throw std::runtime_error(
-      absl::StrCat("Print() not implemented for ", Typename()));
+      std::format("Print() not implemented for {}", Typename()));
 }
 
 template <typename V, typename G>

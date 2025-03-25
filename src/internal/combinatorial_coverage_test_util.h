@@ -19,7 +19,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/log/absl_log.h"
 #include "src/internal/combinatorial_coverage.h"
 
 namespace moriarty {
@@ -30,7 +29,6 @@ MATCHER_P(IsStrength2CoveringArray, dimension_sizes,
 
   int n = dimension_sizes.size();
   for (const CoveringArrayTestCase& tc : arg) {
-    ABSL_LOG(INFO) << tc.test_case.size() << " " << n;
     if (tc.test_case.size() != n) {
       return testing::AssertionFailure()
              << "One of the test cases is the wrong size";

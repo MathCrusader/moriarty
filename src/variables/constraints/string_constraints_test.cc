@@ -17,7 +17,8 @@
 
 #include "src/variables/constraints/string_constraints.h"
 
-#include "absl/container/flat_hash_set.h"
+#include <unordered_set>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -29,7 +30,7 @@ using ::testing::SizeIs;
 
 MATCHER(HasDuplicateLetter,
         negation ? "has no duplicate letters" : "has duplicate letters") {
-  absl::flat_hash_set<char> seen;
+  std::unordered_set<char> seen;
   for (char c : arg) {
     auto [it, inserted] = seen.insert(c);
     if (!inserted) {

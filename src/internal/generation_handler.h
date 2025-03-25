@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "src/librarian/policies.h"
+#include "src/util/str_hash.h"
 
 // FIXME: Should this fail if you Start() a variable that was Complete()d?
 
@@ -122,21 +123,10 @@ class GenerationHandler {
   };
   std::vector<GenerationInfo> generation_info_;
 
-  // This allows std::string_view to be used as a key in the map on lookups.
-  struct Hash {
-    using is_transparent = void;
-    [[nodiscard]] size_t operator()(const std::string& txt) const {
-      return std::hash<std::string>{}(txt);
-    }
-    [[nodiscard]] size_t operator()(std::string_view txt) const {
-      return std::hash<std::string_view>{}(txt);
-    }
-  };
-
   // These variables represent the index in `generation_info_`.
 
   // variables that were generated, in the order they were generated.
-  std::unordered_map<std::string, int64_t, Hash, std::equal_to<>>
+  std::unordered_map<std::string, int64_t, StrHash, std::equal_to<>>
       generation_info_index_;
   std::vector<int64_t> generated_variables_;
   std::stack<int64_t> variables_actively_being_generated_;

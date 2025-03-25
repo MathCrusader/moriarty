@@ -39,6 +39,11 @@ cc_library(
     hdrs = ["locked_optional.h"],
 )
 
+cc_library(
+    name = "str_hash",
+    hdrs = ["str_hash.h"],
+)
+
 cc_test(
     name = "cow_ptr_test",
     srcs = ["cow_ptr_test.cc"],

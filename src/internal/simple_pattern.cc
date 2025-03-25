@@ -29,7 +29,6 @@
 
 #include "absl/strings/match.h"
 #include "absl/strings/numbers.h"
-#include "absl/strings/str_cat.h"
 #include "src/util/debug_string.h"
 
 namespace moriarty {
@@ -41,7 +40,7 @@ bool IsNonNegativeChar(char ch) { return (ch >= 0 && ch <= 127); }
 
 bool IsSpecialCharacter(char ch) {
   static constexpr std::string_view kSpecialCharacters = R"(\()[]{}^?*+-|)";
-  return absl::StrContains(kSpecialCharacters, ch);
+  return kSpecialCharacters.find(ch) != std::string_view::npos;
 }
 
 bool ValidCharSetRange(std::string_view range) {
@@ -316,6 +315,7 @@ PatternNode ParseAllOfNodeScopePrefix(std::string_view pattern) {
 // remove other whitespace characters).
 std::string Sanitize(std::string_view pattern) {
   std::string sanitized_pattern;
+  sanitized_pattern.reserve(pattern.size());
   for (int i = 0; i < pattern.size(); i++) {
     if (pattern[i] == '\\') {
       if (i + 1 == pattern.size()) {
@@ -327,12 +327,11 @@ std::string Sanitize(std::string_view pattern) {
             std::format("Invalid escape character: \\ followed by {}",
                         librarian::DebugString(pattern[i + 1])));
       }
-      absl::StrAppend(&sanitized_pattern, pattern.substr(i + 1, 1));
+      sanitized_pattern += pattern[i + 1];
       i++;
       continue;
     }
-    if (pattern[i] != ' ')
-      absl::StrAppend(&sanitized_pattern, pattern.substr(i, 1));
+    if (pattern[i] != ' ') sanitized_pattern += pattern[i];
   }
   return sanitized_pattern;
 }
@@ -419,8 +418,8 @@ SimplePattern::SimplePattern(std::string pattern) {
 
   if (pattern_node_.pattern != pattern_) {
     throw std::invalid_argument(
-        absl::StrCat("Invalid pattern. Extra characters found: ",
-                     pattern_.substr(pattern_node_.pattern.size())));
+        std::format("Invalid pattern. (Unmatched ')' around index {}?): {}",
+                    pattern_node_.pattern.size(), pattern_));
   }
 }
 
@@ -485,13 +484,13 @@ std::string GeneratePatternNode(
     int64_t idx = rand(0, (int)node.subpatterns.size() - 1);
     std::string subresult =
         GeneratePatternNode(node.subpatterns[idx], restricted_alphabet, rand);
-    return absl::StrCat(result, subresult);
+    return result + subresult;
   }
 
   for (const PatternNode& subpattern : node.subpatterns) {
     std::string subresult =
         GeneratePatternNode(subpattern, restricted_alphabet, rand);
-    absl::StrAppend(&result, subresult);
+    result += subresult;
   }
   return result;
 }

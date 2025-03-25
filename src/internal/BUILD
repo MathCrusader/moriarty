@@ -76,6 +76,7 @@ cc_library(
     deps = [
         "//src/librarian:errors",
         "//src/librarian:policies",
+        "//src/util:str_hash",
     ],
 )
 
@@ -122,8 +123,7 @@ cc_library(
     deps = [
         ":abstract_variable",
         "//src/librarian:errors",
-        "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/strings",
+        "//src/util:str_hash",
     ],
 )
 
@@ -139,7 +139,7 @@ cc_library(
         ":abstract_variable",
         "//src/librarian:conversions",
         "//src/librarian:errors",
-        "@abseil-cpp//absl/container:flat_hash_map",
+        "//src/util:str_hash",
     ],
 )
 
@@ -161,7 +161,6 @@ cc_library(
     hdrs = ["combinatorial_coverage_test_util.h"],
     deps = [
         ":combinatorial_coverage",
-        "@abseil-cpp//absl/log:absl_log",
         "@googletest//:gtest",
     ],
 )
@@ -172,7 +171,6 @@ cc_test(
     deps = [
         ":combinatorial_coverage",
         ":combinatorial_coverage_test_util",
-        "@abseil-cpp//absl/strings",
         "@googletest//:gtest_main",
     ],
 )
@@ -291,7 +289,6 @@ cc_test(
         "//src/testing:gtest_helpers",
         "//src/variables:minteger",
         "//src/variables:mstring",
-        "@abseil-cpp//absl/algorithm:container",
         "@googletest//:gtest_main",
     ],
 )

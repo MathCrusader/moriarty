@@ -21,6 +21,7 @@
 #include <algorithm>
 #include <concepts>
 #include <cstdint>
+#include <format>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -29,7 +30,6 @@
 #include <vector>
 
 #include "absl/container/flat_hash_set.h"
-#include "absl/strings/str_cat.h"
 #include "src/contexts/librarian_context.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
@@ -240,7 +240,7 @@ MArray<T>& MArray<T>::AddConstraint(SizeCategory constraint) {
 
 template <typename T>
 std::string MArray<T>::Typename() const {
-  return absl::StrCat("MArray<", element_constraints_.Typename(), ">");
+  return std::format("MArray<{}>", element_constraints_.Typename());
 }
 
 template <typename MElementType>

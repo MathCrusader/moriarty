@@ -17,10 +17,10 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include "absl/container/flat_hash_set.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/mvariable.h"
@@ -72,7 +72,7 @@ TEST(MArrayTest, TypenameIsCorrect) {
 
 MATCHER(HasDuplicateIntegers,
         negation ? "has no duplicate values" : "has duplicate values") {
-  absl::flat_hash_set<int64_t> seen;
+  std::unordered_set<int64_t> seen;
   for (int64_t c : arg) {
     auto [it, inserted] = seen.insert(c);
     if (!inserted) {

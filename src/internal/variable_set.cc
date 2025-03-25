@@ -18,9 +18,9 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <utility>
 
-#include "absl/container/flat_hash_map.h"
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/errors.h"
 
@@ -70,8 +70,7 @@ const AbstractVariable* VariableSet::GetAnonymousVariableOrNull(
   return it->second.get();
 }
 
-const absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>&
-VariableSet::ListVariables() const {
+const VariableSet::Map& VariableSet::ListVariables() const {
   return variables_;
 }
 
@@ -81,12 +80,12 @@ bool VariableSet::Contains(std::string_view name) const {
 
 void VariableSet::SetVariable(std::string_view name,
                               const AbstractVariable& variable) {
-  variables_[name] = variable.Clone();
+  variables_[std::string(name)] = variable.Clone();
 }
 
 void VariableSet::AddOrMergeVariable(std::string_view name,
                                      const AbstractVariable& variable) {
-  auto [it, inserted] = variables_.try_emplace(name, nullptr);
+  auto [it, inserted] = variables_.try_emplace(std::string(name), nullptr);
   if (inserted) {
     it->second = std::unique_ptr<AbstractVariable>(variable.Clone());
   }

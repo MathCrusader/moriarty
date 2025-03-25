@@ -14,13 +14,14 @@
 
 #include "src/internal/combinatorial_coverage.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <functional>
 #include <optional>
 #include <span>
+#include <stdexcept>
 #include <vector>
 
-#include "absl/algorithm/container.h"
 #include "absl/log/absl_check.h"
 
 namespace moriarty {
@@ -87,7 +88,9 @@ void DeserializePartialTestCaseInto(BitMask mask,
     partial_test_case.test_case[i] = serialized_value % dimension_sizes[i];
     serialized_value /= dimension_sizes[i];
   }
-  ABSL_CHECK_EQ(serialized_value, 0);
+  if (serialized_value != 0) {
+    throw std::runtime_error("Deserialization failed: too many bits set");
+  }
 }
 
 // GetAllNChooseK()
@@ -120,14 +123,15 @@ std::optional<CoveringArrayTestCase> FindTestCaseToAdd(
     std::span<const int> dimension_sizes, std::function<int(int)> rand) {
   // Sort column_sets by number of remaining uncovered partial test cases. We
   // sort the indices rather than the columns themselves.
-  std::vector<int64_t> column_set_index(column_sets.size());
-  absl::c_iota(column_set_index, 0);
+  std::vector<int64_t> column_set_index;
+  column_set_index.reserve(column_sets.size());
+  for (int i = 0; i < column_sets.size(); i++) column_set_index.push_back(i);
   // Using stable_sort for consistency across systems.
-  absl::c_stable_sort(column_set_index,
-                      [column_sets](int64_t idx1, int64_t idx2) {
-                        return column_sets[idx1].remaining_uncovered >
-                               column_sets[idx2].remaining_uncovered;
-                      });
+  std::ranges::stable_sort(column_set_index,
+                           [column_sets](int64_t idx1, int64_t idx2) {
+                             return column_sets[idx1].remaining_uncovered >
+                                    column_sets[idx2].remaining_uncovered;
+                           });
 
   // If there is nothing left to cover, we are done!
   if (column_sets[column_set_index[0]].remaining_uncovered == 0)

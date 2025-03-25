@@ -18,9 +18,7 @@
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_VIEW_ONLY_CONTEXT_H_
 
 #include <functional>
-#include <memory>
 #include <optional>
-#include <string>
 #include <string_view>
 
 #include "src/internal/abstract_variable.h"
@@ -100,9 +98,7 @@ class ViewOnlyContext {
   //
   // Returns all variables in the context. Prefer to not use this function. It
   // may be deprecated in the future.
-  [[nodiscard]] const absl::flat_hash_map<std::string,
-                                          std::unique_ptr<AbstractVariable>>&
-  ListVariables() const;
+  [[nodiscard]] const VariableSet::Map& ListVariables() const;
 
   // UnsafeGetVariables()
   //

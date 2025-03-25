@@ -14,14 +14,12 @@
 
 #include "src/internal/variable_name_utils.h"
 
+#include <cctype>
+#include <format>
 #include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
-
-#include "absl/strings/ascii.h"
-#include "absl/strings/match.h"
-#include "absl/strings/str_cat.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -32,14 +30,14 @@ std::string_view BaseVariableName(std::string_view variable_name) {
 
 std::string ConstructVariableName(std::string_view base_variable_name,
                                   std::string_view subvariable_name) {
-  return absl::StrCat(base_variable_name, ".", subvariable_name);
+  return std::format("{}.{}", base_variable_name, subvariable_name);
 }
 
 std::string ConstructVariableName(
     const VariableNameBreakdown& variable_name_breakdown) {
   if (variable_name_breakdown.subvariable_name.has_value()) {
-    return absl::StrCat(variable_name_breakdown.base_variable_name, ".",
-                        *variable_name_breakdown.subvariable_name);
+    return std::format("{}.{}", variable_name_breakdown.base_variable_name,
+                       *variable_name_breakdown.subvariable_name);
   }
   return variable_name_breakdown.base_variable_name;
 }
@@ -57,7 +55,7 @@ VariableNameBreakdown CreateVariableNameBreakdown(
 }
 
 bool HasSubvariable(std::string_view variable_name) {
-  return absl::StrContains(variable_name, '.');
+  return variable_name.find('.') != std::string_view::npos;
 }
 
 std::optional<std::string_view> SubvariableName(
@@ -75,13 +73,13 @@ void ValidateVariableName(std::string_view name) {
     throw std::invalid_argument("Variable name cannot be empty");
   }
   for (char c : name) {
-    if (!absl::ascii_isalnum(c) && c != '_') {
+    if (!std::isalnum(c) && c != '_') {
       throw std::invalid_argument(
           "Variable name can only contain 'A-Za-z0-9_'.");
     }
   }
 
-  if (!absl::ascii_isalpha(name[0])) {
+  if (!std::isalpha(name[0])) {
     throw std::invalid_argument(
         "Variable name must start with an alphabetic character");
   }

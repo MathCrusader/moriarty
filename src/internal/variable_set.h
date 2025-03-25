@@ -24,11 +24,12 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 
-#include "absl/container/flat_hash_map.h"
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/conversions.h"
 #include "src/librarian/errors.h"
+#include "src/util/str_hash.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -39,6 +40,9 @@ namespace moriarty_internal {
 // other variables must be in the same `VariableSet` instance.
 class VariableSet {
  public:
+  using Map = std::unordered_map<std::string, std::unique_ptr<AbstractVariable>,
+                                 StrHash, std::equal_to<>>;
+
   // Rule of 5, plus swap
   VariableSet() = default;
   ~VariableSet() = default;
@@ -90,13 +94,10 @@ class VariableSet {
   // ListVariables()
   //
   // Returns the map of internal variables.
-  [[nodiscard]] const absl::flat_hash_map<std::string,
-                                          std::unique_ptr<AbstractVariable>>&
-  ListVariables() const;
+  [[nodiscard]] const Map& ListVariables() const;
 
  private:
-  absl::flat_hash_map<std::string, std::unique_ptr<AbstractVariable>>
-      variables_;
+  Map variables_;
 
   // Returns either a pointer to the AbstractVariable or `nullptr` if it doesn't
   // exist.

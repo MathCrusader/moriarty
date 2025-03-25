@@ -16,8 +16,8 @@
 #include "src/variables/mstring.h"
 
 #include <string_view>
+#include <unordered_set>
 
-#include "absl/container/flat_hash_set.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/mvariable.h"
@@ -86,7 +86,7 @@ TEST(MStringTest, IsSatisfiedWithShouldAcceptAllMStringsForDefault) {
 
 MATCHER(HasDuplicateLetter,
         negation ? "has no duplicate letters" : "has duplicate letters") {
-  absl::flat_hash_set<char> seen;
+  std::unordered_set<char> seen;
   for (char c : arg) {
     auto [it, inserted] = seen.insert(c);
     if (!inserted) {

@@ -20,7 +20,6 @@
 #include <tuple>
 #include <vector>
 
-#include "absl/algorithm/container.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/random_engine.h"
@@ -187,7 +186,7 @@ TEST(GenerationBootstrapTest,
         values.Get<MInteger>("B"),
         values.Get<MInteger>("C"),
     });
-  } while (absl::c_next_permutation(names));
+  } while (std::next_permutation(names.begin(), names.end()));
 
   ASSERT_THAT(results, SizeIs(6));
   EXPECT_THAT(results, Each(Eq(results[0])));
@@ -225,7 +224,7 @@ TEST(GenerationBootstrapTest,
         values.Get<MInteger>("F"),
         values.Get<MInteger>("G"),
     });
-  } while (absl::c_next_permutation(names));
+  } while (std::next_permutation(names.begin(), names.end()));
 
   ASSERT_THAT(results, SizeIs(5040));
   EXPECT_THAT(results, Each(Eq(results[0])));

@@ -16,6 +16,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <format>
 #include <functional>
 #include <limits>
 #include <optional>
@@ -26,9 +27,7 @@
 #include <utility>
 #include <vector>
 
-#include "absl/strings/str_cat.h"
 #include "absl/strings/str_join.h"
-#include "absl/strings/substitute.h"
 #include "src/internal/expressions.h"
 
 namespace moriarty {
@@ -104,15 +103,15 @@ std::optional<std::string> BoundsToString(
 
   std::vector<std::string> bounds;
   bounds.reserve(expression_limits.size() + 1);
-  if (!unchanged_numeric_limit) bounds.push_back(absl::StrCat(numeric_limit));
+  if (!unchanged_numeric_limit) bounds.push_back(std::to_string(numeric_limit));
   for (const Expression& expr : expression_limits)
     bounds.push_back(expr.ToString());
 
   if (bounds.size() == 1) return bounds[0];
 
   // Note, we swap min/max here since we want max(a, b, c) <= x <= min(d, e, f).
-  return absl::Substitute("$0($1)", (is_minimum ? "max" : "min"),
-                          absl::StrJoin(bounds, ", "));
+  return std::format("{}({})", (is_minimum ? "max" : "min"),
+                     absl::StrJoin(bounds, ", "));
 }
 
 }  // namespace
@@ -126,12 +125,10 @@ std::string Range::ToString() const {
       BoundsToString(/* is_minimum = */ false, max_, max_exprs_);
 
   if (!min_bounds.has_value() && !max_bounds.has_value()) return "(-inf, inf)";
-  if (!min_bounds.has_value())
-    return absl::Substitute("(-inf, $0]", *max_bounds);
-  if (!max_bounds.has_value())
-    return absl::Substitute("[$0, inf)", *min_bounds);
+  if (!min_bounds.has_value()) return std::format("(-inf, {}]", *max_bounds);
+  if (!max_bounds.has_value()) return std::format("[{}, inf)", *min_bounds);
 
-  return absl::Substitute("[$0, $1]", *min_bounds, *max_bounds);
+  return std::format("[{}, {}]", *min_bounds, *max_bounds);
 }
 
 bool operator==(const Range& r1, const Range& r2) {

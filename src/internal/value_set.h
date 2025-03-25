@@ -19,13 +19,14 @@
 #define MORIARTY_SRC_INTERNAL_VALUE_SET_H_
 
 #include <any>
+#include <functional>
 #include <string>
 #include <string_view>
-#include <utility>
+#include <unordered_map>
 
-#include "absl/container/flat_hash_map.h"
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/errors.h"
+#include "src/util/str_hash.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -86,7 +87,7 @@ class ValueSet {
   void Erase(std::string_view variable_name);
 
  private:
-  absl::flat_hash_map<std::string, std::any> values_;
+  std::unordered_map<std::string, std::any, StrHash, std::equal_to<>> values_;
 };
 
 // -----------------------------------------------------------------------------
@@ -107,7 +108,7 @@ T::value_type ValueSet::Get(std::string_view variable_name) const {
 }
 template <MoriartyVariable T>
 void ValueSet::Set(std::string_view variable_name, T::value_type value) {
-  values_[variable_name] = std::move(value);
+  values_[std::string(variable_name)] = std::move(value);
 }
 
 }  // namespace moriarty_internal

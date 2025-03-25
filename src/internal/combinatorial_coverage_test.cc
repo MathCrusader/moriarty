@@ -20,14 +20,18 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "absl/strings/str_join.h"
 #include "src/internal/combinatorial_coverage_test_util.h"
 
 namespace moriarty {
 
 // Print `CoveringArrayTestCase`s nicely for tests.
 std::ostream& operator<<(std::ostream& os, const CoveringArrayTestCase& tc) {
-  os << "[" << absl::StrJoin(tc.test_case, ", ") << "]";
+  os << "[";
+  for (int i = 0; i < tc.test_case.size(); i++) {
+    if (i > 0) os << ", ";
+    os << tc.test_case[i];
+  }
+  os << "] ";
   return os;
 }
 
