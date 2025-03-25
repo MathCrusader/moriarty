@@ -111,6 +111,7 @@ cc_library(
     srcs = ["simple_pattern.cc"],
     hdrs = ["simple_pattern.h"],
     deps = [
+        "//src/internal:expressions",
         "//src/util:debug_string",
         "@abseil-cpp//absl/strings",
     ],
@@ -227,8 +228,11 @@ cc_test(
     name = "simple_pattern_test",
     srcs = ["simple_pattern_test.cc"],
     deps = [
+        ":expressions",
         ":random_engine",
         ":simple_pattern",
+        "//src/testing:gtest_helpers",
+        "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
 )

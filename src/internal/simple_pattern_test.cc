@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -25,7 +26,10 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/internal/expressions.h"
 #include "src/internal/random_engine.h"
+#include "src/testing/gtest_helpers.h"
+#include "src/variables/minteger.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -45,6 +49,7 @@ void PrintTo(const PatternNode& node, std::ostream* os, int depth = 0) {
 
 namespace {
 
+using ::moriarty_testing::Context;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Eq;
@@ -69,6 +74,12 @@ SimplePattern::RandFn Random() {
   };
 }
 
+Expression::LookupFn EmptyLookup() {
+  return [](std::string_view) -> int64_t {
+    throw std::runtime_error("Empty lookup function");
+  };
+}
+
 MATCHER_P(SimplePatternMatches, str, "") {
   std::string pattern{arg};  // Cast immediately to get better compile messages.
 
@@ -80,7 +91,30 @@ MATCHER_P(SimplePatternMatches, str, "") {
   }
 
   SimplePattern simple_pattern = SimplePattern(pattern);
-  if (simple_pattern.Matches(str)) {
+  if (simple_pattern.Matches(str, EmptyLookup())) {
+    *result_listener << "matches " << str;
+    return true;
+  }
+  *result_listener << "does not match " << str;
+  return false;
+}
+
+MATCHER_P2(SimplePatternMatches, str, context, "") {
+  std::string pattern{arg};  // Cast immediately to get better compile messages.
+  Context ctx{context};
+
+  try {
+    (void)SimplePattern(pattern);
+  } catch (const std::invalid_argument& e) {
+    *result_listener << "Invalid Pattern: " << e.what();
+    return false;
+  }
+
+  auto lookup = [&ctx](std::string_view var) -> int64_t {
+    return ctx.Values().Get<MInteger>(var);
+  };
+  SimplePattern simple_pattern = SimplePattern(pattern);
+  if (simple_pattern.Matches(str, lookup)) {
     *result_listener << "matches " << str;
     return true;
   }
@@ -316,25 +350,86 @@ TEST(SimplePatternTest, InvalidEscapeCharactersShouldFail) {
   EXPECT_THAT(R"(\b)", IsInvalidSimplePattern("escape"));
 }
 
-// GeneratedValuesAre() [for use with GoogleTest]
+TEST(SimplePatternTest, SimpleVariablesInRangeSizesShouldWork) {
+  EXPECT_THAT("a{N}",
+              SimplePatternMatches("a", Context().WithValue<MInteger>("N", 1)));
+  EXPECT_THAT("a{N}", Not(SimplePatternMatches(
+                          "aa", Context().WithValue<MInteger>("N", 1))));
+
+  EXPECT_THAT("a{N}", Not(SimplePatternMatches(
+                          "a", Context().WithValue<MInteger>("N", 2))));
+  EXPECT_THAT("a{N}", SimplePatternMatches(
+                          "aa", Context().WithValue<MInteger>("N", 2)));
+  EXPECT_THAT(
+      "a{N, M}",
+      SimplePatternMatches(
+          "aa",
+          Context().WithValue<MInteger>("N", 1).WithValue<MInteger>("M", 2)));
+  EXPECT_THAT(
+      "a{N, M - 1}",
+      Not(SimplePatternMatches(
+          "aa",
+          Context().WithValue<MInteger>("N", 1).WithValue<MInteger>("M", 2))));
+}
+
+TEST(SimplePatternTest, FunctionsInRangeSizesShouldWork) {
+  EXPECT_THAT("a{abs(N)}", SimplePatternMatches(
+                               "a", Context().WithValue<MInteger>("N", -1)));
+
+  Context ctx =
+      Context().WithValue<MInteger>("N", 1).WithValue<MInteger>("M", 2);
+  EXPECT_THAT("a{max(M, N)}", AllOf(Not(SimplePatternMatches("a", ctx)),
+                                    SimplePatternMatches("aa", ctx)));
+  EXPECT_THAT("a{1, min(M, N)}", AllOf(SimplePatternMatches("a", ctx),
+                                       Not(SimplePatternMatches("aa", ctx))));
+  EXPECT_THAT("a{max(M, N), 2}", AllOf(Not(SimplePatternMatches("a", ctx)),
+                                       SimplePatternMatches("aa", ctx)));
+  EXPECT_THAT(
+      "a{min(M, N), max(N, M)}",
+      AllOf(SimplePatternMatches("a", ctx), SimplePatternMatches("aa", ctx)));
+}
+
+// GeneratedStringsAre() [for use with GoogleTest]
 //
 // Checks if the subpatterns of a PatternNode are as expected.
 //
 // Example usage:
 //
 // EXPECT_THAT(SimplePattern("regex"),
-//             GeneratedValuesAre(SizeIs(Le(10)));
-MATCHER_P(GeneratedValuesAre, matcher, "") {
+//             GeneratedStringsAre(SizeIs(Le(10)));
+MATCHER_P(GeneratedStringsAre, matcher, "") {
   std::string str{arg};  // Cast immediately to get better compile messages.
   SimplePattern p = SimplePattern(str);
 
   for (int tries = 0; tries < 10; tries++) {
-    std::string value = p.Generate(Random());
+    std::string value = p.Generate(EmptyLookup(), Random());
 
     if (!Matches(matcher)(value)) {
       return ExplainMatchResult(matcher, value, result_listener);
     }
-    if (!p.Matches(value)) {
+    if (!p.Matches(value, EmptyLookup())) {
+      *result_listener << "Generated value does not match pattern: " << value;
+      return false;
+    }
+  }
+  return true;
+}
+
+MATCHER_P2(GeneratedStringsAre, matcher, context, "") {
+  std::string str{arg};  // Cast immediately to get better compile messages.
+  Context ctx{context};
+  SimplePattern p = SimplePattern(str);
+
+  auto lookup = [&ctx](std::string_view var) -> int64_t {
+    return ctx.Values().Get<MInteger>(var);
+  };
+  for (int tries = 0; tries < 10; tries++) {
+    std::string value = p.Generate(lookup, Random());
+
+    if (!Matches(matcher)(value)) {
+      return ExplainMatchResult(matcher, value, result_listener);
+    }
+    if (!p.Matches(value, lookup)) {
       *result_listener << "Generated value does not match pattern: " << value;
       return false;
     }
@@ -349,12 +444,12 @@ MATCHER_P2(GeneratedValuesWithRestrictionsAre, matcher, restricted_alphabet,
   SimplePattern p = SimplePattern(str);
 
   for (int tries = 0; tries < 10; tries++) {
-    std::string value =
-        p.GenerateWithRestrictions(restricted_alphabet_copy, Random());
+    std::string value = p.GenerateWithRestrictions(restricted_alphabet_copy,
+                                                   EmptyLookup(), Random());
     if (!Matches(matcher)(value)) {
       return ExplainMatchResult(matcher, value, result_listener);
     }
-    if (!p.Matches(value)) {
+    if (!p.Matches(value, EmptyLookup())) {
       *result_listener << "Generated value does not match pattern: " << value;
       return false;
     }
@@ -365,47 +460,47 @@ MATCHER_P2(GeneratedValuesWithRestrictionsAre, matcher, restricted_alphabet,
 TEST(SimplePatternTest, SimpleGenerationWorks) {
   SimplePattern p = SimplePattern("a");
   for (int tries = 0; tries < 10; tries++) {
-    EXPECT_EQ(p.Generate(Random()), "a");
+    EXPECT_EQ(p.Generate(EmptyLookup(), Random()), "a");
   }
 }
 
 TEST(SimplePatternTest, GenerationWithOrClauseShouldWork) {
-  EXPECT_THAT("a|b|c", GeneratedValuesAre(AnyOf("a", "b", "c")));
+  EXPECT_THAT("a|b|c", GeneratedStringsAre(AnyOf("a", "b", "c")));
 }
 
 TEST(SimplePatternTest, GenerationWithComplexOrClauseShouldWork) {
-  EXPECT_THAT("a|bb|ccc", GeneratedValuesAre(AnyOf("a", "bb", "ccc")));
+  EXPECT_THAT("a|bb|ccc", GeneratedStringsAre(AnyOf("a", "bb", "ccc")));
 }
 
 TEST(SimplePatternTest, GenerationWithConcatenationShouldWork) {
-  EXPECT_THAT("abcde", GeneratedValuesAre("abcde"));
+  EXPECT_THAT("abcde", GeneratedStringsAre("abcde"));
 }
 
 TEST(SimplePatternTest, GenerationWithLengthRangesGivesProperLengths) {
-  EXPECT_THAT("a{4, 8}", GeneratedValuesAre(SizeIs(AllOf(Ge(4), Le(8)))));
-  EXPECT_THAT("a{,8}", GeneratedValuesAre(SizeIs(Le(8))));
-  EXPECT_THAT("a{8}", GeneratedValuesAre(SizeIs(8)));
+  EXPECT_THAT("a{4, 8}", GeneratedStringsAre(SizeIs(AllOf(Ge(4), Le(8)))));
+  EXPECT_THAT("a{,8}", GeneratedStringsAre(SizeIs(Le(8))));
+  EXPECT_THAT("a{8}", GeneratedStringsAre(SizeIs(8)));
 }
 
 TEST(SimplePatternTest, GenerationWithNestedSubExpressionsShouldWork) {
   EXPECT_THAT("a(b|c)(d|e)",
-              GeneratedValuesAre(AnyOf("abd", "abe", "acd", "ace")));
+              GeneratedStringsAre(AnyOf("abd", "abe", "acd", "ace")));
 }
 
 TEST(SimplePatternTest, GenerationWithLargeWildcardShouldThrowError) {
   SimplePattern p1 = SimplePattern("a+");
-  EXPECT_THAT([&] { (void)p1.Generate(Random()); },
+  EXPECT_THAT([&] { (void)p1.Generate(EmptyLookup(), Random()); },
               ThrowsMessage<std::runtime_error>(
                   AllOf(HasSubstr("generate"), HasSubstr("+"))));
 
   SimplePattern p2 = SimplePattern("a*");
-  EXPECT_THAT([&] { (void)p2.Generate(Random()); },
+  EXPECT_THAT([&] { (void)p2.Generate(EmptyLookup(), Random()); },
               ThrowsMessage<std::runtime_error>(
                   AllOf(HasSubstr("generate"), HasSubstr("*"))));
 }
 
 TEST(SimplePatternTest, GenerationWithSmallWildcardShouldWork) {
-  EXPECT_THAT("a?b", GeneratedValuesAre(AnyOf("ab", "b")));
+  EXPECT_THAT("a?b", GeneratedStringsAre(AnyOf("ab", "b")));
 }
 
 TEST(SimplePatternTest, GenerationWithAlphabetRestrictionsShouldWork) {
@@ -428,12 +523,41 @@ TEST(SimplePatternTest,
   EXPECT_THAT(
       [&] {
         (void)p.GenerateWithRestrictions(/*restricted_alphabet = */ "x",
-                                         Random());
+                                         EmptyLookup(), Random());
       },
       ThrowsMessage<std::invalid_argument>(
           HasSubstr("No valid characters for generation, but empty string is "
                     "not allowed.")));
 }
+
+TEST(SimplePatternTest, GeneratingVariablesInRangeSizesShouldWork) {
+  EXPECT_THAT("a{N}",
+              GeneratedStringsAre("a", Context().WithValue<MInteger>("N", 1)));
+  EXPECT_THAT("a{N}",
+              GeneratedStringsAre("aa", Context().WithValue<MInteger>("N", 2)));
+
+  EXPECT_THAT(
+      "a{N, M}",
+      GeneratedStringsAre(
+          AnyOf("a", "aa"),
+          Context().WithValue<MInteger>("N", 1).WithValue<MInteger>("M", 2)));
+}
+
+TEST(SimplePatternTest, GeneratingWithFunctionsInRangeSizesShouldWork) {
+  EXPECT_THAT("a{abs(N)}",
+              GeneratedStringsAre("a", Context().WithValue<MInteger>("N", -1)));
+
+  Context ctx =
+      Context().WithValue<MInteger>("N", 1).WithValue<MInteger>("M", 2);
+  EXPECT_THAT("a{max(M, N)}", GeneratedStringsAre("aa", ctx));
+  EXPECT_THAT("a{1, min(M, N)}", GeneratedStringsAre("a", ctx));
+  EXPECT_THAT("a{max(M, N), 2}", GeneratedStringsAre("aa", ctx));
+  EXPECT_THAT("a{min(M, N-1), max(N, M)}",
+              GeneratedStringsAre(AnyOf("", "a", "aa"), ctx));
+}
+
+// TODO: Add tests for Generation failures when values are not known or produce
+// invalid ranges.
 
 // -----------------------------------------------------------------------------
 //  Tests below here are for more internal-facing functions. Only functions
@@ -519,27 +643,24 @@ TEST(RepeatedCharSetTest, DefaultShouldNotAcceptAnyChars) {
 
 TEST(RepeatedCharSetTest, AddedCharactersShouldBeAccepted) {
   RepeatedCharSet r;
-  r.SetRange(1, 1);
   EXPECT_TRUE(r.Add('a'));
   EXPECT_TRUE(r.Add('b'));
   EXPECT_THAT(r, AcceptsOnly("ab"));
 }
 
-TEST(RepeatedCharSetTest, DefaultLengthShouldBeZero) {
-  EXPECT_EQ(RepeatedCharSet().MinLength(), 0);
-  EXPECT_EQ(RepeatedCharSet().MaxLength(), 0);
+TEST(RepeatedCharSetTest, DefaultLengthShouldBeZeroAndInfinite) {
+  EXPECT_THAT(RepeatedCharSet().Extremes(EmptyLookup()),
+              FieldsAre(0, std::numeric_limits<int64_t>::max()));
 }
 
 TEST(RepeatedCharSetTest, FlippingDefaultShouldAcceptEverything) {
   RepeatedCharSet r;
-  r.SetRange(1, 1);
   r.FlipValidCharacters();
   EXPECT_THAT(r, AcceptsAllBut(""));
 }
 
 TEST(RepeatedCharSetTest, FlippingShouldTurnOffAddedCharacters) {
   RepeatedCharSet r;
-  r.SetRange(1, 1);
   EXPECT_TRUE(r.Add('a'));
   r.FlipValidCharacters();
   EXPECT_THAT(r, AcceptsAllBut("a"));
@@ -547,7 +668,6 @@ TEST(RepeatedCharSetTest, FlippingShouldTurnOffAddedCharacters) {
 
 TEST(RepeatedCharSetTest, AddingAgainAfterFlipShouldBeOk) {
   RepeatedCharSet r;
-  r.SetRange(1, 1);
   EXPECT_TRUE(r.Add('a'));
   r.FlipValidCharacters();
   EXPECT_THAT(r, AcceptsAllBut("a"));
@@ -556,57 +676,57 @@ TEST(RepeatedCharSetTest, AddingAgainAfterFlipShouldBeOk) {
 }
 
 TEST(RepeatedCharSetTest, LongestValidPrefixShouldSucceedForLengthZero) {
-  EXPECT_EQ(RepeatedCharSet().LongestValidPrefix("a"), 0);
+  EXPECT_EQ(RepeatedCharSet().LongestValidPrefix("a", EmptyLookup()), 0);
 }
 
 TEST(RepeatedCharSetTest, LongestValidPrefixShouldSucceedForLengthOneGood) {
   RepeatedCharSet r;
-  r.SetRange(1, 1);
+  r.SetRange(Expression("1"), Expression("1"));
   EXPECT_TRUE(r.Add('a'));
-  EXPECT_THAT(r.LongestValidPrefix("a"), Optional(1));
+  EXPECT_THAT(r.LongestValidPrefix("a", EmptyLookup()), Optional(1));
 }
 
 TEST(RepeatedCharSetTest, LongestValidPrefixShouldFailForLengthOneBad) {
   RepeatedCharSet r;
-  r.SetRange(1, 1);
+  r.SetRange(Expression("1"), Expression("1"));
   EXPECT_TRUE(r.Add('a'));
-  EXPECT_EQ(r.LongestValidPrefix("b"), std::nullopt);
+  EXPECT_EQ(r.LongestValidPrefix("b", EmptyLookup()), std::nullopt);
 }
 
 TEST(RepeatedCharSetTest, LongestValidPrefixShouldSucceedForLongerStrings) {
   RepeatedCharSet r;
-  r.SetRange(1, 4);
+  r.SetRange(Expression("1"), Expression("4"));
   EXPECT_TRUE(r.Add('a'));
-  EXPECT_THAT(r.LongestValidPrefix("aaaaaaaaaaa"), Optional(4));
+  EXPECT_THAT(r.LongestValidPrefix("aaaaaaaaaaa", EmptyLookup()), Optional(4));
 }
 
 TEST(RepeatedCharSetTest, LongestValidPrefixShouldFailForShorterStrings) {
   RepeatedCharSet r;
-  r.SetRange(3, 4);
+  r.SetRange(Expression("3"), Expression("4"));
   EXPECT_TRUE(r.Add('a'));
-  EXPECT_EQ(r.LongestValidPrefix("aa"), std::nullopt);
+  EXPECT_EQ(r.LongestValidPrefix("aa", EmptyLookup()), std::nullopt);
 }
 
 TEST(RepeatedCharSetTest, NegativeMinRangeShouldBeOk) {
   RepeatedCharSet r;
   EXPECT_TRUE(r.Add('a'));
-  r.SetRange(-5, 3);
-  EXPECT_EQ(r.MinLength(), 0);
-  EXPECT_EQ(r.MaxLength(), 3);
+  r.SetRange(Expression("-5"), Expression("3"));
+  EXPECT_THAT(r.Extremes(EmptyLookup()), FieldsAre(0, 3));
 }
 
-TEST(RepeatedCharSetTest, InvalidRangesShouldFail) {
-  EXPECT_THAT([] { RepeatedCharSet().SetRange(10, 5); },
-              Throws<std::invalid_argument>());
-  // Min is clamped to 0, so this is invalid.
-  EXPECT_THAT([] { RepeatedCharSet().SetRange(-5, -3); },
-              Throws<std::invalid_argument>());
-}
+// FIXME: Determine if we can crash sooner on cases like these.
+// TEST(RepeatedCharSetTest, InvalidRangesShouldFail) {
+//   EXPECT_THAT([] { RepeatedCharSet().SetRange(10, 5); },
+//               Throws<std::invalid_argument>());
+//   // Min is clamped to 0, so this is invalid.
+//   EXPECT_THAT([] { RepeatedCharSet().SetRange(-5, -3); },
+//               Throws<std::invalid_argument>());
+// }
 
 TEST(RepeatedCharSetTest, NegativeMinZeroMaxRangeShouldBeOk) {
   RepeatedCharSet r;
-  r.SetRange(-5, 0);
-  EXPECT_EQ(r.MinLength(), 0);
+  r.SetRange(Expression("-5"), Expression("0"));
+  EXPECT_THAT(r.Extremes(EmptyLookup()), FieldsAre(0, 0));
 }
 
 TEST(RepeatedCharSetTest, AddingANegativeCharShouldFail) {
@@ -623,7 +743,6 @@ TEST(RepeatedCharSetTest, FlipShouldNotAcceptNegativeChars) {
 
 TEST(RepeatedCharSetTest, FlipShouldAcceptNullChar) {
   RepeatedCharSet r;
-  r.SetRange(1, 1);
   r.FlipValidCharacters();
   EXPECT_TRUE(r.IsValidCharacter(static_cast<char>(0)));
 }
@@ -872,31 +991,47 @@ TEST(ParseRepetitionTest, SpecialCharacterAtStartShouldReturnZero) {
   EXPECT_EQ(RepetitionPrefixLength("|"), 0);
 }
 
+// Helper for functions to evaluate the internal Expressions.
+std::pair<std::optional<int64_t>, std::optional<int64_t>> Eval(
+    RepetitionRange r) {
+  return {
+      r.min_length ? std::optional{r.min_length->Evaluate(EmptyLookup())}
+                   : std::nullopt,
+      r.max_length ? std::optional{r.max_length->Evaluate(EmptyLookup())}
+                   : std::nullopt,
+  };
+}
+
 TEST(ParseRepetitionTest, EmptyRepetitionShouldGiveLengthOne) {
-  EXPECT_THAT(ParseRepetitionBody(""), FieldsAre(1, 1));
+  EXPECT_THAT(Eval(ParseRepetitionBody("")), FieldsAre(1, 1));
 }
 
 TEST(ParseRepetitionTest, SpecialCharactersShouldParseProperly) {
-  EXPECT_THAT(ParseRepetitionBody("?"), FieldsAre(0, 1));
-  EXPECT_THAT(ParseRepetitionBody("+"),
-              FieldsAre(1, std::numeric_limits<int64_t>::max()));
-  EXPECT_THAT(ParseRepetitionBody("*"),
-              FieldsAre(0, std::numeric_limits<int64_t>::max()));
+  EXPECT_THAT(Eval(ParseRepetitionBody("?")),
+              FieldsAre(std::nullopt, Optional(1)));
+  EXPECT_THAT(Eval(ParseRepetitionBody("+")),
+              FieldsAre(Optional(1), std::nullopt));
+  EXPECT_THAT(Eval(ParseRepetitionBody("*")),
+              FieldsAre(std::nullopt, std::nullopt));
 }
 
 TEST(ParseRepetitionTest, SimpleCasesShouldWork) {
-  EXPECT_THAT(ParseRepetitionBody("{3}"), FieldsAre(3, 3));
-  EXPECT_THAT(ParseRepetitionBody("{3,14}"), FieldsAre(3, 14));
-  EXPECT_THAT(ParseRepetitionBody("{3,}"),
-              FieldsAre(3, std::numeric_limits<int64_t>::max()));
-  EXPECT_THAT(ParseRepetitionBody("{,3}"), FieldsAre(0, 3));
-  EXPECT_THAT(ParseRepetitionBody("{,}"),
-              FieldsAre(0, std::numeric_limits<int64_t>::max()));
+  EXPECT_THAT(Eval(ParseRepetitionBody("{3}")),
+              FieldsAre(Optional(3), Optional(3)));
+  EXPECT_THAT(Eval(ParseRepetitionBody("{3,14}")),
+              FieldsAre(Optional(3), Optional(14)));
+  EXPECT_THAT(Eval(ParseRepetitionBody("{3,}")),
+              FieldsAre(Optional(3), std::nullopt));
+  EXPECT_THAT(Eval(ParseRepetitionBody("{,3}")),
+              FieldsAre(std::nullopt, Optional(3)));
+  EXPECT_THAT(Eval(ParseRepetitionBody("{,}")),
+              FieldsAre(std::nullopt, std::nullopt));
 }
 
 TEST(ParseRepetitionTest, MultipleCommasShouldFail) {
-  EXPECT_THAT([] { (void)ParseRepetitionBody("{3,4,5}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("max value")));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("{3,4,5}"); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition block")));
 }
 
 TEST(ParseRepetitionTest, MissingBracesShouldFail) {
@@ -911,23 +1046,15 @@ TEST(ParseRepetitionTest, MissingBracesShouldFail) {
 }
 
 TEST(ParseRepetitionTest, NonIntegerShouldFail) {
-  EXPECT_THAT([] { (void)ParseRepetitionBody("{1.5,2}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("min")));
-  EXPECT_THAT([] { (void)ParseRepetitionBody("{a,b}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("min")));
-  EXPECT_THAT([] { (void)ParseRepetitionBody("{1,b}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("max")));
-  EXPECT_THAT([] { (void)ParseRepetitionBody("{a,2}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("min")));
-  EXPECT_THAT([] { (void)ParseRepetitionBody("{a,}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("min")));
-  EXPECT_THAT([] { (void)ParseRepetitionBody("{,a}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("max")));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("{1.5,2}"); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition block")));
 }
 
 TEST(ParseRepetitionTest, HexShouldFail) {
-  EXPECT_THAT([] { (void)ParseRepetitionBody("{0x00,0x10}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("min")));
+  EXPECT_THAT(
+      [] { (void)ParseRepetitionBody("{0x00,0x10}"); },
+      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition block")));
 }
 
 TEST(ParseRepetitionTest, SpecialCharacterAtStartShouldFail) {
@@ -1059,7 +1186,9 @@ TEST(ParseRepeatedCharSetTest, CharacterSetParserShouldNotSetSubpattern) {
 TEST(ParseRepeatedCharSetTest,
      CharacterSetShouldNotIncludeSquareBracketsByDefault) {
   PatternNode p = ParseRepeatedCharSetPrefix("[a]");
-  EXPECT_THAT(p.repeated_character_set, AcceptsOnly("a"));
+  // Somewhat testing an internal implementation detail since this may not be
+  // the top node in the tree.
+  EXPECT_THAT(p.repeated_character_set, Optional(AcceptsOnly("a")));
 }
 
 TEST(ParseScopePrefixTest, EmptyStringShouldFail) {

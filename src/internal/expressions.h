@@ -35,12 +35,13 @@ namespace moriarty {
 
 class Expression {
  public:
+  using LookupFn = std::function<int64_t(std::string_view)>;
+
   explicit Expression(std::string_view str);
 
   [[nodiscard]] int64_t Evaluate() const;
 
-  [[nodiscard]] int64_t Evaluate(
-      std::function<int64_t(std::string_view)> lookup_variable) const;
+  [[nodiscard]] int64_t Evaluate(LookupFn lookup_variable) const;
 
   [[nodiscard]] std::string ToString() const;
 

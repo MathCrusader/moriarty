@@ -18,6 +18,7 @@
 #include "src/variables/constraints/string_constraints.h"
 
 #include <bitset>
+#include <cstdint>
 #include <format>
 #include <stdexcept>
 #include <string>
@@ -135,7 +136,11 @@ moriarty_internal::SimplePattern SimplePattern::GetCompiledPattern() const {
 }
 
 bool SimplePattern::IsSatisfiedWith(std::string_view value) const {
-  return pattern_.Matches(value);
+  // FIXME: Add AnalysisContext to this function.
+  auto lookup = [](std::string_view) -> int64_t {
+    throw std::runtime_error("Not implemented");
+  };
+  return pattern_.Matches(value, lookup);
 }
 
 std::string SimplePattern::ToString() const {

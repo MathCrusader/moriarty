@@ -14,13 +14,14 @@
 
 #include "src/internal/simple_pattern.h"
 
-#include <algorithm>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <format>
+#include <iostream>
 #include <limits>
 #include <optional>
+#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -28,7 +29,7 @@
 #include <vector>
 
 #include "absl/strings/match.h"
-#include "absl/strings/numbers.h"
+#include "src/internal/expressions.h"
 #include "src/util/debug_string.h"
 
 namespace moriarty {
@@ -68,13 +69,10 @@ bool RepeatedCharSet::Add(char character) {
 
 void RepeatedCharSet::FlipValidCharacters() { valid_chars_.flip(); }
 
-void RepeatedCharSet::SetRange(int64_t min, int64_t max) {
-  if (min > max || max < 0) {
-    throw std::invalid_argument(std::format(
-        "Invalid range in SimplePattern: min = {}, max = {}", min, max));
-  }
-  min_ = std::max<int64_t>(0, min);
-  max_ = max;
+void RepeatedCharSet::SetRange(std::optional<Expression> min,
+                               std::optional<Expression> max) {
+  min_ = std::move(min);
+  max_ = std::move(max);
 }
 
 bool RepeatedCharSet::IsValidCharacter(char character) const {
@@ -82,17 +80,33 @@ bool RepeatedCharSet::IsValidCharacter(char character) const {
 }
 
 std::optional<int64_t> RepeatedCharSet::LongestValidPrefix(
-    std::string_view str) const {
-  int64_t idx = 0;
-  while (idx < str.size() && idx < max_ && IsValidCharacter(str[idx])) idx++;
+    std::string_view str, const Expression::LookupFn& lookup) const {
+  auto [mini, maxi] = Extremes(lookup);
 
-  if (idx < min_) return std::nullopt;
+  int64_t idx = 0;
+  while (idx < str.size() && idx < maxi && IsValidCharacter(str[idx])) idx++;
+
+  if (idx < mini) return std::nullopt;
   return idx;
 }
 
-int64_t RepeatedCharSet::MinLength() const { return min_; }
+std::pair<int64_t, int64_t> RepeatedCharSet::Extremes(
+    const Expression::LookupFn& lookup) const {
+  int64_t mini = min_ ? min_->Evaluate(lookup) : 0;
+  int64_t maxi =
+      max_ ? max_->Evaluate(lookup) : std::numeric_limits<int64_t>::max();
 
-int64_t RepeatedCharSet::MaxLength() const { return max_; }
+  if (mini < 0) mini = 0;
+  if (mini > maxi) {
+    throw std::runtime_error(std::format(
+        "Invalid range in SimplePattern: min = {}, max = {}", mini, maxi));
+  }
+
+  std::cout << "Min: " << (min_.has_value() ? min_->ToString() : "(no min)")
+            << " Max: " << (max_.has_value() ? max_->ToString() : "(no max)")
+            << " == " << mini << " " << maxi << std::endl;
+  return {mini, maxi};
+}
 
 std::vector<char> RepeatedCharSet::ValidCharacters() const {
   std::vector<char> result;
@@ -146,7 +160,7 @@ RepeatedCharSet ParseCharacterSetBody(std::string_view chars) {
         "Empty character set. Use [ab] to match 'a' or 'b'.");
 
   RepeatedCharSet char_set;
-  char_set.SetRange(1, 1);
+  char_set.SetRange(Expression("1"), Expression("1"));
 
   std::string_view original = chars;
   auto throw_duplicate_char = [original](char c) {
@@ -215,13 +229,13 @@ int RepetitionPrefixLength(std::string_view pattern) {
 }
 
 RepetitionRange ParseRepetitionBody(std::string_view repetition) {
-  if (repetition.empty()) return RepetitionRange({1, 1});
+  if (repetition.empty())
+    return RepetitionRange({Expression("1"), Expression("1")});
   if (repetition.size() == 1) {
-    if (repetition[0] == '?') return RepetitionRange({0, 1});
-    if (repetition[0] == '+')
-      return RepetitionRange({1, std::numeric_limits<int64_t>::max()});
-    if (repetition[0] == '*')
-      return RepetitionRange({0, std::numeric_limits<int64_t>::max()});
+    char c = repetition[0];
+    if (c == '?') return RepetitionRange({std::nullopt, Expression("1")});
+    if (c == '+') return RepetitionRange({Expression("1"), std::nullopt});
+    if (c == '*') return RepetitionRange({std::nullopt, std::nullopt});
 
     throw std::invalid_argument(
         std::format("Invalid repetition character: '{}'", repetition));
@@ -234,24 +248,43 @@ RepetitionRange ParseRepetitionBody(std::string_view repetition) {
   repetition.remove_prefix(1);
   repetition.remove_suffix(1);
 
-  std::string_view min_str = repetition;
-  std::string_view max_str = repetition;
-  if (absl::StrContains(repetition, ',')) {
-    min_str = repetition.substr(0, repetition.find(','));
-    max_str = repetition.substr(repetition.find(',') + 1);
+  if (repetition.empty()) {
+    throw std::invalid_argument("Empty repetition block: '{}'");
   }
 
-  RepetitionRange result = {0, std::numeric_limits<int64_t>::max()};
-  if (!min_str.empty() && !absl::SimpleAtoi(min_str, &result.min_length)) {
-    throw std::invalid_argument(
-        std::format("Invalid min value in repetition: '{}'", repetition));
-  }
-  if (!max_str.empty() && !absl::SimpleAtoi(max_str, &result.max_length)) {
-    throw std::invalid_argument(
-        std::format("Invalid max value in repetition: '{}'", repetition));
-  }
+  int64_t first_comma = [](std::string_view str) {
+    int depth = 0;
+    for (size_t i = 0; i < str.size(); i++) {
+      if (str[i] == '(') depth++;
+      if (str[i] == ')') depth--;
+      if (depth == 0 && str[i] == ',') return i;
+    }
+    return std::string_view::npos;
+  }(repetition);
 
-  return result;
+  try {  // General catch to help error messages.
+    if (first_comma == std::string_view::npos) {  // {__}
+      Expression expr = Expression(repetition);
+      return RepetitionRange({expr, expr});
+    }
+    if (repetition.size() == 1)  // "{,}"
+      return RepetitionRange({std::nullopt, std::nullopt});
+    if (first_comma == 0) {  // {,__}
+      return RepetitionRange({std::nullopt, Expression(repetition.substr(1))});
+    }
+    if (first_comma + 1 == repetition.size()) {  // {__,}
+      return RepetitionRange(
+          {Expression(repetition.substr(0, first_comma)), std::nullopt});
+    }
+
+    Expression min_expr = Expression(repetition.substr(0, first_comma));
+    Expression max_expr = Expression(repetition.substr(first_comma + 1));
+    return RepetitionRange({min_expr, max_expr});
+  } catch (const std::invalid_argument& e) {
+    throw std::invalid_argument(
+        std::format("Failed to parse repetition block: '{{{}}}'. {}",
+                    repetition, e.what()));
+  }
 }
 
 PatternNode ParseRepeatedCharSetPrefix(std::string_view pattern) {
@@ -263,17 +296,13 @@ PatternNode ParseRepeatedCharSetPrefix(std::string_view pattern) {
   RepeatedCharSet char_set = ParseCharacterSetBody(chars);
 
   int repetition_len = RepetitionPrefixLength(pattern.substr(char_set_len));
-
   RepetitionRange repetition =
       ParseRepetitionBody(pattern.substr(char_set_len, repetition_len));
 
   char_set.SetRange(repetition.min_length, repetition.max_length);
 
-  PatternNode result;
-  result.repeated_character_set = std::move(char_set);
-  result.pattern = pattern.substr(0, char_set_len + repetition_len);
-
-  return result;
+  return {.repeated_character_set = std::move(char_set),
+          .pattern = pattern.substr(0, char_set_len + repetition_len)};
 }
 
 namespace {
@@ -369,25 +398,30 @@ PatternNode ParseScopePrefix(std::string_view pattern) {
 }
 
 std::optional<int64_t> MatchesPrefixLength(const PatternNode& pattern_node,
-                                           std::string_view str) {
-  std::optional<int64_t> prefix_length =
-      pattern_node.repeated_character_set.LongestValidPrefix(str);
-  if (!prefix_length.has_value()) return std::nullopt;
-  str.remove_prefix(*prefix_length);
+                                           std::string_view str,
+                                           const Expression::LookupFn& lookup) {
+  int length = 0;
+  if (pattern_node.repeated_character_set) {
+    std::optional<int64_t> prefix_length =
+        pattern_node.repeated_character_set->LongestValidPrefix(str, lookup);
+    if (!prefix_length.has_value()) return std::nullopt;
+    str.remove_prefix(*prefix_length);
+    length += *prefix_length;
+  }
 
   for (const PatternNode& subpattern : pattern_node.subpatterns) {
     std::optional<int64_t> subpattern_length =
-        MatchesPrefixLength(subpattern, str);
+        MatchesPrefixLength(subpattern, str, lookup);
     if (!subpattern_length) {
       if (pattern_node.subpattern_type == PatternNode::SubpatternType::kAllOf)
         return std::nullopt;
       continue;  // We are in a kAnyOf, so we don't *have* to match this.
     }
 
-    *prefix_length += *subpattern_length;
+    length += *subpattern_length;
 
     if (pattern_node.subpattern_type == PatternNode::SubpatternType::kAnyOf) {
-      return prefix_length;
+      return length;
     }
 
     str.remove_prefix(*subpattern_length);
@@ -397,7 +431,7 @@ std::optional<int64_t> MatchesPrefixLength(const PatternNode& pattern_node,
     // We are in a kAnyOf, but we didn't match anything...
     return std::nullopt;
   }
-  return prefix_length;
+  return length;
 }
 
 SimplePattern::SimplePattern(std::string pattern) {
@@ -425,9 +459,10 @@ SimplePattern::SimplePattern(std::string pattern) {
 
 std::string SimplePattern::Pattern() const { return pattern_; }
 
-bool SimplePattern::Matches(std::string_view str) const {
+bool SimplePattern::Matches(std::string_view str,
+                            const Expression::LookupFn& lookup) const {
   std::optional<int64_t> prefix_length =
-      MatchesPrefixLength(pattern_node_, str);
+      MatchesPrefixLength(pattern_node_, str, lookup);
   return prefix_length && *prefix_length == str.length();
 }
 
@@ -436,12 +471,13 @@ namespace {
 std::string GenerateRepeatedCharSet(
     const RepeatedCharSet& char_set,
     std::optional<std::string_view> restricted_alphabet,
-    const SimplePattern::RandFn& rand) {
-  if (char_set.MaxLength() == std::numeric_limits<int64_t>::max()) {
+    const Expression::LookupFn& lookup, const SimplePattern::RandFn& rand) {
+  auto [min, max] = char_set.Extremes(lookup);
+  if (max == std::numeric_limits<int64_t>::max()) {
     throw std::runtime_error(
         "Cannot generate with `*` or `+` or massive lengths.");
   }
-  int64_t len = rand(char_set.MinLength(), char_set.MaxLength());
+  int64_t len = rand(min, max);
 
   RepeatedCharSet restricted_char_set;
   if (restricted_alphabet.has_value()) {
@@ -457,7 +493,7 @@ std::string GenerateRepeatedCharSet(
 
   if (valid_chars.empty()) {
     // No valid characters, so the only valid string is the empty string.
-    if (char_set.MinLength() <= 0) return "";
+    if (min == 0) return "";
     throw std::invalid_argument(
         "No valid characters for generation, but empty string is not "
         "allowed.");
@@ -474,22 +510,25 @@ std::string GenerateRepeatedCharSet(
 std::string GeneratePatternNode(
     const PatternNode& node,
     std::optional<std::string_view> restricted_alphabet,
-    const SimplePattern::RandFn& rand) {
-  std::string result = GenerateRepeatedCharSet(node.repeated_character_set,
-                                               restricted_alphabet, rand);
+    const Expression::LookupFn& lookup, const SimplePattern::RandFn& rand) {
+  std::string result =
+      node.repeated_character_set
+          ? GenerateRepeatedCharSet(*node.repeated_character_set,
+                                    restricted_alphabet, lookup, rand)
+          : "";
 
   if (node.subpatterns.empty()) return result;
 
   if (node.subpattern_type == PatternNode::SubpatternType::kAnyOf) {
     int64_t idx = rand(0, (int)node.subpatterns.size() - 1);
-    std::string subresult =
-        GeneratePatternNode(node.subpatterns[idx], restricted_alphabet, rand);
+    std::string subresult = GeneratePatternNode(
+        node.subpatterns[idx], restricted_alphabet, lookup, rand);
     return result + subresult;
   }
 
   for (const PatternNode& subpattern : node.subpatterns) {
     std::string subresult =
-        GeneratePatternNode(subpattern, restricted_alphabet, rand);
+        GeneratePatternNode(subpattern, restricted_alphabet, lookup, rand);
     result += subresult;
   }
   return result;
@@ -497,15 +536,16 @@ std::string GeneratePatternNode(
 
 }  // namespace
 
-std::string SimplePattern::Generate(const RandFn& rand) const {
+std::string SimplePattern::Generate(const Expression::LookupFn& lookup,
+                                    const RandFn& rand) const {
   return GenerateWithRestrictions(/* restricted_alphabet = */ std::nullopt,
-                                  rand);
+                                  lookup, rand);
 }
 
 std::string SimplePattern::GenerateWithRestrictions(
     std::optional<std::string_view> restricted_alphabet,
-    const RandFn& rand) const {
-  return GeneratePatternNode(pattern_node_, restricted_alphabet, rand);
+    const Expression::LookupFn& lookup, const RandFn& rand) const {
+  return GeneratePatternNode(pattern_node_, restricted_alphabet, lookup, rand);
 }
 
 }  // namespace moriarty_internal

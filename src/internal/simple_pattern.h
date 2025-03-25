@@ -25,6 +25,8 @@
 #include <string_view>
 #include <vector>
 
+#include "src/internal/expressions.h"
+
 namespace moriarty {
 namespace moriarty_internal {
 
@@ -43,7 +45,7 @@ class RepeatedCharSet {
   void FlipValidCharacters();
 
   // Sets the number of repetitions to be between `min` and `max`.
-  void SetRange(int64_t min, int64_t max);
+  void SetRange(std::optional<Expression> min, std::optional<Expression> max);
 
   // Returns if `character` is a valid character.
   [[nodiscard]] bool IsValidCharacter(char character) const;
@@ -51,28 +53,26 @@ class RepeatedCharSet {
   // Returns the longest prefix of `str` that is valid. If no prefix is valid,
   // returns `std::nullopt`.
   [[nodiscard]] std::optional<int64_t> LongestValidPrefix(
-      std::string_view str) const;
+      std::string_view str, const Expression::LookupFn& lookup) const;
 
-  // Minimum length of repetition.
-  [[nodiscard]] int64_t MinLength() const;
-
-  // Maximum length of repetition.
-  [[nodiscard]] int64_t MaxLength() const;
+  // Returns the minimum and maximum length of repetition.
+  [[nodiscard]] std::pair<int64_t, int64_t> Extremes(
+      const Expression::LookupFn& lookup) const;
 
   // Returns all valid characters.
   [[nodiscard]] std::vector<char> ValidCharacters() const;
 
  private:
   std::bitset<128> valid_chars_;  // We only support non-negative signed char.
-  int64_t min_ = 0;
-  int64_t max_ = 0;
+  std::optional<Expression> min_;
+  std::optional<Expression> max_;
 };
 
 // A PatternNode matches in two stages:
 //  * First: Matches character(s) in `repeated_character_set`.
 //  * Second: Matches `subpatterns`.
 struct PatternNode {
-  RepeatedCharSet repeated_character_set;
+  std::optional<RepeatedCharSet> repeated_character_set;
 
   // `kAllOf` needs to match all of the `subpattern`s from left-to-right.
   // `kAnyOf` attempts to match each `subpattern` from left-to-right, and stops
@@ -157,7 +157,7 @@ class SimplePattern {
   // Function that returns a random integer in the range [min, max] (inclusive).
   using RandFn = std::function<int64_t(int64_t, int64_t)>;
 
-  SimplePattern(std::string pattern);
+  explicit SimplePattern(std::string pattern);
 
   // Returns the underlying pattern.
   [[nodiscard]] std::string Pattern() const;
@@ -179,7 +179,8 @@ class SimplePattern {
   //
   //  patternC = "(hello|helloworld)"
   //  strC     = "helloworld"      <-- "hello" matches the left or-expression.
-  [[nodiscard]] bool Matches(std::string_view str) const;
+  [[nodiscard]] bool Matches(std::string_view str,
+                             const Expression::LookupFn& lookup) const;
 
   // Generate()
   //
@@ -191,7 +192,8 @@ class SimplePattern {
   // at any time.
   //
   // All randomness comes from `rand`.
-  [[nodiscard]] std::string Generate(const RandFn& rand) const;
+  [[nodiscard]] std::string Generate(const Expression::LookupFn& lookup,
+                                     const RandFn& rand) const;
 
   // GenerateWithRestrictions()
   //
@@ -202,7 +204,7 @@ class SimplePattern {
   // characters from that string.
   [[nodiscard]] std::string GenerateWithRestrictions(
       std::optional<std::string_view> restricted_alphabet,
-      const RandFn& rand) const;
+      const Expression::LookupFn& lookup, const RandFn& rand) const;
 
  private:
   std::string pattern_;
@@ -230,8 +232,8 @@ class SimplePattern {
 
 // The return type for `ParseRepetitionBody`.
 struct RepetitionRange {
-  int64_t min_length;
-  int64_t max_length;
+  std::optional<Expression> min_length;  // Default = 0
+  std::optional<Expression> max_length;  // Default = 2^63 - 1
 };
 
 // Parses the repetition body. `repetition` should be one of: "", '?', '+', '*',

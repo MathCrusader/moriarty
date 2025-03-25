@@ -142,12 +142,15 @@ std::string MString::GenerateSimplePattern(
     return std::string(alphabet.begin(), alphabet.end());
   }();
 
+  auto lookup = [&](std::string_view name) -> int64_t {
+    return ctx.GenerateVariable<MInteger>(name);
+  };
+  auto rand = [&](int min, int max) { return ctx.RandomInteger(min, max); };
   try {
     // Use the last pattern, since it's probably the most specific. This choice
     // is arbitrary since all patterns must be satisfied.
-    return simple_patterns_.back().GenerateWithRestrictions(
-        maybe_alphabet,
-        [&](int min, int max) { return ctx.RandomInteger(min, max); });
+    return simple_patterns_.back().GenerateWithRestrictions(maybe_alphabet,
+                                                            lookup, rand);
   } catch (const std::runtime_error& e) {
     throw moriarty::GenerationError(
         ctx.GetVariableName(),

@@ -643,5 +643,34 @@ TEST(ExpressionsTest, FunctionsAndVariablesMixWell) {
               EvaluatesToWithVars(3, Map{{"min", 3}, {"max", 5}}));
 }
 
+TEST(ExpressionsTest, CopyAndMoveConstructorsShouldWork) {
+  {  // Simple copy
+    Expression expr("3 + 4");
+    Expression expr2(expr);
+    EXPECT_EQ(expr2.Evaluate(), 7);
+  }
+  {  // Copy, then deconstruct
+    Expression e = [] {
+      Expression expr("3 + 4");
+      Expression expr2(expr);
+      return expr2;
+    }();
+    EXPECT_EQ(e.Evaluate(), 7);
+  }
+  {  // Move
+    Expression expr("3 + 4");
+    Expression expr2(std::move(expr));
+    EXPECT_EQ(expr2.Evaluate(), 7);
+  }
+  {  // Copy, then deconstruct
+    Expression e = [] {
+      Expression expr("3 + 4");
+      Expression expr2(std::move(expr));
+      return expr2;
+    }();
+    EXPECT_EQ(e.Evaluate(), 7);
+  }
+}
+
 }  // namespace
 }  // namespace moriarty
