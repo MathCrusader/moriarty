@@ -62,6 +62,9 @@ class RepeatedCharSet {
   // Returns all valid characters.
   [[nodiscard]] std::vector<char> ValidCharacters() const;
 
+  // Returns the dependencies of the expression.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
  private:
   std::bitset<128> valid_chars_;  // We only support non-negative signed char.
   std::optional<Expression> min_;
@@ -205,6 +208,11 @@ class SimplePattern {
   [[nodiscard]] std::string GenerateWithRestrictions(
       std::optional<std::string_view> restricted_alphabet,
       const Expression::LookupFn& lookup, const RandFn& rand) const;
+
+  // GetDependencies()
+  //
+  // Returns all variables that pattern depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
 
  private:
   std::string pattern_;

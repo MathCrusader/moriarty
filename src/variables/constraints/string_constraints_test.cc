@@ -21,12 +21,20 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/contexts/librarian_context.h"
+#include "src/testing/gtest_helpers.h"
+#include "src/variables/minteger.h"
 
 namespace moriarty {
 namespace {
 
+using ::moriarty::librarian::AnalysisContext;
+using ::moriarty_testing::Context;
+using ::testing::ElementsAre;
+using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::SizeIs;
+using ::testing::UnorderedElementsAre;
 
 MATCHER(HasDuplicateLetter,
         negation ? "has no duplicate letters" : "has duplicate letters") {
@@ -166,27 +174,46 @@ TEST(DistinctCharactersTest, UnsatisfiedReasonShouldWork) {
 TEST(SimplePatternTest, IsSatisfiedWithShouldWork) {
   // See moriarty_internal::SimplePattern class for a more exhaustive set of
   // tests.
+  Context context;
+  AnalysisContext ctx("test", context.Variables(), context.Values());
   {
-    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith(""));
-    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith("a"));
-    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith("abc"));
-    EXPECT_FALSE(SimplePattern("[a-z]*").IsSatisfiedWith("ABC"));
+    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith(ctx, ""));
+    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith(ctx, "a"));
+    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith(ctx, "abc"));
+    EXPECT_FALSE(SimplePattern("[a-z]*").IsSatisfiedWith(ctx, "ABC"));
   }
   {
-    EXPECT_FALSE(SimplePattern("[a-z]+").IsSatisfiedWith(""));
-    EXPECT_TRUE(SimplePattern("[a-z]+").IsSatisfiedWith("a"));
-    EXPECT_TRUE(SimplePattern("[a-z]+").IsSatisfiedWith("abc"));
-    EXPECT_FALSE(SimplePattern("[a-z]+").IsSatisfiedWith("ABC"));
+    EXPECT_FALSE(SimplePattern("[a-z]+").IsSatisfiedWith(ctx, ""));
+    EXPECT_TRUE(SimplePattern("[a-z]+").IsSatisfiedWith(ctx, "a"));
+    EXPECT_TRUE(SimplePattern("[a-z]+").IsSatisfiedWith(ctx, "abc"));
+    EXPECT_FALSE(SimplePattern("[a-z]+").IsSatisfiedWith(ctx, "ABC"));
   }
   {
-    EXPECT_TRUE(SimplePattern("[a-z]?").IsSatisfiedWith(""));
-    EXPECT_TRUE(SimplePattern("[a-z]?").IsSatisfiedWith("a"));
-    EXPECT_FALSE(SimplePattern("[a-z]?").IsSatisfiedWith("abc"));
-    EXPECT_FALSE(SimplePattern("[a-z]?").IsSatisfiedWith("ABC"));
+    EXPECT_TRUE(SimplePattern("[a-z]?").IsSatisfiedWith(ctx, ""));
+    EXPECT_TRUE(SimplePattern("[a-z]?").IsSatisfiedWith(ctx, "a"));
+    EXPECT_FALSE(SimplePattern("[a-z]?").IsSatisfiedWith(ctx, "abc"));
+    EXPECT_FALSE(SimplePattern("[a-z]?").IsSatisfiedWith(ctx, "ABC"));
   }
-  EXPECT_TRUE(SimplePattern("a|b").IsSatisfiedWith("a"));
-  EXPECT_TRUE(SimplePattern("a|b").IsSatisfiedWith("b"));
-  EXPECT_FALSE(SimplePattern("a|b").IsSatisfiedWith("c"));
+  EXPECT_TRUE(SimplePattern("a|b").IsSatisfiedWith(ctx, "a"));
+  EXPECT_TRUE(SimplePattern("a|b").IsSatisfiedWith(ctx, "b"));
+  EXPECT_FALSE(SimplePattern("a|b").IsSatisfiedWith(ctx, "c"));
+}
+
+TEST(SimplePatternTest, IsSatisfiedWithIncludingVariablesShouldWork) {
+  // See moriarty_internal::SimplePattern class for a more exhaustive set of
+  // tests.
+  Context context =
+      Context().WithValue<MInteger>("N", 2).WithValue<MInteger>("X", 7);
+  AnalysisContext ctx("test", context.Variables(), context.Values());
+  EXPECT_TRUE(SimplePattern("[a-z]{N, X}").IsSatisfiedWith(ctx, "asdf"));
+  EXPECT_TRUE(SimplePattern("[a-z]{2 * N}").IsSatisfiedWith(ctx, "asdf"));
+  EXPECT_FALSE(SimplePattern("[a-z]{2 * N}").IsSatisfiedWith(ctx, "a"));
+  EXPECT_TRUE(
+      SimplePattern("[a-z]{max(N, X)}").IsSatisfiedWith(ctx, "abcdefg"));
+  EXPECT_TRUE(SimplePattern("[a-z]{min(N, X)}").IsSatisfiedWith(ctx, "ab"));
+  EXPECT_TRUE(SimplePattern("[a-z]{abs(-N)}").IsSatisfiedWith(ctx, "ab"));
+  EXPECT_TRUE(
+      SimplePattern("N{N}").IsSatisfiedWith(ctx, "NN"));  // Variable + char
 }
 
 TEST(SimplePatternTest, ToStringShouldWork) {
@@ -201,6 +228,13 @@ TEST(SimplePatternTest, UnsatisfiedReasonShouldWork) {
             "does not follow the simple pattern of `[a-z]*`");
   EXPECT_EQ(SimplePattern("[^a-z]?").UnsatisfiedReason("a"),
             "does not follow the simple pattern of `[^a-z]?`");
+}
+
+TEST(SimplePatternTest, GetDependenciesShouldWork) {
+  EXPECT_THAT(SimplePattern("[a-z]{5}").GetDependencies(), IsEmpty());
+  EXPECT_THAT(SimplePattern("[a-z]{N}").GetDependencies(), ElementsAre("N"));
+  EXPECT_THAT(SimplePattern("[a-z]{N, X}").GetDependencies(),
+              UnorderedElementsAre("N", "X"));
 }
 
 }  // namespace

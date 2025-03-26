@@ -24,8 +24,10 @@
 #include <string>
 #include <string_view>
 
+#include "src/contexts/librarian_context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/util/debug_string.h"
+#include "src/variables/minteger.h"
 
 namespace moriarty {
 
@@ -135,10 +137,10 @@ moriarty_internal::SimplePattern SimplePattern::GetCompiledPattern() const {
   return pattern_;
 }
 
-bool SimplePattern::IsSatisfiedWith(std::string_view value) const {
-  // FIXME: Add AnalysisContext to this function.
-  auto lookup = [](std::string_view) -> int64_t {
-    throw std::runtime_error("Not implemented");
+bool SimplePattern::IsSatisfiedWith(librarian::AnalysisContext ctx,
+                                    std::string_view value) const {
+  auto lookup = [&](std::string_view var) -> int64_t {
+    return ctx.GetValue<MInteger>(var);
   };
   return pattern_.Matches(value, lookup);
 }
@@ -153,8 +155,8 @@ std::string SimplePattern::UnsatisfiedReason(std::string_view value) const {
                      librarian::DebugString(pattern_.Pattern()));
 }
 
-// This will need the variables inside the SimplePattern once that is
-// implemented.
-std::vector<std::string> SimplePattern::GetDependencies() const { return {}; }
+std::vector<std::string> SimplePattern::GetDependencies() const {
+  return pattern_.GetDependencies();
+}
 
 }  // namespace moriarty

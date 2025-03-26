@@ -18,10 +18,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <format>
-#include <iostream>
 #include <limits>
 #include <optional>
-#include <ostream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -101,10 +99,6 @@ std::pair<int64_t, int64_t> RepeatedCharSet::Extremes(
     throw std::runtime_error(std::format(
         "Invalid range in SimplePattern: min = {}, max = {}", mini, maxi));
   }
-
-  std::cout << "Min: " << (min_.has_value() ? min_->ToString() : "(no min)")
-            << " Max: " << (max_.has_value() ? max_->ToString() : "(no max)")
-            << " == " << mini << " " << maxi << std::endl;
   return {mini, maxi};
 }
 
@@ -213,6 +207,19 @@ RepeatedCharSet ParseCharacterSetBody(std::string_view chars) {
   if (negation) char_set.FlipValidCharacters();
 
   return char_set;
+}
+
+std::vector<std::string> RepeatedCharSet::GetDependencies() const {
+  std::vector<std::string> dependencies;
+  if (min_) {
+    auto min_deps = min_->GetDependencies();
+    dependencies.insert(dependencies.end(), min_deps.begin(), min_deps.end());
+  }
+  if (max_) {
+    auto max_deps = max_->GetDependencies();
+    dependencies.insert(dependencies.end(), max_deps.begin(), max_deps.end());
+  }
+  return dependencies;
 }
 
 int RepetitionPrefixLength(std::string_view pattern) {
@@ -534,6 +541,22 @@ std::string GeneratePatternNode(
   return result;
 }
 
+std::vector<std::string> ExtractDependencies(const PatternNode& node) {
+  std::vector<std::string> dependencies;
+  for (const PatternNode& subpattern : node.subpatterns) {
+    std::vector<std::string> sub_dependencies = ExtractDependencies(subpattern);
+    dependencies.insert(dependencies.end(), sub_dependencies.begin(),
+                        sub_dependencies.end());
+  }
+  if (node.repeated_character_set) {
+    std::vector<std::string> deps =
+        node.repeated_character_set->GetDependencies();
+    dependencies.insert(dependencies.end(), deps.begin(), deps.end());
+  }
+
+  return dependencies;
+}
+
 }  // namespace
 
 std::string SimplePattern::Generate(const Expression::LookupFn& lookup,
@@ -546,6 +569,12 @@ std::string SimplePattern::GenerateWithRestrictions(
     std::optional<std::string_view> restricted_alphabet,
     const Expression::LookupFn& lookup, const RandFn& rand) const {
   return GeneratePatternNode(pattern_node_, restricted_alphabet, lookup, rand);
+}
+std::vector<std::string> SimplePattern::GetDependencies() const {
+  std::vector<std::string> deps = ExtractDependencies(pattern_node_);
+  std::ranges::sort(deps);
+  deps.erase(std::unique(deps.begin(), deps.end()), deps.end());
+  return deps;
 }
 
 }  // namespace moriarty_internal

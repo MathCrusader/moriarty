@@ -20,6 +20,7 @@
 #include <string>
 #include <string_view>
 
+#include "src/contexts/librarian_context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/variables/constraints/base_constraints.h"
 
@@ -110,7 +111,8 @@ class SimplePattern : public MConstraint {
   [[nodiscard]] moriarty_internal::SimplePattern GetCompiledPattern() const;
 
   // Determines if the string has the correct characters.
-  [[nodiscard]] bool IsSatisfiedWith(std::string_view value) const;
+  [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
+                                     std::string_view value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;

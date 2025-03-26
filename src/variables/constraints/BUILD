@@ -1,3 +1,4 @@
+# Copyright 2025 Darcy Best
 # Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -91,7 +92,9 @@ cc_library(
     hdrs = ["string_constraints.h"],
     deps = [
         ":base_constraints",
+        "//src/contexts:librarian_context",
         "//src/internal:simple_pattern",
+        "//src/variables:minteger",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -165,6 +168,8 @@ cc_test(
     srcs = ["string_constraints_test.cc"],
     deps = [
         ":string_constraints",
+        "//src/contexts:librarian_context",
+        "//src/testing:gtest_helpers",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@googletest//:gtest_main",
     ],
