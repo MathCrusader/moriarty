@@ -53,6 +53,8 @@ cc_library(
         "//src/contexts:librarian_context",
         "//src/util:debug_string",
         "//src/variables:minteger",
+        "@abseil-cpp//absl/container:flat_hash_map",
+        "@abseil-cpp//absl/container:flat_hash_set",
     ],
 )
 

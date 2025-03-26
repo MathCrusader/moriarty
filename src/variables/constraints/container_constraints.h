@@ -23,10 +23,10 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
+#include "absl/container/flat_hash_map.h"
+#include "absl/container/flat_hash_set.h"
 #include "src/contexts/librarian_context.h"
 #include "src/util/debug_string.h"
 #include "src/variables/constraints/base_constraints.h"
@@ -294,14 +294,14 @@ std::vector<std::string> Element<I, MElementType>::GetDependencies() const {
 template <typename T>
 bool DistinctElements::IsSatisfiedWith(librarian::AnalysisContext ctx,
                                        const std::vector<T>& value) const {
-  std::unordered_set<T> seen(value.begin(), value.end());
+  absl::flat_hash_set<T> seen(value.begin(), value.end());
   return seen.size() == value.size();
 }
 
 template <typename T>
 std::string DistinctElements::UnsatisfiedReason(
     librarian::AnalysisContext ctx, const std::vector<T>& value) const {
-  std::unordered_map<T, int> seen;
+  absl::flat_hash_map<T, int> seen;
   for (int idx = -1; const auto& elem : value) {
     idx++;
     auto [it, inserted] = seen.insert({elem, idx});
