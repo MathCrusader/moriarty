@@ -164,14 +164,15 @@ TEST(VariableIStreamContextTest,
      ReadVariableToShouldBeAbleToInspectOtherValues) {
   std::istringstream ss("11 22 33");
 
+  // FIXME: ReadVariableTo should be able to inspect global values.
   Context context = Context()
                         .WithVariable("N", MInteger())
-                        .WithVariable("A", MArray<MInteger>(Length("N")))
-                        .WithValue<MInteger>("N", 3);
+                        .WithVariable("A", MArray<MInteger>(Length("N")));
 
   VariableIStreamContext ctx(ss, WhitespaceStrictness::kPrecise,
                              context.Variables(), context.Values());
   ConcreteTestCase test_case;
+  test_case.SetValue<MInteger>("N", 3);
   ctx.ReadVariableTo("A", test_case);
   ValueSet new_values = UnsafeExtractConcreteTestCaseInternals(test_case);
   EXPECT_THAT(new_values.Get<MArray<MInteger>>("A"), ElementsAre(11, 22, 33));

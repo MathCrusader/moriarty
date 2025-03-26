@@ -5,6 +5,7 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/policies.h"
+#include "src/test_case.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -21,7 +22,7 @@ VariableIStreamContext::VariableIStreamContext(
 
 void VariableIStreamContext::ReadVariableTo(std::string_view variable_name,
                                             ConcreteTestCase& test_case) {
-  ValueSet values = values_;
+  ValueSet values = UnsafeExtractConcreteTestCaseInternals(test_case);
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
   variable->ReadValue(variable_name, is_, whitespace_strictness_, variables_,

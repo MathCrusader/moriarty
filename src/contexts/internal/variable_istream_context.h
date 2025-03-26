@@ -42,6 +42,9 @@ class VariableIStreamContext {
   // ReadVariable()
   //
   // Reads a known variable from the input stream and returns what was read.
+  //
+  // FIXME: This is silly. No local context is known. If this variable depends
+  // on another, you must use `ReadVariableTo()`.
   template <MoriartyVariable T>
   [[nodiscard]] T::value_type ReadVariable(std::string_view variable_name);
 
@@ -56,6 +59,8 @@ class VariableIStreamContext {
   //
   // Reads a known variable from the input stream and stores its value into
   // `test_case`.
+  //
+  // FIXME: The only set values come from `test_case`, not the global values.
   void ReadVariableTo(std::string_view variable_name,
                       ConcreteTestCase& test_case);
 

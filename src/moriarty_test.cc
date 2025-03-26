@@ -28,6 +28,8 @@
 #include "src/test_case.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/testing/mtest_type.h"
+#include "src/variables/constraints/container_constraints.h"
+#include "src/variables/marray.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"
 
@@ -362,6 +364,36 @@ TEST(MoriartyTest, ImportAndExportWithIOStreamsShouldWork) {
       },
       {.os = ss_out});
   EXPECT_EQ(ss_out.str(), "1\n2\n3\n4\n5\n6\n");
+}
+
+TEST(MoriartyTest, ImportSingleArrayShouldWork) {
+  std::string expected = "6\n1 2 3 4 5 6\n";
+  std::stringstream ss_in(expected);
+  Moriarty M;
+  M.AddVariable("N", MInteger());
+  M.AddVariable(
+      "A", MArray<MInteger>(Elements<MInteger>(Between(1, 10)), Length("N")));
+  M.ImportTestCases(
+      [](ImportContext ctx) -> std::vector<ConcreteTestCase> {
+        ConcreteTestCase C = {};
+        ctx.ReadVariableTo("N", C);
+        ctx.ReadWhitespace(Whitespace::kNewline);
+        ctx.ReadVariableTo("A", C);
+        ctx.ReadWhitespace(Whitespace::kNewline);
+        return {C};
+      },
+      ImportOptions{.is = ss_in});
+
+  std::stringstream ss_out;
+  M.ExportTestCases(
+      [](ExportContext ctx, std::span<const ConcreteTestCase> cases) {
+        ctx.PrintVariableFrom("N", cases[0]);
+        ctx.PrintWhitespace(Whitespace::kNewline);
+        ctx.PrintVariableFrom("A", cases[0]);
+        ctx.PrintWhitespace(Whitespace::kNewline);
+      },
+      {.os = ss_out});
+  EXPECT_EQ(ss_out.str(), expected);
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesWorksWhenAllVariablesAreValid) {

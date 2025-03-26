@@ -104,6 +104,7 @@ cc_test(
         ":test_case",
         "//src/testing:gtest_helpers",
         "//src/testing:mtest_type",
+        "//src/variables:marray",
         "//src/variables:minteger",
         "//src/variables:mstring",
         "@googletest//:gtest_main",
