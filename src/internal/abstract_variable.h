@@ -23,21 +23,7 @@
 #include <string>
 #include <vector>
 
-namespace moriarty::moriarty_internal {
-class ValueSet;           // Forward declaration
-class VariableSet;        // Forward declaration
-class RandomEngine;       // Forward declaration
-class GenerationHandler;  // Forward declaration
-}  // namespace moriarty::moriarty_internal
-
 namespace moriarty {
-enum class WhitespaceStrictness;  // Forward declaration
-}
-
-namespace moriarty::librarian {
-template <typename V, typename G>
-class MVariable;  // Forward declaration
-}
 
 // Determines if T is a Moriarty Variable. Examples: MInteger, MString, etc.
 template <typename T>
@@ -45,6 +31,37 @@ concept MoriartyVariable = requires {
   requires T::is_moriarty_variable;
   typename T::value_type;
 };
+
+namespace moriarty_internal {
+
+// A PartialReader is an interface for reading a value from a stream over
+// several calls. For example, each call to `ReadNext()` may read the next
+// element in an array. `Finalize` is called when all items have been read.
+class PartialReader {
+ public:
+  virtual ~PartialReader() = default;
+  virtual void ReadNext() = 0;
+  virtual void Finalize() = 0;
+};
+
+}  // namespace moriarty_internal
+}  // namespace moriarty
+
+namespace moriarty::moriarty_internal {
+class ValueSet;           // Forward declaration
+class VariableSet;        // Forward declaration
+class RandomEngine;       // Forward declaration
+class GenerationHandler;  // Forward declaration
+}  // namespace moriarty::moriarty_internal
+
+namespace moriarty::librarian {
+template <typename V, typename G>
+class MVariable;  // Forward declaration
+}
+
+namespace moriarty {
+enum class WhitespaceStrictness;  // Forward declaration
+}  // namespace moriarty
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -128,6 +145,25 @@ class AbstractVariable {
                          WhitespaceStrictness whitespace_strictness,
                          std::reference_wrapper<const VariableSet> variables,
                          std::reference_wrapper<ValueSet> values) const = 0;
+
+  // GetPartialReader() [pure virtual]
+  //
+  // Returns a PartialReader that can be used to read a value from `ctx` over
+  // multiple calls. The returned PartialReader will be called `N` times, then
+  // finalized.
+  //
+  // In principle, calling the returned object `N` times should be similar to
+  // calling `ReadValue()` once. However, this is not required, and there may be
+  // slight differences (e.g., whitespace separators may be read differently).
+  //
+  // It is expected that all references passed in will be valid until
+  // `Finalize()` is called.
+  [[nodiscard]] virtual std::unique_ptr<PartialReader> GetPartialReader(
+      std::string_view variable_name, int N,
+      std::reference_wrapper<std::istream> is,
+      WhitespaceStrictness whitespace_strictness,
+      std::reference_wrapper<const VariableSet> variables,
+      std::reference_wrapper<ValueSet> values) const = 0;
 
   // PrintValue() [pure virtual]
   //

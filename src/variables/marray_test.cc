@@ -16,6 +16,7 @@
 #include "src/variables/marray.h"
 
 #include <cstdint>
+#include <sstream>
 #include <stdexcept>
 #include <unordered_set>
 #include <utility>
@@ -23,7 +24,10 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/contexts/librarian_context.h"
+#include "src/internal/abstract_variable.h"
 #include "src/librarian/mvariable.h"
+#include "src/librarian/policies.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/container_constraints.h"
@@ -82,7 +86,7 @@ MATCHER(HasDuplicateIntegers,
   }
   return false;
 }
-TEST(MArrayTest, TypicalReadCaseWorks) {
+TEST(MArrayTest, TypicalPrintCaseWorks) {
   EXPECT_EQ(Print(MArray<MInteger>(Length(6)), {1, 2, 3, 4, 5, 6}),
             "1 2 3 4 5 6");
   EXPECT_EQ(Print(MArray<MString>(Length(5)),
@@ -400,6 +404,41 @@ TEST(MArrayTest,
   EXPECT_THROW(
       [] { (void)Read(MArray<MInteger>(Length(Between(3, 4))), "1 2 3"); }(),
       std::runtime_error);
+}
+
+TEST(MArrayTest, DirectlyUsingPartialReaderShouldWork) {
+  MArray<MInteger> arr(Elements<MInteger>(Between(1, 10)), Length(6));
+  MArray<MInteger>::ArrayPartialReader reader = arr.CreatePartialReader(6);
+
+  Context context;
+  std::istringstream input("1\n2\n3\n4\n5\n6\n");
+  librarian::ReaderContext ctx("A", input, WhitespaceStrictness::kPrecise,
+                               Context().Variables(), Context().Values());
+
+  for (int i = 0; i < 6; i++) {
+    reader.ReadNext(ctx, i);
+    ASSERT_EQ(input.get(), '\n');  // Consume the separator
+  }
+  EXPECT_THAT(reader.Finalize(), ElementsAre(1, 2, 3, 4, 5, 6));
+}
+
+TEST(MArrayTest, IndirectlyUsingPartialReaderShouldWork) {
+  Context context;
+  std::istringstream input("1\n2\n3\n4\n5\n6\n");
+
+  MArray<MInteger> arr(Elements<MInteger>(Between(1, 10)), Length(6));
+  std::unique_ptr<moriarty_internal::PartialReader> reader =
+      static_cast<moriarty_internal::AbstractVariable&>(arr).GetPartialReader(
+          "A", 6, input, WhitespaceStrictness::kPrecise, context.Variables(),
+          context.Values());
+
+  for (int i = 0; i < 6; i++) {
+    reader->ReadNext();
+    ASSERT_EQ(input.get(), '\n');  // Consume the separator
+  }
+  reader->Finalize();
+  EXPECT_THAT(context.Values().Get<MArray<MInteger>>("A"),
+              ElementsAre(1, 2, 3, 4, 5, 6));
 }
 
 TEST(MArrayTest, ListEdgeCasesContainsLengthCases) {

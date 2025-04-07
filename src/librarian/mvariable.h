@@ -22,6 +22,7 @@
 #include <concepts>
 #include <exception>
 #include <format>
+#include <functional>
 #include <iterator>
 #include <memory>
 #include <optional>
@@ -271,6 +272,13 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<moriarty_internal::ValueSet> values)
       const override;
+  std::unique_ptr<moriarty_internal::PartialReader> GetPartialReader(
+      std::string_view variable_name, int N,
+      std::reference_wrapper<std::istream> is,
+      WhitespaceStrictness whitespace_strictness,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<moriarty_internal::ValueSet> values)
+      const override;
   void PrintValue(
       std::string_view variable_name, std::reference_wrapper<std::ostream> os,
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
@@ -305,6 +313,29 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
    private:
     CustomConstraint<ValueType> constraint_;
+  };
+
+  // Wrapper class around an MVariable's PartialReader. Expected API is:
+  //   void ReadNext(ReaderContext, int idx);  // Read the next value
+  //   ValueType Finalize();                   // Return the read value
+  template <typename ReaderType>
+  class PartialReaderWrapper : public moriarty_internal::PartialReader {
+   public:
+    PartialReaderWrapper(
+        ReaderType reader, ReaderContext ctx,
+        std::reference_wrapper<moriarty_internal::ValueSet> values)
+        : reader_(std::move(reader)), ctx_(std::move(ctx)), values_(values) {}
+    void ReadNext() override { reader_.ReadNext(ctx_, idx_++); }
+    void Finalize() override {
+      values_.get().Set<VariableType>(ctx_.GetVariableName(),
+                                      reader_.Finalize());
+    }
+
+   private:
+    ReaderType reader_;
+    int idx_ = 0;
+    ReaderContext ctx_;
+    std::reference_wrapper<moriarty_internal::ValueSet> values_;
   };
 };
 
@@ -595,8 +626,27 @@ void MVariable<V, G>::ReadValue(
     std::reference_wrapper<moriarty_internal::ValueSet> values) const {
   ReaderContext ctx(variable_name, is, whitespace_strictness, variables,
                     values);
-  moriarty_internal::MutableValuesContext mut_ctx(values);
-  mut_ctx.SetValue<V>(ctx.GetVariableName(), Read(ctx));
+  values.get().Set<V>(ctx.GetVariableName(), Read(ctx));
+}
+
+template <typename V, typename G>
+std::unique_ptr<moriarty_internal::PartialReader>
+MVariable<V, G>::GetPartialReader(
+    std::string_view variable_name, int N,
+    std::reference_wrapper<std::istream> is,
+    WhitespaceStrictness whitespace_strictness,
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<moriarty_internal::ValueSet> values) const {
+  if constexpr (requires { typename V::partial_reader_type; }) {
+    ReaderContext ctx(variable_name, is, whitespace_strictness, variables,
+                      values);
+    return std::make_unique<
+        PartialReaderWrapper<typename V::partial_reader_type>>(
+        UnderlyingVariableType().CreatePartialReader(N), ctx, values);
+  } else {
+    throw std::runtime_error(
+        std::format("PartialReader not implemented for {}", Typename()));
+  }
 }
 
 template <typename V, typename G>

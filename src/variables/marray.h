@@ -22,6 +22,7 @@
 #include <concepts>
 #include <cstdint>
 #include <format>
+#include <functional>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -31,6 +32,7 @@
 
 #include "absl/container/flat_hash_set.h"
 #include "src/contexts/librarian_context.h"
+#include "src/internal/abstract_variable.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
@@ -59,6 +61,8 @@ class MArray : public librarian::MVariable<
  public:
   using element_value_type = typename MElementType::value_type;
   using vector_value_type = typename std::vector<element_value_type>;
+  class ArrayPartialReader;  // Forward declaration
+  using partial_reader_type = ArrayPartialReader;
 
   // Create an MArray from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
@@ -108,6 +112,38 @@ class MArray : public librarian::MVariable<
   // Returns a string representing the name of this type (for example,
   // "MArray<MInteger>"). This is mostly used for debugging/error messages.
   [[nodiscard]] std::string Typename() const override;
+
+  // CreatePartialReader()
+  //
+  // The partial reader reads one element at a time from the input stream,
+  // without reading the separators. Call ReadNext() exactly N times, then call
+  // Finalize() to get the final value, which will leave this in a
+  // moved-from-state.
+  ArrayPartialReader CreatePartialReader(int N) const {
+    return ArrayPartialReader(N, element_constraints_, length_);
+  }
+
+  class ArrayPartialReader {
+   public:
+    explicit ArrayPartialReader(
+        int N, std::reference_wrapper<const MElementType> element_constraints,
+        std::reference_wrapper<const std::optional<MInteger>> length)
+        : element_constraints_(element_constraints), length_(length) {
+      // TODO: Add safety checks if N is massive?
+      // TODO: Ensure `length_` is satisfied?
+      array_.reserve(N);
+    }
+
+    void ReadNext(librarian::ReaderContext ctx, int idx) {
+      array_.push_back(element_constraints_.get().Read(ctx));
+    }
+    vector_value_type Finalize() { return std::move(array_); }
+
+   private:
+    std::vector<element_value_type> array_;
+    std::reference_wrapper<const MElementType> element_constraints_;
+    std::reference_wrapper<const std::optional<MInteger>> length_;
+  };
 
  private:
   MElementType element_constraints_;
