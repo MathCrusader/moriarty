@@ -52,6 +52,10 @@ moriarty_internal::ValueSet UnsafeExtractConcreteTestCaseInternals(
   return test_case.values_;
 }
 
+moriarty_internal::ValueSet& ConcreteTestCase::UnsafeGetValues() & {
+  return values_;
+}
+
 void UnsafeSetConcreteTestCaseInternals(ConcreteTestCase& test_case,
                                         moriarty_internal::ValueSet values) {
   test_case.values_ = std::move(values);

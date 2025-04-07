@@ -55,6 +55,11 @@ class VariableOStreamContext {
   void PrintVariableFrom(std::string_view variable_name,
                          const ConcreteTestCase& test_case);
 
+ protected:
+  void UpdateVariableOStream(std::reference_wrapper<std::ostream> os) {
+    os_ = os;
+  }
+
  private:
   std::reference_wrapper<const VariableSet> variables_;
   std::reference_wrapper<const ValueSet> values_;

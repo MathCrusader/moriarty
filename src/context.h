@@ -130,6 +130,7 @@ class ExportContext : public moriarty_internal::ViewOnlyContext,
       std::reference_wrapper<std::ostream> os,
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<const moriarty_internal::ValueSet> values);
+  ExportContext(ExportContext ctx, std::reference_wrapper<std::ostream> os);
 
   // *****************************************************
   // ** See parent classes for all available functions. **

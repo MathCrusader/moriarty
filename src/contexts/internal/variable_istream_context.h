@@ -19,6 +19,7 @@
 
 #include <functional>
 #include <istream>
+#include <memory>
 #include <string_view>
 
 #include "src/internal/value_set.h"
@@ -63,6 +64,14 @@ class VariableIStreamContext {
   // FIXME: The only set values come from `test_case`, not the global values.
   void ReadVariableTo(std::string_view variable_name,
                       ConcreteTestCase& test_case);
+
+  // GetPartialReader()
+  //
+  // Returns `variable_name`'s partial reader. This is used to read
+  // a variable from the input stream over multiple calls.
+  std::unique_ptr<moriarty_internal::PartialReader> GetPartialReader(
+      std::string_view variable_name, int calls,
+      ConcreteTestCase& test_case) const;
 
  private:
   std::reference_wrapper<const VariableSet> variables_;

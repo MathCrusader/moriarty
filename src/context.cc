@@ -23,7 +23,6 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/io_config.h"
 
 namespace moriarty {
 
@@ -50,5 +49,13 @@ ExportContext::ExportContext(
     : ViewOnlyContext(variables, values),
       BasicOStreamContext(os),
       VariableOStreamContext(os, variables, values) {}
+
+ExportContext::ExportContext(ExportContext ctx,
+                             std::reference_wrapper<std::ostream> os)
+    : ViewOnlyContext(ctx),
+      BasicOStreamContext(os),
+      VariableOStreamContext(ctx) {
+  VariableOStreamContext::UpdateVariableOStream(os);
+}
 
 }  // namespace moriarty

@@ -15,9 +15,15 @@
 
 #include "src/simple_io.h"
 
+#include <algorithm>
+#include <cstdio>
+#include <format>
+#include <memory>
 #include <span>
+#include <sstream>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -40,19 +46,19 @@ void PrintTestCases(ExportContext ctx, SimpleIO simple_io,
 
 SimpleIO& SimpleIO::AddLine(std::span<const std::string> tokens) {
   lines_per_test_case_.push_back(
-      std::vector<SimpleIOToken>(tokens.begin(), tokens.end()));
+      {std::vector<SimpleIOToken>(tokens.begin(), tokens.end())});
   return *this;
 }
 
 SimpleIO& SimpleIO::AddHeaderLine(std::span<const std::string> tokens) {
   lines_in_header_.push_back(
-      std::vector<SimpleIOToken>(tokens.begin(), tokens.end()));
+      {std::vector<SimpleIOToken>(tokens.begin(), tokens.end())});
   return *this;
 }
 
 SimpleIO& SimpleIO::AddFooterLine(std::span<const std::string> tokens) {
   lines_in_footer_.push_back(
-      std::vector<SimpleIOToken>(tokens.begin(), tokens.end()));
+      {std::vector<SimpleIOToken>(tokens.begin(), tokens.end())});
   return *this;
 }
 
@@ -103,13 +109,58 @@ void PrintToken(ExportContext ctx, const SimpleIOToken& token,
     ctx.PrintToken(std::string(std::get<StringLiteral>(token)));
 }
 
+// TODO: Clean up this function. It is pretty messy.
 void PrintLine(ExportContext ctx, const SimpleIO::Line& line,
                const ConcreteTestCase& test_case) {
-  for (int line_idx = 0; const SimpleIOToken& token : line) {
-    if (line_idx++) ctx.PrintWhitespace(Whitespace::kSpace);
-    PrintToken(ctx, token, test_case);
+  if (!line.num_lines) {
+    for (int line_idx = 0; const SimpleIOToken& token : line.tokens) {
+      if (line_idx++) ctx.PrintWhitespace(Whitespace::kSpace);
+      PrintToken(ctx, token, test_case);
+    }
+    ctx.PrintWhitespace(Whitespace::kNewline);
+    return;
   }
-  ctx.PrintWhitespace(Whitespace::kNewline);
+
+  int64_t line_count = line.num_lines->Evaluate(
+      [&](std::string_view var) { return test_case.GetValue<MInteger>(var); });
+  if (line_count < 0) {
+    throw std::runtime_error(
+        std::format("Number of lines in SimpleIO must be >= 0. Got: {} ({})",
+                    line_count, line.num_lines->ToString()));
+  }
+
+  std::vector<std::string> output(line_count);
+  for (int var_idx = -1; const SimpleIOToken& token : line.tokens) {
+    var_idx++;
+    std::stringstream ss;
+    PrintToken(ExportContext(ctx, ss), token, test_case);
+    std::string lines = ss.str();
+    if (lines.empty() || lines.back() != '\n') lines += '\n';
+    int newlines = std::count(lines.begin(), lines.end(), '\n');
+    if (newlines != line_count) {
+      throw std::runtime_error(std::format(
+          "Expected {} lines in printout of variable {}, but got {}",
+          line_count, std::get<std::string>(token), newlines));
+    }
+
+    std::string line;
+    int line_num = 0;
+    try {
+      for (; line_num < line_count && std::getline(ss, line); line_num++) {
+        if (var_idx != 0) output[line_num] += ' ';
+        output[line_num] += line;
+      }
+    } catch (const std::exception& e) {
+      throw std::runtime_error(std::format(
+          "Error printing line {} of variable {} (missing '\\n'?): {}",
+          line_num, std::get<std::string>(token), e.what()));
+    }
+  }
+
+  for (std::string_view line : output) {
+    ctx.PrintToken(line);
+    ctx.PrintWhitespace(Whitespace::kNewline);
+  }
 }
 
 void PrintLines(ExportContext ctx, std::span<const SimpleIO::Line> lines,
@@ -120,7 +171,7 @@ void PrintLines(ExportContext ctx, std::span<const SimpleIO::Line> lines,
 void PrintLiteralOnlyLines(ExportContext ctx,
                            std::span<const SimpleIO::Line> lines) {
   for (const SimpleIO::Line& line : lines) {
-    for (int line_idx = 0; const SimpleIOToken& token : line) {
+    for (int line_idx = 0; const SimpleIOToken& token : line.tokens) {
       if (line_idx++) ctx.PrintWhitespace(Whitespace::kSpace);
 
       if (std::holds_alternative<std::string>(token))
@@ -175,15 +226,46 @@ void ReadToken(ImportContext ctx, const SimpleIOToken& token,
 
 void ReadLine(ImportContext ctx, const SimpleIO::Line& line,
               ConcreteTestCase& test_case) {
-  for (int line_idx = 0; const SimpleIOToken& token : line) {
-    if (line_idx++) ctx.ReadWhitespace(Whitespace::kSpace);
-    ReadToken(ctx, token, test_case);
+  if (!line.num_lines) {
+    for (int line_idx = 0; const SimpleIOToken& token : line.tokens) {
+      if (line_idx++) ctx.ReadWhitespace(Whitespace::kSpace);
+      ReadToken(ctx, token, test_case);
+    }
+    ctx.ReadWhitespace(Whitespace::kNewline);
+    return;
   }
-  ctx.ReadWhitespace(Whitespace::kNewline);
+
+  int64_t line_count = line.num_lines->Evaluate(
+      [&](std::string_view var) { return test_case.GetValue<MInteger>(var); });
+  if (line_count < 0) {
+    throw std::runtime_error(
+        std::format("Number of lines in SimpleIO must be >= 0. Got: {} ({})",
+                    line_count, line.num_lines->ToString()));
+  }
+
+  std::vector<std::unique_ptr<moriarty_internal::PartialReader>> readers;
+  for (const auto& var : line.tokens) {
+    if (std::holds_alternative<StringLiteral>(var)) {
+      throw std::runtime_error("Cannot have literal in multiline section");
+    }
+    readers.push_back(ctx.GetPartialReader(std::get<std::string>(var),
+                                           line_count, test_case));
+  }
+
+  for (int i = 0; i < line_count; i++) {
+    for (int var_idx = 0; var_idx < readers.size(); var_idx++) {
+      if (var_idx) ctx.ReadWhitespace(Whitespace::kSpace);
+      readers[var_idx]->ReadNext();
+    }
+    ctx.ReadWhitespace(Whitespace::kNewline);
+  }
+  for (int var_idx = 0; var_idx < readers.size(); var_idx++) {
+    readers[var_idx]->Finalize();
+  }
 }
 
 void ReadLiteralOnlyLine(ImportContext ctx, const SimpleIO::Line& line) {
-  for (int line_idx = 0; const SimpleIOToken& token : line) {
+  for (int line_idx = 0; const SimpleIOToken& token : line.tokens) {
     if (line_idx++) ctx.ReadWhitespace(Whitespace::kSpace);
 
     if (std::holds_alternative<std::string>(token))

@@ -1,7 +1,9 @@
 #include "src/contexts/internal/variable_istream_context.h"
 
 #include <istream>
+#include <memory>
 
+#include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/policies.h"
@@ -29,6 +31,17 @@ void VariableIStreamContext::ReadVariableTo(std::string_view variable_name,
                       values);
   test_case.UnsafeSetAnonymousValue(variable_name,
                                     values.UnsafeGet(variable_name));
+}
+
+std::unique_ptr<moriarty_internal::PartialReader>
+VariableIStreamContext::GetPartialReader(std::string_view variable_name,
+                                         int calls,
+                                         ConcreteTestCase& test_case) const {
+  const AbstractVariable* variable =
+      variables_.get().GetAnonymousVariable(variable_name);
+  return variable->GetPartialReader(variable_name, calls, is_,
+                                    whitespace_strictness_, variables_,
+                                    test_case.UnsafeGetValues());
 }
 
 }  // namespace moriarty_internal

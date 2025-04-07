@@ -137,6 +137,11 @@ class ConcreteTestCase {
   ConcreteTestCase& UnsafeSetAnonymousValue(std::string_view variable_name,
                                             std::any value);
 
+  // This is a dangerous function that should only be used if you know what
+  // you're doing. This is sometimes needed to pass a reference to a particular
+  // context. Do not depend on this function as it may be removed at any point.
+  moriarty_internal::ValueSet& UnsafeGetValues() &;
+
  private:
   moriarty_internal::ValueSet values_;
 

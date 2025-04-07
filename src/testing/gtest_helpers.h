@@ -142,15 +142,15 @@ class Context {
     return *this;
   }
 
-  const moriarty::moriarty_internal::VariableSet& Variables() const {
+  const moriarty::moriarty_internal::VariableSet& Variables() const& {
     return variables_;
   }
-  moriarty::moriarty_internal::VariableSet& Variables() { return variables_; }
+  moriarty::moriarty_internal::VariableSet& Variables() & { return variables_; }
 
-  const moriarty::moriarty_internal::ValueSet& Values() const {
+  const moriarty::moriarty_internal::ValueSet& Values() const& {
     return values_;
   }
-  moriarty::moriarty_internal::ValueSet& Values() { return values_; }
+  moriarty::moriarty_internal::ValueSet& Values() & { return values_; }
 
  private:
   moriarty::moriarty_internal::VariableSet variables_;

@@ -15,97 +15,29 @@
 
 #include "src/simple_io.h"
 
+#include <cstdint>
 #include <sstream>
 #include <stdexcept>
-#include <string>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/context.h"
-#include "src/librarian/io_config.h"
 #include "src/test_case.h"
 #include "src/testing/gtest_helpers.h"
+#include "src/variables/constraints/io_constraints.h"
+#include "src/variables/marray.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
 namespace {
 
+using ::moriarty::MArray;
+using ::moriarty::MInteger;
 using ::moriarty_testing::Context;
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::StrEq;
-using ::testing::VariantWith;
-
-// -----------------------------------------------------------------------------
-//  SimpleIO
-
-TEST(SimpleIOTest, AddLineIsRetrievableViaLinesPerTestCase) {
-  SimpleIO s;
-  s.AddLine("hello", "world!").AddLine("how", StringLiteral("are"), "you?");
-
-  EXPECT_THAT(
-      s.LinesPerTestCase(),
-      ElementsAre(ElementsAre(VariantWith<std::string>("hello"),
-                              VariantWith<std::string>("world!")),
-                  ElementsAre(VariantWith<std::string>("how"),
-                              VariantWith<StringLiteral>(StringLiteral("are")),
-                              VariantWith<std::string>("you?"))));
-}
-
-TEST(SimpleIOTest, AddLineWithSpanIsRetrievableViaLinesPerTestCase) {
-  SimpleIO s;
-  s.AddLine(std::vector<std::string>{"hello", "world!"})
-      .AddLine("how", StringLiteral("are"), "you?");
-
-  EXPECT_THAT(
-      s.LinesPerTestCase(),
-      ElementsAre(ElementsAre(VariantWith<std::string>("hello"),
-                              VariantWith<std::string>("world!")),
-                  ElementsAre(VariantWith<std::string>("how"),
-                              VariantWith<StringLiteral>(StringLiteral("are")),
-                              VariantWith<std::string>("you?"))));
-}
-
-TEST(SimpleIOTest, AddHeaderLineIsRetrievableViaLinesInHeader) {
-  SimpleIO s;
-  s.AddHeaderLine(std::vector<std::string>{"hello", "header!"})
-      .AddHeaderLine("how", StringLiteral("are"), "you?");
-
-  EXPECT_THAT(
-      s.LinesInHeader(),
-      ElementsAre(ElementsAre(VariantWith<std::string>("hello"),
-                              VariantWith<std::string>("header!")),
-                  ElementsAre(VariantWith<std::string>("how"),
-                              VariantWith<StringLiteral>(StringLiteral("are")),
-                              VariantWith<std::string>("you?"))));
-}
-
-TEST(SimpleIOTest, AddHeaderLineIsRetrievableViaLinesInFooter) {
-  SimpleIO s;
-  s.AddFooterLine(std::vector<std::string>{"hello", "footer!"})
-      .AddFooterLine("how", StringLiteral("are"), "you?");
-
-  EXPECT_THAT(
-      s.LinesInFooter(),
-      ElementsAre(ElementsAre(VariantWith<std::string>("hello"),
-                              VariantWith<std::string>("footer!")),
-                  ElementsAre(VariantWith<std::string>("how"),
-                              VariantWith<StringLiteral>(StringLiteral("are")),
-                              VariantWith<std::string>("you?"))));
-}
-
-TEST(SimpleIOTest, UsingAllAddLineVariationsDoNotInteractPoorly) {
-  SimpleIO s;
-  s.AddFooterLine("footer").AddHeaderLine("header").AddLine("line");
-
-  EXPECT_THAT(s.LinesInFooter(),
-              ElementsAre(ElementsAre(VariantWith<std::string>("footer"))));
-  EXPECT_THAT(s.LinesInHeader(),
-              ElementsAre(ElementsAre(VariantWith<std::string>("header"))));
-  EXPECT_THAT(s.LinesPerTestCase(),
-              ElementsAre(ElementsAre(VariantWith<std::string>("line"))));
-}
 
 // -----------------------------------------------------------------------------
 //  SimpleIOExporter
@@ -192,12 +124,40 @@ TEST(SimpleIOExporterTest, ExportWithNumberOfTestCasesShouldPrintProperly) {
 )"));
 }
 
+TEST(SimpleIOExporterTest, MultilineSectionShouldWork) {
+  Context context =
+      Context()
+          .WithVariable("N", MInteger())
+          .WithVariable("A", MArray<MInteger>(IOSeparator::Newline()))
+          .WithVariable("B", MArray<MInteger>(IOSeparator::Newline()));
+
+  std::vector<ConcreteTestCase> test_cases = {
+      ConcreteTestCase()
+          .SetValue<MInteger>("N", 3)
+          .SetValue<MArray<MInteger>>("A", std::vector<int64_t>{1, 2, 3})
+          .SetValue<MArray<MInteger>>("B", std::vector<int64_t>{11, 22, 33}),
+  };
+
+  std::stringstream ss;
+  ExportContext ctx(ss, context.Variables(), context.Values());
+  ExportFn exporter =
+      SimpleIO().AddMultilineSection("(N - 1) + 1", "A", "B").Exporter();
+
+  exporter(ctx, test_cases);
+  EXPECT_THAT(ss.str(), StrEq("1 11\n2 22\n3 33\n"));
+}
+
 // -----------------------------------------------------------------------------
 //  SimpleIOImporter
 
-MATCHER_P2(VariableIs, variable_name, value, "") {
+MATCHER_P2(IntVariableIs, variable_name, value, "") {
   ConcreteTestCase tc = arg;
   return tc.GetValue<MInteger>(variable_name) == value;
+}
+
+MATCHER_P2(ArrayIntVariableIs, variable_name, value, "") {
+  ConcreteTestCase tc = arg;
+  return tc.GetValue<MArray<MInteger>>(variable_name) == value;
 }
 
 TEST(SimpleIOImporterTest, ImportInBasicCaseShouldWork) {
@@ -209,11 +169,12 @@ TEST(SimpleIOImporterTest, ImportInBasicCaseShouldWork) {
 
   ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
 
-  EXPECT_THAT(importer(ctx),
-              ElementsAre(AllOf(VariableIs("R", 1), VariableIs("S", 11)),
-                          AllOf(VariableIs("R", 2), VariableIs("S", 22)),
-                          AllOf(VariableIs("R", 3), VariableIs("S", 33)),
-                          AllOf(VariableIs("R", 4), VariableIs("S", 44))));
+  EXPECT_THAT(
+      importer(ctx),
+      ElementsAre(AllOf(IntVariableIs("R", 1), IntVariableIs("S", 11)),
+                  AllOf(IntVariableIs("R", 2), IntVariableIs("S", 22)),
+                  AllOf(IntVariableIs("R", 3), IntVariableIs("S", 33)),
+                  AllOf(IntVariableIs("R", 4), IntVariableIs("S", 44))));
 }
 
 TEST(SimpleIOImporterTest, ExportHeaderAndFooterLinesShouldWork) {
@@ -240,11 +201,12 @@ end
 
   ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
 
-  EXPECT_THAT(importer(ctx),
-              ElementsAre(AllOf(VariableIs("R", 1), VariableIs("S", 11)),
-                          AllOf(VariableIs("R", 2), VariableIs("S", 22)),
-                          AllOf(VariableIs("R", 3), VariableIs("S", 33)),
-                          AllOf(VariableIs("R", 4), VariableIs("S", 44))));
+  EXPECT_THAT(
+      importer(ctx),
+      ElementsAre(AllOf(IntVariableIs("R", 1), IntVariableIs("S", 11)),
+                  AllOf(IntVariableIs("R", 2), IntVariableIs("S", 22)),
+                  AllOf(IntVariableIs("R", 3), IntVariableIs("S", 33)),
+                  AllOf(IntVariableIs("R", 4), IntVariableIs("S", 44))));
 }
 
 TEST(SimpleIOImporterTest, ImportWrongTokenFails) {
@@ -281,11 +243,12 @@ TEST(SimpleIOImporterTest, ImportWithNumberOfTestCasesInHeaderShouldWork) {
 
   ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
 
-  EXPECT_THAT(importer(ctx),
-              ElementsAre(AllOf(VariableIs("R", 1), VariableIs("S", 11)),
-                          AllOf(VariableIs("R", 2), VariableIs("S", 22)),
-                          AllOf(VariableIs("R", 3), VariableIs("S", 33)),
-                          AllOf(VariableIs("R", 4), VariableIs("S", 44))));
+  EXPECT_THAT(
+      importer(ctx),
+      ElementsAre(AllOf(IntVariableIs("R", 1), IntVariableIs("S", 11)),
+                  AllOf(IntVariableIs("R", 2), IntVariableIs("S", 22)),
+                  AllOf(IntVariableIs("R", 3), IntVariableIs("S", 33)),
+                  AllOf(IntVariableIs("R", 4), IntVariableIs("S", 44))));
 }
 
 TEST(SimpleIOImporterTest,
@@ -325,6 +288,35 @@ TEST(SimpleIOImporterTest,
 
   ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
   EXPECT_THROW({ importer(ctx); }, std::runtime_error);
+}
+
+TEST(SimpleIOImporterTest, MultilineSectionShouldWork) {
+  Context context =
+      Context()
+          .WithVariable("N", MInteger())
+          .WithVariable("A", MArray<MInteger>(IOSeparator::Newline()))
+          .WithVariable("B", MArray<MInteger>(IOSeparator::Newline()));
+
+  std::vector<ConcreteTestCase> test_cases = {
+      ConcreteTestCase()
+          .SetValue<MInteger>("N", 3)
+          .SetValue<MArray<MInteger>>("A", std::vector<int64_t>{1, 2, 3})
+          .SetValue<MArray<MInteger>>("B", std::vector<int64_t>{11, 22, 33}),
+  };
+
+  std::stringstream ss("3\n1 11\n2 22\n3 33\n");
+
+  ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
+  ImportFn importer = SimpleIO()
+                          .AddLine("N")
+                          .AddMultilineSection("(N - 1) + 1", "A", "B")
+                          .Importer();
+
+  EXPECT_THAT(importer(ctx),
+              ElementsAre(AllOf(
+                  IntVariableIs("N", 3),
+                  ArrayIntVariableIs("A", std::vector<int64_t>{1, 2, 3}),
+                  ArrayIntVariableIs("B", std::vector<int64_t>{11, 22, 33}))));
 }
 
 }  // namespace

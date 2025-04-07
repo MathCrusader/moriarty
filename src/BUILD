@@ -120,6 +120,7 @@ cc_test(
         ":test_case",
         "//src/librarian:io_config",
         "//src/testing:gtest_helpers",
+        "//src/variables:marray",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],

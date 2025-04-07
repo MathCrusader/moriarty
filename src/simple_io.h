@@ -19,6 +19,7 @@
 #define MORIARTY_SRC_SIMPLE_IO_H_
 
 #include <concepts>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -26,6 +27,7 @@
 #include <vector>
 
 #include "src/context.h"
+#include "src/internal/expressions.h"
 
 namespace moriarty {
 
@@ -78,6 +80,23 @@ class SimpleIO {
   template <typename... Tokens>
     requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
   SimpleIO& AddLine(Tokens&&... token);
+
+  // AddLine()
+  //
+  // Each variable will be printed over `number_of_lines_expression` lines. They
+  // will then be zipped together.
+  //
+  // For example:
+  //   AddMultilineSection(3, "N", "X"); // N = [1, 2, 3], X = [11, 22, 33]
+  //
+  // Prints:
+  //   1 11
+  //   2 22
+  //   3 33
+  template <typename... Tokens>
+    requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
+  SimpleIO& AddMultilineSection(std::string_view number_of_lines_expression,
+                                Tokens&&... token);
 
   // AddHeaderLine()
   //
@@ -132,7 +151,10 @@ class SimpleIO {
   [[nodiscard]] ImportFn Importer(int number_of_test_cases = 1) const;
 
   // Access the lines
-  using Line = std::vector<SimpleIOToken>;
+  struct Line {
+    std::vector<SimpleIOToken> tokens;
+    std::optional<Expression> num_lines;  // Set for multiline sections
+  };
   [[nodiscard]] std::vector<Line> LinesInHeader() const;
   [[nodiscard]] std::vector<Line> LinesPerTestCase() const;
   [[nodiscard]] std::vector<Line> LinesInFooter() const;
@@ -156,28 +178,37 @@ template <typename... Tokens>
 std::vector<SimpleIOToken> SimpleIO::GetTokens(Tokens&&... token) {
   std::vector<SimpleIOToken> line;
   line.reserve(sizeof...(Tokens));
-  (line.push_back(std::move(token)), ...);
+  (line.push_back(std::forward<Tokens>(token)), ...);
   return line;
 }
 
 template <typename... Tokens>
   requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
 SimpleIO& SimpleIO::AddLine(Tokens&&... token) {
-  lines_per_test_case_.push_back(GetTokens(std::forward<Tokens>(token)...));
+  lines_per_test_case_.push_back({GetTokens(std::forward<Tokens>(token)...)});
+  return *this;
+}
+
+template <typename... Tokens>
+  requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
+SimpleIO& SimpleIO::AddMultilineSection(
+    std::string_view number_of_lines_expression, Tokens&&... token) {
+  lines_per_test_case_.push_back({GetTokens(std::forward<Tokens>(token)...),
+                                  Expression(number_of_lines_expression)});
   return *this;
 }
 
 template <typename... Tokens>
   requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
 SimpleIO& SimpleIO::AddHeaderLine(Tokens&&... token) {
-  lines_in_header_.push_back(GetTokens(std::forward<Tokens>(token)...));
+  lines_in_header_.push_back({GetTokens(std::forward<Tokens>(token)...)});
   return *this;
 }
 
 template <typename... Tokens>
   requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
 SimpleIO& SimpleIO::AddFooterLine(Tokens&&... token) {
-  lines_in_footer_.push_back(GetTokens(std::forward<Tokens>(token)...));
+  lines_in_footer_.push_back({GetTokens(std::forward<Tokens>(token)...)});
   return *this;
 }
 

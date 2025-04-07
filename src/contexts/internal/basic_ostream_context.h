@@ -44,6 +44,9 @@ class BasicOStreamContext {
   // Prints the whitespace character to the output stream.
   void PrintWhitespace(moriarty::Whitespace whitespace);
 
+ protected:
+  void UpdateBasicOStream(std::reference_wrapper<std::ostream> os) { os_ = os; }
+
  private:
   std::reference_wrapper<std::ostream> os_;
 
