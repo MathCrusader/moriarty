@@ -26,6 +26,24 @@ package(
 
 licenses(["notice"])
 
+filegroup(
+    name = "mvariable_headers",
+    srcs = glob([
+        "*.h",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "all_mvariables",
+    deps = [
+        ":marray",
+        ":minteger",
+        ":mstring",
+        ":mtuple",
+    ],
+)
+
 cc_library(
     name = "marray",
     hdrs = ["marray.h"],

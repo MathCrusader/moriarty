@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
+
 package(
     default_visibility = ["//:internal"],
 )
@@ -26,3 +28,28 @@ package_group(
 licenses(["notice"])
 
 exports_files(["LICENSE"])
+
+# The core items in Moriarty.
+cc_library(
+    name = "core_moriarty",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//src:context",
+        "//src:moriarty",
+        "//src:simple_io",
+        "//src:test_case",
+        "//src/variables:all_mvariables",
+        "//src/variables/constraints:all_mconstraints",
+    ],
+)
+
+# The core headers in Moriarty.
+filegroup(
+    name = "core_headers",
+    srcs = [
+        "//src:moriarty_headers",
+        "//src/variables:mvariable_headers",
+        "//src/variables/constraints:mconstraint_headers",
+    ],
+    visibility = ["//visibility:public"],
+)

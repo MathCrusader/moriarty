@@ -26,21 +26,32 @@ package(
 
 licenses(["notice"])
 
+filegroup(
+    name = "mconstraint_headers",
+    srcs = glob([
+        "*.h",
+    ]),
+    visibility = ["//visibility:public"],
+)
+
+cc_library(
+    name = "all_mconstraints",
+    deps = [
+        ":base_constraints",
+        ":container_constraints",
+        ":custom_constraint",
+        ":io_constraints",
+        ":numeric_constraints",
+        ":size_constraints",
+        ":string_constraints",
+    ],
+)
+
 cc_library(
     name = "base_constraints",
     hdrs = ["base_constraints.h"],
     deps = [
         "//src/util:debug_string",
-    ],
-)
-
-cc_library(
-    name = "numeric_constraints",
-    srcs = ["numeric_constraints.cc"],
-    hdrs = ["numeric_constraints.h"],
-    deps = [
-        ":base_constraints",
-        "//src/internal:range",
     ],
 )
 
@@ -75,6 +86,16 @@ cc_library(
     deps = [
         ":base_constraints",
         "//src/librarian:io_config",
+    ],
+)
+
+cc_library(
+    name = "numeric_constraints",
+    srcs = ["numeric_constraints.cc"],
+    hdrs = ["numeric_constraints.h"],
+    deps = [
+        ":base_constraints",
+        "//src/internal:range",
     ],
 )
 
