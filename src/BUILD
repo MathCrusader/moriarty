@@ -26,14 +26,6 @@ package(
 
 licenses(["notice"])
 
-filegroup(
-    name = "moriarty_headers",
-    srcs = glob([
-        "*.h",
-    ]),
-    visibility = ["//visibility:public"],
-)
-
 cc_library(
     name = "context",
     srcs = ["context.cc"],

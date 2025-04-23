@@ -14,8 +14,6 @@
 
 # A concise package to export Moriarty's core functionality.
 
-load("@rules_cc//cc:cc_library.bzl", "cc_library")
-
 package(
     default_visibility = [
         "//visibility:public",
@@ -25,10 +23,8 @@ package(
 licenses(["notice"])
 
 # The core items in Moriarty.
-cc_library(
+cc_static_library(
     name = "core_moriarty",
-    srcs = ["empty.cc"],
-    linkstatic = True,  # Emits a `.a` file.
     deps = [
         "//src:context",
         "//src:moriarty",
@@ -37,15 +33,4 @@ cc_library(
         "//src/variables:all_mvariables",
         "//src/variables/constraints:all_mconstraints",
     ],
-)
-
-# The core headers in Moriarty.
-filegroup(
-    name = "core_headers",
-    srcs = [
-        "//src:moriarty_headers",
-        "//src/variables:mvariable_headers",
-        "//src/variables/constraints:mconstraint_headers",
-    ],
-    visibility = ["//visibility:public"],
 )

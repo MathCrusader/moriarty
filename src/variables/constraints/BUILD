@@ -26,14 +26,6 @@ package(
 
 licenses(["notice"])
 
-filegroup(
-    name = "mconstraint_headers",
-    srcs = glob([
-        "*.h",
-    ]),
-    visibility = ["//visibility:public"],
-)
-
 cc_library(
     name = "all_mconstraints",
     deps = [
