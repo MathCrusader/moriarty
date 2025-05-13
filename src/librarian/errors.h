@@ -22,6 +22,7 @@
 #include <string>
 #include <string_view>
 
+#include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
 
 namespace moriarty {
@@ -154,6 +155,34 @@ class GenerationError : public std::logic_error {
   std::string variable_name_;
   std::string message_;
   RetryPolicy retryable_;
+};
+
+// InputError()
+//
+// Thrown when the I/O is invalid.
+class IOError : public std::logic_error {
+ public:
+  explicit IOError(const InputCursor& cursor, std::string_view message)
+      : std::logic_error(
+            std::format("{}\nLine #: {} / Column #: {} / Token # (entire "
+                        "file): {} / Token # (this line): {}",
+                        message, cursor.line_num, cursor.col_num,
+                        cursor.token_num_file, cursor.token_num_line)),
+        message_(message),
+        cursor_(cursor) {}
+
+  static IOError ExpectedGot(const InputCursor& cursor,
+                             std::string_view expected, std::string_view got) {
+    return IOError(cursor,
+                   std::format("Expected '{}', but got '{}'", expected, got));
+  }
+
+  const InputCursor& Cursor() const { return cursor_; }
+  const std::string& Message() const { return message_; }
+
+ private:
+  std::string message_;
+  InputCursor cursor_;
 };
 
 }  // namespace moriarty

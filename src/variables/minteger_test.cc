@@ -26,6 +26,7 @@
 #include "src/contexts/librarian_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/errors.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
@@ -87,15 +88,15 @@ TEST(MIntegerTest, ReadWithTokensAfterwardsIsFine) {
 
 TEST(MIntegerTest, InvalidReadShouldFail) {
   // EOF
-  EXPECT_THROW({ (void)Read(MInteger(), ""); }, std::runtime_error);
+  EXPECT_THROW({ (void)Read(MInteger(), ""); }, IOError);
   // EOF with whitespace
-  EXPECT_THROW({ (void)Read(MInteger(), " "); }, std::runtime_error);
+  EXPECT_THROW({ (void)Read(MInteger(), " "); }, IOError);
   // Double negative
-  EXPECT_THROW({ (void)Read(MInteger(), "--123"); }, std::runtime_error);
+  EXPECT_THROW({ (void)Read(MInteger(), "--123"); }, IOError);
   // Invalid character start/middle/end
-  EXPECT_THROW({ (void)Read(MInteger(), "c123"); }, std::runtime_error);
-  EXPECT_THROW({ (void)Read(MInteger(), "12c3"); }, std::runtime_error);
-  EXPECT_THROW({ (void)Read(MInteger(), "123c"); }, std::runtime_error);
+  EXPECT_THROW({ (void)Read(MInteger(), "c123"); }, IOError);
+  EXPECT_THROW({ (void)Read(MInteger(), "12c3"); }, IOError);
+  EXPECT_THROW({ (void)Read(MInteger(), "123c"); }, IOError);
 }
 
 TEST(MIntegerTest, ListEdgeCasesIncludesManyInterestingValues) {

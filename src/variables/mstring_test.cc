@@ -20,6 +20,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/mvariable.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/container_constraints.h"
@@ -70,11 +71,11 @@ TEST(MStringTest, InputWithTokenWithWhitespaceAfterShouldReadToken) {
 }
 
 TEST(MStringTest, ReadATokenWithLeadingWhitespaceShouldFail) {
-  EXPECT_THROW((void)Read(MString(), " spacebefore"), std::runtime_error);
+  EXPECT_THROW((void)Read(MString(), " spacebefore"), IOError);
 }
 
 TEST(MStringTest, ReadAtEofShouldFail) {
-  EXPECT_THROW((void)Read(MString(), ""), std::runtime_error);
+  EXPECT_THROW((void)Read(MString(), ""), IOError);
 }
 
 TEST(MStringTest, IsSatisfiedWithShouldAcceptAllMStringsForDefault) {

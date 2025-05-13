@@ -29,6 +29,7 @@
 #include "absl/strings/str_join.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/util/locked_optional.h"
@@ -192,7 +193,7 @@ MTuple<T...>& MTuple<T...>::AddConstraint(OneOf<tuple_value_type> constraint) {
 template <typename... T>
 MTuple<T...>& MTuple<T...>::AddConstraint(IOSeparator constraint) {
   if (!separator_.Set(constraint.GetSeparator())) {
-    throw std::runtime_error(
+    throw ImpossibleToSatisfy(
         "Attempting to set multiple I/O separators for the same MTuple.");
   }
   return this->InternalAddConstraint(std::move(constraint));

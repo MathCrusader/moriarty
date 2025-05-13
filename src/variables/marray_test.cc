@@ -26,6 +26,7 @@
 #include "gtest/gtest.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/policies.h"
 #include "src/testing/gtest_helpers.h"
@@ -41,7 +42,6 @@ namespace moriarty {
 namespace {
 
 using ::moriarty_testing::Context;
-using ::moriarty_testing::Generate;
 using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GenerateEdgeCases;
 using ::moriarty_testing::GenerateSameValues;
@@ -95,8 +95,7 @@ TEST(MArrayTest, TypicalPrintCaseWorks) {
 }
 
 TEST(MArrayTest, ReadingTheWrongLengthOfMArrayShouldFail) {
-  EXPECT_THROW((void)Read(MArray<MInteger>(Length(6)), "1 2 3 4"),
-               std::runtime_error);
+  EXPECT_THROW((void)Read(MArray<MInteger>(Length(6)), "1 2 3 4"), IOError);
 }
 
 TEST(MArrayTest, SimpleGenerateCaseWorks) {
@@ -324,12 +323,9 @@ TEST(MArrayTest, WithDistinctElementsReturnsOnlyDistinctValues) {
 }
 
 TEST(MArrayTest, WithDistinctElementsWithNotEnoughDistinctValuesFails) {
-  EXPECT_THROW(
-      {
-        (void)Generate(MArray<MInteger>(Elements<MInteger>(Between(1, 5)),
-                                        Length(10), DistinctElements()));
-      },
-      std::runtime_error);
+  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 5)), Length(10),
+                               DistinctElements()),
+              GenerateThrowsGenerationError("", Context()));
 }
 
 TEST(MArrayTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
@@ -356,7 +352,7 @@ TEST(MArrayTest, WhitespaceSeparatorShouldAffectRead) {
   // Read wrong whitespace between characters.
   EXPECT_THROW((void)Read(MArray<MInteger>(IOSeparator::Newline(), Length(6)),
                           "1\n2\n3 4\n5\n6"),
-               std::runtime_error);
+               IOError);
 }
 
 TEST(MArrayTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
@@ -369,7 +365,7 @@ TEST(MArrayTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
 TEST(MArrayTest, WhitespaceSeparatorShouldFailWithTwoSeparators) {
   EXPECT_THROW(
       (void)MArray<MInteger>(IOSeparator::Newline(), IOSeparator::Tab()),
-      std::runtime_error);
+      ImpossibleToSatisfy);
 }
 
 TEST(MArrayTest, ReadShouldBeAbleToDetermineLengthFromAnotherVariable) {
@@ -399,11 +395,11 @@ TEST(MArrayTest,
 
   EXPECT_THROW(
       [] { (void)Read(MArray<MInteger>(Length(Between(2, 3))), "1 2 3"); }(),
-      std::runtime_error);
+      IOError);
 
   EXPECT_THROW(
       [] { (void)Read(MArray<MInteger>(Length(Between(3, 4))), "1 2 3"); }(),
-      std::runtime_error);
+      IOError);
 }
 
 TEST(MArrayTest, DirectlyUsingPartialReaderShouldWork) {

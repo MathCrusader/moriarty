@@ -17,10 +17,22 @@
 #ifndef MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
 #define MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
 
+#include <optional>
+#include <string>
+
 namespace moriarty {
 
 // Various kinds of whitespace characters.
 enum class Whitespace { kSpace, kTab, kNewline };
+
+// Information about where the input cursor is in the input stream.
+struct InputCursor {
+  int line_num = 1;
+  int col_num = 1;
+  int token_num_file = 1;
+  int token_num_line = 1;
+  std::optional<std::string> last_read_item;  // May be a token or whitespace.
+};
 
 }  // namespace moriarty
 

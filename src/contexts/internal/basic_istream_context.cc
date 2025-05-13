@@ -20,7 +20,9 @@
 #include <functional>
 #include <istream>
 #include <string>
+#include <string_view>
 
+#include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
 
@@ -31,7 +33,11 @@ BasicIStreamContext::BasicIStreamContext(
     std::reference_wrapper<std::istream> is,
     moriarty::WhitespaceStrictness strictness)
     : is_(is), strictness_(strictness) {
-  is_.get().exceptions(std::istream::failbit | std::istream::badbit);
+  // is_.get().exceptions(std::istream::failbit | std::istream::badbit);
+}
+
+void BasicIStreamContext::ThrowIOError(std::string_view message) const {
+  throw IOError(cursor_, message);
 }
 
 namespace {
@@ -67,8 +73,19 @@ char WhitespaceAsChar(Whitespace whitespace) {
   assert(false);
 }
 
-void StripLeadingWhitespace(std::istream& is) {
-  if (!is.eof()) is >> std::ws;
+void StripLeadingWhitespace(std::istream& is, InputCursor& cursor) {
+  while (is) {
+    char c = is.peek();
+    if (c == EOF) break;
+    if (!std::isspace(c)) break;
+    is.get();
+    cursor.col_num++;
+    if (c == '\n') {
+      cursor.line_num++;
+      cursor.col_num = 1;
+      cursor.token_num_line = 1;
+    }
+  }
 }
 
 }  // namespace
@@ -77,52 +94,65 @@ std::string BasicIStreamContext::ReadToken() {
   std::istream& is = is_.get();
 
   if (strictness_ == WhitespaceStrictness::kFlexible)
-    StripLeadingWhitespace(is);
+    StripLeadingWhitespace(is, cursor_);
 
-  if (IsEOF(is))
-    throw std::runtime_error("Attempted to read a token, but got EOF.");
+  if (IsEOF(is)) ThrowIOError("Expected a token, but got EOF.");
 
   if (strictness_ == WhitespaceStrictness::kPrecise) {
     char c = is.peek();
     if (!std::isprint(c) || std::isspace(c)) {
-      throw std::runtime_error(
-          std::format("Expected token, but got '{}'.", ReadableChar(c)));
+      ThrowIOError(
+          std::format("Expected a token, but got '{}'.", ReadableChar(c)));
     }
   }
+
+  if (!is) ThrowIOError("Failed to read from the input stream.");
 
   // At this point, we are not at EOF and there is no leading whitespace.
   std::string token;
   is >> token;
+
+  cursor_.last_read_item = token;
+  cursor_.col_num += token.length();
+  cursor_.token_num_file++;
+  cursor_.token_num_line++;
+
   return token;
 }
 
 void BasicIStreamContext::ReadEof() {
-  if (strictness_ == WhitespaceStrictness::kFlexible)
-    StripLeadingWhitespace(is_.get());
+  std::istream& is = is_.get();
 
-  if (!IsEOF(is_.get())) {
-    throw std::runtime_error("Expected EOF, but got more input.");
+  if (strictness_ == WhitespaceStrictness::kFlexible)
+    StripLeadingWhitespace(is, cursor_);
+
+  if (!IsEOF(is)) {
+    ThrowIOError("Expected EOF, but got more input.");
   }
 }
 
 void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
-  if (IsEOF(is_.get())) {
-    throw std::runtime_error(
-        std::format("Attempted to read '{}', but got EOF.",
-                    ReadableChar(WhitespaceAsChar(whitespace))));
+  std::istream& is = is_.get();
+
+  if (IsEOF(is)) {
+    ThrowIOError(std::format("Expected '{}', but got EOF.",
+                             ReadableChar(WhitespaceAsChar(whitespace))));
   }
-  char c = is_.get().get();
+  char c = is.get();
   if (!std::isspace(c)) {
-    throw std::runtime_error(
+    ThrowIOError(
         std::format("Expected whitespace, but got '{}'.", ReadableChar(c)));
   }
+
+  cursor_.col_num++;
+  cursor_.last_read_item = std::string(1, c);
 
   if (strictness_ == WhitespaceStrictness::kFlexible) return;
 
   if (c != WhitespaceAsChar(whitespace)) {
-    throw std::runtime_error(std::format(
-        "Expected '{}', but got '{}'.",
-        ReadableChar(WhitespaceAsChar(whitespace)), ReadableChar(c)));
+    ThrowIOError(std::format("Expected '{}', but got '{}'.",
+                             ReadableChar(WhitespaceAsChar(whitespace)),
+                             ReadableChar(c)));
   }
 }
 

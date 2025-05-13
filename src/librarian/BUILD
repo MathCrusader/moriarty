@@ -47,6 +47,7 @@ cc_library(
     name = "errors",
     hdrs = ["errors.h"],
     deps = [
+        "//src/librarian:io_config",
         "//src/librarian:policies",
     ],
 )

@@ -16,11 +16,11 @@
 #include "src/variables/mtuple.h"
 
 #include <cstdint>
-#include <stdexcept>
 #include <tuple>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/mvariable.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/base_constraints.h"
@@ -90,24 +90,24 @@ TEST(MTupleTest, ReadWithProperSeparatorShouldSucceed) {
 
 TEST(MTupleTest, ReadWithIncorrectSeparatorShouldFail) {
   EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(), "1\t22\t333"),
-               std::runtime_error);
+               IOError);
   EXPECT_THROW(
       (void)Read(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
                  "1 22 333"),
-      std::runtime_error);
+      IOError);
   EXPECT_THROW(
       (void)Read(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
                  "1\ttwotwo 333"),
-      std::runtime_error);
+      IOError);
 }
 
 TEST(MTupleTest, ReadingTheWrongTypeShouldFail) {
   // MString where MInteger should be
   EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(), "1 two 3"),
-               std::runtime_error);
+               IOError);
   // Not enough input
   EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(), "1 22"),
-               std::runtime_error);
+               IOError);
 }
 
 TEST(MTupleTest, SimpleGenerateCaseWorks) {
@@ -246,8 +246,8 @@ TEST(MTupleTest, MultipleIOSeparatorsShouldThrow) {
                                       IOSeparator::Space());
   };
 
-  EXPECT_THAT(a, Throws<std::runtime_error>());
-  EXPECT_THAT(b, Throws<std::runtime_error>());
+  EXPECT_THAT(a, Throws<ImpossibleToSatisfy>());
+  EXPECT_THAT(b, Throws<ImpossibleToSatisfy>());
 }
 
 TEST(MTupleTest, ExactlyAndOneOfShouldGenerateAndValidate) {

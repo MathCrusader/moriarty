@@ -263,7 +263,7 @@ MArray<T>& MArray<T>::AddConstraint(DistinctElements constraint) {
 template <typename T>
 MArray<T>& MArray<T>::AddConstraint(IOSeparator constraint) {
   if (!separator_.Set(constraint.GetSeparator())) {
-    throw std::runtime_error(
+    throw ImpossibleToSatisfy(
         "Attempting to set multiple I/O separators for the same MArray.");
   }
   return this->InternalAddConstraint(std::move(constraint));
@@ -287,10 +287,10 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
         [&](int n) { return ctx.RandomInteger(n); });
 
   if (!length_) {
-    throw moriarty::GenerationError(ctx.GetVariableName(),
-                                    "Attempting to generate an array with no "
-                                    "length parameter given.",
-                                    RetryPolicy::kAbort);
+    throw GenerationError(ctx.GetVariableName(),
+                          "Attempting to generate an array with no "
+                          "length parameter given.",
+                          RetryPolicy::kAbort);
   }
 
   MInteger length_local = *length_;
@@ -344,7 +344,10 @@ auto MArray<MElementType>::GenerateUnseenElement(
     if (!seen.contains(value)) return value;
   }
 
-  throw std::runtime_error("Cannot generate enough distinct values for array.");
+  // TODO: We may want to not retry if we can prove it will always fail.
+  throw GenerationError(ctx.GetVariableName(),
+                        "Cannot generate enough distinct values for array.",
+                        RetryPolicy::kRetry);
 }
 
 template <typename MElementType>
@@ -377,15 +380,12 @@ void MArray<MoriartyElementType>::PrintImpl(
 template <typename MoriartyElementType>
 MArray<MoriartyElementType>::vector_value_type
 MArray<MoriartyElementType>::ReadImpl(librarian::ReaderContext ctx) const {
-  if (!length_)
-    throw std::runtime_error("Unknown length of array before read.");
+  if (!length_) ctx.ThrowIOError("Unknown length of array before read.");
 
   std::optional<int64_t> length = length_->GetUniqueValue(ctx);
 
-  if (!length) {
-    throw std::runtime_error(
-        "Cannot determine the length of array before read.");
-  }
+  if (!length)
+    ctx.ThrowIOError("Cannot determine the length of array before read.");
 
   vector_value_type res;
   res.reserve(*length);

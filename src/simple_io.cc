@@ -203,8 +203,7 @@ void PrintTestCases(ExportContext ctx, SimpleIO simple_io,
 // TODO: ReadVariable(MInteger(AtLeast(0)));
 int64_t ReadNumTestCases(ImportContext ctx) {
   int64_t num_cases = ctx.ReadVariable(MInteger());
-  if (num_cases < 0)
-    throw std::runtime_error("Number of test cases must be >= 0");
+  if (num_cases < 0) ctx.ThrowIOError("Number of test cases must be >= 0");
   ctx.ReadWhitespace(Whitespace::kNewline);
   return num_cases;
 }
@@ -212,8 +211,10 @@ int64_t ReadNumTestCases(ImportContext ctx) {
 void ReadLiteral(ImportContext ctx, const StringLiteral& literal) {
   std::string read_token = ctx.ReadToken();
   std::string expected = std::string(literal);
-  if (read_token != expected)
-    throw std::runtime_error("Expected to read '$0', but read '$1' instead.");
+  if (read_token != expected) {
+    ctx.ThrowIOError(
+        std::format("Expected '{}', but got '{}'.", expected, read_token));
+  }
 }
 
 void ReadToken(ImportContext ctx, const SimpleIOToken& token,
@@ -269,7 +270,7 @@ void ReadLiteralOnlyLine(ImportContext ctx, const SimpleIO::Line& line) {
     if (line_idx++) ctx.ReadWhitespace(Whitespace::kSpace);
 
     if (std::holds_alternative<std::string>(token))
-      throw "Cannot have variable in Header";
+      throw std::runtime_error("Cannot have variable in Header");
     ReadLiteral(ctx, std::get<StringLiteral>(token));
   }
   ctx.ReadWhitespace(Whitespace::kNewline);

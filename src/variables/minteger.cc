@@ -24,7 +24,6 @@
 #include <memory>
 #include <optional>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -240,10 +239,10 @@ int64_t MInteger::ReadImpl(librarian::ReaderContext ctx) const {
   std::stringstream is(token);
 
   int64_t value;
-  if (!(is >> value)) throw std::runtime_error("Unable to read an integer");
   std::string garbage;
-  if (is >> garbage)
-    throw std::runtime_error("Token contains non-integer items");
+  if (!(is >> value) || (is >> garbage)) {
+    ctx.ThrowIOError(std::format("Expected an integer, received '{}'", token));
+  }
   return value;
 }
 

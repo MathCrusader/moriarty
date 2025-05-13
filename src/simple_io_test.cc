@@ -17,12 +17,12 @@
 
 #include <cstdint>
 #include <sstream>
-#include <stdexcept>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/context.h"
+#include "src/librarian/errors.h"
 #include "src/test_case.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/io_constraints.h"
@@ -219,7 +219,7 @@ TEST(SimpleIOImporterTest, ImportWrongTokenFails) {
 
   Context context;
   ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
-  EXPECT_THROW({ importer(ctx); }, std::runtime_error);
+  EXPECT_THROW({ importer(ctx); }, IOError);
 }
 
 TEST(SimpleIOImporterTest, ImportWrongWhitespaceFails) {
@@ -230,7 +230,7 @@ TEST(SimpleIOImporterTest, ImportWrongWhitespaceFails) {
   ImportFn importer = SimpleIO().AddLine("R", "S").Importer();
 
   ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
-  EXPECT_THROW({ importer(ctx); }, std::runtime_error);
+  EXPECT_THROW({ importer(ctx); }, IOError);
 }
 
 TEST(SimpleIOImporterTest, ImportWithNumberOfTestCasesInHeaderShouldWork) {
@@ -261,7 +261,7 @@ TEST(SimpleIOImporterTest,
       SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
 
   ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
-  EXPECT_THROW({ importer(ctx); }, std::runtime_error);
+  EXPECT_THROW({ importer(ctx); }, IOError);
 }
 
 TEST(SimpleIOImporterTest,
@@ -274,7 +274,7 @@ TEST(SimpleIOImporterTest,
       SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
 
   ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
-  EXPECT_THROW({ importer(ctx); }, std::runtime_error);
+  EXPECT_THROW({ importer(ctx); }, IOError);
 }
 
 TEST(SimpleIOImporterTest,
@@ -287,7 +287,7 @@ TEST(SimpleIOImporterTest,
       SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
 
   ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
-  EXPECT_THROW({ importer(ctx); }, std::runtime_error);
+  EXPECT_THROW({ importer(ctx); }, IOError);
 }
 
 TEST(SimpleIOImporterTest, MultilineSectionShouldWork) {

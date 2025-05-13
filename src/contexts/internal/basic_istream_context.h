@@ -64,11 +64,18 @@ class BasicIStreamContext {
   //   read character is not the one provided.
   void ReadWhitespace(moriarty::Whitespace whitespace);
 
+  // ThrowIOError()
+  //
+  // Throws an `IOError` exception with the current cursor position and the
+  // provided message.
+  void ThrowIOError(std::string_view message) const;
+
   // TODO: Add helper functions. ReadSpace(), ReadEoln(), ReadTokens(),
   // ReadInt64(), etc.
  private:
   std::reference_wrapper<std::istream> is_;
   moriarty::WhitespaceStrictness strictness_;
+  moriarty::InputCursor cursor_;
 
   // TODO: Determine if we should provide an API for:
   //  * update/access strictness and is_.

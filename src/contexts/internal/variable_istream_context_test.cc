@@ -16,11 +16,10 @@
 
 #include "src/contexts/internal/variable_istream_context.h"
 
-#include <stdexcept>
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/value_set.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/policies.h"
 #include "src/test_case.h"
 #include "src/testing/gtest_helpers.h"
@@ -86,8 +85,7 @@ TEST(VariableIStreamContextTest, ReadNamedVariableShouldRespectWhitespace) {
     std::istringstream ss("11    22");
     VariableIStreamContext ctx(ss, WhitespaceStrictness::kPrecise,
                                context.Variables(), context.Values());
-    EXPECT_THROW(
-        { (void)ctx.ReadVariable<MArray<MInteger>>("A"); }, std::runtime_error);
+    EXPECT_THROW({ (void)ctx.ReadVariable<MArray<MInteger>>("A"); }, IOError);
   }
 }
 
@@ -133,8 +131,7 @@ TEST(VariableIStreamContextTest, ReadUnnamedVariableShouldRespectWhitespace) {
     VariableIStreamContext ctx(ss, WhitespaceStrictness::kPrecise,
                                context.Variables(), context.Values());
     EXPECT_THROW(
-        { (void)ctx.ReadVariable(MArray<MInteger>(Length(2))); },
-        std::runtime_error);
+        { (void)ctx.ReadVariable(MArray<MInteger>(Length(2))); }, IOError);
   }
 }
 
@@ -203,7 +200,7 @@ TEST(VariableIStreamContextTest, ReadVariableToShouldRespectWhitespace) {
     VariableIStreamContext ctx(ss, WhitespaceStrictness::kPrecise,
                                context.Variables(), context.Values());
     ConcreteTestCase test_case;
-    EXPECT_THROW({ ctx.ReadVariableTo("A", test_case); }, std::runtime_error);
+    EXPECT_THROW({ ctx.ReadVariableTo("A", test_case); }, IOError);
   }
 }
 

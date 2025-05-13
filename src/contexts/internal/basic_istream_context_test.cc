@@ -15,9 +15,9 @@
 #include "src/contexts/internal/basic_istream_context.h"
 
 #include <sstream>
-#include <stdexcept>
 
 #include "gtest/gtest.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
 
@@ -34,7 +34,7 @@ TEST(BasicIStreamTest, ReadTokenShouldAdhereToWhitespaceScrictness) {
   {
     std::stringstream ss("  \n\tHello");
     BasicIStreamContext c(ss, WhitespaceStrictness::kPrecise);
-    EXPECT_THROW({ (void)c.ReadToken(); }, std::runtime_error);
+    EXPECT_THROW({ (void)c.ReadToken(); }, IOError);
   }
 }
 
@@ -59,7 +59,7 @@ TEST(BasicIStreamTest, ReadTokenShouldWorkInSimpleCases) {
     std::stringstream ss("Hello World");
     BasicIStreamContext c(ss, WhitespaceStrictness::kPrecise);
     EXPECT_EQ(c.ReadToken(), "Hello");
-    EXPECT_THROW({ (void)c.ReadToken(); }, std::runtime_error);
+    EXPECT_THROW({ (void)c.ReadToken(); }, IOError);
   }
 }
 
@@ -82,17 +82,17 @@ TEST(BasicIStreamTest, ReadEofShouldWork) {
   {
     std::stringstream ss("     \t\n\t");
     BasicIStreamContext c(ss, WhitespaceStrictness::kPrecise);
-    EXPECT_THROW({ c.ReadEof(); }, std::runtime_error);
+    EXPECT_THROW({ c.ReadEof(); }, IOError);
   }
   {
     std::stringstream ss("Hello");
     BasicIStreamContext c(ss, WhitespaceStrictness::kFlexible);
-    EXPECT_THROW({ c.ReadEof(); }, std::runtime_error);
+    EXPECT_THROW({ c.ReadEof(); }, IOError);
   }
   {
     std::stringstream ss("Hello");
     BasicIStreamContext c(ss, WhitespaceStrictness::kPrecise);
-    EXPECT_THROW({ c.ReadEof(); }, std::runtime_error);
+    EXPECT_THROW({ c.ReadEof(); }, IOError);
   }
   {
     std::stringstream ss("Hello");
@@ -138,23 +138,22 @@ TEST(BasicIStreamTest, ReadWhitespaceShouldCareWhichWhitespaceInStrictMode) {
   {  // Not space
     std::stringstream ss("\n");
     BasicIStreamContext c(ss, WhitespaceStrictness::kPrecise);
-    EXPECT_THROW({ c.ReadWhitespace(Whitespace::kSpace); }, std::runtime_error);
+    EXPECT_THROW({ c.ReadWhitespace(Whitespace::kSpace); }, IOError);
   }
   {  // Not newline
     std::stringstream ss(" ");
     BasicIStreamContext c(ss, WhitespaceStrictness::kPrecise);
-    EXPECT_THROW(
-        { c.ReadWhitespace(Whitespace::kNewline); }, std::runtime_error);
+    EXPECT_THROW({ c.ReadWhitespace(Whitespace::kNewline); }, IOError);
   }
   {  // Not tab
     std::stringstream ss(" ");
     BasicIStreamContext c(ss, WhitespaceStrictness::kPrecise);
-    EXPECT_THROW({ c.ReadWhitespace(Whitespace::kTab); }, std::runtime_error);
+    EXPECT_THROW({ c.ReadWhitespace(Whitespace::kTab); }, IOError);
   }
   {  // At EOF
     std::stringstream ss("");
     BasicIStreamContext c(ss, WhitespaceStrictness::kPrecise);
-    EXPECT_THROW({ c.ReadWhitespace(Whitespace::kSpace); }, std::runtime_error);
+    EXPECT_THROW({ c.ReadWhitespace(Whitespace::kSpace); }, IOError);
   }
 }
 
@@ -165,7 +164,7 @@ TEST(BasicIStreamTest,
   c.ReadWhitespace(Whitespace::kSpace);
   c.ReadWhitespace(Whitespace::kNewline);
   c.ReadWhitespace(Whitespace::kTab);
-  EXPECT_THROW({ c.ReadWhitespace(Whitespace::kSpace); }, std::runtime_error);
+  EXPECT_THROW({ c.ReadWhitespace(Whitespace::kSpace); }, IOError);
 }
 
 TEST(BasicIStreamTest, ReadFunctionBehaveEndToEnd) {
@@ -191,7 +190,7 @@ TEST(BasicIStreamTest, ReadFunctionBehaveEndToEnd) {
     std::stringstream ss("1 2 3");
     BasicIStreamContext c(ss, WhitespaceStrictness::kPrecise);
     EXPECT_EQ(c.ReadToken(), "1");
-    EXPECT_THROW({ (void)c.ReadToken(); }, std::runtime_error);
+    EXPECT_THROW({ (void)c.ReadToken(); }, IOError);
   }
 }
 
