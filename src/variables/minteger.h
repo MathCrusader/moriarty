@@ -54,6 +54,8 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
 
   ~MInteger() override = default;
 
+  using MVariable<MInteger, int64_t>::AddConstraint;  // Custom constraints
+
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values
 

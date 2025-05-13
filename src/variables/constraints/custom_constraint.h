@@ -31,41 +31,45 @@ namespace moriarty {
 
 // CustomConstraint
 //
-// Holds a constraint specified by the user.
+// Holds a constraint specified by the user. T must be a Moriarty variable.
 template <typename T>
-class CustomConstraint : MConstraint {
+class CustomConstraint : public MConstraint {
  public:
   // The value must satisfy `checker`. `name` is used for debugging and error
   // messages.
-  explicit CustomConstraint(std::string_view name,
-                            std::function<bool(const T&)> checker);
+  explicit CustomConstraint(
+      std::string_view name,
+      std::function<bool(const typename T::value_type&)> checker);
 
   // The value must satisfy `checker`. `name` is used for debugging and error
   // messages. This constraint depends on the variables in `dependencies`. Their
   // values must be generated before this constraint is checked.
-  explicit CustomConstraint(
-      std::string_view name, std::vector<std::string> dependencies,
-      std::function<bool(librarian::AnalysisContext, const T&)> checker);
+  explicit CustomConstraint(std::string_view name,
+                            std::vector<std::string> dependencies,
+                            std::function<bool(librarian::AnalysisContext,
+                                               const typename T::value_type&)>
+                                checker);
 
   // Returns the name of the constraint.
   [[nodiscard]] std::string GetName() const;
 
   // Determines if `value` satisfies the constraint.
   [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                     const T& value) const;
+                                     const T::value_type& value) const;
 
   // Returns a string representation of the constraint.
   [[nodiscard]] std::string ToString() const;
 
   // Returns a string explaining why `value` does not satisfy the constraint.
-  [[nodiscard]] std::string UnsatisfiedReason(const T& value) const;
+  [[nodiscard]] std::string UnsatisfiedReason(const T::value_type& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
 
  private:
   std::string name_;
-  std::function<bool(librarian::AnalysisContext, const T&)> constraint_;
+  std::function<bool(librarian::AnalysisContext, const typename T::value_type&)>
+      constraint_;
   std::vector<std::string> dependencies_;
 };
 
@@ -73,15 +77,20 @@ class CustomConstraint : MConstraint {
 // Template implementation below
 
 template <typename T>
-CustomConstraint<T>::CustomConstraint(std::string_view name,
-                                      std::function<bool(const T&)> checker)
+CustomConstraint<T>::CustomConstraint(
+    std::string_view name,
+    std::function<bool(const typename T::value_type&)> checker)
     : name_(std::string(name)),
-      constraint_([checker](auto, const T& value) { return checker(value); }) {}
+      constraint_([checker](auto, const T::value_type& value) {
+        return checker(value);
+      }) {}
 
 template <typename T>
 CustomConstraint<T>::CustomConstraint(
     std::string_view name, std::vector<std::string> dependencies,
-    std::function<bool(librarian::AnalysisContext, const T&)> checker)
+    std::function<bool(librarian::AnalysisContext,
+                       const typename T::value_type&)>
+        checker)
     : name_(std::string(name)),
       constraint_(std::move(checker)),
       dependencies_(std::move(dependencies)) {}
@@ -98,7 +107,7 @@ std::string CustomConstraint<T>::GetName() const {
 
 template <typename T>
 bool CustomConstraint<T>::IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                          const T& value) const {
+                                          const T::value_type& value) const {
   return constraint_(ctx, value);
 }
 
@@ -108,7 +117,8 @@ std::string CustomConstraint<T>::ToString() const {
 }
 
 template <typename T>
-std::string CustomConstraint<T>::UnsatisfiedReason(const T& value) const {
+std::string CustomConstraint<T>::UnsatisfiedReason(
+    const T::value_type& value) const {
   return std::format("{} does not satisfy the custom constraint `{}`",
                      librarian::DebugString(value), name_);
 }

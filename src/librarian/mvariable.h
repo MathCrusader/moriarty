@@ -128,11 +128,11 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::function<bool(librarian::AnalysisContext, const ValueType&)>
           checker);
 
-  // AddCustomConstraint()
+  // AddConstraint()
   //
   // Adds a constraint that is fully user-defined. See other overloads of
   // `AddCustomConstraint` for simple construction.
-  VariableType& AddCustomConstraint(CustomConstraint<ValueType> constraint);
+  VariableType& AddConstraint(CustomConstraint<VariableType> constraint);
 
   // IsSatisfiedWith()
   //
@@ -302,7 +302,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   class CustomConstraintWrapper {
    public:
-    explicit CustomConstraintWrapper(CustomConstraint<ValueType> constraint);
+    explicit CustomConstraintWrapper(CustomConstraint<VariableType> constraint);
     bool IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const;
     std::string UnsatisfiedReason(AnalysisContext ctx,
                                   const ValueType& value) const;
@@ -311,7 +311,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
     void ApplyTo(VariableType& other) const;
 
    private:
-    CustomConstraint<ValueType> constraint_;
+    CustomConstraint<VariableType> constraint_;
   };
 
   // Wrapper class around an MVariable's PartialReader. Expected API is:
@@ -373,19 +373,19 @@ V& MVariable<V, G>::MergeFrom(const V& other) {
 template <typename V, typename G>
 V& MVariable<V, G>::AddCustomConstraint(std::string_view name,
                                         std::function<bool(const G&)> checker) {
-  return AddCustomConstraint(CustomConstraint<G>(name, std::move(checker)));
+  return AddConstraint(CustomConstraint<V>(name, std::move(checker)));
 }
 
 template <typename V, typename G>
 V& MVariable<V, G>::AddCustomConstraint(
     std::string_view name, std::vector<std::string> dependencies,
     std::function<bool(librarian::AnalysisContext, const G&)> checker) {
-  return AddCustomConstraint(
-      CustomConstraint<G>(name, std::move(dependencies), std::move(checker)));
+  return AddConstraint(
+      CustomConstraint<V>(name, std::move(dependencies), std::move(checker)));
 }
 
 template <typename V, typename G>
-V& MVariable<V, G>::AddCustomConstraint(CustomConstraint<G> constraint) {
+V& MVariable<V, G>::AddConstraint(CustomConstraint<V> constraint) {
   return InternalAddConstraint(CustomConstraintWrapper(std::move(constraint)));
 }
 
@@ -694,7 +694,7 @@ MVariable<V, G>::ListAnonymousEdgeCases(
 
 template <typename V, typename G>
 MVariable<V, G>::CustomConstraintWrapper::CustomConstraintWrapper(
-    CustomConstraint<G> constraint)
+    CustomConstraint<V> constraint)
     : constraint_(std::move(constraint)) {}
 
 template <typename V, typename G>
@@ -722,7 +722,7 @@ MVariable<V, G>::CustomConstraintWrapper::GetDependencies() const {
 
 template <typename V, typename G>
 void MVariable<V, G>::CustomConstraintWrapper::ApplyTo(V& other) const {
-  other.AddCustomConstraint(constraint_);
+  other.AddConstraint(constraint_);
 }
 
 }  // namespace librarian

@@ -123,6 +123,7 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
     (AddConstraint(std::forward<Constraints>(constraints)), ...);
   }
 
+  using MVariable<MTestType, TestType>::AddConstraint;  // Custom constraints
   MTestType& AddConstraint(moriarty::Exactly<TestType> constraint);
   MTestType& AddConstraint(moriarty::OneOf<TestType> constraint);
   MTestType& AddConstraint(LastDigit constraint);

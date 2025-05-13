@@ -86,6 +86,10 @@ class MTuple : public librarian::MVariable<
   // debugging/error messages.
   [[nodiscard]] std::string Typename() const override;
 
+  using librarian::MVariable<MTuple,
+                             tuple_value_type>::AddConstraint;  // Custom
+                                                                // constraints
+
   MTuple& AddConstraint(Exactly<tuple_value_type> constraint);
   MTuple& AddConstraint(OneOf<tuple_value_type> constraint);
 

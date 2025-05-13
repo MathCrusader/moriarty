@@ -54,6 +54,8 @@ class MString : public librarian::MVariable<MString, std::string> {
 
   ~MString() override = default;
 
+  using MVariable<MString, std::string>::AddConstraint;  // Custom constraints
+
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values
 

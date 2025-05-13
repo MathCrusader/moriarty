@@ -31,8 +31,8 @@ using ::testing::IsEmpty;
 
 TEST(CustomConstraintTest, BasicGettersWork) {
   {  // No dependent variables
-    CustomConstraint<int64_t> constraint("positive",
-                                         [](int64_t x) { return x > 0; });
+    CustomConstraint<MInteger> constraint("positive",
+                                          [](int64_t x) { return x > 0; });
     EXPECT_EQ(constraint.GetName(), "positive");
     EXPECT_THAT(constraint.GetDependencies(), IsEmpty());
     EXPECT_EQ(constraint.ToString(), "[CustomConstraint] positive");
@@ -45,7 +45,7 @@ TEST(CustomConstraintTest, BasicGettersWork) {
     values.Set<MInteger>("N", 10);
     librarian::AnalysisContext ctx("X", variables, values);
 
-    CustomConstraint<int64_t> constraint(
+    CustomConstraint<MInteger> constraint(
         "bigger_than_N", {"N"}, [](librarian::AnalysisContext ctx, int64_t x) {
           return x > ctx.GetValue<MInteger>("N");
         });
@@ -63,8 +63,8 @@ TEST(CustomConstraintTest, IsSatisfiedWithShouldWork) {
     moriarty_internal::ValueSet values;
     librarian::AnalysisContext ctx("X", variables, values);
 
-    CustomConstraint<int64_t> constraint("positive",
-                                         [](int64_t x) { return x > 0; });
+    CustomConstraint<MInteger> constraint("positive",
+                                          [](int64_t x) { return x > 0; });
     EXPECT_TRUE(constraint.IsSatisfiedWith(ctx, 10));
     EXPECT_FALSE(constraint.IsSatisfiedWith(ctx, 0));
     EXPECT_FALSE(constraint.IsSatisfiedWith(ctx, -10));
@@ -75,7 +75,7 @@ TEST(CustomConstraintTest, IsSatisfiedWithShouldWork) {
     values.Set<MInteger>("N", 10);
     librarian::AnalysisContext ctx("X", variables, values);
 
-    CustomConstraint<int64_t> constraint(
+    CustomConstraint<MInteger> constraint(
         "bigger_than_N", {"N"}, [](librarian::AnalysisContext ctx, int64_t x) {
           return x > ctx.GetValue<MInteger>("N");
         });

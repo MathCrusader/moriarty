@@ -77,6 +77,9 @@ class MArray : public librarian::MVariable<
 
   ~MArray() override = default;
 
+  using librarian::MVariable<
+      MArray, vector_value_type>::AddConstraint;  // Custom constraints
+
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values
 
