@@ -33,10 +33,10 @@ enum class Whitespace { kSpace, kTab, kNewline };
 struct InputCursor {
   std::reference_wrapper<std::istream> is;
   WhitespaceStrictness strictness;
-  int line_num = 1;
-  int col_num = 1;
-  int token_num_file = 1;
-  int token_num_line = 1;
+  int line_num = 1;                           // 1-based
+  int col_num = 0;                            // 1-based
+  int token_num_file = 0;                     // 1-based
+  int token_num_line = 0;                     // 1-based
   std::optional<std::string> last_read_item;  // May be a token or whitespace.
 };
 

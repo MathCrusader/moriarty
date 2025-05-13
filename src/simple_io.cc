@@ -29,6 +29,7 @@
 
 #include "src/context.h"
 #include "src/test_case.h"
+#include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
@@ -202,8 +203,7 @@ void PrintTestCases(ExportContext ctx, SimpleIO simple_io,
 
 // TODO: ReadVariable(MInteger(AtLeast(0)));
 int64_t ReadNumTestCases(ImportContext ctx) {
-  int64_t num_cases = ctx.ReadVariable(MInteger());
-  if (num_cases < 0) ctx.ThrowIOError("Number of test cases must be >= 0");
+  int64_t num_cases = ctx.ReadVariable(MInteger(AtLeast(0)), "num_cases");
   ctx.ReadWhitespace(Whitespace::kNewline);
   return num_cases;
 }

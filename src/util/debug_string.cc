@@ -12,41 +12,66 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "src/util/debug_string.h"
+
 #include <cctype>
 #include <format>
-
-#include "src/util/debug_string.h"
 
 namespace moriarty {
 namespace librarian {
 
+namespace {
+
+std::string SafeChar(unsigned char c) {
+  if (c == '\n') return "\\n";
+  if (c == '\t') return "\\t";
+  if (c == '\r') return "\\r";
+  if (c == '\\') return "\\\\";
+  if (c == '\0') return "\\0";
+  if (c == '\a') return "\\a";
+  if (c == '\b') return "\\b";
+  if (c == '\f') return "\\f";
+  if (c == '\v') return "\\v";
+  if (c == '\e') return "\\e";
+
+  if (std::isprint(c)) return std::string(1, c);
+  return std::format("[ASCII_VALUE={}]", int(c));
+}
+
+std::string SafeString(const std::string& x) {
+  std::string result;
+  for (unsigned char c : x) result += SafeChar(c);
+  return result;
+}
+
+}  // namespace
+
 std::string DebugString(char c, int max_len, bool include_backticks) {
-  return DebugString(static_cast<unsigned char>(c), max_len, include_backticks);
+  return CleanAndShortenDebugString(std::string(1, c), max_len,
+                                    include_backticks);
 }
 
 std::string DebugString(unsigned char c, int max_len, bool include_backticks) {
-  if (std::isprint(c))
-    return ShortenDebugString(std::string(1, c), max_len, include_backticks);
-  return ShortenDebugString(std::format("{{ASCII_VALUE:{}}}", int(c)), max_len,
-                            include_backticks);
+  return CleanAndShortenDebugString(std::string(1, c), max_len,
+                                    include_backticks);
 }
 
 std::string DebugString(const std::string& x, int max_len,
                         bool include_backticks) {
-  return ShortenDebugString(x, max_len, include_backticks);
+  return CleanAndShortenDebugString(x, max_len, include_backticks);
 }
 
-std::string ShortenDebugString(const std::string& x, int max_len,
-                               bool include_backticks) {
+std::string CleanAndShortenDebugString(const std::string& x, int max_len,
+                                       bool include_backticks) {
   auto do_it = [&]() {
-    if (x.length() <= max_len) return std::format("{}", x);
+    if (x.length() <= max_len) return x;
     int left_half = (max_len - 3 + 1) / 2;
     int right_half = (max_len - 3) / 2;
     return std::format("{}...{}", x.substr(0, left_half),
                        x.substr(x.length() - right_half));
   };
-  if (include_backticks) return std::format("`{}`", do_it());
-  return do_it();
+  if (include_backticks) return SafeString(std::format("`{}`", do_it()));
+  return SafeString(do_it());
 }
 
 }  // namespace librarian

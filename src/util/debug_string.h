@@ -58,14 +58,15 @@ template <typename T>
 std::string DebugString(const T& x, int max_len = kMaxDebugStringLength,
                         bool include_backticks = true);
 
-std::string ShortenDebugString(const std::string& x, int max_len,
-                               bool include_backticks);
+std::string CleanAndShortenDebugString(const std::string& x, int max_len,
+                                       bool include_backticks);
 
 // ----------------------------------------------------------------------------
 
 template <std::integral IntLike>
 std::string DebugString(IntLike x, int max_len, bool include_backticks) {
-  return ShortenDebugString(std::to_string(x), max_len, include_backticks);
+  return CleanAndShortenDebugString(std::to_string(x), max_len,
+                                    include_backticks);
 }
 
 template <typename T>
@@ -77,7 +78,7 @@ std::string DebugString(const std::vector<T>& x, int max_len,
     first = false;
     res += DebugString(elem, max_len, false);
   }
-  return ShortenDebugString(res + "]", max_len, include_backticks);
+  return CleanAndShortenDebugString(res + "]", max_len, include_backticks);
 }
 
 template <typename... Ts>
@@ -92,7 +93,7 @@ std::string DebugString(const std::tuple<Ts...>& x, int max_len,
          ...);
       },
       x);
-  return ShortenDebugString(res + ">", max_len, include_backticks);
+  return CleanAndShortenDebugString(res + ">", max_len, include_backticks);
 }
 
 template <typename T>

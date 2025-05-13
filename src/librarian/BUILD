@@ -49,6 +49,7 @@ cc_library(
     deps = [
         "//src/librarian:io_config",
         "//src/librarian:policies",
+        "//src/util:debug_string",
     ],
 )
 

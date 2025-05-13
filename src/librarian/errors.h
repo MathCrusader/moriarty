@@ -24,6 +24,7 @@
 
 #include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
+#include "src/util/debug_string.h"
 
 namespace moriarty {
 
@@ -163,11 +164,14 @@ class GenerationError : public std::logic_error {
 class IOError : public std::logic_error {
  public:
   explicit IOError(const InputCursor& cursor, std::string_view message)
-      : std::logic_error(
-            std::format("{}\nLine #: {} / Column #: {} / Token # (entire "
-                        "file): {} / Token # (this line): {}",
-                        message, cursor.line_num, cursor.col_num,
-                        cursor.token_num_file, cursor.token_num_line)),
+      : std::logic_error(std::format(
+            "{}\nLocation (line, column): ({}, {}) | "
+            "Token # (this line, entire file): ({}, {})\nLast Read Value: '{}'",
+            message, cursor.line_num, cursor.col_num, cursor.token_num_line,
+            cursor.token_num_file,
+            librarian::CleanAndShortenDebugString(
+                cursor.last_read_item.value_or(""), 50,
+                /* include_backticks = */ false))),
         message_(message),
         cursor_(cursor) {}
 

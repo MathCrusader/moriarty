@@ -95,7 +95,7 @@ TEST(VariableIStreamContextTest, ReadUnnamedVariableShouldWork) {
   std::istringstream ss("10");
   InputCursor cr(ss, WhitespaceStrictness::kPrecise);
   VariableIStreamContext ctx(cr, context.Variables(), context.Values());
-  EXPECT_EQ(ctx.ReadVariable(MInteger()), 10);
+  EXPECT_EQ(ctx.ReadVariable(MInteger(), "test"), 10);
 }
 
 TEST(VariableIStreamContextTest,
@@ -107,7 +107,7 @@ TEST(VariableIStreamContextTest,
 
   InputCursor cr(ss, WhitespaceStrictness::kPrecise);
   VariableIStreamContext ctx(cr, context.Variables(), context.Values());
-  EXPECT_THAT(ctx.ReadVariable(MArray<MInteger>(Length("N"))),
+  EXPECT_THAT(ctx.ReadVariable(MArray<MInteger>(Length("N")), "test"),
               ElementsAre(11, 22, 33));
 }
 
@@ -117,14 +117,14 @@ TEST(VariableIStreamContextTest, ReadUnnamedVariableShouldRespectWhitespace) {
     std::istringstream ss("11 22");
     InputCursor cr(ss, WhitespaceStrictness::kPrecise);
     VariableIStreamContext ctx(cr, context.Variables(), context.Values());
-    EXPECT_THAT(ctx.ReadVariable(MArray<MInteger>(Length(2))),
+    EXPECT_THAT(ctx.ReadVariable(MArray<MInteger>(Length(2)), "test"),
                 ElementsAre(11, 22));
   }
   {
     std::istringstream ss("11    22");
     InputCursor cr(ss, WhitespaceStrictness::kFlexible);
     VariableIStreamContext ctx(cr, context.Variables(), context.Values());
-    EXPECT_THAT(ctx.ReadVariable(MArray<MInteger>(Length(2))),
+    EXPECT_THAT(ctx.ReadVariable(MArray<MInteger>(Length(2)), "test"),
                 ElementsAre(11, 22));
   }
   {
@@ -132,7 +132,8 @@ TEST(VariableIStreamContextTest, ReadUnnamedVariableShouldRespectWhitespace) {
     InputCursor cr(ss, WhitespaceStrictness::kPrecise);
     VariableIStreamContext ctx(cr, context.Variables(), context.Values());
     EXPECT_THROW(
-        { (void)ctx.ReadVariable(MArray<MInteger>(Length(2))); }, IOError);
+        { (void)ctx.ReadVariable(MArray<MInteger>(Length(2)), "test"); },
+        IOError);
   }
 }
 

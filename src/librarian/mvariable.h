@@ -454,7 +454,12 @@ void MVariable<V, G>::Print(PrinterContext ctx, const G& value) const {
 
 template <typename V, typename G>
 G MVariable<V, G>::Read(ReaderContext ctx) const {
-  return ReadImpl(ctx);
+  G value = ReadImpl(ctx);
+  if (!IsSatisfiedWith(ctx, value)) {
+    ctx.ThrowIOError(std::format("Read value does not satisfy constraints: {}",
+                                 UnsatisfiedReason(ctx, value)));
+  }
+  return value;
 }
 
 template <typename V, typename G>

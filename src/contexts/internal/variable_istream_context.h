@@ -52,7 +52,7 @@ class VariableIStreamContext {
   // Reads something from the input stream, using `variable` to define how to
   // read it, and returns what was read.
   template <MoriartyVariable T>
-  [[nodiscard]] T::value_type ReadVariable(const T& variable);
+  [[nodiscard]] T::value_type ReadVariable(T variable, std::string_view name);
 
   // ReadVariableTo()
   //
@@ -89,8 +89,9 @@ T::value_type VariableIStreamContext::ReadVariable(
 }
 
 template <MoriartyVariable T>
-T::value_type VariableIStreamContext::ReadVariable(const T& variable) {
-  return variable.Read({"ReadVariable()", input_, variables_, values_});
+T::value_type VariableIStreamContext::ReadVariable(T variable,
+                                                   std::string_view name) {
+  return variable.Read({name, input_, variables_, values_});
 }
 
 }  // namespace moriarty_internal

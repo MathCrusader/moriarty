@@ -70,18 +70,21 @@ char WhitespaceAsChar(Whitespace whitespace) {
   assert(false);
 }
 
+void RegisterNewline(char c, InputCursor& cursor) {
+  if (c != '\n') return;
+  cursor.line_num++;
+  cursor.col_num = 0;
+  cursor.token_num_line = 0;
+}
+
 void StripLeadingWhitespace(std::istream& is, InputCursor& cursor) {
   while (is) {
     char c = is.peek();
     if (c == EOF) break;
     if (!std::isspace(c)) break;
-    is.get();
     cursor.col_num++;
-    if (c == '\n') {
-      cursor.line_num++;
-      cursor.col_num = 1;
-      cursor.token_num_line = 1;
-    }
+    is.get();
+    RegisterNewline(c, cursor);
   }
 }
 
@@ -105,14 +108,17 @@ std::string BasicIStreamContext::ReadToken() {
 
   if (!is) ThrowIOError("Failed to read from the input stream.");
 
+  GetCursor().token_num_file++;
+  GetCursor().token_num_line++;
   // At this point, we are not at EOF and there is no leading whitespace.
   std::string token;
   is >> token;
 
+  // I don't think this is necessary, but it is here for safety.
+  if (!is) ThrowIOError("Failed to read from the input stream.");
+
   GetCursor().last_read_item = token;
   GetCursor().col_num += token.length();
-  GetCursor().token_num_file++;
-  GetCursor().token_num_line++;
 
   return token;
 }
@@ -123,9 +129,7 @@ void BasicIStreamContext::ReadEof() {
   if (GetStrictness() == WhitespaceStrictness::kFlexible)
     StripLeadingWhitespace(is, GetCursor());
 
-  if (!IsEOF(is)) {
-    ThrowIOError("Expected EOF, but got more input.");
-  }
+  if (!IsEOF(is)) ThrowIOError("Expected EOF, but got more input.");
 }
 
 void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
@@ -135,13 +139,14 @@ void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
     ThrowIOError(std::format("Expected '{}', but got EOF.",
                              ReadableChar(WhitespaceAsChar(whitespace))));
   }
+  GetCursor().col_num++;
   char c = is.get();
   if (!std::isspace(c)) {
     ThrowIOError(
         std::format("Expected whitespace, but got '{}'.", ReadableChar(c)));
   }
+  RegisterNewline(c, GetCursor());
 
-  GetCursor().col_num++;
   GetCursor().last_read_item = std::string(1, c);
 
   if (GetStrictness() == WhitespaceStrictness::kFlexible) return;

@@ -132,8 +132,8 @@ TEST(AlphabetTest, IsSatisfiedWithShouldWork) {
 TEST(AlphabetTest, ToStringShouldWork) {
   EXPECT_EQ(Alphabet("abc").ToString(), "contains only the characters `abc`");
   EXPECT_EQ(Alphabet("AbC").ToString(), "contains only the characters `AbC`");
-  // TODO(darcybest): Consider escaping whitespace characters in string.
-  EXPECT_EQ(Alphabet("A\tC").ToString(), "contains only the characters `A\tC`");
+  EXPECT_EQ(Alphabet("A\tC").ToString(),
+            "contains only the characters `A\\tC`");
   EXPECT_EQ(Alphabet("AAA").ToString(), "contains only the characters `AAA`");
 }
 

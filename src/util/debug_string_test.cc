@@ -12,29 +12,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gtest/gtest.h"
 #include "src/util/debug_string.h"
+
+#include "gtest/gtest.h"
 
 namespace moriarty {
 namespace librarian {
 namespace {
 
-TEST(ShortenDebugStringTest, BasicCases) {
-  EXPECT_EQ(ShortenDebugString("hello world", 11, true), "`hello world`");
-  EXPECT_EQ(ShortenDebugString("hello world", 10, true), "`hell...rld`");
-  EXPECT_EQ(ShortenDebugString("hello world", 15, true), "`hello world`");
-  EXPECT_EQ(ShortenDebugString("short", 10, true), "`short`");
-  EXPECT_EQ(ShortenDebugString("", 10, true), "``");
+TEST(CleanAndShortenDebugStringTest, BasicCases) {
+  EXPECT_EQ(CleanAndShortenDebugString("hello world", 11, true),
+            "`hello world`");
+  EXPECT_EQ(CleanAndShortenDebugString("hello world", 10, true),
+            "`hell...rld`");
+  EXPECT_EQ(CleanAndShortenDebugString("hello world", 15, true),
+            "`hello world`");
+  EXPECT_EQ(CleanAndShortenDebugString("short", 10, true), "`short`");
+  EXPECT_EQ(CleanAndShortenDebugString("", 10, true), "``");
 
-  EXPECT_EQ(ShortenDebugString("hello world", 15, false), "hello world");
-  EXPECT_EQ(ShortenDebugString("short", 10, false), "short");
-  EXPECT_EQ(ShortenDebugString("", 10, false), "");
+  EXPECT_EQ(CleanAndShortenDebugString("hello world", 15, false),
+            "hello world");
+  EXPECT_EQ(CleanAndShortenDebugString("short", 10, false), "short");
+  EXPECT_EQ(CleanAndShortenDebugString("", 10, false), "");
 }
 
-TEST(ShortenDebugStringTest, BoundaryCases) {
-  EXPECT_EQ(ShortenDebugString("12345678901", 10, true), "`1234...901`");
-  EXPECT_EQ(ShortenDebugString("abcdefghijk", 10, true), "`abcd...ijk`");
-  EXPECT_EQ(ShortenDebugString("a very long string", 10, true), "`a ve...ing`");
+TEST(CleanAndShortenDebugStringTest, BoundaryCases) {
+  EXPECT_EQ(CleanAndShortenDebugString("12345678901", 10, true),
+            "`1234...901`");
+  EXPECT_EQ(CleanAndShortenDebugString("abcdefghijk", 10, true),
+            "`abcd...ijk`");
+  EXPECT_EQ(CleanAndShortenDebugString("a very long string", 10, true),
+            "`a ve...ing`");
 }
 
 TEST(DebugStringTest, IntegerShouldWork) {
@@ -47,8 +55,8 @@ TEST(DebugStringTest, IntegerShouldWork) {
 TEST(DebugStringTest, CharactersShouldWork) {
   EXPECT_EQ(DebugString('x'), "`x`");
   EXPECT_EQ(DebugString(' '), "` `");
-  EXPECT_EQ(DebugString('\n'), "`{ASCII_VALUE:10}`");
-  EXPECT_EQ(DebugString(char(4)), "`{ASCII_VALUE:4}`");
+  EXPECT_EQ(DebugString('\n'), R"(`\n`)");
+  EXPECT_EQ(DebugString(char(4)), "`[ASCII_VALUE=4]`");
 }
 
 TEST(DebugStringTest, StringShouldWork) {
