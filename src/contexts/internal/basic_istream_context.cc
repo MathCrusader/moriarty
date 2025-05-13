@@ -30,14 +30,11 @@ namespace moriarty {
 namespace moriarty_internal {
 
 BasicIStreamContext::BasicIStreamContext(
-    std::reference_wrapper<std::istream> is,
-    moriarty::WhitespaceStrictness strictness)
-    : is_(is), strictness_(strictness) {
-  // is_.get().exceptions(std::istream::failbit | std::istream::badbit);
-}
+    std::reference_wrapper<InputCursor> input)
+    : input_(input) {}
 
 void BasicIStreamContext::ThrowIOError(std::string_view message) const {
-  throw IOError(cursor_, message);
+  throw IOError(input_.get(), message);
 }
 
 namespace {
@@ -91,14 +88,14 @@ void StripLeadingWhitespace(std::istream& is, InputCursor& cursor) {
 }  // namespace
 
 std::string BasicIStreamContext::ReadToken() {
-  std::istream& is = is_.get();
+  std::istream& is = GetIStream();
 
-  if (strictness_ == WhitespaceStrictness::kFlexible)
-    StripLeadingWhitespace(is, cursor_);
+  if (GetStrictness() == WhitespaceStrictness::kFlexible)
+    StripLeadingWhitespace(is, GetCursor());
 
   if (IsEOF(is)) ThrowIOError("Expected a token, but got EOF.");
 
-  if (strictness_ == WhitespaceStrictness::kPrecise) {
+  if (GetStrictness() == WhitespaceStrictness::kPrecise) {
     char c = is.peek();
     if (!std::isprint(c) || std::isspace(c)) {
       ThrowIOError(
@@ -112,19 +109,19 @@ std::string BasicIStreamContext::ReadToken() {
   std::string token;
   is >> token;
 
-  cursor_.last_read_item = token;
-  cursor_.col_num += token.length();
-  cursor_.token_num_file++;
-  cursor_.token_num_line++;
+  GetCursor().last_read_item = token;
+  GetCursor().col_num += token.length();
+  GetCursor().token_num_file++;
+  GetCursor().token_num_line++;
 
   return token;
 }
 
 void BasicIStreamContext::ReadEof() {
-  std::istream& is = is_.get();
+  std::istream& is = GetIStream();
 
-  if (strictness_ == WhitespaceStrictness::kFlexible)
-    StripLeadingWhitespace(is, cursor_);
+  if (GetStrictness() == WhitespaceStrictness::kFlexible)
+    StripLeadingWhitespace(is, GetCursor());
 
   if (!IsEOF(is)) {
     ThrowIOError("Expected EOF, but got more input.");
@@ -132,7 +129,7 @@ void BasicIStreamContext::ReadEof() {
 }
 
 void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
-  std::istream& is = is_.get();
+  std::istream& is = GetIStream();
 
   if (IsEOF(is)) {
     ThrowIOError(std::format("Expected '{}', but got EOF.",
@@ -144,10 +141,10 @@ void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
         std::format("Expected whitespace, but got '{}'.", ReadableChar(c)));
   }
 
-  cursor_.col_num++;
-  cursor_.last_read_item = std::string(1, c);
+  GetCursor().col_num++;
+  GetCursor().last_read_item = std::string(1, c);
 
-  if (strictness_ == WhitespaceStrictness::kFlexible) return;
+  if (GetStrictness() == WhitespaceStrictness::kFlexible) return;
 
   if (c != WhitespaceAsChar(whitespace)) {
     ThrowIOError(std::format("Expected '{}', but got '{}'.",
@@ -155,6 +152,14 @@ void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
                              ReadableChar(c)));
   }
 }
+
+WhitespaceStrictness BasicIStreamContext::GetStrictness() const {
+  return input_.get().strictness;
+}
+
+std::istream& BasicIStreamContext::GetIStream() { return input_.get().is; }
+
+InputCursor& BasicIStreamContext::GetCursor() { return input_; }
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

@@ -31,6 +31,7 @@
 #include "src/contexts/internal/variable_random_context.h"
 #include "src/contexts/internal/view_only_context.h"
 #include "src/internal/value_set.h"
+#include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
 #include "test_case.h"
 
@@ -90,8 +91,7 @@ class ImportContext : public moriarty_internal::ViewOnlyContext,
   // See `src/Moriarty.h` for entry points.
   ImportContext(
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<std::istream> is,
-      WhitespaceStrictness whitespace_strictness);
+      std::reference_wrapper<InputCursor> input);
 
   // *****************************************************
   // ** See parent classes for all available functions. **

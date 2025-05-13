@@ -23,6 +23,7 @@
 #include "gtest/gtest.h"
 #include "src/context.h"
 #include "src/librarian/errors.h"
+#include "src/librarian/io_config.h"
 #include "src/test_case.h"
 #include "src/testing/gtest_helpers.h"
 #include "src/variables/constraints/io_constraints.h"
@@ -167,7 +168,8 @@ TEST(SimpleIOImporterTest, ImportInBasicCaseShouldWork) {
   std::stringstream ss("1 11\n2 22\n3 33\n4 44\n");
   ImportFn importer = SimpleIO().AddLine("R", "S").Importer(4);
 
-  ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ImportContext ctx(context.Variables(), cursor);
 
   EXPECT_THAT(
       importer(ctx),
@@ -199,7 +201,8 @@ end
                           .AddFooterLine(StringLiteral("end"))
                           .Importer(4);
 
-  ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ImportContext ctx(context.Variables(), cursor);
 
   EXPECT_THAT(
       importer(ctx),
@@ -218,7 +221,8 @@ TEST(SimpleIOImporterTest, ImportWrongTokenFails) {
           .Importer();
 
   Context context;
-  ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ImportContext ctx(context.Variables(), cursor);
   EXPECT_THROW({ importer(ctx); }, IOError);
 }
 
@@ -229,7 +233,8 @@ TEST(SimpleIOImporterTest, ImportWrongWhitespaceFails) {
   std::stringstream ss("1\t11\n");
   ImportFn importer = SimpleIO().AddLine("R", "S").Importer();
 
-  ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ImportContext ctx(context.Variables(), cursor);
   EXPECT_THROW({ importer(ctx); }, IOError);
 }
 
@@ -241,7 +246,8 @@ TEST(SimpleIOImporterTest, ImportWithNumberOfTestCasesInHeaderShouldWork) {
   ImportFn importer =
       SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
 
-  ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ImportContext ctx(context.Variables(), cursor);
 
   EXPECT_THAT(
       importer(ctx),
@@ -260,7 +266,8 @@ TEST(SimpleIOImporterTest,
   ImportFn importer =
       SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
 
-  ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ImportContext ctx(context.Variables(), cursor);
   EXPECT_THROW({ importer(ctx); }, IOError);
 }
 
@@ -273,7 +280,8 @@ TEST(SimpleIOImporterTest,
   ImportFn importer =
       SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
 
-  ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ImportContext ctx(context.Variables(), cursor);
   EXPECT_THROW({ importer(ctx); }, IOError);
 }
 
@@ -286,7 +294,8 @@ TEST(SimpleIOImporterTest,
   ImportFn importer =
       SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
 
-  ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ImportContext ctx(context.Variables(), cursor);
   EXPECT_THROW({ importer(ctx); }, IOError);
 }
 
@@ -306,7 +315,8 @@ TEST(SimpleIOImporterTest, MultilineSectionShouldWork) {
 
   std::stringstream ss("3\n1 11\n2 22\n3 33\n");
 
-  ImportContext ctx(context.Variables(), ss, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ImportContext ctx(context.Variables(), cursor);
   ImportFn importer = SimpleIO()
                           .AddLine("N")
                           .AddMultilineSection("(N - 1) + 1", "A", "B")

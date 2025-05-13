@@ -41,6 +41,7 @@
 #include "src/librarian/constraint_handler.h"
 #include "src/librarian/conversions.h"
 #include "src/librarian/errors.h"
+#include "src/librarian/io_config.h"
 #include "src/librarian/one_of_handler.h"
 #include "src/librarian/policies.h"
 #include "src/variables/constraints/base_constraints.h"
@@ -267,15 +268,13 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::reference_wrapper<moriarty_internal::ValueSet> values)
       const override;
   void ReadValue(
-      std::string_view variable_name, std::reference_wrapper<std::istream> is,
-      WhitespaceStrictness whitespace_strictness,
+      std::string_view variable_name, std::reference_wrapper<InputCursor> input,
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<moriarty_internal::ValueSet> values)
       const override;
   std::unique_ptr<moriarty_internal::PartialReader> GetPartialReader(
       std::string_view variable_name, int N,
-      std::reference_wrapper<std::istream> is,
-      WhitespaceStrictness whitespace_strictness,
+      std::reference_wrapper<InputCursor> input,
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<moriarty_internal::ValueSet> values)
       const override;
@@ -620,12 +619,10 @@ void MVariable<V, G>::AssignUniqueValue(
 
 template <typename V, typename G>
 void MVariable<V, G>::ReadValue(
-    std::string_view variable_name, std::reference_wrapper<std::istream> is,
-    WhitespaceStrictness whitespace_strictness,
+    std::string_view variable_name, std::reference_wrapper<InputCursor> input,
     std::reference_wrapper<const moriarty_internal::VariableSet> variables,
     std::reference_wrapper<moriarty_internal::ValueSet> values) const {
-  ReaderContext ctx(variable_name, is, whitespace_strictness, variables,
-                    values);
+  ReaderContext ctx(variable_name, input, variables, values);
   values.get().Set<V>(ctx.GetVariableName(), Read(ctx));
 }
 
@@ -633,13 +630,11 @@ template <typename V, typename G>
 std::unique_ptr<moriarty_internal::PartialReader>
 MVariable<V, G>::GetPartialReader(
     std::string_view variable_name, int N,
-    std::reference_wrapper<std::istream> is,
-    WhitespaceStrictness whitespace_strictness,
+    std::reference_wrapper<InputCursor> input,
     std::reference_wrapper<const moriarty_internal::VariableSet> variables,
     std::reference_wrapper<moriarty_internal::ValueSet> values) const {
   if constexpr (requires { typename V::partial_reader_type; }) {
-    ReaderContext ctx(variable_name, is, whitespace_strictness, variables,
-                      values);
+    ReaderContext ctx(variable_name, input, variables, values);
     return std::make_unique<
         PartialReaderWrapper<typename V::partial_reader_type>>(
         UnderlyingVariableType().CreatePartialReader(N), ctx, values);

@@ -14,7 +14,6 @@
 
 #include "src/contexts/librarian_context.h"
 
-#include <istream>
 #include <ostream>
 #include <string_view>
 
@@ -25,7 +24,7 @@
 #include "src/contexts/internal/view_only_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/policies.h"
+#include "src/librarian/io_config.h"
 
 namespace moriarty {
 namespace librarian {
@@ -57,13 +56,12 @@ PrinterContext::PrinterContext(
       BasicOStreamContext(os) {}
 
 ReaderContext::ReaderContext(
-    std::string_view variable_name, std::reference_wrapper<std::istream> is,
-    WhitespaceStrictness whitespace_strictness,
+    std::string_view variable_name, std::reference_wrapper<InputCursor> input,
     std::reference_wrapper<const moriarty_internal::VariableSet> variables,
     std::reference_wrapper<const moriarty_internal::ValueSet> values)
     : NameContext(variable_name),
       ViewOnlyContext(variables, values),
-      BasicIStreamContext(is, whitespace_strictness) {}
+      BasicIStreamContext(input) {}
 
 ResolverContext::ResolverContext(
     std::string_view variable_name,

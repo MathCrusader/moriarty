@@ -31,6 +31,7 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_name_utils.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/io_config.h"
 #include "src/test_case.h"
 
 namespace moriarty {
@@ -86,7 +87,8 @@ std::optional<std::string> Moriarty::ValidateTestCases() {
 }
 
 void Moriarty::ImportTestCases(ImportFn fn, ImportOptions options) {
-  ImportContext ctx(variables_, options.is, options.whitespace_strictness);
+  InputCursor cursor(options.is, options.whitespace_strictness);
+  ImportContext ctx(variables_, cursor);
 
   std::vector<ConcreteTestCase> test_cases = fn(ctx);
   for (const ConcreteTestCase& test_case : test_cases) {

@@ -18,7 +18,6 @@
 #define MORIARTY_SRC_CONTEXTS_LIBRARIAN_CONTEXT_H_
 
 #include <functional>
-#include <istream>
 #include <ostream>
 #include <string_view>
 
@@ -34,7 +33,7 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/policies.h"
+#include "src/librarian/io_config.h"
 
 namespace moriarty {
 namespace librarian {
@@ -105,8 +104,7 @@ class ReaderContext : public moriarty_internal::NameContext,
                       public moriarty_internal::BasicIStreamContext {
  public:
   ReaderContext(
-      std::string_view variable_name, std::reference_wrapper<std::istream> is,
-      WhitespaceStrictness whitespace_strictness,
+      std::string_view variable_name, std::reference_wrapper<InputCursor> input,
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<const moriarty_internal::ValueSet> values);
 

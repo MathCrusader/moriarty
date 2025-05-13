@@ -55,6 +55,9 @@ cc_library(
 cc_library(
     name = "io_config",
     hdrs = ["io_config.h"],
+    deps = [
+        "//src/librarian:policies",
+    ],
 )
 
 cc_library(

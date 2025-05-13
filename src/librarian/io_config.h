@@ -17,8 +17,12 @@
 #ifndef MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
 #define MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
 
+#include <functional>
+#include <istream>
 #include <optional>
 #include <string>
+
+#include "src/librarian/policies.h"
 
 namespace moriarty {
 
@@ -27,6 +31,8 @@ enum class Whitespace { kSpace, kTab, kNewline };
 
 // Information about where the input cursor is in the input stream.
 struct InputCursor {
+  std::reference_wrapper<std::istream> is;
+  WhitespaceStrictness strictness;
   int line_num = 1;
   int col_num = 1;
   int token_num_file = 1;

@@ -1,34 +1,28 @@
 #include "src/contexts/internal/variable_istream_context.h"
 
-#include <istream>
 #include <memory>
 
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/policies.h"
+#include "src/librarian/io_config.h"
 #include "src/test_case.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
 VariableIStreamContext::VariableIStreamContext(
-    std::reference_wrapper<std::istream> is,
-    WhitespaceStrictness whitespace_strictness,
+    std::reference_wrapper<InputCursor> input,
     std::reference_wrapper<const VariableSet> variables,
     std::reference_wrapper<const ValueSet> values)
-    : variables_(variables),
-      values_(values),
-      is_(is),
-      whitespace_strictness_(whitespace_strictness) {}
+    : variables_(variables), values_(values), input_(input) {}
 
 void VariableIStreamContext::ReadVariableTo(std::string_view variable_name,
                                             ConcreteTestCase& test_case) {
   ValueSet values = UnsafeExtractConcreteTestCaseInternals(test_case);
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
-  variable->ReadValue(variable_name, is_, whitespace_strictness_, variables_,
-                      values);
+  variable->ReadValue(variable_name, input_, variables_, values);
   test_case.UnsafeSetAnonymousValue(variable_name,
                                     values.UnsafeGet(variable_name));
 }
@@ -39,8 +33,7 @@ VariableIStreamContext::GetPartialReader(std::string_view variable_name,
                                          ConcreteTestCase& test_case) const {
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
-  return variable->GetPartialReader(variable_name, calls, is_,
-                                    whitespace_strictness_, variables_,
+  return variable->GetPartialReader(variable_name, calls, input_, variables_,
                                     test_case.UnsafeGetValues());
 }
 

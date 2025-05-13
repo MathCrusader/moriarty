@@ -23,6 +23,8 @@
 #include <string>
 #include <vector>
 
+#include "src/librarian/io_config.h"
+
 namespace moriarty {
 
 // Determines if T is a Moriarty Variable. Examples: MInteger, MString, etc.
@@ -141,8 +143,7 @@ class AbstractVariable {
   // Reads a value from `ctx` using the constraints of this variable to
   // determine formatting, etc. Stores the value in `values_ctx`.
   virtual void ReadValue(std::string_view variable_name,
-                         std::reference_wrapper<std::istream> is,
-                         WhitespaceStrictness whitespace_strictness,
+                         std::reference_wrapper<InputCursor> input,
                          std::reference_wrapper<const VariableSet> variables,
                          std::reference_wrapper<ValueSet> values) const = 0;
 
@@ -160,8 +161,7 @@ class AbstractVariable {
   // `Finalize()` is called.
   [[nodiscard]] virtual std::unique_ptr<PartialReader> GetPartialReader(
       std::string_view variable_name, int N,
-      std::reference_wrapper<std::istream> is,
-      WhitespaceStrictness whitespace_strictness,
+      std::reference_wrapper<InputCursor> input,
       std::reference_wrapper<const VariableSet> variables,
       std::reference_wrapper<ValueSet> values) const = 0;
 

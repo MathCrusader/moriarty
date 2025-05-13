@@ -18,13 +18,12 @@
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_ISTREAM_CONTEXT_H_
 
 #include <functional>
-#include <istream>
 #include <memory>
 #include <string_view>
 
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/librarian/policies.h"
+#include "src/librarian/io_config.h"
 #include "src/test_case.h"
 
 namespace moriarty {
@@ -35,8 +34,7 @@ namespace moriarty_internal {
 // Read variables from an input stream.
 class VariableIStreamContext {
  public:
-  VariableIStreamContext(std::reference_wrapper<std::istream> is,
-                         WhitespaceStrictness whitespace_strictness,
+  VariableIStreamContext(std::reference_wrapper<InputCursor> input,
                          std::reference_wrapper<const VariableSet> variables,
                          std::reference_wrapper<const ValueSet> values);
 
@@ -76,8 +74,7 @@ class VariableIStreamContext {
  private:
   std::reference_wrapper<const VariableSet> variables_;
   std::reference_wrapper<const ValueSet> values_;
-  std::reference_wrapper<std::istream> is_;
-  WhitespaceStrictness whitespace_strictness_;
+  std::reference_wrapper<InputCursor> input_;
 };
 
 // ----------------------------------------------------------------------------
@@ -88,14 +85,12 @@ T::value_type VariableIStreamContext::ReadVariable(
     std::string_view variable_name) {
   T variable = variables_.get().GetVariable<T>(variable_name);
 
-  return variable.Read(
-      {variable_name, is_, whitespace_strictness_, variables_, values_});
+  return variable.Read({variable_name, input_, variables_, values_});
 }
 
 template <MoriartyVariable T>
 T::value_type VariableIStreamContext::ReadVariable(const T& variable) {
-  return variable.Read(
-      {"ReadVariable()", is_, whitespace_strictness_, variables_, values_});
+  return variable.Read({"ReadVariable()", input_, variables_, values_});
 }
 
 }  // namespace moriarty_internal

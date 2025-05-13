@@ -23,6 +23,7 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/io_config.h"
 
 namespace moriarty {
 
@@ -36,11 +37,10 @@ GenerateContext::GenerateContext(
 
 ImportContext::ImportContext(
     std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<std::istream> is,
-    WhitespaceStrictness whitespace_strictness)
+    std::reference_wrapper<InputCursor> input)
     : ViewOnlyContext(variables, values_),
-      BasicIStreamContext(is, whitespace_strictness),
-      VariableIStreamContext(is, whitespace_strictness, variables, values_) {}
+      BasicIStreamContext(input),
+      VariableIStreamContext(input, variables, values_) {}
 
 ExportContext::ExportContext(
     std::reference_wrapper<std::ostream> os,

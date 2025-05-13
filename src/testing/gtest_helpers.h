@@ -118,6 +118,7 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/errors.h"
+#include "src/librarian/io_config.h"
 
 namespace moriarty_testing {
 
@@ -444,8 +445,8 @@ T::value_type Read(T variable, std::istream& is, Context context) {
   moriarty::moriarty_internal::AbstractVariable* var =
       context.Variables().GetAnonymousVariable(var_name);
 
-  var->ReadValue(var_name, is, moriarty::WhitespaceStrictness::kPrecise,
-                 context.Variables(), context.Values());
+  moriarty::InputCursor cr(is, moriarty::WhitespaceStrictness::kPrecise);
+  var->ReadValue(var_name, cr, context.Variables(), context.Values());
   return context.Values().Get<T>(var_name);
 }
 

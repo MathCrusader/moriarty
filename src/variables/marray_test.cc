@@ -27,6 +27,7 @@
 #include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/errors.h"
+#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/policies.h"
 #include "src/testing/gtest_helpers.h"
@@ -408,8 +409,9 @@ TEST(MArrayTest, DirectlyUsingPartialReaderShouldWork) {
 
   Context context;
   std::istringstream input("1\n2\n3\n4\n5\n6\n");
-  librarian::ReaderContext ctx("A", input, WhitespaceStrictness::kPrecise,
-                               Context().Variables(), Context().Values());
+  InputCursor cursor(input, WhitespaceStrictness::kPrecise);
+  librarian::ReaderContext ctx("A", cursor, Context().Variables(),
+                               Context().Values());
 
   for (int i = 0; i < 6; i++) {
     reader.ReadNext(ctx, i);
@@ -421,12 +423,12 @@ TEST(MArrayTest, DirectlyUsingPartialReaderShouldWork) {
 TEST(MArrayTest, IndirectlyUsingPartialReaderShouldWork) {
   Context context;
   std::istringstream input("1\n2\n3\n4\n5\n6\n");
+  InputCursor cursor(input, WhitespaceStrictness::kPrecise);
 
   MArray<MInteger> arr(Elements<MInteger>(Between(1, 10)), Length(6));
   std::unique_ptr<moriarty_internal::PartialReader> reader =
       static_cast<moriarty_internal::AbstractVariable&>(arr).GetPartialReader(
-          "A", 6, input, WhitespaceStrictness::kPrecise, context.Variables(),
-          context.Values());
+          "A", 6, cursor, context.Variables(), context.Values());
 
   for (int i = 0; i < 6; i++) {
     reader->ReadNext();
