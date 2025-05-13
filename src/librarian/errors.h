@@ -28,14 +28,24 @@
 
 namespace moriarty {
 
+// GenericMoriartyError
+//
+// Base class for all errors thrown by Moriarty. This is not intended to be
+// thrown directly, but rather to be inherited from.
+class GenericMoriartyError : public std::logic_error {
+ public:
+  explicit GenericMoriartyError(std::string message)
+      : std::logic_error(message) {}
+};
+
 // ValueNotFound
 //
 // Thrown when the user asks about a value that is not known. This does not
 // imply anything about if the variable is known.
-class ValueNotFound : public std::logic_error {
+class ValueNotFound : public GenericMoriartyError {
  public:
   explicit ValueNotFound(std::string_view variable_name)
-      : std::logic_error(
+      : GenericMoriartyError(
             std::format("Value for `{}` not found", variable_name)),
         variable_name_(variable_name) {}
 
@@ -49,10 +59,11 @@ class ValueNotFound : public std::logic_error {
 //
 // Thrown when the user asks about a variable that is not known. For the most
 // part, named variables are created via the `Moriarty` class.
-class VariableNotFound : public std::logic_error {
+class VariableNotFound : public GenericMoriartyError {
  public:
   explicit VariableNotFound(std::string_view variable_name)
-      : std::logic_error(std::format("Variable `{}` not found", variable_name)),
+      : GenericMoriartyError(
+            std::format("Variable `{}` not found", variable_name)),
         variable_name_(variable_name) {}
 
   const std::string& VariableName() const { return variable_name_; }
@@ -64,12 +75,12 @@ class VariableNotFound : public std::logic_error {
 // MVariableTypeMismatch
 //
 // Thrown when the user attempts to cast an MVariable to one of the wrong type.
-class MVariableTypeMismatch : public std::logic_error {
+class MVariableTypeMismatch : public GenericMoriartyError {
  public:
   explicit MVariableTypeMismatch(std::string_view converting_from,
                                  std::string_view converting_to)
-      : std::logic_error(std::format("Cannot convert {} to {}", converting_from,
-                                     converting_to)),
+      : GenericMoriartyError(std::format("Cannot convert {} to {}",
+                                         converting_from, converting_to)),
         from_(converting_from),
         to_(converting_to) {}
 
@@ -85,11 +96,11 @@ class MVariableTypeMismatch : public std::logic_error {
 //
 // Thrown when the user attempts to cast a value that has been stored using the
 // wrong MVariable type. E.g., attempting to read an std::string using MInteger.
-class ValueTypeMismatch : public std::logic_error {
+class ValueTypeMismatch : public GenericMoriartyError {
  public:
   explicit ValueTypeMismatch(std::string_view variable_name,
                              std::string_view incompatible_type)
-      : std::logic_error(
+      : GenericMoriartyError(
             std::format("Cannot convert the value of `{}` into {}::value_type",
                         variable_name, incompatible_type)),
         name_(variable_name),
@@ -107,11 +118,11 @@ class ValueTypeMismatch : public std::logic_error {
 //
 // Thrown when a constraint is added to a variable, which makes it impossible
 // for any value to satisfy.
-class ImpossibleToSatisfy : public std::logic_error {
+class ImpossibleToSatisfy : public GenericMoriartyError {
  public:
   explicit ImpossibleToSatisfy(std::string_view variable_str,
                                std::string_view constraint_str)
-      : std::logic_error(
+      : GenericMoriartyError(
             std::format("Adding this constraint left the variable in a state "
                         "where no value can possibly be generated:"
                         "\n * New Constraint : {}\n * All constraints: {}",
@@ -120,10 +131,11 @@ class ImpossibleToSatisfy : public std::logic_error {
         constraint_(constraint_str) {}
 
   explicit ImpossibleToSatisfy(std::string_view variable_str)
-      : std::logic_error(std::format("This constraint is in a state "
-                                     "where no value can possibly be generated:"
-                                     "\n * All constraints: {}",
-                                     variable_str)),
+      : GenericMoriartyError(
+            std::format("This constraint is in a state "
+                        "where no value can possibly be generated:"
+                        "\n * All constraints: {}",
+                        variable_str)),
         variable_(variable_str),
         constraint_("") {}
 
@@ -138,12 +150,13 @@ class ImpossibleToSatisfy : public std::logic_error {
 // GenerationError()
 //
 // Thrown when a variable is unable to generate a value.
-class GenerationError : public std::logic_error {
+class GenerationError : public GenericMoriartyError {
  public:
   explicit GenerationError(std::string_view variable_name,
                            std::string_view message, RetryPolicy retryable)
-      : std::logic_error(std::format("Error while generating variable `{}`: {}",
-                                     variable_name, message)),
+      : GenericMoriartyError(
+            std::format("Error while generating variable `{}`: {}",
+                        variable_name, message)),
         variable_name_(variable_name),
         message_(message),
         retryable_(retryable) {}
@@ -158,13 +171,13 @@ class GenerationError : public std::logic_error {
   RetryPolicy retryable_;
 };
 
-// InputError()
+// IOError()
 //
 // Thrown when the I/O is invalid.
-class IOError : public std::logic_error {
+class IOError : public GenericMoriartyError {
  public:
   explicit IOError(const InputCursor& cursor, std::string_view message)
-      : std::logic_error(std::format(
+      : GenericMoriartyError(std::format(
             "{}\nLocation (line, column): ({}, {}) | "
             "Token # (this line, entire file): ({}, {})\nLast Read Value: '{}'",
             message, cursor.line_num, cursor.col_num, cursor.token_num_line,
@@ -174,12 +187,6 @@ class IOError : public std::logic_error {
                 /* include_backticks = */ false))),
         message_(message),
         cursor_(cursor) {}
-
-  static IOError ExpectedGot(const InputCursor& cursor,
-                             std::string_view expected, std::string_view got) {
-    return IOError(cursor,
-                   std::format("Expected '{}', but got '{}'", expected, got));
-  }
 
   const InputCursor& Cursor() const { return cursor_; }
   const std::string& Message() const { return message_; }
