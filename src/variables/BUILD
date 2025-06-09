@@ -37,6 +37,13 @@ cc_library(
 )
 
 cc_library(
+    name = "graph",
+    hdrs = ["graph.h"],
+    deps = [
+    ],
+)
+
+cc_library(
     name = "marray",
     hdrs = ["marray.h"],
     deps = [
@@ -53,6 +60,21 @@ cc_library(
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/strings",
+    ],
+)
+
+cc_library(
+    name = "mgraph",
+    srcs = ["mgraph.cc"],
+    hdrs = ["mgraph.h"],
+    deps = [
+        ":graph",
+        ":minteger",
+        "//src/contexts:librarian_context",
+        "//src/librarian:mvariable",
+        "//src/variables/constraints:base_constraints",
+        "//src/variables/constraints:graph_constraints",
+        "//src/variables/constraints:size_constraints",
     ],
 )
 
@@ -116,6 +138,15 @@ cc_library(
 )
 
 cc_test(
+    name = "graph_test",
+    srcs = ["graph_test.cc"],
+    deps = [
+        ":graph",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "marray_test",
     srcs = ["marray_test.cc"],
     deps = [
@@ -147,6 +178,19 @@ cc_test(
         "//src/variables/constraints:base_constraints",
         "//src/variables/constraints:numeric_constraints",
         "//src/variables/constraints:size_constraints",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "mgraph_test",
+    srcs = ["mgraph_test.cc"],
+    deps = [
+        ":graph",
+        ":mgraph",
+        ":minteger",
+        "//src/testing:gtest_helpers",
+        "//src/variables/constraints:graph_constraints",
         "@googletest//:gtest_main",
     ],
 )

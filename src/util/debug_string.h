@@ -28,6 +28,13 @@ namespace librarian {
 // Values <10 may be weird, I wasn't careful for small values.
 static constexpr int kMaxDebugStringLength = 50;
 
+template <typename T>
+  requires(requires(T x) {
+    { x.DebugString() } -> std::same_as<std::string>;
+  })
+std::string DebugString(const T& x, int max_len = kMaxDebugStringLength,
+                        bool include_backticks = true);
+
 template <std::integral IntLike>
 std::string DebugString(IntLike x, int max_len = kMaxDebugStringLength,
                         bool include_backticks = true);
@@ -62,6 +69,14 @@ std::string CleanAndShortenDebugString(const std::string& x, int max_len,
                                        bool include_backticks);
 
 // ----------------------------------------------------------------------------
+
+template <typename T>
+  requires(requires(T x) {
+    { x.DebugString() } -> std::same_as<std::string>;
+  })
+std::string DebugString(const T& x, int max_len, bool include_backticks) {
+  return DebugString(x.DebugString(), max_len, include_backticks);
+}
 
 template <std::integral IntLike>
 std::string DebugString(IntLike x, int max_len, bool include_backticks) {

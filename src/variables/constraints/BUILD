@@ -72,6 +72,19 @@ cc_library(
 )
 
 cc_library(
+    name = "graph_constraints",
+    srcs = ["graph_constraints.cc"],
+    hdrs = ["graph_constraints.h"],
+    deps = [
+        ":base_constraints",
+        "//src/contexts:librarian_context",
+        "//src/util:debug_string",
+        "//src/variables:graph",
+        "//src/variables:minteger",
+    ],
+)
+
+cc_library(
     name = "io_constraints",
     srcs = ["io_constraints.cc"],
     hdrs = ["io_constraints.h"],
@@ -143,6 +156,18 @@ cc_test(
         ":custom_constraint",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/variables:minteger",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "graph_constraints_test",
+    srcs = ["graph_constraints_test.cc"],
+    deps = [
+        ":graph_constraints",
+        "//src/testing:gtest_helpers",
+        "//src/variables:graph",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
