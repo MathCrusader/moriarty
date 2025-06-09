@@ -119,7 +119,7 @@ std::string BasicIStreamContext::ReadToken() {
   // I don't think this is necessary, but it is here for safety.
   if (!is) ThrowIOError("Failed to read from the input stream.");
 
-  GetCursor().last_read_item = token;
+  GetCursor().AddReadItem(token);
   GetCursor().col_num += token.length();
 
   return token;
@@ -149,7 +149,7 @@ void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
   }
   RegisterNewline(c, GetCursor());
 
-  GetCursor().last_read_item = std::string(1, c);
+  GetCursor().AddReadItem(std::string(1, c));
 
   if (GetStrictness() == WhitespaceStrictness::kFlexible) return;
 

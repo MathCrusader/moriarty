@@ -20,7 +20,6 @@
 #include <concepts>
 #include <string>
 #include <tuple>
-#include <vector>
 
 namespace moriarty {
 namespace librarian {
@@ -46,8 +45,8 @@ std::string DebugString(unsigned char x, int max_len = kMaxDebugStringLength,
                         bool include_backticks = true);
 
 template <typename T>
-std::string DebugString(const std::vector<T>& x,
-                        int max_len = kMaxDebugStringLength,
+  requires(std::ranges::range<T> && !std::convertible_to<T, std::string>)
+std::string DebugString(const T& x, int max_len = kMaxDebugStringLength,
                         bool include_backticks = true);
 
 template <typename... Ts>
@@ -85,8 +84,8 @@ std::string DebugString(IntLike x, int max_len, bool include_backticks) {
 }
 
 template <typename T>
-std::string DebugString(const std::vector<T>& x, int max_len,
-                        bool include_backticks) {
+  requires(std::ranges::range<T> && !std::convertible_to<T, std::string>)
+std::string DebugString(const T& x, int max_len, bool include_backticks) {
   std::string res = "[";
   for (bool first = true; const auto& elem : x) {
     if (!first) res += ",";

@@ -17,9 +17,9 @@
 #ifndef MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
 #define MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
 
+#include <deque>
 #include <functional>
 #include <istream>
-#include <optional>
 #include <string>
 
 #include "src/librarian/policies.h"
@@ -31,13 +31,20 @@ enum class Whitespace { kSpace, kTab, kNewline };
 
 // Information about where the input cursor is in the input stream.
 struct InputCursor {
+  static constexpr int kRecentlyReadSize = 3;
+
   std::reference_wrapper<std::istream> is;
   WhitespaceStrictness strictness;
-  int line_num = 1;                           // 1-based
-  int col_num = 0;                            // 1-based
-  int token_num_file = 0;                     // 1-based
-  int token_num_line = 0;                     // 1-based
-  std::optional<std::string> last_read_item;  // May be a token or whitespace.
+  int line_num = 1;                       // 1-based
+  int col_num = 0;                        // 1-based
+  int token_num_file = 0;                 // 1-based
+  int token_num_line = 0;                 // 1-based
+  std::deque<std::string> recently_read;  // May be tokens or whitespace.
+
+  void AddReadItem(std::string item) {
+    recently_read.push_back(std::move(item));
+    if (recently_read.size() > kRecentlyReadSize) recently_read.pop_front();
+  }
 };
 
 }  // namespace moriarty

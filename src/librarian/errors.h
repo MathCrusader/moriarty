@@ -178,13 +178,16 @@ class IOError : public GenericMoriartyError {
  public:
   explicit IOError(const InputCursor& cursor, std::string_view message)
       : GenericMoriartyError(std::format(
-            "{}\nLocation (line, column): ({}, {}) | "
-            "Token # (this line, entire file): ({}, {})\nLast Read Value: '{}'",
+            R"({}
+
+Context:
+ * On line {} (column {})
+ * Token #{} on this line (#{} in the entire file)
+ * Most recently read value: '{}')",
             message, cursor.line_num, cursor.col_num, cursor.token_num_line,
             cursor.token_num_file,
-            librarian::CleanAndShortenDebugString(
-                cursor.last_read_item.value_or(""), 50,
-                /* include_backticks = */ false))),
+            librarian::DebugString(cursor.recently_read, 50,
+                                   /* include_backticks = */ false))),
         message_(message),
         cursor_(cursor) {}
 
