@@ -219,6 +219,95 @@ TEST(BasicIStreamTest, ReadFunctionBehaveEndToEnd) {
   }
 }
 
+TEST(BasicIStreamContextTest, ValidIntegerReadShouldWork) {
+  {  // Positive
+    std::stringstream ss("123");
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_EQ(c.ReadInteger(), 123);
+  }
+  {  // Negative
+    std::stringstream ss("-123");
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_EQ(c.ReadInteger(), -123);
+  }
+  {  // Zero
+    std::stringstream ss("0");
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_EQ(c.ReadInteger(), 0);
+  }
+  {  // With whitespace
+    std::stringstream ss("   -123   ");
+    InputCursor cr(ss, WhitespaceStrictness::kFlexible);
+    BasicIStreamContext c(cr);
+    EXPECT_EQ(c.ReadInteger(), -123);
+  }
+}
+
+TEST(BasicIStreamContextTest, InvalidIntegerReadShouldFail) {
+  {  // EOF
+    std::stringstream ss("");
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_THROW({ (void)c.ReadInteger(); }, IOError);
+  }
+  // EOF with whitespace
+  {
+    std::stringstream ss(" ");
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_THROW({ (void)c.ReadInteger(); }, IOError);
+  }
+  // Double negative
+  {
+    std::stringstream ss("--123");
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_THROW({ (void)c.ReadInteger(); }, IOError);
+  }
+  // Invalid character start
+  {
+    std::stringstream ss("c123");
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_THROW({ (void)c.ReadInteger(); }, IOError);
+  }
+  // Invalid character middle
+  {
+    std::stringstream ss("12c3");
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_THROW({ (void)c.ReadInteger(); }, IOError);
+  }
+  // Invalid character end
+  {
+    std::stringstream ss("123c");
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_THROW({ (void)c.ReadInteger(); }, IOError);
+  }
+  {  // Too large
+    std::stringstream ss("9223372036854775808");
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_THROW({ (void)c.ReadInteger(); }, IOError);
+  }
+  {  // Too small
+    std::stringstream ss("-9223372036854775809");
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_THROW({ (void)c.ReadInteger(); }, IOError);
+  }
+  {  // Massive
+    std::stringstream ss(std::string(1000, '3'));
+    InputCursor cr(ss, WhitespaceStrictness::kPrecise);
+    BasicIStreamContext c(cr);
+    EXPECT_THROW({ (void)c.ReadInteger(); }, IOError);
+  }
+}
+
 }  // namespace
 }  // namespace moriarty_internal
 }  // namespace moriarty

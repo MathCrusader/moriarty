@@ -31,6 +31,7 @@ cc_library(
         "//src/librarian:errors",
         "//src/librarian:io_config",
         "//src/librarian:policies",
+        "//src/util:debug_string",
     ],
 )
 

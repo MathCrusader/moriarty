@@ -16,6 +16,7 @@
 
 #include <cassert>
 #include <cctype>
+#include <cstdint>
 #include <format>
 #include <functional>
 #include <istream>
@@ -25,6 +26,7 @@
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
+#include "src/util/debug_string.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -156,6 +158,38 @@ void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
                              ReadableChar(WhitespaceAsChar(whitespace)),
                              ReadableChar(c)));
   }
+}
+
+int64_t BasicIStreamContext::ReadInteger() {
+  std::string read_token = ReadToken();
+  bool negative = read_token[0] == '-';
+  std::string_view token = read_token;
+  if (negative) token.remove_prefix(1);
+
+  for (char c : token) {
+    if (!std::isdigit(c))
+      ThrowIOError(std::format("Expected an integer, but got '{}'.",
+                               librarian::DebugString(read_token)));
+  }
+  if (token.empty())
+    ThrowIOError(std::format("Expected an integer, but got '{}'.",
+                             librarian::DebugString(read_token)));
+  // 2^63 == 9223372036854775808, which has 19 digits.
+  if (token.size() > 19) {
+    ThrowIOError(std::format("Value does not fit into a 64-bit integer '{}'.",
+                             librarian::DebugString(read_token)));
+  }
+  if (token.size() == 19) {
+    if (negative && token == "9223372036854775808")
+      return std::numeric_limits<int64_t>::min();
+
+    if (token > "9223372036854775807")
+      ThrowIOError(std::format("Value does not fit into a 64-bit integer '{}'.",
+                               librarian::DebugString(read_token)));
+  }
+
+  // TODO: Add checks for strict mode (-0, leading zeros)
+  return std::stoll(read_token);
 }
 
 WhitespaceStrictness BasicIStreamContext::GetStrictness() const {

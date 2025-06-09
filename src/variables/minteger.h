@@ -74,7 +74,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   MInteger& AddConstraint(OneOf<std::string> constraint);
 
   // ---------------------------------------------------------------------------
-  //  Constraints about ranges
+  //  Constrain the interval of values that the integer can be in
 
   // The integer must be in this inclusive range.
   MInteger& AddConstraint(Between constraint);

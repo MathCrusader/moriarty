@@ -23,7 +23,6 @@
 #include <limits>
 #include <memory>
 #include <optional>
-#include <sstream>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -235,15 +234,7 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
 }
 
 int64_t MInteger::ReadImpl(librarian::ReaderContext ctx) const {
-  std::string token = ctx.ReadToken();
-  std::stringstream is(token);
-
-  int64_t value;
-  std::string garbage;
-  if (!(is >> value) || (is >> garbage)) {
-    ctx.ThrowIOError(std::format("Expected an integer, received '{}'", token));
-  }
-  return value;
+  return ctx.ReadInteger();
 }
 
 void MInteger::PrintImpl(librarian::PrinterContext ctx,

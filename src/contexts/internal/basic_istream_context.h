@@ -17,6 +17,7 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_BASIC_ISTREAM_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_BASIC_ISTREAM_CONTEXT_H_
 
+#include <cstdint>
 #include <functional>
 #include <string>
 
@@ -67,6 +68,11 @@ class BasicIStreamContext {
   // Throws an `IOError` exception with the current cursor position and the
   // provided message.
   void ThrowIOError(std::string_view message) const;
+
+  // ReadInteger()
+  //
+  // Reads the next token from the input stream and casts it to an integer.
+  int64_t ReadInteger();
 
   // TODO: Add helper functions. ReadSpace(), ReadEoln(), ReadTokens(),
   // ReadInt64(), etc.
