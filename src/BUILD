@@ -34,6 +34,7 @@ cc_library(
         "//src/contexts/internal:basic_istream_context",
         "//src/contexts/internal:basic_ostream_context",
         "//src/contexts/internal:basic_random_context",
+        "//src/contexts/internal:name_context",
         "//src/contexts/internal:variable_istream_context",
         "//src/contexts/internal:variable_ostream_context",
         "//src/contexts/internal:variable_random_context",

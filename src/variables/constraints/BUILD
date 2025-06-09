@@ -66,6 +66,7 @@ cc_library(
     hdrs = ["custom_constraint.h"],
     deps = [
         ":base_constraints",
+        "//src:context",
         "//src/contexts:librarian_context",
         "//src/util:debug_string",
     ],

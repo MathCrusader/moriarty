@@ -26,6 +26,7 @@
 #include "src/contexts/internal/basic_istream_context.h"
 #include "src/contexts/internal/basic_ostream_context.h"
 #include "src/contexts/internal/basic_random_context.h"
+#include "src/contexts/internal/name_context.h"
 #include "src/contexts/internal/variable_istream_context.h"
 #include "src/contexts/internal/variable_ostream_context.h"
 #include "src/contexts/internal/variable_random_context.h"
@@ -145,6 +146,29 @@ struct ExportOptions {
   // The output stream to write to.
   std::reference_wrapper<std::ostream> os = std::cout;
 };
+
+// -----------------------------------------------------------------------------
+//  Custom Constraints
+
+// ConstraintContext
+//
+// All context that CustomConstraints have access to.
+class ConstraintContext : public moriarty_internal::NameContext,
+                          public moriarty_internal::ViewOnlyContext {
+ public:
+  ConstraintContext(
+      std::string_view variable_name,
+      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+      std::reference_wrapper<const moriarty_internal::ValueSet> values);
+  ConstraintContext(std::string_view name, const ViewOnlyContext& other);
+
+  // ********************************************
+  // ** See parent classes for more functions. **
+  // ********************************************
+};
+
+// The function signature for an importer.
+using ImportFn = std::function<std::vector<ConcreteTestCase>(ImportContext)>;
 
 }  // namespace moriarty
 

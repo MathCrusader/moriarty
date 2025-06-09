@@ -23,6 +23,7 @@
 #include <string_view>
 #include <vector>
 
+#include "src/context.h"
 #include "src/contexts/librarian_context.h"
 #include "src/util/debug_string.h"
 #include "src/variables/constraints/base_constraints.h"
@@ -44,11 +45,10 @@ class CustomConstraint : public MConstraint {
   // The value must satisfy `checker`. `name` is used for debugging and error
   // messages. This constraint depends on the variables in `dependencies`. Their
   // values must be generated before this constraint is checked.
-  explicit CustomConstraint(std::string_view name,
-                            std::vector<std::string> dependencies,
-                            std::function<bool(librarian::AnalysisContext,
-                                               const typename T::value_type&)>
-                                checker);
+  explicit CustomConstraint(
+      std::string_view name, std::vector<std::string> dependencies,
+      std::function<bool(ConstraintContext, const typename T::value_type&)>
+          checker);
 
   // Returns the name of the constraint.
   [[nodiscard]] std::string GetName() const;
@@ -68,7 +68,7 @@ class CustomConstraint : public MConstraint {
 
  private:
   std::string name_;
-  std::function<bool(librarian::AnalysisContext, const typename T::value_type&)>
+  std::function<bool(ConstraintContext, const typename T::value_type&)>
       constraint_;
   std::vector<std::string> dependencies_;
 };
@@ -88,8 +88,7 @@ CustomConstraint<T>::CustomConstraint(
 template <typename T>
 CustomConstraint<T>::CustomConstraint(
     std::string_view name, std::vector<std::string> dependencies,
-    std::function<bool(librarian::AnalysisContext,
-                       const typename T::value_type&)>
+    std::function<bool(ConstraintContext, const typename T::value_type&)>
         checker)
     : name_(std::string(name)),
       constraint_(std::move(checker)),
@@ -108,7 +107,7 @@ std::string CustomConstraint<T>::GetName() const {
 template <typename T>
 bool CustomConstraint<T>::IsSatisfiedWith(librarian::AnalysisContext ctx,
                                           const T::value_type& value) const {
-  return constraint_(ctx, value);
+  return constraint_(ConstraintContext(ctx.GetVariableName(), ctx), value);
 }
 
 template <typename T>

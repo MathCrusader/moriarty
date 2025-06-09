@@ -58,4 +58,14 @@ ExportContext::ExportContext(ExportContext ctx,
   VariableOStreamContext::UpdateVariableOStream(os);
 }
 
+ConstraintContext::ConstraintContext(
+    std::string_view variable_name,
+    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
+    std::reference_wrapper<const moriarty_internal::ValueSet> values)
+    : NameContext(variable_name), ViewOnlyContext(variables, values) {}
+
+ConstraintContext::ConstraintContext(std::string_view name,
+                                     const ViewOnlyContext& other)
+    : NameContext(name), ViewOnlyContext(other) {}
+
 }  // namespace moriarty

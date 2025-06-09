@@ -18,7 +18,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/contexts/librarian_context.h"
+#include "src/context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/variables/minteger.h"
@@ -43,10 +43,10 @@ TEST(CustomConstraintTest, BasicGettersWork) {
     moriarty_internal::VariableSet variables;
     moriarty_internal::ValueSet values;
     values.Set<MInteger>("N", 10);
-    librarian::AnalysisContext ctx("X", variables, values);
+    ConstraintContext ctx("X", variables, values);
 
     CustomConstraint<MInteger> constraint(
-        "bigger_than_N", {"N"}, [](librarian::AnalysisContext ctx, int64_t x) {
+        "bigger_than_N", {"N"}, [](ConstraintContext ctx, int64_t x) {
           return x > ctx.GetValue<MInteger>("N");
         });
     EXPECT_EQ(constraint.GetName(), "bigger_than_N");
@@ -61,7 +61,7 @@ TEST(CustomConstraintTest, IsSatisfiedWithShouldWork) {
   {  // No dependent variables
     moriarty_internal::VariableSet variables;
     moriarty_internal::ValueSet values;
-    librarian::AnalysisContext ctx("X", variables, values);
+    ConstraintContext ctx("X", variables, values);
 
     CustomConstraint<MInteger> constraint("positive",
                                           [](int64_t x) { return x > 0; });
@@ -73,10 +73,10 @@ TEST(CustomConstraintTest, IsSatisfiedWithShouldWork) {
     moriarty_internal::VariableSet variables;
     moriarty_internal::ValueSet values;
     values.Set<MInteger>("N", 10);
-    librarian::AnalysisContext ctx("X", variables, values);
+    ConstraintContext ctx("X", variables, values);
 
     CustomConstraint<MInteger> constraint(
-        "bigger_than_N", {"N"}, [](librarian::AnalysisContext ctx, int64_t x) {
+        "bigger_than_N", {"N"}, [](ConstraintContext ctx, int64_t x) {
           return x > ctx.GetValue<MInteger>("N");
         });
     EXPECT_TRUE(constraint.IsSatisfiedWith(ctx, 11));
