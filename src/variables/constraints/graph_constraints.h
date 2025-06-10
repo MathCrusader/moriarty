@@ -24,6 +24,7 @@
 
 namespace moriarty {
 
+// Constrains the number of nodes (vertices) in a graph.
 class NumNodes : public MConstraint {
  public:
   // The graph must have exactly this many nodes.
@@ -62,6 +63,7 @@ class NumNodes : public MConstraint {
   MInteger num_nodes_;
 };
 
+// Constrains the number of edges in a graph.
 class NumEdges : public MConstraint {
  public:
   // The graph must have exactly this many edges.
@@ -98,6 +100,53 @@ class NumEdges : public MConstraint {
 
  private:
   MInteger num_edges_;
+};
+
+// The graph must have exactly one connected component.
+//
+// In particular, the graph with 0 nodes is *not* connected.
+class Connected : public MConstraint {
+ public:
+  explicit Connected() {}
+
+  // Determines if the graph is connected.
+  [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
+                                     const Graph<>& value) const;
+
+  // Returns a string representation of this constraint.
+  [[nodiscard]] std::string ToString() const;
+
+  // Returns a string explaining why the value does not satisfy the constraints.
+  // It is assumed that IsSatisfiedWith() returned false.
+  [[nodiscard]] std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
+                                              const Graph<>& value) const;
+
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+};
+
+// The graph must contain no parallel edges. That is, the edge (u, v) is only
+// present in the graph at most once. This limits the graph to ((n+1) choose
+// 2) nodes if the graph contains loops and (n choose 2) if the graph is
+// loopless.
+class NoParallelEdges : public MConstraint {
+ public:
+  explicit NoParallelEdges() {}
+
+  // Determines if the graph has the correct number of edges.
+  [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
+                                     const Graph<>& value) const;
+
+  // Returns a string representation of this constraint.
+  [[nodiscard]] std::string ToString() const;
+
+  // Returns a string explaining why the value does not satisfy the constraints.
+  // It is assumed that IsSatisfiedWith() returned false.
+  [[nodiscard]] std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
+                                              const Graph<>& value) const;
+
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
 };
 
 template <typename... Constraints>

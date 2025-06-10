@@ -66,11 +66,21 @@ class MGraph : public librarian::MVariable<MGraph, Graph<>> {
   // The total size of the graph should be approximately this size.
   MGraph& AddConstraint(SizeCategory constraint);
 
+  // ---------------------------------------------------------------------------
+  //  Constrain typical graph theory items
+
+  // The graph is connected
+  MGraph& AddConstraint(Connected constraint);
+  // The graph has no parallel edges
+  MGraph& AddConstraint(NoParallelEdges constraint);
+
   [[nodiscard]] std::string Typename() const override { return "MGraph"; }
 
  private:
   std::optional<MInteger> num_nodes_constraints_;
   std::optional<MInteger> num_edges_constraints_;
+  bool is_connected_ = false;
+  bool multi_edges_allowed_ = true;
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides

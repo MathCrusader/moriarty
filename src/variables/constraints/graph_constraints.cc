@@ -85,4 +85,78 @@ std::string NumEdges::UnsatisfiedReason(librarian::AnalysisContext ctx,
                          ctx, static_cast<int64_t>(value.NumEdges())));
 }
 
+namespace {
+
+class UnionFind {
+ public:
+  UnionFind(int size) : parent(std::views::iota(size)) {}
+
+  int find(int i) { return parent[i] = (parent[i] == i ? i : find(parent[i])); }
+
+  void unite(int i, int j) {
+    int I = find(i);
+    int J = find(j);
+    if (I != J) parent[I] = J;
+  }
+
+ private:
+  std::vector<int> parent;
+};
+
+}  // namespace
+
+// ====== Connected ======
+bool Connected::IsSatisfiedWith(librarian::AnalysisContext ctx,
+                                const Graph<>& value) const {
+  if (value.NumNodes() == 0) return false;
+
+  UnionFind uf(value.NumNodes());
+  auto edges = value.Edges();
+  for (const auto& [u, v, _] : edges) uf.unite(u, v);
+
+  for (int i = 1; i < value.NumNodes(); ++i)
+    if (uf.find(i) != uf.find(0)) return false;
+  return true;
+}
+
+std::string Connected::ToString() const { return "is a connected graph"; }
+
+std::vector<std::string> Connected::GetDependencies() const { return {}; }
+
+std::string Connected::UnsatisfiedReason(librarian::AnalysisContext ctx,
+                                         const Graph<>& value) const {
+  return "is not connected";
+}
+
+// ====== NoParallelEdges ======
+bool NoParallelEdges::IsSatisfiedWith(librarian::AnalysisContext ctx,
+                                      const Graph<>& value) const {
+  std::set<std::pair<Graph::NodeIdx, Graph::NodeIdx>> seen;
+  auto edges = value.Edges();
+  for (const auto& [u, v, _] : edges) {
+    if (!seen.insert(u, v).second) return false;
+    if (u != v && !seen.insert(v, u).second) return false;
+  }
+  return true;
+}
+
+std::string NoParallelEdges::ToString() const {
+  return "does not contain any edge multiple times";
+}
+
+std::vector<std::string> NoParallelEdges::GetDependencies() const { return {}; }
+
+std::string NoParallelEdges::UnsatisfiedReason(librarian::AnalysisContext ctx,
+                                               const Graph<>& value) const {
+  std::set<std::pair<Graph::NodeIdx, Graph::NodeIdx>> seen;
+  auto edges = value.Edges();
+  for (const auto& [u, v, _] : edges) {
+    if (!seen.insert(u, v).second)
+      return std::format("contains the edge ({}, {}) multiple times", u, v);
+    if (u != v && !seen.insert(v, u).second)
+      return std::format("contains the edge ({}, {}) multiple times", u, v);
+  }
+  return "contains some edge multiple times";
+}
+
 }  // namespace moriarty
