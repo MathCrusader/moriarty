@@ -68,19 +68,13 @@ class Alphabet : public MConstraint {
 };
 
 // Constraint stating that the characters in the string must all be distinct.
-class DistinctCharacters : public MConstraint {
+class DistinctCharacters : public BasicMConstraint {
  public:
   // The characters in the string must all be distinct.
-  explicit DistinctCharacters() = default;
+  explicit DistinctCharacters() : BasicMConstraint("has distinct characters") {}
 
-  // Determines if the string has the correct characters.
+  // Determines if the string has no duplicate characters.
   [[nodiscard]] ConstraintViolation CheckValue(std::string_view value) const;
-
-  // Returns a string representation of this constraint.
-  [[nodiscard]] std::string ToString() const;
-
-  // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
 };
 
 // Constraint stating that the string must match this simple pattern.

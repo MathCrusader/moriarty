@@ -68,6 +68,17 @@ MGraph& MGraph::AddConstraint(NoParallelEdges constraint) {
   return InternalAddConstraint(std::move(constraint));
 }
 
+MGraph& MGraph::AddConstraint(Loopless constraint) {
+  loops_allowed_ = false;
+  return InternalAddConstraint(std::move(constraint));
+}
+
+MGraph& MGraph::AddConstraint(SimpleGraph constraint) {
+  multi_edges_allowed_ = false;
+  loops_allowed_ = false;
+  return InternalAddConstraint(std::move(constraint));
+}
+
 Graph<> MGraph::GenerateImpl(librarian::ResolverContext ctx) const {
   if (GetOneOf().HasBeenConstrained())
     return GetOneOf().SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
@@ -93,8 +104,12 @@ Graph<> MGraph::GenerateImpl(librarian::ResolverContext ctx) const {
   MInteger edge_con = *num_edges_constraints_;
   edge_con.AddConstraint(AtLeast(0));
   if (is_connected_) edge_con.AddConstraint(AtLeast(num_nodes - 1));
-  if (!multi_edges_allowed_)
-    edge_con.AddConstraint(AtMost((num_nodes * (num_nodes + 1)) / 2));
+  if (!multi_edges_allowed_) {
+    if (loops_allowed_)
+      edge_con.AddConstraint(AtMost((num_nodes * (num_nodes + 1)) / 2));
+    else
+      edge_con.AddConstraint(AtMost((num_nodes * (num_nodes - 1)) / 2));
+  }
   int64_t num_edges = edge_con.Generate(ctx.ForSubVariable("num_edges"));
 
   if (num_nodes == 0 && num_edges > 0) {
@@ -117,6 +132,7 @@ Graph<> MGraph::GenerateImpl(librarian::ResolverContext ctx) const {
   while (G.NumEdges() < num_edges) {
     int64_t u = ctx.RandomInteger(num_nodes);
     int64_t v = ctx.RandomInteger(num_nodes);
+    if (!loops_allowed_ && u == v) continue;
     if (!multi_edges_allowed_ && !seen.emplace(u, v).second) continue;
     seen.emplace(v, u);
     G.AddEdge(u, v);

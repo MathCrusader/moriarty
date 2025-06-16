@@ -36,6 +36,46 @@ using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Le;
 
+// These aren't really tests, moreso to check for visual consistency.
+TEST(GraphConstraintsTest, ToStringLooksReasonable) {
+  EXPECT_EQ(NumNodes(Between(1, 10)).ToString(),
+            "is a graph whose number of nodes is between 1 and 10");
+  EXPECT_EQ(NumEdges(Between(1, 10)).ToString(),
+            "is a graph whose number of edges is between 1 and 10");
+  EXPECT_EQ(Connected().ToString(), "is a connected graph");
+  EXPECT_EQ(NoParallelEdges().ToString(), "is a graph with no parallel edges");
+  EXPECT_EQ(Loopless().ToString(), "is a graph with no loops");
+  EXPECT_EQ(SimpleGraph().ToString(), "is a simple graph");
+}
+
+// These are only sort of tests... It doesn't matter exactly what the strings
+// are, but I'm checking for them exactly here so we manually verify that the
+// messages have consistency.
+TEST(GraphConstraintsTest, UnsatisfiedReasonLooksReasonable) {
+  moriarty_internal::VariableSet variables;
+  moriarty_internal::ValueSet values;
+  librarian::AnalysisContext ctx("N", variables, values);
+
+  EXPECT_THAT(NumNodes(Between(1, 10)).CheckValue(ctx, Graph<>(25)),
+              HasConstraintViolation(
+                  "number of nodes (which is 25) is not between 1 and 10"));
+  EXPECT_THAT(NumEdges(Between(1, 10)).CheckValue(ctx, Graph<>(25)),
+              HasConstraintViolation(
+                  "number of edges (which is 0) is not between 1 and 10"));
+  EXPECT_THAT(Connected().CheckValue(Graph<>(25)),
+              HasConstraintViolation(
+                  "is not connected (no path from node 0 to node 1)"));
+  EXPECT_THAT(
+      NoParallelEdges().CheckValue(Graph<>(25).AddEdge(0, 1).AddEdge(0, 1)),
+      HasConstraintViolation(
+          "contains a parallel edge (between nodes 0 and 1)"));
+  EXPECT_THAT(Loopless().CheckValue(Graph<>(25).AddEdge(1, 1)),
+              HasConstraintViolation("contains a loop at node 1"));
+  EXPECT_THAT(
+      SimpleGraph().CheckValue(Graph<>(25).AddEdge(1, 1)),
+      HasConstraintViolation("is not simple: contains a loop at node 1"));
+}
+
 TEST(GraphConstraintsTest, NumNodesAndEdgesGetConstraintsAreCorrect) {
   EXPECT_THAT(NumNodes(10).GetConstraints(), GeneratedValuesAre(10));
   EXPECT_THAT(NumNodes("2 * N").GetConstraints(),
@@ -50,26 +90,6 @@ TEST(GraphConstraintsTest, NumNodesAndEdgesGetConstraintsAreCorrect) {
   EXPECT_THAT(NumEdges(AtLeast("X"), AtMost(15)).GetConstraints(),
               GeneratedValuesAre(AllOf(Ge(3), Le(15)),
                                  Context().WithValue<MInteger>("X", 3)));
-}
-
-TEST(GraphConstraintsTest, NumNodesAndNumEdgesToStringWorks) {
-  EXPECT_EQ(NumNodes(Between(1, 10)).ToString(),
-            "is a graph whose number of nodes is between 1 and 10");
-  EXPECT_EQ(NumEdges(Between(1, 10)).ToString(),
-            "is a graph whose number of edges is between 1 and 10");
-}
-
-TEST(GraphConstraintsTest, NumNodesAndNumEdgesUnsatisfiedReasonWorks) {
-  moriarty_internal::VariableSet variables;
-  moriarty_internal::ValueSet values;
-  librarian::AnalysisContext ctx("N", variables, values);
-
-  EXPECT_THAT(NumNodes(Between(1, 10)).CheckValue(ctx, Graph<>(25)),
-              HasConstraintViolation(
-                  "number of nodes (which is 25) is not between 1 and 10"));
-  EXPECT_THAT(NumEdges(Between(1, 10)).CheckValue(ctx, Graph<>(25)),
-              HasConstraintViolation(
-                  "number of edges (which is 0) is not between 1 and 10"));
 }
 
 TEST(GraphConstraintsTest, NumNodesAndNumEdgesDependenciesWork) {

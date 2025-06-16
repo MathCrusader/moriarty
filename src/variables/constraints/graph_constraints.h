@@ -96,39 +96,49 @@ class NumEdges : public MConstraint {
 // The graph must have exactly one connected component.
 //
 // In particular, the graph with 0 nodes is *not* connected.
-class Connected : public MConstraint {
+class Connected : public BasicMConstraint {
  public:
-  explicit Connected() {}
+  explicit Connected() : BasicMConstraint("is a connected graph") {}
 
   // Determines if the graph is connected.
-  [[nodiscard]] ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
-                                               const Graph<>& value) const;
-
-  // Returns a string representation of this constraint.
-  [[nodiscard]] std::string ToString() const;
-
-  // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] ConstraintViolation CheckValue(const Graph<>& value) const;
 };
 
 // The graph must contain no parallel edges. That is, the edge (u, v) is only
-// present in the graph at most once. This limits the graph to ((n+1) choose
-// 2) nodes if the graph contains loops and (n choose 2) if the graph is
-// loopless.
-class NoParallelEdges : public MConstraint {
+// present in the graph at most once.
+//
+// Note: This limits the graph to ((n+1) choose 2) nodes if the graph contains
+// loops and (n choose 2) if the graph is loopless.
+class NoParallelEdges : public BasicMConstraint {
  public:
-  explicit NoParallelEdges() {}
+  explicit NoParallelEdges()
+      : BasicMConstraint("is a graph with no parallel edges") {}
 
-  // Determines if the graph has the correct number of edges.
-  [[nodiscard]] ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
-                                               const Graph<>& value) const;
-
-  // Returns a string representation of this constraint.
-  [[nodiscard]] std::string ToString() const;
-
-  // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  // Determines if the graph has any parallel edges.
+  [[nodiscard]] ConstraintViolation CheckValue(const Graph<>& value) const;
 };
+
+// The graph must not contain any loops. That is, the edge (u, u) is not
+// present in the graph.
+class Loopless : public BasicMConstraint {
+ public:
+  explicit Loopless() : BasicMConstraint("is a graph with no loops") {}
+
+  // Determines if the graph has any loops.
+  [[nodiscard]] ConstraintViolation CheckValue(const Graph<>& value) const;
+};
+
+// The graph is simple if it is loopless and contains no parallel edges.
+class SimpleGraph : public BasicMConstraint {
+ public:
+  explicit SimpleGraph() : BasicMConstraint("is a simple graph") {}
+
+  // Determines if the graph is simple.
+  [[nodiscard]] ConstraintViolation CheckValue(const Graph<>& value) const;
+};
+
+// ----------------------------------------------------------------------------
+//  Template Implementation Below
 
 template <typename... Constraints>
   requires(std::constructible_from<MInteger, Constraints...> &&

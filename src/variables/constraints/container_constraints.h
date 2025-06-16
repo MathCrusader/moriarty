@@ -130,21 +130,14 @@ class Element : public MConstraint {
 };
 
 // Constraint stating that the elements of a container must be distinct.
-class DistinctElements : public MConstraint {
+class DistinctElements : public BasicMConstraint {
  public:
-  // The elements of the container must all be distinct.
-  explicit DistinctElements() = default;
+  explicit DistinctElements() : BasicMConstraint("has distinct elements") {}
 
   // Determines if the container's elements satisfy all constraints.
   template <typename T>
   [[nodiscard]] ConstraintViolation CheckValue(
-      librarian::AnalysisContext ctx, const std::vector<T>& value) const;
-
-  // Returns a string representation of this constraint.
-  [[nodiscard]] std::string ToString() const;
-
-  // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+      const std::vector<T>& value) const;
 };
 
 // -----------------------------------------------------------------------------
@@ -246,7 +239,7 @@ std::vector<std::string> Element<I, MElementType>::GetDependencies() const {
 // ====== DistinctElements ======
 template <typename T>
 ConstraintViolation DistinctElements::CheckValue(
-    librarian::AnalysisContext ctx, const std::vector<T>& value) const {
+    const std::vector<T>& value) const {
   absl::flat_hash_map<T, int> seen;
   for (int idx = -1; const auto& elem : value) {
     idx++;

@@ -36,7 +36,32 @@
 namespace moriarty {
 
 // Base class for all constraints in Moriarty.
-class MConstraint {};
+class MConstraint {
+ protected:
+  MConstraint() = default;
+  MConstraint(const MConstraint&) = default;
+  MConstraint(MConstraint&&) = default;
+  MConstraint& operator=(const MConstraint&) = default;
+  MConstraint& operator=(MConstraint&&) = default;
+};
+
+// A basic constraint denotes a property that you have or you don't have. It
+// may not depend on any variables. (e.g., connected, prime, even, etc.)
+class BasicMConstraint : public MConstraint {
+ public:
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const { return {}; }
+
+  // Returns a human-readable representation of this constraint.
+  [[nodiscard]] std::string ToString() const { return description_; }
+
+ protected:
+  explicit BasicMConstraint(std::string_view description)
+      : description_(description) {}
+
+ private:
+  std::string description_;
+};
 
 // Constraint stating that the variable must be exactly this value.
 //
@@ -46,8 +71,9 @@ class MConstraint {};
 //
 // NOTE:
 // We have added several special constructors to handle different types.
-// This should make working with basic types nicer. For non-basic types, you may
-// need to specify the type explicitly:
+// This should make working with simple types nicer (int, array, double).
+// However, for non-basic types, you may need to specify the type explicitly and
+// not use brace-initialization, since it may be interpreted as an array.
 //   E.g.,
 //         Exactly<std::tuple<int, int>>({2, 4})) or
 //         Exactly(std::tuple<int, int>({2, 4})) or

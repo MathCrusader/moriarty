@@ -39,13 +39,4 @@ std::vector<std::string> Length::GetDependencies() const {
   return length_.GetDependencies();
 }
 
-// ====== DistinctElements ======
-std::string DistinctElements::ToString() const {
-  return "has distinct elements";
-}
-
-std::vector<std::string> DistinctElements::GetDependencies() const {
-  return {};
-}
-
 }  // namespace moriarty

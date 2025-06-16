@@ -57,7 +57,7 @@ class Graph {
   std::vector<NodeLabel> GetNodeLabels() const;
 
   // Adds an undirected edge between nodes `u` and `v`.
-  void AddEdge(NodeIdx u, NodeIdx v, EdgeLabel edge_label = {});
+  Graph& AddEdge(NodeIdx u, NodeIdx v, EdgeLabel edge_label = {});
 
   // Returns the adjacency list representation of the graph.
   // The order of (u, v) will be altered so that adj[i][j].u == i.
@@ -106,11 +106,12 @@ auto Graph<E, V>::GetEdges() const -> std::vector<Graph::Edge> {
 }
 
 template <typename E, typename V>
-void Graph<E, V>::AddEdge(int64_t u, int64_t v, E edge_label) {
+Graph<E, V>& Graph<E, V>::AddEdge(int64_t u, int64_t v, E edge_label) {
   if (u < 0 || v < 0 || u >= num_nodes_ || v >= num_nodes_) {
     throw std::out_of_range("AddEdge(): Node index out of range.");
   }
   edges_.push_back({u, v, edge_label});
+  return *this;
 }
 
 template <typename E, typename V>

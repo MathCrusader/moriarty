@@ -227,38 +227,29 @@ TEST(ContainerConstraintsTest, DistinctElementsToStringWorks) {
 }
 
 TEST(ContainerConstraintsTest, DistinctElementsUnsatisfiedReasonWorks) {
-  moriarty_internal::VariableSet variables;
-  moriarty_internal::ValueSet values;
-  librarian::AnalysisContext ctx("N", variables, values);
-
-  EXPECT_THAT(DistinctElements().CheckValue(ctx, std::vector{11, 22, 11}),
+  EXPECT_THAT(DistinctElements().CheckValue(std::vector{11, 22, 11}),
               HasConstraintViolation(HasSubstr("not distinct")));
-  EXPECT_THAT(
-      DistinctElements().CheckValue(
-          ctx, std::vector<std::string>{"hello", "hell", "help", "hell"}),
-      HasConstraintViolation(HasSubstr("not distinct")));
-  EXPECT_THAT(DistinctElements().CheckValue(ctx, std::vector{1, 2, 3, 2, 2, 3}),
+  EXPECT_THAT(DistinctElements().CheckValue(
+                  std::vector<std::string>{"hello", "hell", "help", "hell"}),
+              HasConstraintViolation(HasSubstr("not distinct")));
+  EXPECT_THAT(DistinctElements().CheckValue(std::vector{1, 2, 3, 2, 2, 3}),
               HasConstraintViolation(HasSubstr("not distinct")));
 }
 
 TEST(ContainerConstraintsTest, DistinctElementsIsSatisfiedWithWorks) {
-  moriarty_internal::VariableSet variables;
-  moriarty_internal::ValueSet values;
-  librarian::AnalysisContext ctx("N", variables, values);
-
   {
-    EXPECT_THAT(DistinctElements().CheckValue(ctx, std::vector<std::string>{}),
+    EXPECT_THAT(DistinctElements().CheckValue(std::vector<std::string>{}),
                 HasNoConstraintViolation());
     EXPECT_THAT(DistinctElements().CheckValue(
-                    ctx, std::vector<std::string>{"hello", "moto"}),
+                    std::vector<std::string>{"hello", "moto"}),
                 HasNoConstraintViolation());
   }
   {
     EXPECT_THAT(
-        DistinctElements().CheckValue(ctx, std::vector<std::string>{"a", "a"}),
+        DistinctElements().CheckValue(std::vector<std::string>{"a", "a"}),
         HasConstraintViolation(HasSubstr("not distinct")));
     EXPECT_THAT(DistinctElements().CheckValue(
-                    ctx, std::vector<std::string>{"a", "ba", "ba"}),
+                    std::vector<std::string>{"a", "ba", "ba"}),
                 HasConstraintViolation(HasSubstr("not distinct")));
   }
 }

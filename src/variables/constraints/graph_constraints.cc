@@ -16,6 +16,7 @@
 
 #include "src/variables/constraints/graph_constraints.h"
 
+#include <format>
 #include <set>
 #include <string>
 #include <string_view>
@@ -105,11 +106,10 @@ class UnionFind {
 }  // namespace
 
 // ====== Connected ======
-ConstraintViolation Connected::CheckValue(librarian::AnalysisContext ctx,
-                                          const Graph<>& value) const {
+ConstraintViolation Connected::CheckValue(const Graph<>& value) const {
   if (value.NumNodes() == 0)
     return ConstraintViolation(
-        "a graph with 0 nodes is not considered connected");
+        "is not connected (a graph with 0 nodes is not considered connected)");
 
   UnionFind uf(value.NumNodes());
   auto edges = value.GetEdges();
@@ -117,35 +117,50 @@ ConstraintViolation Connected::CheckValue(librarian::AnalysisContext ctx,
 
   for (int i = 1; i < value.NumNodes(); ++i)
     if (uf.find(i) != uf.find(0))
-      return ConstraintViolation(std::format(
-          "graph is not connected (node {} is not connected to node 0)", i));
+      return ConstraintViolation(
+          std::format("is not connected (no path from node 0 to node {})", i));
   return ConstraintViolation::None();
 }
 
-std::string Connected::ToString() const { return "is a connected graph"; }
-
-std::vector<std::string> Connected::GetDependencies() const { return {}; }
-
 // ====== NoParallelEdges ======
-ConstraintViolation NoParallelEdges::CheckValue(librarian::AnalysisContext ctx,
-                                                const Graph<>& value) const {
+ConstraintViolation NoParallelEdges::CheckValue(const Graph<>& value) const {
   std::set<std::pair<Graph<>::NodeIdx, Graph<>::NodeIdx>> seen;
   auto edges = value.GetEdges();
   for (const auto& [u, v, _] : edges) {
     if (!seen.emplace(u, v).second)
-      return ConstraintViolation(
-          std::format("contains the edge ({}, {}) multiple times", u, v));
+      return ConstraintViolation(std::format(
+          "contains a parallel edge (between nodes {} and {})", u, v));
     if (u != v && !seen.emplace(v, u).second)
-      return ConstraintViolation(
-          std::format("contains the edge ({}, {}) multiple times", v, u));
+      return ConstraintViolation(std::format(
+          "contains a parallel edge (between nodes {} and {})", v, u));
   }
   return ConstraintViolation::None();
 }
 
-std::string NoParallelEdges::ToString() const {
-  return "does not contain any edge multiple times";
+// ====== Loopless ======
+ConstraintViolation Loopless::CheckValue(const Graph<>& value) const {
+  auto edges = value.GetEdges();
+  for (const auto& [u, v, _] : edges) {
+    if (u == v) {
+      return ConstraintViolation(std::format("contains a loop at node {}", u));
+    }
+  }
+  return ConstraintViolation::None();
 }
 
-std::vector<std::string> NoParallelEdges::GetDependencies() const { return {}; }
+// ====== SimpleGraph ======
+ConstraintViolation SimpleGraph::CheckValue(const Graph<>& value) const {
+  auto check1 = Loopless().CheckValue(value);
+  if (!check1.IsOk()) {
+    return ConstraintViolation(
+        std::format("is not simple: {}", check1.Reason()));
+  }
+  auto check2 = NoParallelEdges().CheckValue(value);
+  if (!check2.IsOk()) {
+    return ConstraintViolation(
+        std::format("is not simple: {}", check2.Reason()));
+  }
+  return ConstraintViolation::None();
+}
 
 }  // namespace moriarty

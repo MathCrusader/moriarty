@@ -98,14 +98,6 @@ ConstraintViolation DistinctCharacters::CheckValue(
   return ConstraintViolation::None();
 }
 
-std::string DistinctCharacters::ToString() const {
-  return "has distinct characters";
-}
-
-std::vector<std::string> DistinctCharacters::GetDependencies() const {
-  return {};
-}
-
 // ====== SimplePattern ======
 SimplePattern::SimplePattern(std::string_view pattern)
     : pattern_(moriarty_internal::SimplePattern(std::string(pattern))) {}

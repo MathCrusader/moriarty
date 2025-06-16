@@ -52,7 +52,6 @@ class MGraph : public librarian::MVariable<MGraph, Graph<>> {
 
   // The graph must be exactly this value.
   MGraph& AddConstraint(Exactly<Graph<>> constraint);
-
   // The graph must be one of these values.
   MGraph& AddConstraint(OneOf<Graph<>> constraint);
 
@@ -73,6 +72,10 @@ class MGraph : public librarian::MVariable<MGraph, Graph<>> {
   MGraph& AddConstraint(Connected constraint);
   // The graph has no parallel edges
   MGraph& AddConstraint(NoParallelEdges constraint);
+  // The graph has no self-loops
+  MGraph& AddConstraint(Loopless constraint);
+  // The graph is simple (no parallel edges or self-loops)
+  MGraph& AddConstraint(SimpleGraph constraint);
 
   [[nodiscard]] std::string Typename() const override { return "MGraph"; }
 
@@ -81,6 +84,7 @@ class MGraph : public librarian::MVariable<MGraph, Graph<>> {
   std::optional<MInteger> num_edges_constraints_;
   bool is_connected_ = false;
   bool multi_edges_allowed_ = true;
+  bool loops_allowed_ = true;
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
