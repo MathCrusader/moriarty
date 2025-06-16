@@ -32,6 +32,7 @@
 #include "src/librarian/size_property.h"
 #include "src/util/cow_ptr.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/constraint_violation.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/constraints/size_constraints.h"
 
@@ -108,9 +109,8 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
     explicit RangeConstraint(
         std::unique_ptr<IntegerRangeMConstraint> constraint,
         std::function<void(MInteger&)> apply_to_fn);
-    bool IsSatisfiedWith(librarian::AnalysisContext ctx, int64_t value) const;
-    std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
-                                  int64_t value) const;
+    ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                   int64_t value) const;
     std::string ToString() const;
     std::vector<std::string> GetDependencies() const;
     void ApplyTo(MInteger& other) const;

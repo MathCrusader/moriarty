@@ -27,6 +27,7 @@
 #include "src/contexts/librarian_context.h"
 #include "src/librarian/mvariable.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/constraint_violation.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty_testing {
@@ -57,14 +58,13 @@ class LastDigit : public moriarty::MConstraint {
   std::string ToString() const {
     return std::format("the last digit {}", digit_.ToString());
   }
-  bool IsSatisfiedWith(moriarty::librarian::AnalysisContext ctx,
-                       const TestType& value) const {
-    return digit_.CheckValue(ctx, value.value % 10) == std::nullopt;
-  }
-  std::string UnsatisfiedReason(moriarty::librarian::AnalysisContext ctx,
-                                const TestType& value) const {
-    return std::format("the last digit of {} {}", value.value,
-                       *digit_.CheckValue(ctx, value.value));
+
+  moriarty::ConstraintViolation CheckValue(
+      moriarty::librarian::AnalysisContext ctx, const TestType& value) const {
+    auto check = digit_.CheckValue(ctx, value.value % 10);
+    if (check.IsOk()) return moriarty::ConstraintViolation::None();
+    return moriarty::ConstraintViolation(
+        std::format("the last digit of {} {}", value.value, check.Reason()));
   }
   std::vector<std::string> GetDependencies() const {
     return digit_.GetDependencies();
@@ -83,15 +83,13 @@ class NumberOfDigits : public moriarty::MConstraint {
     return std::format("the number of digits {}", num_digits_.ToString());
   }
 
-  bool IsSatisfiedWith(moriarty::librarian::AnalysisContext ctx,
-                       const TestType& value) const {
-    return num_digits_.CheckValue(ctx, std::to_string(value.value).size()) ==
-           std::nullopt;
-  }
-  std::string UnsatisfiedReason(moriarty::librarian::AnalysisContext ctx,
-                                const TestType& value) const {
-    return std::format("the number of digits in {} {}", value.value,
-                       *num_digits_.CheckValue(ctx, value.value));
+  moriarty::ConstraintViolation CheckValue(
+      moriarty::librarian::AnalysisContext ctx, const TestType& value) const {
+    auto check =
+        num_digits_.CheckValue(ctx, std::to_string(value.value).size());
+    if (check.IsOk()) return moriarty::ConstraintViolation::None();
+    return moriarty::ConstraintViolation(std::format(
+        "the number of digits in {} {}", value.value, check.Reason()));
   }
   std::vector<std::string> GetDependencies() const {
     return num_digits_.GetDependencies();

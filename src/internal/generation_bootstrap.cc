@@ -124,8 +124,9 @@ ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
   for (std::string_view name : order) {
     AbstractVariable* var = variables.GetAnonymousVariable(name);
     if (auto reason = var->CheckValue(name, variables, known_values)) {
-      throw std::runtime_error(std::format(
-          "Variable {} does not satisfy its constraints: {}", name, *reason));
+      throw std::runtime_error(
+          std::format("Variable {} does not satisfy its constraints: {}", name,
+                      reason.Reason()));
     }
   }
 

@@ -20,13 +20,13 @@
 #include <bitset>
 #include <cstdint>
 #include <format>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 
 #include "src/contexts/librarian_context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/util/debug_string.h"
+#include "src/variables/constraints/constraint_violation.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
@@ -61,11 +61,17 @@ Alphabet Alphabet::AlphaNumeric() { return Alphabet(kAlphaNumeric); }
 Alphabet Alphabet::UpperAlphaNumeric() { return Alphabet(kUpperAlphaNumeric); }
 Alphabet Alphabet::LowerAlphaNumeric() { return Alphabet(kLowerAlphaNumeric); }
 
-bool Alphabet::IsSatisfiedWith(std::string_view value) const {
-  for (char c : value) {
-    if (alphabet_.find(c) == std::string::npos) return false;
+ConstraintViolation Alphabet::CheckValue(std::string_view value) const {
+  for (int idx = -1; char c : value) {
+    idx++;
+    if (alphabet_.find(c) == std::string::npos) {
+      return ConstraintViolation(std::format(
+          "character at index {} (which is {}) is not a valid character (valid "
+          "characters are {})",
+          idx, librarian::DebugString(c), librarian::DebugString(alphabet_)));
+    }
   }
-  return true;
+  return ConstraintViolation::None();
 }
 
 std::string Alphabet::ToString() const {
@@ -73,54 +79,27 @@ std::string Alphabet::ToString() const {
                      librarian::DebugString(alphabet_));
 }
 
-std::string Alphabet::UnsatisfiedReason(std::string_view value) const {
-  for (int idx = -1; char c : value) {
-    idx++;
-    if (alphabet_.find(c) == std::string::npos) {
-      return std::format(
-          "character at index {} (which is {}) is not a valid character (valid "
-          "characters are {})",
-          idx, librarian::DebugString(c), librarian::DebugString(alphabet_));
-    }
-  }
-
-  throw std::invalid_argument(
-      "Alphabet::UnsatisfiedReason called with all valid characters.");
-}
-
 std::vector<std::string> Alphabet::GetDependencies() const { return {}; }
 
 // ====== DistinctCharacters ======
 
-bool DistinctCharacters::IsSatisfiedWith(std::string_view value) const {
-  std::bitset<sizeof(unsigned char) * 256> seen;
-  for (unsigned char c : value) {
-    if (seen.test(c)) return false;
-    seen.set(c);
-  }
-  return true;
-}
-
-std::string DistinctCharacters::ToString() const {
-  return "has distinct characters";
-}
-
-std::string DistinctCharacters::UnsatisfiedReason(
+ConstraintViolation DistinctCharacters::CheckValue(
     std::string_view value) const {
   std::bitset<sizeof(unsigned char) * 256> seen;
   for (int idx = -1; unsigned char c : value) {
     idx++;
     if (seen.test(c)) {
-      return std::format(
+      return ConstraintViolation(std::format(
           "character at index {} (which is {}) appears multiple times", idx,
-          librarian::DebugString(c));
+          librarian::DebugString(c)));
     }
     seen.set(c);
   }
+  return ConstraintViolation::None();
+}
 
-  throw std::invalid_argument(
-      "DistinctCharacters::UnsatisfiedReason called with all distinct "
-      "characters.");
+std::string DistinctCharacters::ToString() const {
+  return "has distinct characters";
 }
 
 std::vector<std::string> DistinctCharacters::GetDependencies() const {
@@ -137,21 +116,19 @@ moriarty_internal::SimplePattern SimplePattern::GetCompiledPattern() const {
   return pattern_;
 }
 
-bool SimplePattern::IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                    std::string_view value) const {
+ConstraintViolation SimplePattern::CheckValue(librarian::AnalysisContext ctx,
+                                              std::string_view value) const {
   auto lookup = [&](std::string_view var) -> int64_t {
     return ctx.GetValue<MInteger>(var);
   };
-  return pattern_.Matches(value, lookup);
+  if (pattern_.Matches(value, lookup)) return ConstraintViolation::None();
+  return ConstraintViolation(
+      std::format("does not match the simple pattern of {}",
+                  librarian::DebugString(pattern_.Pattern())));
 }
 
 std::string SimplePattern::ToString() const {
   return std::format("has a simple pattern of {}",
-                     librarian::DebugString(pattern_.Pattern()));
-}
-
-std::string SimplePattern::UnsatisfiedReason(std::string_view value) const {
-  return std::format("does not follow the simple pattern of {}",
                      librarian::DebugString(pattern_.Pattern()));
 }
 

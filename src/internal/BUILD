@@ -32,6 +32,8 @@ cc_library(
         "abstract_variable.h",
     ],
     deps = [
+        "//src/librarian:io_config",
+        "//src/variables/constraints:constraint_violation",
     ],
 )
 

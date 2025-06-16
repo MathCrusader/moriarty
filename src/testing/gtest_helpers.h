@@ -119,6 +119,7 @@
 #include "src/internal/variable_set.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
+#include "src/variables/constraints/constraint_violation.h"
 
 namespace moriarty_testing {
 
@@ -544,7 +545,8 @@ MATCHER_P2(IsSatisfiedWith, value, context, "") {
                                            context_copy.Values());
 
   if (auto reason = arg.CheckValue(ctx, ValueType(value))) {
-    *result_listener << "value does not satisfy constraints: " << *reason;
+    *result_listener << "value does not satisfy constraints: "
+                     << reason.Reason();
     return false;
   }
 
@@ -582,15 +584,16 @@ MATCHER_P3(IsNotSatisfiedWith, value, expected_reason, context, "") {
                                            context_copy.Values());
 
   if (auto actual_reason = arg.CheckValue(ctx, ValueType(value))) {
-    if (!testing::Value(*actual_reason, testing::HasSubstr(expected_reason))) {
+    if (!testing::Value(actual_reason.Reason(),
+                        testing::HasSubstr(expected_reason))) {
       *result_listener << "value does not satisfy constraints, but not for the "
                           "correct reason. Expected '"
-                       << expected_reason << "', got '" << *actual_reason
-                       << "'";
+                       << expected_reason << "', got '"
+                       << actual_reason.Reason() << "'";
       return false;
     }
     *result_listener << "value does not satisfy constraints: "
-                     << *actual_reason;
+                     << actual_reason.Reason();
     return true;
   }
 
@@ -603,6 +606,29 @@ MATCHER_P2(IsNotSatisfiedWith, value, reason, "") {
   return testing::ExplainMatchResult(
       IsNotSatisfiedWith(ValueType(value), reason, Context()), arg,
       result_listener);
+}
+
+MATCHER(HasNoConstraintViolation, "") {
+  static_assert(
+      std::is_same_v<std::decay_t<arg_type>, moriarty::ConstraintViolation>,
+      "Expected a ConstraintViolation");
+  if (arg.IsOk()) return true;
+
+  *result_listener << "expected no constraint violations, but got: "
+                   << arg.Reason();
+  return false;
+}
+
+MATCHER_P(HasConstraintViolation, matcher, "") {
+  static_assert(
+      std::is_same_v<std::decay_t<arg_type>, moriarty::ConstraintViolation>,
+      "Expected a ConstraintViolation");
+  if (arg.IsOk()) {
+    *result_listener << "expected a constraint violation, but got no violation";
+    return false;
+  }
+  *result_listener << "constraint violation: " << arg.Reason();
+  return testing::ExplainMatchResult(matcher, arg.Reason(), result_listener);
 }
 
 namespace moriarty_testing_internal {

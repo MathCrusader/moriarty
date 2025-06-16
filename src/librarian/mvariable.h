@@ -45,6 +45,7 @@
 #include "src/librarian/one_of_handler.h"
 #include "src/librarian/policies.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/constraint_violation.h"
 #include "src/variables/constraints/custom_constraint.h"
 
 namespace moriarty {
@@ -137,10 +138,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // CheckValue()
   //
   // Determines if `value` satisfies all constraints on this variable.
-  // Returns `std::nullopt` if `value` satisfies all constraints or a string
-  // explaining why it does not.
-  [[nodiscard]] std::optional<std::string> CheckValue(
-      AnalysisContext ctx, const ValueType& value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(AnalysisContext ctx,
+                                               const ValueType& value) const;
 
   // Generate()
   //
@@ -276,7 +275,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<const moriarty_internal::ValueSet> values)
       const override;
-  std::optional<std::string> CheckValue(
+  ConstraintViolation CheckValue(
       std::string_view variable_name,
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<const moriarty_internal::ValueSet> values)
@@ -291,9 +290,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   class CustomConstraintWrapper {
    public:
     explicit CustomConstraintWrapper(CustomConstraint<VariableType> constraint);
-    bool IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const;
-    std::string UnsatisfiedReason(AnalysisContext ctx,
-                                  const ValueType& value) const;
+    ConstraintViolation CheckValue(AnalysisContext ctx,
+                                   const ValueType& value) const;
     std::string ToString() const;
     std::vector<std::string> GetDependencies() const;
     void ApplyTo(VariableType& other) const;
@@ -378,10 +376,9 @@ V& MVariable<V, G>::AddConstraint(CustomConstraint<V> constraint) {
 }
 
 template <typename V, typename G>
-std::optional<std::string> MVariable<V, G>::CheckValue(AnalysisContext ctx,
-                                                       const G& value) const {
-  if (constraints_.IsSatisfiedWith(ctx, value)) return std::nullopt;
-  return constraints_.UnsatisfiedReason(ctx, value);
+ConstraintViolation MVariable<V, G>::CheckValue(AnalysisContext ctx,
+                                                const G& value) const {
+  return constraints_.CheckValue(ctx, value);
 }
 
 template <typename V, typename G>
@@ -439,8 +436,8 @@ template <typename V, typename G>
 G MVariable<V, G>::Read(ReaderContext ctx) const {
   G value = ReadImpl(ctx);
   if (auto reason = CheckValue(ctx, value)) {
-    ctx.ThrowIOError(
-        std::format("Read value does not satisfy constraints: {}", *reason));
+    ctx.ThrowIOError(std::format("Read value does not satisfy constraints: {}",
+                                 reason.Reason()));
   }
   return value;
 }
@@ -571,7 +568,7 @@ G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
     throw moriarty::GenerationError(
         ctx.GetVariableName(),
         std::format("Generated value does not satisfy constraints: {}",
-                    *reason),
+                    reason.Reason()),
         RetryPolicy::kRetry);
 
   return potential_value;
@@ -642,7 +639,7 @@ void MVariable<V, G>::PrintValue(
 }
 
 template <typename V, typename G>
-std::optional<std::string> MVariable<V, G>::CheckValue(
+ConstraintViolation MVariable<V, G>::CheckValue(
     std::string_view variable_name,
     std::reference_wrapper<const moriarty_internal::VariableSet> variables,
     std::reference_wrapper<const moriarty_internal::ValueSet> values) const {
@@ -672,15 +669,9 @@ MVariable<V, G>::CustomConstraintWrapper::CustomConstraintWrapper(
     : constraint_(std::move(constraint)) {}
 
 template <typename V, typename G>
-bool MVariable<V, G>::CustomConstraintWrapper::IsSatisfiedWith(
+ConstraintViolation MVariable<V, G>::CustomConstraintWrapper::CheckValue(
     AnalysisContext ctx, const G& value) const {
-  return constraint_.IsSatisfiedWith(ctx, value);
-}
-
-template <typename V, typename G>
-std::string MVariable<V, G>::CustomConstraintWrapper::UnsatisfiedReason(
-    AnalysisContext ctx, const G& value) const {
-  return constraint_.UnsatisfiedReason(value);
+  return constraint_.CheckValue(ctx, value);
 }
 
 template <typename V, typename G>

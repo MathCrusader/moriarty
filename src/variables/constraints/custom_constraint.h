@@ -27,6 +27,7 @@
 #include "src/contexts/librarian_context.h"
 #include "src/util/debug_string.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/constraint_violation.h"
 
 namespace moriarty {
 
@@ -54,14 +55,11 @@ class CustomConstraint : public MConstraint {
   [[nodiscard]] std::string GetName() const;
 
   // Determines if `value` satisfies the constraint.
-  [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                     const T::value_type& value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(
+      librarian::AnalysisContext ctx, const T::value_type& value) const;
 
   // Returns a string representation of the constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why `value` does not satisfy the constraint.
-  [[nodiscard]] std::string UnsatisfiedReason(const T::value_type& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -105,21 +103,18 @@ std::string CustomConstraint<T>::GetName() const {
 }
 
 template <typename T>
-bool CustomConstraint<T>::IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                          const T::value_type& value) const {
-  return constraint_(ConstraintContext(ctx.GetVariableName(), ctx), value);
+ConstraintViolation CustomConstraint<T>::CheckValue(
+    librarian::AnalysisContext ctx, const T::value_type& value) const {
+  if (constraint_(ConstraintContext(ctx.GetVariableName(), ctx), value))
+    return ConstraintViolation::None();
+  return ConstraintViolation(
+      std::format("{} does not satisfy the custom constraint `{}`",
+                  librarian::DebugString(value), name_));
 }
 
 template <typename T>
 std::string CustomConstraint<T>::ToString() const {
   return std::format("[CustomConstraint] {}", name_);
-}
-
-template <typename T>
-std::string CustomConstraint<T>::UnsatisfiedReason(
-    const T::value_type& value) const {
-  return std::format("{} does not satisfy the custom constraint `{}`",
-                     librarian::DebugString(value), name_);
 }
 
 }  // namespace moriarty

@@ -26,11 +26,15 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/testing/gtest_helpers.h"
 
 namespace moriarty {
 namespace {
 
+using moriarty_testing::HasConstraintViolation;
+using moriarty_testing::HasNoConstraintViolation;
 using testing::ElementsAre;
+using testing::HasSubstr;
 using testing::Throws;
 
 TEST(BaseConstraintsTest, ExactlyForVariousIntegerTypesWorks) {
@@ -124,21 +128,17 @@ TEST(BaseConstraintsTest, ExactlyWithTooLargeOfIntegersShouldThrow) {
               Throws<std::invalid_argument>());
 }
 
-TEST(BaseConstraintsTest, ExactlyIsSatisfiedWithShouldWork) {
+TEST(BaseConstraintsTest, ExactlyCheckValueShouldWork) {
   {
-    EXPECT_TRUE(Exactly(123).IsSatisfiedWith(123));
-    EXPECT_TRUE(Exactly("abc").IsSatisfiedWith("abc"));
+    EXPECT_THAT(Exactly(123).CheckValue(123), HasNoConstraintViolation());
+    EXPECT_THAT(Exactly("abc").CheckValue("abc"), HasNoConstraintViolation());
   }
   {
-    EXPECT_FALSE(Exactly(123).IsSatisfiedWith(124));
-    EXPECT_FALSE(Exactly("abc").IsSatisfiedWith("def"));
+    EXPECT_THAT(Exactly(123).CheckValue(124),
+                HasConstraintViolation(HasSubstr("exactly")));
+    EXPECT_THAT(Exactly("abc").CheckValue("def"),
+                HasConstraintViolation(HasSubstr("exactly")));
   }
-}
-
-TEST(BaseConstraintsTest, ExactlyUnsatisfiedReasonShouldWork) {
-  EXPECT_EQ(Exactly(123).UnsatisfiedReason(11), "`11` is not exactly `123`");
-  EXPECT_EQ(Exactly("abc").UnsatisfiedReason("hello"),
-            "`hello` is not exactly `abc`");
 }
 
 // ---------------------------------------------------------------------------
@@ -248,26 +248,25 @@ TEST(BaseConstraintsTest, OneOfWithTooLargeOfIntegersShouldThrow) {
       Throws<std::invalid_argument>());
 }
 
-TEST(BaseConstraintsTest, OneOfIsSatisfiedWithShouldWork) {
+TEST(BaseConstraintsTest, OneOfCheckValueShouldWork) {
   {
-    EXPECT_TRUE(OneOf({123, 456}).IsSatisfiedWith(123));
-    EXPECT_TRUE(OneOf({456}).IsSatisfiedWith(456));
-    EXPECT_TRUE(OneOf({"abc", "def", "hello"}).IsSatisfiedWith("abc"));
-    EXPECT_TRUE(OneOf({"abc", "def", "hello"}).IsSatisfiedWith("hello"));
+    EXPECT_THAT(OneOf({123, 456}).CheckValue(123), HasNoConstraintViolation());
+    EXPECT_THAT(OneOf({456}).CheckValue(456), HasNoConstraintViolation());
+    EXPECT_THAT(OneOf({"abc", "def", "hello"}).CheckValue("abc"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(OneOf({"abc", "def", "hello"}).CheckValue("hello"),
+                HasNoConstraintViolation());
   }
   {
-    EXPECT_FALSE(OneOf({123, 456}).IsSatisfiedWith(123567));
-    EXPECT_FALSE(OneOf({456}).IsSatisfiedWith(123));
-    EXPECT_FALSE(OneOf({"abc", "def", "hello"}).IsSatisfiedWith("ABC"));
-    EXPECT_FALSE(OneOf({"abc", "def", "hello"}).IsSatisfiedWith("ertert"));
+    EXPECT_THAT(OneOf({123, 456}).CheckValue(123567),
+                HasConstraintViolation(HasSubstr("one of")));
+    EXPECT_THAT(OneOf({456}).CheckValue(123),
+                HasConstraintViolation(HasSubstr("one of")));
+    EXPECT_THAT(OneOf({"abc", "def", "hello"}).CheckValue("ABC"),
+                HasConstraintViolation(HasSubstr("one of")));
+    EXPECT_THAT(OneOf({"abc", "def", "hello"}).CheckValue("ertert"),
+                HasConstraintViolation(HasSubstr("one of")));
   }
-}
-
-TEST(BaseConstraintsTest, OneOfUnsatisfiedReasonShouldWork) {
-  EXPECT_EQ(OneOf({123, 456}).UnsatisfiedReason(11),
-            "`11` is not one of {`123`, `456`}");
-  EXPECT_EQ(OneOf({"abc", "def"}).UnsatisfiedReason("hello"),
-            "`hello` is not one of {`abc`, `def`}");
 }
 
 }  // namespace

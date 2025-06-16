@@ -32,6 +32,7 @@ cc_library(
     deps = [
         "//src/contexts:librarian_context",
         "//src/util:cow_ptr",
+        "//src/variables/constraints:constraint_violation",
     ],
 )
 
@@ -103,8 +104,10 @@ cc_test(
     deps = [
         ":constraint_handler",
         "//src/contexts:librarian_context",
+        "//src/testing:gtest_helpers",
         "//src/variables:minteger",
         "//src/variables:mstring",
+        "//src/variables/constraints:constraint_violation",
         "@googletest//:gtest_main",
     ],
 )

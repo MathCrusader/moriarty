@@ -21,6 +21,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/range.h"
+#include "src/testing/gtest_helpers.h"
 
 namespace moriarty {
 namespace {
@@ -28,7 +29,10 @@ namespace {
 using ::moriarty::AtLeast;
 using ::moriarty::AtMost;
 using ::moriarty::Between;
+using ::moriarty_testing::HasConstraintViolation;
+using ::moriarty_testing::HasNoConstraintViolation;
 using ::testing::ElementsAre;
+using ::testing::HasSubstr;
 using ::testing::Throws;
 
 int64_t NoVariablesKnown(std::string_view var) {
@@ -159,21 +163,28 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithNonExpressionWorks) {
   };
 
   {
-    EXPECT_TRUE(Between(10, 20).IsSatisfiedWith(tmp, 10));
-    EXPECT_TRUE(Between(10, 20).IsSatisfiedWith(tmp, 15));
-    EXPECT_TRUE(Between(10, 20).IsSatisfiedWith(tmp, 20));
-    EXPECT_FALSE(Between(10, 20).IsSatisfiedWith(tmp, 9));
-    EXPECT_FALSE(Between(10, 20).IsSatisfiedWith(tmp, 21));
+    EXPECT_THAT(Between(10, 20).CheckValue(tmp, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Between(10, 20).CheckValue(tmp, 15),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Between(10, 20).CheckValue(tmp, 20),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Between(10, 20).CheckValue(tmp, 9),
+                HasConstraintViolation(HasSubstr("between")));
+    EXPECT_THAT(Between(10, 20).CheckValue(tmp, 21),
+                HasConstraintViolation(HasSubstr("between")));
   }
   {
-    EXPECT_TRUE(AtLeast(10).IsSatisfiedWith(tmp, 10));
-    EXPECT_TRUE(AtLeast(10).IsSatisfiedWith(tmp, 11));
-    EXPECT_FALSE(AtLeast(10).IsSatisfiedWith(tmp, 9));
+    EXPECT_THAT(AtLeast(10).CheckValue(tmp, 10), HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast(10).CheckValue(tmp, 11), HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast(10).CheckValue(tmp, 9),
+                HasConstraintViolation(HasSubstr("at least")));
   }
   {
-    EXPECT_TRUE(AtMost(10).IsSatisfiedWith(tmp, 10));
-    EXPECT_TRUE(AtMost(10).IsSatisfiedWith(tmp, 9));
-    EXPECT_FALSE(AtMost(10).IsSatisfiedWith(tmp, 11));
+    EXPECT_THAT(AtMost(10).CheckValue(tmp, 10), HasNoConstraintViolation());
+    EXPECT_THAT(AtMost(10).CheckValue(tmp, 9), HasNoConstraintViolation());
+    EXPECT_THAT(AtMost(10).CheckValue(tmp, 11),
+                HasConstraintViolation(HasSubstr("at most")));
   }
 }
 
@@ -185,68 +196,48 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
   };
 
   {
-    EXPECT_TRUE(ExactlyIntegerExpression("x").IsSatisfiedWith(tmp, 10));
-    EXPECT_FALSE(ExactlyIntegerExpression("x").IsSatisfiedWith(tmp, 11));
-    EXPECT_FALSE(ExactlyIntegerExpression("x").IsSatisfiedWith(tmp, 9));
+    EXPECT_THAT(ExactlyIntegerExpression("x").CheckValue(tmp, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(ExactlyIntegerExpression("x").CheckValue(tmp, 11),
+                HasConstraintViolation(HasSubstr("exactly")));
+    EXPECT_THAT(ExactlyIntegerExpression("x").CheckValue(tmp, 9),
+                HasConstraintViolation(HasSubstr("exactly")));
   }
   {
-    EXPECT_TRUE(OneOfIntegerExpression({"x", "14"}).IsSatisfiedWith(tmp, 10));
-    EXPECT_TRUE(OneOfIntegerExpression({"x", "14"}).IsSatisfiedWith(tmp, 14));
-    EXPECT_FALSE(OneOfIntegerExpression({"x", "14"}).IsSatisfiedWith(tmp, 9));
-    EXPECT_FALSE(OneOfIntegerExpression({"x", "14"}).IsSatisfiedWith(tmp, 15));
+    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckValue(tmp, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckValue(tmp, 14),
+                HasNoConstraintViolation());
+    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckValue(tmp, 9),
+                HasConstraintViolation(HasSubstr("one of")));
+    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckValue(tmp, 15),
+                HasConstraintViolation(HasSubstr("one of")));
   }
   {
-    EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 10));
-    EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 25));
-    EXPECT_TRUE(Between("x", "y^2").IsSatisfiedWith(tmp, 400));
-    EXPECT_FALSE(Between("x", "y^2").IsSatisfiedWith(tmp, 9));
-    EXPECT_FALSE(Between("x", "y^2").IsSatisfiedWith(tmp, 401));
+    EXPECT_THAT(Between("x", "y^2").CheckValue(tmp, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Between("x", "y^2").CheckValue(tmp, 25),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Between("x", "y^2").CheckValue(tmp, 400),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Between("x", "y^2").CheckValue(tmp, 9),
+                HasConstraintViolation(HasSubstr("between")));
+    EXPECT_THAT(Between("x", "y^2").CheckValue(tmp, 401),
+                HasConstraintViolation(HasSubstr("between")));
   }
   {
-    EXPECT_TRUE(AtLeast("x").IsSatisfiedWith(tmp, 10));
-    EXPECT_TRUE(AtLeast("x").IsSatisfiedWith(tmp, 11));
-    EXPECT_FALSE(AtLeast("x").IsSatisfiedWith(tmp, 9));
+    EXPECT_THAT(AtLeast("x").CheckValue(tmp, 10), HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast("x").CheckValue(tmp, 11), HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast("x").CheckValue(tmp, 9),
+                HasConstraintViolation(HasSubstr("at least")));
   }
   {
-    EXPECT_TRUE(AtMost("x + 1").IsSatisfiedWith(tmp, 11));
-    EXPECT_TRUE(AtMost("x + 1").IsSatisfiedWith(tmp, 10));
-    EXPECT_FALSE(AtMost("x + 1").IsSatisfiedWith(tmp, 12));
-  }
-}
-
-TEST(NumericConstraintsTest, UnsatisfiedReasonShouldWork) {
-  auto tmp = [](std::string_view s) -> int64_t {
-    throw std::runtime_error("Should not be called");
-  };
-
-  {
-    EXPECT_EQ(ExactlyIntegerExpression("x + 1").UnsatisfiedReason(tmp, 10),
-              "is not exactly x + 1");
-  }
-  {
-    EXPECT_EQ(OneOfIntegerExpression({"x", "14"}).UnsatisfiedReason(tmp, 10),
-              "is not one of {x, 14}");
-    EXPECT_EQ(OneOfIntegerExpression({"x", "14"}).UnsatisfiedReason(tmp, 15),
-              "is not one of {x, 14}");
-  }
-  {
-    EXPECT_EQ(Between("x", 12).UnsatisfiedReason(tmp, 9),
-              "is not between x and 12");
-    EXPECT_EQ(Between(4, "y^2").UnsatisfiedReason(tmp, 401),
-              "is not between 4 and y^2");
-    EXPECT_EQ(Between("x", "y^2").UnsatisfiedReason(tmp, 401),
-              "is not between x and y^2");
-    EXPECT_EQ(Between(18, 20).UnsatisfiedReason(tmp, 401),
-              "is not between 18 and 20");
-  }
-  {
-    EXPECT_EQ(AtLeast("x").UnsatisfiedReason(tmp, 10), "is not at least x");
-    EXPECT_EQ(AtLeast(100).UnsatisfiedReason(tmp, 11), "is not at least 100");
-  }
-  {
-    EXPECT_EQ(AtMost("x + 1").UnsatisfiedReason(tmp, 11),
-              "is not at most x + 1");
-    EXPECT_EQ(AtMost(5).UnsatisfiedReason(tmp, 10), "is not at most 5");
+    EXPECT_THAT(AtMost("x + 1").CheckValue(tmp, 11),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtMost("x + 1").CheckValue(tmp, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtMost("x + 1").CheckValue(tmp, 12),
+                HasConstraintViolation(HasSubstr("at most")));
   }
 }
 

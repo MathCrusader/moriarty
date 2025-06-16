@@ -20,11 +20,11 @@
 
 #include <functional>
 #include <memory>
-#include <optional>
 #include <string>
 #include <vector>
 
 #include "src/librarian/io_config.h"
+#include "src/variables/constraints/constraint_violation.h"
 
 namespace moriarty {
 
@@ -191,7 +191,7 @@ class AbstractVariable {
   //
   // If a variable does not have a value, this will return false.
   // If a value does not have a variable, this will return true.
-  virtual std::optional<std::string> CheckValue(
+  virtual ConstraintViolation CheckValue(
       std::string_view variable_name,
       std::reference_wrapper<const VariableSet> variables,
       std::reference_wrapper<const ValueSet> values) const = 0;

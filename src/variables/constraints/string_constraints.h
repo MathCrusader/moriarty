@@ -23,6 +23,7 @@
 #include "src/contexts/librarian_context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/constraint_violation.h"
 
 namespace moriarty {
 
@@ -54,14 +55,10 @@ class Alphabet : public MConstraint {
   [[nodiscard]] std::string GetAlphabet() const;
 
   // Determines if the string has the correct characters.
-  [[nodiscard]] bool IsSatisfiedWith(std::string_view value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(std::string_view value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(std::string_view value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -77,14 +74,10 @@ class DistinctCharacters : public MConstraint {
   explicit DistinctCharacters() = default;
 
   // Determines if the string has the correct characters.
-  [[nodiscard]] bool IsSatisfiedWith(std::string_view value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(std::string_view value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(std::string_view value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -111,15 +104,11 @@ class SimplePattern : public MConstraint {
   [[nodiscard]] moriarty_internal::SimplePattern GetCompiledPattern() const;
 
   // Determines if the string has the correct characters.
-  [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                     std::string_view value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                               std::string_view value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(std::string_view value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;

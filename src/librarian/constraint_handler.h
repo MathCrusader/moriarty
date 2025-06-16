@@ -23,20 +23,15 @@
 
 #include "src/contexts/librarian_context.h"
 #include "src/util/cow_ptr.h"
+#include "src/variables/constraints/constraint_violation.h"
 
 namespace moriarty {
 namespace librarian {
 
 template <typename ConstraintType, typename ValueType>
-concept ConstraintHasSimplifiedIsSatisfiedWithFn =
+concept ConstraintHasSimplifiedCheckValueFn =
     requires(const ConstraintType& c, const ValueType& v) {
-      { c.IsSatisfiedWith(v) } -> std::same_as<bool>;
-    };
-
-template <typename ConstraintType, typename ValueType>
-concept ConstraintHasSimplifiedUnsatisfiedReasonFn =
-    requires(const ConstraintType& c, const ValueType& v) {
-      { c.UnsatisfiedReason(v) } -> std::same_as<std::string>;
+      { c.CheckValue(v) } -> std::same_as<ConstraintViolation>;
     };
 
 template <typename ConstraintType, typename VariableType>
@@ -60,18 +55,11 @@ class ConstraintHandler {
   template <typename ConstraintType>
   void AddConstraint(ConstraintType constraint);
 
-  // IsSatisfiedWith()
+  // CheckValue()
   //
   // Determines if all constraints are satisfied with the given value.
-  auto IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const
-      -> bool;
-
-  // UnsatisfiedReason()
-  //
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  auto UnsatisfiedReason(AnalysisContext ctx, const ValueType& value) const
-      -> std::string;
+  ConstraintViolation CheckValue(AnalysisContext ctx,
+                                 const ValueType& value) const;
 
   // ToString()
   //
@@ -87,11 +75,8 @@ class ConstraintHandler {
   class ConstraintHusk {
    public:
     virtual ~ConstraintHusk() = default;
-    virtual auto IsSatisfiedWith(AnalysisContext ctx,
-                                 const ValueType& value) const -> bool = 0;
-    virtual auto UnsatisfiedReason(AnalysisContext ctx,
-                                   const ValueType& value) const
-        -> std::string = 0;
+    virtual auto CheckValue(AnalysisContext ctx, const ValueType& value) const
+        -> ConstraintViolation = 0;
     virtual auto ToString() const -> std::string = 0;
     virtual auto ApplyTo(VariableType& other) const -> void = 0;
   };
@@ -102,20 +87,12 @@ class ConstraintHandler {
     ~ConstraintWrapper() override = default;
     explicit ConstraintWrapper(U constraint)
         : constraint_(std::move(constraint)) {}
-    auto IsSatisfiedWith(AnalysisContext ctx, const ValueType& value) const
-        -> bool override {
-      if constexpr (ConstraintHasSimplifiedIsSatisfiedWithFn<U, ValueType>) {
-        return constraint_.IsSatisfiedWith(value);
+    auto CheckValue(AnalysisContext ctx, const ValueType& value) const
+        -> ConstraintViolation override {
+      if constexpr (ConstraintHasSimplifiedCheckValueFn<U, ValueType>) {
+        return constraint_.CheckValue(value);
       } else {
-        return constraint_.IsSatisfiedWith(ctx, value);
-      }
-    }
-    auto UnsatisfiedReason(AnalysisContext ctx, const ValueType& value) const
-        -> std::string override {
-      if constexpr (ConstraintHasSimplifiedUnsatisfiedReasonFn<U, ValueType>) {
-        return constraint_.UnsatisfiedReason(value);
-      } else {
-        return constraint_.UnsatisfiedReason(ctx, value);
+        return constraint_.CheckValue(ctx, value);
       }
     }
     auto ToString() const -> std::string override {
@@ -150,27 +127,12 @@ void ConstraintHandler<VariableType, ValueType>::AddConstraint(U constraint) {
 }
 
 template <typename VariableType, typename ValueType>
-auto ConstraintHandler<VariableType, ValueType>::IsSatisfiedWith(
-    AnalysisContext ctx, const ValueType& value) const -> bool {
+ConstraintViolation ConstraintHandler<VariableType, ValueType>::CheckValue(
+    AnalysisContext ctx, const ValueType& value) const {
   for (const auto& constraint : constraints_) {
-    if (!constraint->IsSatisfiedWith(ctx, value)) {
-      return false;
-    }
+    if (auto check = constraint->CheckValue(ctx, value)) return check;
   }
-  return true;
-}
-
-template <typename VariableType, typename ValueType>
-auto ConstraintHandler<VariableType, ValueType>::UnsatisfiedReason(
-    AnalysisContext ctx, const ValueType& value) const -> std::string {
-  std::string explanation;
-  for (const auto& constraint : constraints_) {
-    if (!constraint->IsSatisfiedWith(ctx, value)) {
-      if (!explanation.empty()) explanation += "; ";
-      explanation += constraint->UnsatisfiedReason(ctx, value);
-    }
-  }
-  return explanation;
+  return ConstraintViolation::None();
 }
 
 template <typename VariableType, typename ValueType>

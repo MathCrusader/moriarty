@@ -37,26 +37,26 @@ TEST(OneOfHandler, HasBeenConstrainedReturnsTrueAfterAnyCall) {
   EXPECT_TRUE(handler.HasBeenConstrained());
 }
 
-TEST(OneOfHandler, IsSatisfiedWithReturnsIsSatisfiedWithAnythingInitially) {
+TEST(OneOfHandler, HasOptionShouldBeOkayWithAnythingInitially) {
   OneOfHandler<int> handler;
-  EXPECT_TRUE(handler.IsSatisfiedWith(1));
-  EXPECT_TRUE(handler.IsSatisfiedWith(-2));
-  EXPECT_TRUE(handler.IsSatisfiedWith(3321578));
+  EXPECT_TRUE(handler.HasOption(1));
+  EXPECT_TRUE(handler.HasOption(-2));
+  EXPECT_TRUE(handler.HasOption(3321578));
 }
 
-TEST(OneOfHandler, IsSatisfiedWithReturnsAsExpectedForConstrainedValue) {
+TEST(OneOfHandler, HasOptionReturnsAsExpectedForConstrainedValue) {
   OneOfHandler<int> handler;
   EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 2, 3}));
-  EXPECT_TRUE(handler.IsSatisfiedWith(1));
-  EXPECT_TRUE(handler.IsSatisfiedWith(2));
-  EXPECT_TRUE(handler.IsSatisfiedWith(3));
-  EXPECT_FALSE(handler.IsSatisfiedWith(4));
+  EXPECT_TRUE(handler.HasOption(1));
+  EXPECT_TRUE(handler.HasOption(2));
+  EXPECT_TRUE(handler.HasOption(3));
+  EXPECT_FALSE(handler.HasOption(4));
 
   EXPECT_TRUE(handler.ConstrainOptions(std::vector{1, 2}));
-  EXPECT_TRUE(handler.IsSatisfiedWith(1));
-  EXPECT_TRUE(handler.IsSatisfiedWith(2));
-  EXPECT_FALSE(handler.IsSatisfiedWith(3));
-  EXPECT_FALSE(handler.IsSatisfiedWith(4));
+  EXPECT_TRUE(handler.HasOption(1));
+  EXPECT_TRUE(handler.HasOption(2));
+  EXPECT_FALSE(handler.HasOption(3));
+  EXPECT_FALSE(handler.HasOption(4));
 }
 
 TEST(OneOfHandler, SelectOneOfReturnsOneOfTheConstrainedValues) {

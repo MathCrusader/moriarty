@@ -96,13 +96,13 @@ template <MoriartyVariable T>
 T::value_type ResolveValuesContext::GenerateVariable(
     std::string_view variable_name, T extra_constraints) {
   if (values_.get().Contains(variable_name)) {
-    if (auto reason =
+    if (auto check =
             extra_constraints.CheckValue({variable_name, variables_, values_},
                                          values_.get().Get<T>(variable_name))) {
       throw std::runtime_error(
           std::format("Value for {} is already known, but does not satisfy "
                       "the extra constraints requested: {}",
-                      variable_name, *reason));
+                      variable_name, check.Reason()));
     }
     return values_.get().Get<T>(variable_name);
   }

@@ -21,6 +21,8 @@
 #include "src/contexts/librarian_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/testing/gtest_helpers.h"
+#include "src/variables/constraints/constraint_violation.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"
 
@@ -30,29 +32,26 @@ namespace {
 
 using ::moriarty::MInteger;
 using ::moriarty::MString;
+using ::moriarty_testing::HasConstraintViolation;
+using ::moriarty_testing::HasNoConstraintViolation;
 using ::testing::AllOf;
+using ::testing::AnyOf;
 using ::testing::HasSubstr;
-using ::testing::IsEmpty;
 using ::testing::Not;
-using ::testing::StartsWith;
 
 struct Even {
-  bool IsSatisfiedWith(AnalysisContext ctx, int value) const {
-    return value % 2 == 0;
-  }
-  std::string UnsatisfiedReason(AnalysisContext ctx, int value) const {
-    return std::format("`{}` is not even", value);
+  ConstraintViolation CheckValue(AnalysisContext ctx, int value) const {
+    if (value % 2 == 0) return ConstraintViolation::None();
+    return ConstraintViolation(std::format("`{}` is not even", value));
   }
   std::string ToString() const { return "is even"; }
   void ApplyTo(MInteger& other) const { throw "unimplemented"; }
 };
 
 struct Positive {
-  bool IsSatisfiedWith(AnalysisContext ctx, int value) const {
-    return value > 0;
-  }
-  std::string UnsatisfiedReason(AnalysisContext ctx, int value) const {
-    return std::format("`{}` is not positive", value);
+  ConstraintViolation CheckValue(AnalysisContext ctx, int value) const {
+    if (value > 0) return ConstraintViolation::None();
+    return ConstraintViolation(std::format("`{}` is not positive", value));
   }
   std::string ToString() const { return "is positive"; }
   void ApplyTo(MInteger& other) const { throw "unimplemented"; }
@@ -65,13 +64,13 @@ TEST(ConstraintHandlerTest, EmptyHandlerShouldBeSatisfiedWithEverything) {
 
   {
     ConstraintHandler<MInteger, int> handler;
-    EXPECT_TRUE(handler.IsSatisfiedWith(ctx, 5));
-    EXPECT_TRUE(handler.IsSatisfiedWith(ctx, 0));
+    EXPECT_THAT(handler.CheckValue(ctx, 5), HasNoConstraintViolation());
+    EXPECT_THAT(handler.CheckValue(ctx, 0), HasNoConstraintViolation());
   }
   {
     ConstraintHandler<MString, std::string> handler;
-    EXPECT_TRUE(handler.IsSatisfiedWith(ctx, "hello"));
-    EXPECT_TRUE(handler.IsSatisfiedWith(ctx, ""));
+    EXPECT_THAT(handler.CheckValue(ctx, "hello"), HasNoConstraintViolation());
+    EXPECT_THAT(handler.CheckValue(ctx, ""), HasNoConstraintViolation());
   }
 }
 
@@ -94,25 +93,7 @@ TEST(ConstraintHandlerTest, ToStringShouldWork) {
   }
 }
 
-TEST(ConstraintHandlerTest,
-     UnsatisfiedReasonShouldBeEmptyForSatisfiedConstraints) {
-  moriarty_internal::VariableSet variables;
-  moriarty_internal::ValueSet values;
-  AnalysisContext ctx("X", variables, values);
-
-  {
-    ConstraintHandler<MInteger, int> handler;
-    EXPECT_TRUE(handler.IsSatisfiedWith(ctx, 5));
-    EXPECT_THAT(handler.UnsatisfiedReason(ctx, 5), IsEmpty());
-  }
-  {
-    ConstraintHandler<MString, std::string> handler;
-    EXPECT_TRUE(handler.IsSatisfiedWith(ctx, "hello"));
-    EXPECT_THAT(handler.UnsatisfiedReason(ctx, "hello"), IsEmpty());
-  }
-}
-
-TEST(ConstraintHandlerTest, UnsatisfiedReasonShouldContainRelevantMessages) {
+TEST(ConstraintHandlerTest, CheckValueShouldContainRelevantMessages) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   AnalysisContext ctx("X", variables, values);
@@ -121,17 +102,19 @@ TEST(ConstraintHandlerTest, UnsatisfiedReasonShouldContainRelevantMessages) {
   handler.AddConstraint(Even());
   handler.AddConstraint(Positive());
 
-  EXPECT_THAT(handler.UnsatisfiedReason(ctx, -5),
-              AllOf(HasSubstr("even"), HasSubstr("positive")));
-  EXPECT_THAT(handler.UnsatisfiedReason(ctx, 5),
-              AllOf(HasSubstr("even"), Not(HasSubstr("positive"))));
-  EXPECT_THAT(handler.UnsatisfiedReason(ctx, 0),
-              AllOf(Not(HasSubstr("even")), HasSubstr("positive")));
-  EXPECT_THAT(handler.UnsatisfiedReason(ctx, 10),
-              AllOf(Not(HasSubstr("even")), Not(HasSubstr("positive"))));
+  EXPECT_THAT(
+      handler.CheckValue(ctx, -5),
+      HasConstraintViolation(AnyOf(HasSubstr("even"), HasSubstr("positive"))));
+  EXPECT_THAT(handler.CheckValue(ctx, 5),
+              HasConstraintViolation(
+                  AllOf(HasSubstr("even"), Not(HasSubstr("positive")))));
+  EXPECT_THAT(handler.CheckValue(ctx, 0),
+              HasConstraintViolation(
+                  AllOf(Not(HasSubstr("even")), HasSubstr("positive"))));
+  EXPECT_THAT(handler.CheckValue(ctx, 10), HasNoConstraintViolation());
 }
 
-TEST(ConstraintHandlerTest, IsSatisfiedWithShouldReturnIfAnyFail) {
+TEST(ConstraintHandlerTest, CheckValueShouldReturnIfAnyFail) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   AnalysisContext ctx("X", variables, values);
@@ -140,10 +123,14 @@ TEST(ConstraintHandlerTest, IsSatisfiedWithShouldReturnIfAnyFail) {
   handler.AddConstraint(Even());
   handler.AddConstraint(Positive());
 
-  EXPECT_FALSE(handler.IsSatisfiedWith(ctx, -5));
-  EXPECT_FALSE(handler.IsSatisfiedWith(ctx, 5));
-  EXPECT_FALSE(handler.IsSatisfiedWith(ctx, 0));
-  EXPECT_TRUE(handler.IsSatisfiedWith(ctx, 10));
+  EXPECT_THAT(
+      handler.CheckValue(ctx, -5),
+      HasConstraintViolation(AnyOf(HasSubstr("even"), HasSubstr("positive"))));
+  EXPECT_THAT(handler.CheckValue(ctx, 5),
+              HasConstraintViolation(HasSubstr("even")));
+  EXPECT_THAT(handler.CheckValue(ctx, 0),
+              HasConstraintViolation(HasSubstr("positive")));
+  EXPECT_THAT(handler.CheckValue(ctx, 10), HasNoConstraintViolation());
 }
 
 }  // namespace

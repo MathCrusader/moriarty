@@ -31,6 +31,7 @@
 #include <vector>
 
 #include "src/util/debug_string.h"
+#include "src/variables/constraints/constraint_violation.h"
 
 namespace moriarty {
 
@@ -85,11 +86,7 @@ class Exactly : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Determines if all constraints are satisfied with the given value.
-  [[nodiscard]] bool IsSatisfiedWith(const T& value) const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(const T& value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(const T& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -148,11 +145,7 @@ class OneOf : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Determines if all constraints are satisfied with the given value.
-  [[nodiscard]] bool IsSatisfiedWith(const T& value) const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(const T& value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(const T& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -265,14 +258,11 @@ std::string Exactly<T>::ToString() const {
 }
 
 template <typename T>
-bool Exactly<T>::IsSatisfiedWith(const T& value) const {
-  return value == value_;
-}
-
-template <typename T>
-std::string Exactly<T>::UnsatisfiedReason(const T& value) const {
-  return std::format("{} is not exactly {}", librarian::DebugString(value),
-                     librarian::DebugString(value_));
+ConstraintViolation Exactly<T>::CheckValue(const T& value) const {
+  if (value == value_) return ConstraintViolation::None();
+  return ConstraintViolation(std::format("is not exactly {} (got {})",
+                                         librarian::DebugString(value_),
+                                         librarian::DebugString(value)));
 }
 
 template <typename T>
@@ -381,12 +371,10 @@ std::string OneOf<T>::ToString() const {
 }
 
 template <typename T>
-bool OneOf<T>::IsSatisfiedWith(const T& value) const {
-  return std::find(options_.begin(), options_.end(), value) != options_.end();
-}
+ConstraintViolation OneOf<T>::CheckValue(const T& value) const {
+  if (std::find(options_.begin(), options_.end(), value) != options_.end())
+    return ConstraintViolation::None();
 
-template <typename T>
-std::string OneOf<T>::UnsatisfiedReason(const T& value) const {
   std::string options = "{";
   for (const auto& option : options_) {
     if (options.size() > 1) options += ", ";
@@ -394,8 +382,8 @@ std::string OneOf<T>::UnsatisfiedReason(const T& value) const {
   }
   options += "}";
 
-  return std::format("{} is not one of {}", librarian::DebugString(value),
-                     options);
+  return ConstraintViolation(std::format(
+      "{} is not one of {}", librarian::DebugString(value), options));
 }
 
 template <typename T>

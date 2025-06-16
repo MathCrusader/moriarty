@@ -19,6 +19,7 @@
 
 #include "src/contexts/librarian_context.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/constraint_violation.h"
 #include "src/variables/graph.h"
 #include "src/variables/minteger.h"
 
@@ -45,16 +46,11 @@ class NumNodes : public MConstraint {
   [[nodiscard]] MInteger GetConstraints() const;
 
   // Determines if the graph has the correct number of nodes.
-  [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                     const Graph<>& value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                               const Graph<>& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
-                                              const Graph<>& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -84,16 +80,11 @@ class NumEdges : public MConstraint {
   [[nodiscard]] MInteger GetConstraints() const;
 
   // Determines if the graph has the correct number of edges.
-  [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                     const Graph<>& value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                               const Graph<>& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
-                                              const Graph<>& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -110,16 +101,11 @@ class Connected : public MConstraint {
   explicit Connected() {}
 
   // Determines if the graph is connected.
-  [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                     const Graph<>& value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                               const Graph<>& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
-                                              const Graph<>& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -134,16 +120,11 @@ class NoParallelEdges : public MConstraint {
   explicit NoParallelEdges() {}
 
   // Determines if the graph has the correct number of edges.
-  [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                     const Graph<>& value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                               const Graph<>& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
-                                              const Graph<>& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;

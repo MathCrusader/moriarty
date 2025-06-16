@@ -30,7 +30,10 @@ namespace {
 
 using ::moriarty::librarian::AnalysisContext;
 using ::moriarty_testing::Context;
+using ::moriarty_testing::HasConstraintViolation;
+using ::moriarty_testing::HasNoConstraintViolation;
 using ::testing::ElementsAre;
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::SizeIs;
@@ -82,50 +85,79 @@ TEST(AlphabetTest, BasicConstructorShouldReturnExactAlphabet) {
 }
 
 TEST(AlphabetTest, IsSatisfiedWithShouldWork) {
-  EXPECT_TRUE(Alphabet("abc").IsSatisfiedWith("a"));
-  EXPECT_FALSE(Alphabet("abc").IsSatisfiedWith("A"));
+  EXPECT_THAT(Alphabet("abc").CheckValue("a"), HasNoConstraintViolation());
+  EXPECT_THAT(Alphabet("abc").CheckValue("A"),
+              HasConstraintViolation(HasSubstr("`A`")));
 
   {
-    EXPECT_TRUE(Alphabet::AlphaNumeric().IsSatisfiedWith("b"));
-    EXPECT_TRUE(Alphabet::AlphaNumeric().IsSatisfiedWith("B"));
-    EXPECT_TRUE(Alphabet::AlphaNumeric().IsSatisfiedWith("3"));
-    EXPECT_FALSE(Alphabet::AlphaNumeric().IsSatisfiedWith("%"));
+    EXPECT_THAT(Alphabet::AlphaNumeric().CheckValue("b"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::AlphaNumeric().CheckValue("B"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::AlphaNumeric().CheckValue("3"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::AlphaNumeric().CheckValue("%"),
+                HasConstraintViolation(HasSubstr("`%`")));
   }
   {
-    EXPECT_TRUE(Alphabet::Letters().IsSatisfiedWith("b"));
-    EXPECT_TRUE(Alphabet::Letters().IsSatisfiedWith("B"));
-    EXPECT_FALSE(Alphabet::Letters().IsSatisfiedWith("3"));
-    EXPECT_FALSE(Alphabet::Letters().IsSatisfiedWith("%"));
+    EXPECT_THAT(Alphabet::Letters().CheckValue("b"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::Letters().CheckValue("B"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::Letters().CheckValue("3"),
+                HasConstraintViolation(HasSubstr("`3`")));
+    EXPECT_THAT(Alphabet::Letters().CheckValue("%"),
+                HasConstraintViolation(HasSubstr("`%`")));
   }
   {
-    EXPECT_TRUE(Alphabet::LowerAlphaNumeric().IsSatisfiedWith("b"));
-    EXPECT_FALSE(Alphabet::LowerAlphaNumeric().IsSatisfiedWith("B"));
-    EXPECT_TRUE(Alphabet::LowerAlphaNumeric().IsSatisfiedWith("3"));
-    EXPECT_FALSE(Alphabet::LowerAlphaNumeric().IsSatisfiedWith("%"));
+    EXPECT_THAT(Alphabet::LowerAlphaNumeric().CheckValue("b"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::LowerAlphaNumeric().CheckValue("B"),
+                HasConstraintViolation(HasSubstr("`B`")));
+    EXPECT_THAT(Alphabet::LowerAlphaNumeric().CheckValue("3"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::LowerAlphaNumeric().CheckValue("%"),
+                HasConstraintViolation(HasSubstr("`%`")));
   }
   {
-    EXPECT_TRUE(Alphabet::LowerCase().IsSatisfiedWith("b"));
-    EXPECT_FALSE(Alphabet::LowerCase().IsSatisfiedWith("B"));
-    EXPECT_FALSE(Alphabet::LowerCase().IsSatisfiedWith("3"));
-    EXPECT_FALSE(Alphabet::LowerCase().IsSatisfiedWith("%"));
+    EXPECT_THAT(Alphabet::LowerCase().CheckValue("b"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::LowerCase().CheckValue("B"),
+                HasConstraintViolation(HasSubstr("`B`")));
+    EXPECT_THAT(Alphabet::LowerCase().CheckValue("3"),
+                HasConstraintViolation(HasSubstr("`3`")));
+    EXPECT_THAT(Alphabet::LowerCase().CheckValue("%"),
+                HasConstraintViolation(HasSubstr("`%`")));
   }
   {
-    EXPECT_FALSE(Alphabet::Numbers().IsSatisfiedWith("b"));
-    EXPECT_FALSE(Alphabet::Numbers().IsSatisfiedWith("B"));
-    EXPECT_TRUE(Alphabet::Numbers().IsSatisfiedWith("3"));
-    EXPECT_FALSE(Alphabet::Numbers().IsSatisfiedWith("%"));
+    EXPECT_THAT(Alphabet::Numbers().CheckValue("b"),
+                HasConstraintViolation(HasSubstr("`b`")));
+    EXPECT_THAT(Alphabet::Numbers().CheckValue("B"),
+                HasConstraintViolation(HasSubstr("`B`")));
+    EXPECT_THAT(Alphabet::Numbers().CheckValue("3"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::Numbers().CheckValue("%"),
+                HasConstraintViolation(HasSubstr("`%`")));
   }
   {
-    EXPECT_FALSE(Alphabet::UpperAlphaNumeric().IsSatisfiedWith("b"));
-    EXPECT_TRUE(Alphabet::UpperAlphaNumeric().IsSatisfiedWith("B"));
-    EXPECT_TRUE(Alphabet::UpperAlphaNumeric().IsSatisfiedWith("3"));
-    EXPECT_FALSE(Alphabet::UpperAlphaNumeric().IsSatisfiedWith("%"));
+    EXPECT_THAT(Alphabet::UpperAlphaNumeric().CheckValue("b"),
+                HasConstraintViolation(HasSubstr("`b`")));
+    EXPECT_THAT(Alphabet::UpperAlphaNumeric().CheckValue("B"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::UpperAlphaNumeric().CheckValue("3"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::UpperAlphaNumeric().CheckValue("%"),
+                HasConstraintViolation(HasSubstr("`%`")));
   }
   {
-    EXPECT_FALSE(Alphabet::UpperCase().IsSatisfiedWith("b"));
-    EXPECT_TRUE(Alphabet::UpperCase().IsSatisfiedWith("B"));
-    EXPECT_FALSE(Alphabet::UpperCase().IsSatisfiedWith("3"));
-    EXPECT_FALSE(Alphabet::UpperCase().IsSatisfiedWith("%"));
+    EXPECT_THAT(Alphabet::UpperCase().CheckValue("b"),
+                HasConstraintViolation(HasSubstr("`b`")));
+    EXPECT_THAT(Alphabet::UpperCase().CheckValue("B"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Alphabet::UpperCase().CheckValue("3"),
+                HasConstraintViolation(HasSubstr("`3`")));
+    EXPECT_THAT(Alphabet::UpperCase().CheckValue("%"),
+                HasConstraintViolation(HasSubstr("`%`")));
   }
 }
 
@@ -137,38 +169,25 @@ TEST(AlphabetTest, ToStringShouldWork) {
   EXPECT_EQ(Alphabet("AAA").ToString(), "contains only the characters `AAA`");
 }
 
-TEST(AlphabetTest, UnsatisfiedReasonShouldWork) {
-  EXPECT_EQ(Alphabet("abc").UnsatisfiedReason("A"),
-            "character at index 0 (which is `A`) is not a valid character "
-            "(valid characters are `abc`)");
-  // TODO: Consider a nicer message for the common cases.
-  EXPECT_EQ(Alphabet::LowerCase().UnsatisfiedReason("abcXdef"),
-            "character at index 3 (which is `X`) is not a valid character "
-            "(valid characters are `abcdefghijklmnopqrstuvwxyz`)");
-}
-
 TEST(DistinctCharactersTest, IsSatisfiedWithShouldWork) {
-  EXPECT_TRUE(DistinctCharacters().IsSatisfiedWith(""));
-  EXPECT_TRUE(DistinctCharacters().IsSatisfiedWith("a"));
-  EXPECT_TRUE(DistinctCharacters().IsSatisfiedWith("ab"));
-  EXPECT_TRUE(DistinctCharacters().IsSatisfiedWith("abc"));
-  EXPECT_FALSE(DistinctCharacters().IsSatisfiedWith("aa"));
-  EXPECT_FALSE(DistinctCharacters().IsSatisfiedWith("aba"));
-  EXPECT_FALSE(DistinctCharacters().IsSatisfiedWith("abcabc"));
-  EXPECT_TRUE(DistinctCharacters().IsSatisfiedWith("abcABC"));
+  EXPECT_THAT(DistinctCharacters().CheckValue(""), HasNoConstraintViolation());
+  EXPECT_THAT(DistinctCharacters().CheckValue("a"), HasNoConstraintViolation());
+  EXPECT_THAT(DistinctCharacters().CheckValue("ab"),
+              HasNoConstraintViolation());
+  EXPECT_THAT(DistinctCharacters().CheckValue("abc"),
+              HasNoConstraintViolation());
+  EXPECT_THAT(DistinctCharacters().CheckValue("aa"),
+              HasConstraintViolation(HasSubstr("multiple times")));
+  EXPECT_THAT(DistinctCharacters().CheckValue("aba"),
+              HasConstraintViolation(HasSubstr("multiple times")));
+  EXPECT_THAT(DistinctCharacters().CheckValue("abcabc"),
+              HasConstraintViolation(HasSubstr("multiple times")));
+  EXPECT_THAT(DistinctCharacters().CheckValue("abcABC"),
+              HasNoConstraintViolation());
 }
 
 TEST(DistinctCharactersTest, ToStringShouldWork) {
   EXPECT_EQ(DistinctCharacters().ToString(), "has distinct characters");
-}
-
-TEST(DistinctCharactersTest, UnsatisfiedReasonShouldWork) {
-  EXPECT_EQ(DistinctCharacters().UnsatisfiedReason("aa"),
-            "character at index 1 (which is `a`) appears multiple times");
-  EXPECT_EQ(DistinctCharacters().UnsatisfiedReason("abb"),
-            "character at index 2 (which is `b`) appears multiple times");
-  EXPECT_EQ(DistinctCharacters().UnsatisfiedReason("abca"),
-            "character at index 3 (which is `a`) appears multiple times");
 }
 
 TEST(SimplePatternTest, IsSatisfiedWithShouldWork) {
@@ -177,26 +196,43 @@ TEST(SimplePatternTest, IsSatisfiedWithShouldWork) {
   Context context;
   AnalysisContext ctx("test", context.Variables(), context.Values());
   {
-    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith(ctx, ""));
-    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith(ctx, "a"));
-    EXPECT_TRUE(SimplePattern("[a-z]*").IsSatisfiedWith(ctx, "abc"));
-    EXPECT_FALSE(SimplePattern("[a-z]*").IsSatisfiedWith(ctx, "ABC"));
+    EXPECT_THAT(SimplePattern("[a-z]*").CheckValue(ctx, ""),
+                HasNoConstraintViolation());
+    EXPECT_THAT(SimplePattern("[a-z]*").CheckValue(ctx, "a"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(SimplePattern("[a-z]*").CheckValue(ctx, "abc"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(SimplePattern("[a-z]*").CheckValue(ctx, "ABC"),
+                HasConstraintViolation(HasSubstr("simple pattern")));
   }
   {
-    EXPECT_FALSE(SimplePattern("[a-z]+").IsSatisfiedWith(ctx, ""));
-    EXPECT_TRUE(SimplePattern("[a-z]+").IsSatisfiedWith(ctx, "a"));
-    EXPECT_TRUE(SimplePattern("[a-z]+").IsSatisfiedWith(ctx, "abc"));
-    EXPECT_FALSE(SimplePattern("[a-z]+").IsSatisfiedWith(ctx, "ABC"));
+    EXPECT_THAT(SimplePattern("[a-z]+").CheckValue(ctx, ""),
+                HasConstraintViolation(HasSubstr("simple pattern")));
+    EXPECT_THAT(SimplePattern("[a-z]+").CheckValue(ctx, "a"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(SimplePattern("[a-z]+").CheckValue(ctx, "abc"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(SimplePattern("[a-z]+").CheckValue(ctx, "ABC"),
+                HasConstraintViolation(HasSubstr("simple pattern")));
   }
   {
-    EXPECT_TRUE(SimplePattern("[a-z]?").IsSatisfiedWith(ctx, ""));
-    EXPECT_TRUE(SimplePattern("[a-z]?").IsSatisfiedWith(ctx, "a"));
-    EXPECT_FALSE(SimplePattern("[a-z]?").IsSatisfiedWith(ctx, "abc"));
-    EXPECT_FALSE(SimplePattern("[a-z]?").IsSatisfiedWith(ctx, "ABC"));
+    EXPECT_THAT(SimplePattern("[a-z]?").CheckValue(ctx, ""),
+                HasNoConstraintViolation());
+    EXPECT_THAT(SimplePattern("[a-z]?").CheckValue(ctx, "a"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(SimplePattern("[a-z]?").CheckValue(ctx, "abc"),
+                HasConstraintViolation(HasSubstr("simple pattern")));
+    EXPECT_THAT(SimplePattern("[a-z]?").CheckValue(ctx, "ABC"),
+                HasConstraintViolation(HasSubstr("simple pattern")));
   }
-  EXPECT_TRUE(SimplePattern("a|b").IsSatisfiedWith(ctx, "a"));
-  EXPECT_TRUE(SimplePattern("a|b").IsSatisfiedWith(ctx, "b"));
-  EXPECT_FALSE(SimplePattern("a|b").IsSatisfiedWith(ctx, "c"));
+  {
+    EXPECT_THAT(SimplePattern("a|b").CheckValue(ctx, "a"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(SimplePattern("a|b").CheckValue(ctx, "b"),
+                HasNoConstraintViolation());
+    EXPECT_THAT(SimplePattern("a|b").CheckValue(ctx, "c"),
+                HasConstraintViolation(HasSubstr("simple pattern")));
+  }
 }
 
 TEST(SimplePatternTest, IsSatisfiedWithIncludingVariablesShouldWork) {
@@ -205,15 +241,20 @@ TEST(SimplePatternTest, IsSatisfiedWithIncludingVariablesShouldWork) {
   Context context =
       Context().WithValue<MInteger>("N", 2).WithValue<MInteger>("X", 7);
   AnalysisContext ctx("test", context.Variables(), context.Values());
-  EXPECT_TRUE(SimplePattern("[a-z]{N, X}").IsSatisfiedWith(ctx, "asdf"));
-  EXPECT_TRUE(SimplePattern("[a-z]{2 * N}").IsSatisfiedWith(ctx, "asdf"));
-  EXPECT_FALSE(SimplePattern("[a-z]{2 * N}").IsSatisfiedWith(ctx, "a"));
-  EXPECT_TRUE(
-      SimplePattern("[a-z]{max(N, X)}").IsSatisfiedWith(ctx, "abcdefg"));
-  EXPECT_TRUE(SimplePattern("[a-z]{min(N, X)}").IsSatisfiedWith(ctx, "ab"));
-  EXPECT_TRUE(SimplePattern("[a-z]{abs(-N)}").IsSatisfiedWith(ctx, "ab"));
-  EXPECT_TRUE(
-      SimplePattern("N{N}").IsSatisfiedWith(ctx, "NN"));  // Variable + char
+  EXPECT_THAT(SimplePattern("[a-z]{N, X}").CheckValue(ctx, "asdf"),
+              HasNoConstraintViolation());
+  EXPECT_THAT(SimplePattern("[a-z]{2 * N}").CheckValue(ctx, "asdf"),
+              HasNoConstraintViolation());
+  EXPECT_THAT(SimplePattern("[a-z]{2 * N}").CheckValue(ctx, "a"),
+              HasConstraintViolation(HasSubstr("simple pattern")));
+  EXPECT_THAT(SimplePattern("[a-z]{max(N, X)}").CheckValue(ctx, "abcdefg"),
+              HasNoConstraintViolation());
+  EXPECT_THAT(SimplePattern("[a-z]{min(N, X)}").CheckValue(ctx, "ab"),
+              HasNoConstraintViolation());
+  EXPECT_THAT(SimplePattern("[a-z]{abs(-N)}").CheckValue(ctx, "ab"),
+              HasNoConstraintViolation());
+  EXPECT_THAT(SimplePattern("N{N}").CheckValue(ctx, "NN"),
+              HasNoConstraintViolation());  // Variable + char
 }
 
 TEST(SimplePatternTest, ToStringShouldWork) {
@@ -221,13 +262,6 @@ TEST(SimplePatternTest, ToStringShouldWork) {
             "has a simple pattern of `[a-z]*`");
   EXPECT_EQ(SimplePattern("[^a-z]?").ToString(),
             "has a simple pattern of `[^a-z]?`");
-}
-
-TEST(SimplePatternTest, UnsatisfiedReasonShouldWork) {
-  EXPECT_EQ(SimplePattern("[a-z]*").UnsatisfiedReason("A"),
-            "does not follow the simple pattern of `[a-z]*`");
-  EXPECT_EQ(SimplePattern("[^a-z]?").UnsatisfiedReason("a"),
-            "does not follow the simple pattern of `[^a-z]?`");
 }
 
 TEST(SimplePatternTest, GetDependenciesShouldWork) {

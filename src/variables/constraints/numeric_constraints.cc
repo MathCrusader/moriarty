@@ -26,6 +26,7 @@
 
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
+#include "src/variables/constraints/constraint_violation.h"
 
 namespace moriarty {
 
@@ -46,15 +47,13 @@ std::string ExactlyIntegerExpression::ToString() const {
   return std::format("is exactly {}", value_.ToString());
 }
 
-bool ExactlyIntegerExpression::IsSatisfiedWith(LookupVariableFn lookup_variable,
-                                               int64_t value) const {
-  int64_t expected = value_.Evaluate(lookup_variable);
-  return expected == value;
-}
-
-std::string ExactlyIntegerExpression::UnsatisfiedReason(
+ConstraintViolation ExactlyIntegerExpression::CheckValue(
     LookupVariableFn lookup_variable, int64_t value) const {
-  return std::format("is not exactly {}", value_.ToString());
+  int64_t expected = value_.Evaluate(lookup_variable);
+  if (expected == value) return ConstraintViolation::None();
+
+  return ConstraintViolation(
+      std::format("is not exactly {}", value_.ToString()));
 }
 
 std::vector<std::string> ExactlyIntegerExpression::GetDependencies() const {
@@ -103,18 +102,14 @@ std::string OneOfIntegerExpression::ToString() const {
   return std::format("is one of {}", OptionString(options_));
 }
 
-bool OneOfIntegerExpression::IsSatisfiedWith(LookupVariableFn lookup_variable,
-                                             int64_t value) const {
+ConstraintViolation OneOfIntegerExpression::CheckValue(
+    LookupVariableFn lookup_variable, int64_t value) const {
   for (const auto& option : options_) {
     int64_t expected = option.Evaluate(lookup_variable);
-    if (expected == value) return true;
+    if (expected == value) return ConstraintViolation::None();
   }
-  return false;
-}
-
-std::string OneOfIntegerExpression::UnsatisfiedReason(
-    LookupVariableFn lookup_variable, int64_t value) const {
-  return std::format("is not one of {}", OptionString(options_));
+  return ConstraintViolation(
+      std::format("is not one of {}", OptionString(options_)));
 }
 
 std::vector<std::string> OneOfIntegerExpression::GetDependencies() const {
@@ -161,18 +156,19 @@ std::string Between::ToString() const {
                      maximum_.ToString());
 }
 
-bool Between::IsSatisfiedWith(LookupVariableFn lookup_variable,
-                              int64_t value) const {
+ConstraintViolation Between::CheckValue(LookupVariableFn lookup_variable,
+                                        int64_t value) const {
   std::optional<Range::ExtremeValues> extremes =
       GetRange().Extremes(lookup_variable);
-  if (!extremes) return false;
-  return extremes->min <= value && value <= extremes->max;
-}
-
-std::string Between::UnsatisfiedReason(LookupVariableFn lookup_variable,
-                                       int64_t value) const {
-  return std::format("is not between {} and {}", minimum_.ToString(),
-                     maximum_.ToString());
+  if (!extremes)
+    return ConstraintViolation(
+        std::format("is not between {} and {} (impossible)",
+                    minimum_.ToString(), maximum_.ToString()));
+  if (extremes->min <= value && value <= extremes->max)
+    return ConstraintViolation::None();
+  return ConstraintViolation(std::format("is not between {} and {}",
+                                         minimum_.ToString(),
+                                         maximum_.ToString(), value));
 }
 
 std::vector<std::string> Between::GetDependencies() const {
@@ -197,17 +193,17 @@ std::string AtMost::ToString() const {
   return std::format("is at most {}", maximum_.ToString());
 }
 
-bool AtMost::IsSatisfiedWith(LookupVariableFn lookup_variable,
-                             int64_t value) const {
+ConstraintViolation AtMost::CheckValue(LookupVariableFn lookup_variable,
+                                       int64_t value) const {
   std::optional<Range::ExtremeValues> extremes =
       GetRange().Extremes(lookup_variable);
-  if (!extremes) return false;
-  return extremes->min <= value && value <= extremes->max;
-}
-
-std::string AtMost::UnsatisfiedReason(LookupVariableFn lookup_variable,
-                                      int64_t value) const {
-  return std::format("is not at most {}", maximum_.ToString());
+  if (!extremes)
+    return ConstraintViolation(
+        std::format("is not at most {} (impossible)", maximum_.ToString()));
+  if (extremes->min <= value && value <= extremes->max)
+    return ConstraintViolation::None();
+  return ConstraintViolation(
+      std::format("is not at most {}", maximum_.ToString()));
 }
 
 std::vector<std::string> AtMost::GetDependencies() const {
@@ -232,17 +228,17 @@ std::string AtLeast::ToString() const {
   return std::format("is at least {}", minimum_.ToString());
 }
 
-bool AtLeast::IsSatisfiedWith(LookupVariableFn lookup_variable,
-                              int64_t value) const {
+ConstraintViolation AtLeast::CheckValue(LookupVariableFn lookup_variable,
+                                        int64_t value) const {
   std::optional<Range::ExtremeValues> extremes =
       GetRange().Extremes(lookup_variable);
-  if (!extremes) return false;
-  return extremes->min <= value && value <= extremes->max;
-}
-
-std::string AtLeast::UnsatisfiedReason(LookupVariableFn lookup_variable,
-                                       int64_t value) const {
-  return std::format("is not at least {}", minimum_.ToString());
+  if (!extremes)
+    return ConstraintViolation(
+        std::format("is not at least {} (impossible)", minimum_.ToString()));
+  if (extremes->min <= value && value <= extremes->max)
+    return ConstraintViolation::None();
+  return ConstraintViolation(
+      std::format("is not at least {}", minimum_.ToString()));
 }
 
 std::vector<std::string> AtLeast::GetDependencies() const {

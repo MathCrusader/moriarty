@@ -17,19 +17,17 @@
 #ifndef MORIARTY_SRC_VARIABLES_CONSTRAINTS_CONTAINERS_H_
 #define MORIARTY_SRC_VARIABLES_CONSTRAINTS_CONTAINERS_H_
 
-#include <algorithm>
 #include <concepts>
 #include <format>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
-#include "absl/container/flat_hash_set.h"
 #include "src/contexts/librarian_context.h"
 #include "src/util/debug_string.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/constraint_violation.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
@@ -59,17 +57,11 @@ class Length : public MConstraint {
 
   // Determines if the container has the correct length.
   template <typename Container>
-  [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                     const Container& value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                               const Container& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  template <typename Container>
-  [[nodiscard]] std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
-                                              const Container& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -93,18 +85,12 @@ class Elements : public MConstraint {
   [[nodiscard]] MElementType GetConstraints() const;
 
   // Determines if the container's elements satisfy all constraints.
-  [[nodiscard]] bool IsSatisfiedWith(
+  [[nodiscard]] ConstraintViolation CheckValue(
       librarian::AnalysisContext ctx,
       const std::vector<typename MElementType::value_type>& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(
-      librarian::AnalysisContext ctx,
-      const std::vector<typename MElementType::value_type>& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -129,18 +115,12 @@ class Element : public MConstraint {
   [[nodiscard]] MElementType GetConstraints() const;
 
   // Determines if an object satisfy all constraints.
-  [[nodiscard]] bool IsSatisfiedWith(
+  [[nodiscard]] ConstraintViolation CheckValue(
       librarian::AnalysisContext ctx,
       const MElementType::value_type& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(
-      librarian::AnalysisContext ctx,
-      const MElementType::value_type& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -157,17 +137,11 @@ class DistinctElements : public MConstraint {
 
   // Determines if the container's elements satisfy all constraints.
   template <typename T>
-  [[nodiscard]] bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                     const std::vector<T>& value) const;
+  [[nodiscard]] ConstraintViolation CheckValue(
+      librarian::AnalysisContext ctx, const std::vector<T>& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  template <typename T>
-  [[nodiscard]] std::string UnsatisfiedReason(
-      librarian::AnalysisContext ctx, const std::vector<T>& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -188,18 +162,13 @@ Length::Length(Constraints&&... constraints)
     : length_(std::forward<Constraints>(constraints)...) {}
 
 template <typename Container>
-bool Length::IsSatisfiedWith(librarian::AnalysisContext ctx,
-                             const Container& value) const {
-  return length_.CheckValue(ctx, static_cast<int64_t>(value.size())) ==
-         std::nullopt;
-}
-
-template <typename Container>
-std::string Length::UnsatisfiedReason(librarian::AnalysisContext ctx,
-                                      const Container& value) const {
-  return std::format(
-      "has length (which is {}) that {}", librarian::DebugString(value.size()),
-      *length_.CheckValue(ctx, static_cast<int64_t>(value.size())));
+ConstraintViolation Length::CheckValue(librarian::AnalysisContext ctx,
+                                       const Container& value) const {
+  auto check = length_.CheckValue(ctx, static_cast<int64_t>(value.size()));
+  if (check.IsOk()) return ConstraintViolation::None();
+  return ConstraintViolation(std::format("has length (which is {}) that {}",
+                                         librarian::DebugString(value.size()),
+                                         check.Reason()));
 }
 
 // ====== Elements ======
@@ -216,35 +185,23 @@ MElementType Elements<MElementType>::GetConstraints() const {
 }
 
 template <typename MElementType>
-bool Elements<MElementType>::IsSatisfiedWith(
+ConstraintViolation Elements<MElementType>::CheckValue(
     librarian::AnalysisContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
-  for (const auto& elem : value) {
-    if (auto reason = element_constraints_.CheckValue(ctx, elem)) return false;
+  for (int idx = -1; const auto& elem : value) {
+    idx++;
+    if (auto check = element_constraints_.CheckValue(ctx, elem)) {
+      return ConstraintViolation(std::format("array index {} (which is {}) {}",
+                                             idx, librarian::DebugString(elem),
+                                             check.Reason()));
+    }
   }
-  return true;
+  return ConstraintViolation::None();
 }
 
 template <typename MElementType>
 std::string Elements<MElementType>::ToString() const {
   return std::format("each element {}", element_constraints_.ToString());
-}
-
-template <typename MElementType>
-std::string Elements<MElementType>::UnsatisfiedReason(
-    librarian::AnalysisContext ctx,
-    const std::vector<typename MElementType::value_type>& value) const {
-  auto it = std::ranges::find_if_not(value, [&](const auto& elem) {
-    return element_constraints_.CheckValue(ctx, elem) == std::nullopt;
-  });
-  if (it == value.end()) {
-    throw std::invalid_argument(
-        "Elements<>()::UnsatisfiedReason called when all elements ok.");
-  }
-
-  return std::format("array index {} (which is {}) {}", it - value.begin(),
-                     librarian::DebugString(*it),
-                     *element_constraints_.CheckValue(ctx, *it));
 }
 
 template <typename MElementType>
@@ -266,24 +223,19 @@ MElementType Element<I, MElementType>::GetConstraints() const {
 }
 
 template <size_t I, typename MElementType>
-bool Element<I, MElementType>::IsSatisfiedWith(
+ConstraintViolation Element<I, MElementType>::CheckValue(
     librarian::AnalysisContext ctx,
     const MElementType::value_type& value) const {
-  return element_constraints_.CheckValue(ctx, value) == std::nullopt;
+  auto check = element_constraints_.CheckValue(ctx, value);
+  if (check.IsOk()) return ConstraintViolation::None();
+  return ConstraintViolation(std::format("tuple index {} (which is {}) {}", I,
+                                         librarian::DebugString(value),
+                                         check.Reason()));
 }
 
 template <size_t I, typename MElementType>
 std::string Element<I, MElementType>::ToString() const {
   return std::format("tuple index {} {}", I, element_constraints_.ToString());
-}
-
-template <size_t I, typename MElementType>
-std::string Element<I, MElementType>::UnsatisfiedReason(
-    librarian::AnalysisContext ctx,
-    const MElementType::value_type& value) const {
-  return std::format("tuple index {} (which is {}) {}", I,
-                     librarian::DebugString(value),
-                     *element_constraints_.CheckValue(ctx, value));
 }
 
 template <size_t I, typename MElementType>
@@ -293,27 +245,19 @@ std::vector<std::string> Element<I, MElementType>::GetDependencies() const {
 
 // ====== DistinctElements ======
 template <typename T>
-bool DistinctElements::IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                       const std::vector<T>& value) const {
-  absl::flat_hash_set<T> seen(value.begin(), value.end());
-  return seen.size() == value.size();
-}
-
-template <typename T>
-std::string DistinctElements::UnsatisfiedReason(
+ConstraintViolation DistinctElements::CheckValue(
     librarian::AnalysisContext ctx, const std::vector<T>& value) const {
   absl::flat_hash_map<T, int> seen;
   for (int idx = -1; const auto& elem : value) {
     idx++;
     auto [it, inserted] = seen.insert({elem, idx});
     if (!inserted) {
-      return std::format(
-          "array indices {} and {} (which are {}) are not distinct", it->second,
-          idx, librarian::DebugString(elem));
+      return ConstraintViolation(
+          std::format("array indices {} and {} (which are {}) are not distinct",
+                      it->second, idx, librarian::DebugString(elem)));
     }
   }
-  throw std::invalid_argument(
-      "DistinctElements::UnsatisfiedReason called with all elements distinct.");
+  return ConstraintViolation::None();
 }
 
 }  // namespace moriarty

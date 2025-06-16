@@ -28,8 +28,11 @@ namespace {
 
 using ::moriarty_testing::Context;
 using ::moriarty_testing::GeneratedValuesAre;
+using ::moriarty_testing::HasConstraintViolation;
+using ::moriarty_testing::HasNoConstraintViolation;
 using ::testing::AllOf;
 using ::testing::Ge;
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Le;
 
@@ -61,10 +64,12 @@ TEST(GraphConstraintsTest, NumNodesAndNumEdgesUnsatisfiedReasonWorks) {
   moriarty_internal::ValueSet values;
   librarian::AnalysisContext ctx("N", variables, values);
 
-  EXPECT_EQ(NumNodes(Between(1, 10)).UnsatisfiedReason(ctx, Graph<>(25)),
-            "number of nodes (which is 25) is not between 1 and 10");
-  EXPECT_EQ(NumEdges(Between(1, 10)).UnsatisfiedReason(ctx, Graph<>(25)),
-            "number of edges (which is 0) is not between 1 and 10");
+  EXPECT_THAT(NumNodes(Between(1, 10)).CheckValue(ctx, Graph<>(25)),
+              HasConstraintViolation(
+                  "number of nodes (which is 25) is not between 1 and 10"));
+  EXPECT_THAT(NumEdges(Between(1, 10)).CheckValue(ctx, Graph<>(25)),
+              HasConstraintViolation(
+                  "number of edges (which is 0) is not between 1 and 10"));
 }
 
 TEST(GraphConstraintsTest, NumNodesAndNumEdgesDependenciesWork) {
@@ -89,14 +94,14 @@ TEST(GraphConstraintsTest, NumNodesAndNumEdgesSatisfiedWithWorks) {
   moriarty_internal::ValueSet values;
   librarian::AnalysisContext ctx("N", variables, values);
 
-  EXPECT_TRUE(
-      NumNodes(Between(1, 100)).IsSatisfiedWith(ctx, CreateGraph(5, 3)));
-  EXPECT_FALSE(
-      NumNodes(Between(1, 100)).IsSatisfiedWith(ctx, CreateGraph(150, 3)));
-  EXPECT_TRUE(
-      NumEdges(Between(1, 100)).IsSatisfiedWith(ctx, CreateGraph(5, 30)));
-  EXPECT_FALSE(
-      NumEdges(Between(1, 100)).IsSatisfiedWith(ctx, CreateGraph(5, 105)));
+  EXPECT_THAT(NumNodes(Between(1, 100)).CheckValue(ctx, CreateGraph(5, 3)),
+              HasNoConstraintViolation());
+  EXPECT_THAT(NumNodes(Between(1, 100)).CheckValue(ctx, CreateGraph(150, 3)),
+              HasConstraintViolation(HasSubstr("number of nodes")));
+  EXPECT_THAT(NumEdges(Between(1, 100)).CheckValue(ctx, CreateGraph(5, 30)),
+              HasNoConstraintViolation());
+  EXPECT_THAT(NumEdges(Between(1, 100)).CheckValue(ctx, CreateGraph(5, 105)),
+              HasConstraintViolation(HasSubstr("number of edges")));
 }
 
 }  // namespace

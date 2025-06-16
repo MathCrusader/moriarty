@@ -34,8 +34,11 @@ namespace {
 
 using ::moriarty_testing::Context;
 using ::moriarty_testing::GeneratedValuesAre;
+using ::moriarty_testing::HasConstraintViolation;
+using ::moriarty_testing::HasNoConstraintViolation;
 using ::testing::AllOf;
 using ::testing::Ge;
+using ::testing::HasSubstr;
 using ::testing::Le;
 
 TEST(ContainerConstraintsTest, LengthConstraintsAreCorrect) {
@@ -58,10 +61,11 @@ TEST(ContainerConstraintsTest, LengthUnsatisfiedReasonWorks) {
   librarian::AnalysisContext ctx("N", variables, values);
 
   EXPECT_EQ(Length(Between(1, 10))
-                .UnsatisfiedReason(ctx, std::string("this string is long")),
+                .CheckValue(ctx, std::string("this string is long"))
+                .Reason(),
             "has length (which is `19`) that is not between 1 and 10");
   EXPECT_EQ(
-      Length(Between(3, 10)).UnsatisfiedReason(ctx, std::vector<int>{1, 2}),
+      Length(Between(3, 10)).CheckValue(ctx, std::vector<int>{1, 2}).Reason(),
       "has length (which is `2`) that is not between 3 and 10");
 }
 
@@ -70,17 +74,21 @@ TEST(ContainerConstraintsTest, LengthIsSatisfiedWithWorks) {
   moriarty_internal::ValueSet values;
   librarian::AnalysisContext ctx("N", variables, values);
 
-  EXPECT_TRUE(
-      Length(Between(1, 10)).IsSatisfiedWith(ctx, std::string("123456")));
-  EXPECT_TRUE(Length(Between(1, 10)).IsSatisfiedWith(ctx, std::string("1")));
-  EXPECT_TRUE(
-      Length(Between(1, 10)).IsSatisfiedWith(ctx, std::string("1234567890")));
-  EXPECT_TRUE(
-      Length(Between(1, 10)).IsSatisfiedWith(ctx, std::vector{1, 2, 3}));
+  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::string("123456")),
+              HasNoConstraintViolation());
+  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::string("1")),
+              HasNoConstraintViolation());
+  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::string("1234567890")),
+              HasNoConstraintViolation());
+  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::vector{1, 2, 3}),
+              HasNoConstraintViolation());
 
-  EXPECT_FALSE(Length(Between(1, 10)).IsSatisfiedWith(ctx, std::string("")));
-  EXPECT_FALSE(Length(Between(1, 10)).IsSatisfiedWith(ctx, std::vector<int>{}));
-  EXPECT_FALSE(Length(Between(2, 3)).IsSatisfiedWith(ctx, std::vector{1}));
+  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::string("")),
+              HasConstraintViolation(HasSubstr("length")));
+  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::vector<int>{}),
+              HasConstraintViolation(HasSubstr("length")));
+  EXPECT_THAT(Length(Between(2, 3)).CheckValue(ctx, std::vector{1}),
+              HasConstraintViolation(HasSubstr("length")));
 }
 
 TEST(ContainerConstraintsTest, ElementsConstraintsAreCorrect) {
@@ -104,12 +112,12 @@ TEST(ContainerConstraintsTest, ElementsUnsatisfiedReasonWorks) {
   librarian::AnalysisContext ctx("N", variables, values);
 
   EXPECT_EQ(
-      Elements<MInteger>(Between(1, 10)).UnsatisfiedReason(ctx, {-1, 2, 3}),
+      Elements<MInteger>(Between(1, 10)).CheckValue(ctx, {-1, 2, 3}).Reason(),
       "array index 0 (which is `-1`) is not between 1 and 10");
   EXPECT_EQ(
       Elements<MString>(Length(Between(3, 10)))
-          .UnsatisfiedReason(ctx,
-                             std::vector<std::string>{"hello", "moto", "me"}),
+          .CheckValue(ctx, std::vector<std::string>{"hello", "moto", "me"})
+          .Reason(),
       "array index 2 (which is `me`) has length (which is `2`) that is not "
       "between 3 and 10");
 }
@@ -121,33 +129,39 @@ TEST(ContainerConstraintsTest, ElementsIsSatisfiedWithWorks) {
   librarian::AnalysisContext ctx("N", variables, values);
 
   {
-    EXPECT_TRUE(Elements<MString>(Length(Between(1, 10)))
-                    .IsSatisfiedWith(ctx, std::vector<std::string>{}));
-    EXPECT_TRUE(
-        Elements<MString>(Length(Between(1, 10)))
-            .IsSatisfiedWith(ctx, std::vector<std::string>{"hello", "moto"}));
-    EXPECT_TRUE(
-        Elements<MString>(Length(Between(1, "X")))
-            .IsSatisfiedWith(ctx, std::vector<std::string>{"hello", "moto"}));
+    EXPECT_THAT(Elements<MString>(Length(Between(1, 10)))
+                    .CheckValue(ctx, std::vector<std::string>{}),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Elements<MString>(Length(Between(1, 10)))
+                    .CheckValue(ctx, std::vector<std::string>{"hello", "moto"}),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Elements<MString>(Length(Between(1, "X")))
+                    .CheckValue(ctx, std::vector<std::string>{"hello", "moto"}),
+                HasNoConstraintViolation());
   }
   {
-    EXPECT_TRUE(Elements<MInteger>(Between(1, 10))
-                    .IsSatisfiedWith(ctx, std::vector<int64_t>{1, 2, 3}));
-    EXPECT_TRUE(Elements<MInteger>(Between(1, "X"))
-                    .IsSatisfiedWith(ctx, std::vector<int64_t>{1}));
+    EXPECT_THAT(Elements<MInteger>(Between(1, 10))
+                    .CheckValue(ctx, std::vector<int64_t>{1, 2, 3}),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Elements<MInteger>(Between(1, "X"))
+                    .CheckValue(ctx, std::vector<int64_t>{1}),
+                HasNoConstraintViolation());
   }
   {
-    EXPECT_FALSE(Elements<MString>(Length(Between(1, 4)))
-                     .IsSatisfiedWith(ctx, std::vector<std::string>{"hello"}));
-    EXPECT_FALSE(
-        Elements<MString>(Length(Between(2, 10)))
-            .IsSatisfiedWith(ctx, std::vector<std::string>{"hello", "m"}));
+    EXPECT_THAT(Elements<MString>(Length(Between(1, 4)))
+                    .CheckValue(ctx, std::vector<std::string>{"hello"}),
+                HasConstraintViolation(HasSubstr("length")));
+    EXPECT_THAT(Elements<MString>(Length(Between(2, 10)))
+                    .CheckValue(ctx, std::vector<std::string>{"hello", "m"}),
+                HasConstraintViolation(HasSubstr("length")));
   }
   {
-    EXPECT_FALSE(Elements<MInteger>(Between(1, 10))
-                     .IsSatisfiedWith(ctx, std::vector<int64_t>{1, 2, 11}));
-    EXPECT_FALSE(Elements<MInteger>(Between(1, "X"))
-                     .IsSatisfiedWith(ctx, std::vector<int64_t>{1, 2, 11}));
+    EXPECT_THAT(Elements<MInteger>(Between(1, 10))
+                    .CheckValue(ctx, std::vector<int64_t>{1, 2, 11}),
+                HasConstraintViolation(HasSubstr("is not between")));
+    EXPECT_THAT(Elements<MInteger>(Between(1, "X"))
+                    .CheckValue(ctx, std::vector<int64_t>{1, 2, 11}),
+                HasConstraintViolation(HasSubstr("is not between")));
   }
 }
 
@@ -171,11 +185,12 @@ TEST(ContainerConstraintsTest, ElementUnsatisfiedReasonWorks) {
   moriarty_internal::ValueSet values;
   librarian::AnalysisContext ctx("N", variables, values);
 
-  EXPECT_EQ((Element<0, MInteger>(Between(1, 10)).UnsatisfiedReason(ctx, -1)),
+  EXPECT_EQ((Element<0, MInteger>(Between(1, 10)).CheckValue(ctx, -1).Reason()),
             "tuple index 0 (which is `-1`) is not between 1 and 10");
   EXPECT_EQ(
       (Element<12, MString>(Length(Between(1, 3)))
-           .UnsatisfiedReason(ctx, "hello")),
+           .CheckValue(ctx, "hello")
+           .Reason()),
       "tuple index 12 (which is `hello`) has length (which is `5`) that is not "
       "between 1 and 3");
 }
@@ -187,18 +202,23 @@ TEST(ContainerConstraintsTest, ElementIsSatisfiedWithWorks) {
   librarian::AnalysisContext ctx("N", variables, values);
 
   {
-    EXPECT_TRUE((Element<0, MString>(Length(Between(1, 10)))
-                     .IsSatisfiedWith(ctx, "123")));
-    EXPECT_TRUE((Element<0, MString>(Length(Between(1, 10)))
-                     .IsSatisfiedWith(ctx, "hello")));
-    EXPECT_TRUE((Element<0, MString>(Length(Between(1, "X")))
-                     .IsSatisfiedWith(ctx, "moto")));
+    EXPECT_THAT(
+        (Element<0, MString>(Length(Between(1, 10))).CheckValue(ctx, "123")),
+        HasNoConstraintViolation());
+    EXPECT_THAT(
+        (Element<0, MString>(Length(Between(1, 10))).CheckValue(ctx, "hello")),
+        HasNoConstraintViolation());
+    EXPECT_THAT(
+        (Element<0, MString>(Length(Between(1, "X"))).CheckValue(ctx, "moto")),
+        HasNoConstraintViolation());
   }
   {
-    EXPECT_FALSE((Element<0, MString>(Length(Between(1, 4)))
-                      .IsSatisfiedWith(ctx, "hello")));
-    EXPECT_FALSE((Element<0, MString>(Length(Between(2, "X")))
-                      .IsSatisfiedWith(ctx, "m")));
+    EXPECT_THAT(
+        (Element<0, MString>(Length(Between(1, 4))).CheckValue(ctx, "hello")),
+        HasConstraintViolation(HasSubstr("length")));
+    EXPECT_THAT(
+        (Element<0, MString>(Length(Between(2, "X"))).CheckValue(ctx, "m")),
+        HasConstraintViolation(HasSubstr("length")));
   }
 }
 
@@ -211,14 +231,14 @@ TEST(ContainerConstraintsTest, DistinctElementsUnsatisfiedReasonWorks) {
   moriarty_internal::ValueSet values;
   librarian::AnalysisContext ctx("N", variables, values);
 
-  EXPECT_EQ(DistinctElements().UnsatisfiedReason(ctx, std::vector{11, 22, 11}),
-            "array indices 0 and 2 (which are `11`) are not distinct");
-  EXPECT_EQ(DistinctElements().UnsatisfiedReason(
-                ctx, std::vector<std::string>{"hello", "hell", "help", "hell"}),
-            "array indices 1 and 3 (which are `hell`) are not distinct");
-  EXPECT_EQ(
-      DistinctElements().UnsatisfiedReason(ctx, std::vector{1, 2, 3, 2, 2, 3}),
-      "array indices 1 and 3 (which are `2`) are not distinct");
+  EXPECT_THAT(DistinctElements().CheckValue(ctx, std::vector{11, 22, 11}),
+              HasConstraintViolation(HasSubstr("not distinct")));
+  EXPECT_THAT(
+      DistinctElements().CheckValue(
+          ctx, std::vector<std::string>{"hello", "hell", "help", "hell"}),
+      HasConstraintViolation(HasSubstr("not distinct")));
+  EXPECT_THAT(DistinctElements().CheckValue(ctx, std::vector{1, 2, 3, 2, 2, 3}),
+              HasConstraintViolation(HasSubstr("not distinct")));
 }
 
 TEST(ContainerConstraintsTest, DistinctElementsIsSatisfiedWithWorks) {
@@ -227,16 +247,19 @@ TEST(ContainerConstraintsTest, DistinctElementsIsSatisfiedWithWorks) {
   librarian::AnalysisContext ctx("N", variables, values);
 
   {
-    EXPECT_TRUE(
-        DistinctElements().IsSatisfiedWith(ctx, std::vector<std::string>{}));
-    EXPECT_TRUE(DistinctElements().IsSatisfiedWith(
-        ctx, std::vector<std::string>{"hello", "moto"}));
+    EXPECT_THAT(DistinctElements().CheckValue(ctx, std::vector<std::string>{}),
+                HasNoConstraintViolation());
+    EXPECT_THAT(DistinctElements().CheckValue(
+                    ctx, std::vector<std::string>{"hello", "moto"}),
+                HasNoConstraintViolation());
   }
   {
-    EXPECT_FALSE(DistinctElements().IsSatisfiedWith(
-        ctx, std::vector<std::string>{"a", "a"}));
-    EXPECT_FALSE(DistinctElements().IsSatisfiedWith(
-        ctx, std::vector<std::string>{"a", "ba", "ba"}));
+    EXPECT_THAT(
+        DistinctElements().CheckValue(ctx, std::vector<std::string>{"a", "a"}),
+        HasConstraintViolation(HasSubstr("not distinct")));
+    EXPECT_THAT(DistinctElements().CheckValue(
+                    ctx, std::vector<std::string>{"a", "ba", "ba"}),
+                HasConstraintViolation(HasSubstr("not distinct")));
   }
 }
 

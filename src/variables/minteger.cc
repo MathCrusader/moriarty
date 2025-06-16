@@ -36,6 +36,7 @@
 #include "src/librarian/policies.h"
 #include "src/librarian/size_property.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/constraint_violation.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/constraints/size_constraints.h"
 
@@ -309,14 +310,9 @@ MInteger::RangeConstraint::RangeConstraint(
     : constraint_(std::move(constraint)),
       apply_to_fn_(std::move(apply_to_fn)) {};
 
-bool MInteger::RangeConstraint::IsSatisfiedWith(librarian::AnalysisContext ctx,
-                                                int64_t value) const {
-  return constraint_->IsSatisfiedWith(Wrap(ctx), value);
-}
-
-std::string MInteger::RangeConstraint::UnsatisfiedReason(
+ConstraintViolation MInteger::RangeConstraint::CheckValue(
     librarian::AnalysisContext ctx, int64_t value) const {
-  return constraint_->UnsatisfiedReason(Wrap(ctx), value);
+  return constraint_->CheckValue(Wrap(ctx), value);
 }
 
 std::string MInteger::RangeConstraint::ToString() const {

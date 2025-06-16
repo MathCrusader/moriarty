@@ -47,10 +47,10 @@ class OneOfHandler {
   template <typename Container>
   [[nodiscard]] bool ConstrainOptions(Container&& one_of);
 
-  // IsSatisfiedWith()
+  // HasOption()
   //
   // Determines if the given value is one of the valid values.
-  [[nodiscard]] bool IsSatisfiedWith(const T& value) const;
+  [[nodiscard]] bool HasOption(const T& value) const;
 
   // SelectOneOf()
   //
@@ -86,7 +86,7 @@ bool OneOfHandler<T>::HasBeenConstrained() const {
 }
 
 template <typename T>
-bool OneOfHandler<T>::IsSatisfiedWith(const T& value) const {
+bool OneOfHandler<T>::HasOption(const T& value) const {
   return !valid_options_ ||
          std::find(valid_options_->begin(), valid_options_->end(), value) !=
              valid_options_->end();

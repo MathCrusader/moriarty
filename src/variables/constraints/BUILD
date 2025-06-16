@@ -43,7 +43,15 @@ cc_library(
     name = "base_constraints",
     hdrs = ["base_constraints.h"],
     deps = [
+        ":constraint_violation",
         "//src/util:debug_string",
+    ],
+)
+
+cc_library(
+    name = "constraint_violation",
+    hdrs = ["constraint_violation.h"],
+    deps = [
     ],
 )
 
@@ -133,6 +141,7 @@ cc_test(
     srcs = ["base_constraints_test.cc"],
     deps = [
         ":base_constraints",
+        "//src/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],
 )
@@ -157,6 +166,7 @@ cc_test(
         ":custom_constraint",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
@@ -190,6 +200,7 @@ cc_test(
     deps = [
         ":numeric_constraints",
         "//src/internal:range",
+        "//src/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],
 )

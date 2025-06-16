@@ -28,7 +28,7 @@ std::optional<std::string> AllVariablesSatisfyConstraints(
   for (const auto& [name, var] : variables.ListVariables()) {
     if (auto reason = var->CheckValue(name, variables, values))
       return std::format("Variable {} does not satisfy its constraints: {}",
-                         name, *reason);
+                         name, reason.Reason());
   }
   return std::nullopt;
 }

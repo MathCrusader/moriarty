@@ -34,6 +34,7 @@
 #include "src/librarian/mvariable.h"
 #include "src/util/locked_optional.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/constraint_violation.h"
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/io_constraints.h"
 
@@ -115,10 +116,8 @@ class MTuple : public librarian::MVariable<
   struct ElementConstraintWrapper {
    public:
     explicit ElementConstraintWrapper(Element<I, MElementType> constraint);
-    bool IsSatisfiedWith(librarian::AnalysisContext ctx,
-                         const tuple_value_type& value) const;
-    std::string UnsatisfiedReason(librarian::AnalysisContext ctx,
-                                  const tuple_value_type& value) const;
+    ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                   const tuple_value_type& value) const;
     std::string ToString() const;
     std::vector<std::string> GetDependencies() const;
     void ApplyTo(MTuple& other) const;
@@ -268,17 +267,10 @@ MTuple<T...>::ElementConstraintWrapper<I, MElementType>::
 
 template <typename... T>
 template <size_t I, typename MElementType>
-bool MTuple<T...>::ElementConstraintWrapper<I, MElementType>::IsSatisfiedWith(
+ConstraintViolation
+MTuple<T...>::ElementConstraintWrapper<I, MElementType>::CheckValue(
     librarian::AnalysisContext ctx, const tuple_value_type& value) const {
-  return constraint_.IsSatisfiedWith(ctx, std::get<I>(value));
-}
-
-template <typename... T>
-template <size_t I, typename MElementType>
-std::string
-MTuple<T...>::ElementConstraintWrapper<I, MElementType>::UnsatisfiedReason(
-    librarian::AnalysisContext ctx, const tuple_value_type& value) const {
-  return constraint_.UnsatisfiedReason(ctx, std::get<I>(value));
+  return constraint_.CheckValue(ctx, std::get<I>(value));
 }
 
 template <typename... T>

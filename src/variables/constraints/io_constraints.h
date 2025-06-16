@@ -17,11 +17,11 @@
 #ifndef MORIARTY_SRC_VARIABLES_CONSTRAINTS_IO_CONSTRAINTS_H_
 #define MORIARTY_SRC_VARIABLES_CONSTRAINTS_IO_CONSTRAINTS_H_
 
-#include <stdexcept>
 #include <string>
 
 #include "src/librarian/io_config.h"
 #include "src/variables/constraints/base_constraints.h"
+#include "src/variables/constraints/constraint_violation.h"
 
 namespace moriarty {
 
@@ -40,16 +40,12 @@ class IOSeparator : public MConstraint {
   [[nodiscard]] Whitespace GetSeparator() const;
 
   // IOConstraints are always satisfied
-  [[nodiscard]] bool IsSatisfiedWith(const auto& value) const { return true; }
+  [[nodiscard]] ConstraintViolation CheckValue(const auto& value) const {
+    return ConstraintViolation::None();
+  }
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
-
-  // Returns a string explaining why the value does not satisfy the constraints.
-  // It is assumed that IsSatisfiedWith() returned false.
-  [[nodiscard]] std::string UnsatisfiedReason(const auto& value) const {
-    throw std::runtime_error("IOSeparator is always satisfied");
-  }
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
