@@ -543,7 +543,7 @@ MATCHER_P2(IsSatisfiedWith, value, context, "") {
   moriarty::librarian::AnalysisContext ctx(var_name, context_copy.Variables(),
                                            context_copy.Values());
 
-  if (auto reason = arg.IsSatisfiedWith(ctx, ValueType(value))) {
+  if (auto reason = arg.CheckValue(ctx, ValueType(value))) {
     *result_listener << "value does not satisfy constraints: " << *reason;
     return false;
   }
@@ -581,7 +581,7 @@ MATCHER_P3(IsNotSatisfiedWith, value, expected_reason, context, "") {
   moriarty::librarian::AnalysisContext ctx(var_name, context_copy.Variables(),
                                            context_copy.Values());
 
-  if (auto actual_reason = arg.IsSatisfiedWith(ctx, ValueType(value))) {
+  if (auto actual_reason = arg.CheckValue(ctx, ValueType(value))) {
     if (!testing::Value(*actual_reason, testing::HasSubstr(expected_reason))) {
       *result_listener << "value does not satisfy constraints, but not for the "
                           "correct reason. Expected '"

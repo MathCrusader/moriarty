@@ -38,8 +38,8 @@ MInteger NumNodes::GetConstraints() const { return num_nodes_; }
 
 bool NumNodes::IsSatisfiedWith(librarian::AnalysisContext ctx,
                                const Graph<>& value) const {
-  return num_nodes_.IsSatisfiedWith(
-             ctx, static_cast<int64_t>(value.NumNodes())) == std::nullopt;
+  return num_nodes_.CheckValue(ctx, static_cast<int64_t>(value.NumNodes())) ==
+         std::nullopt;
 }
 
 std::string NumNodes::ToString() const {
@@ -55,7 +55,7 @@ std::string NumNodes::UnsatisfiedReason(librarian::AnalysisContext ctx,
                                         const Graph<>& value) const {
   return std::format(
       "number of nodes (which is {}) {}", value.NumNodes(),
-      *num_nodes_.IsSatisfiedWith(ctx, static_cast<int64_t>(value.NumNodes())));
+      *num_nodes_.CheckValue(ctx, static_cast<int64_t>(value.NumNodes())));
 }
 
 // ====== NumEdges ======
@@ -68,8 +68,8 @@ MInteger NumEdges::GetConstraints() const { return num_edges_; }
 
 bool NumEdges::IsSatisfiedWith(librarian::AnalysisContext ctx,
                                const Graph<>& value) const {
-  return num_edges_.IsSatisfiedWith(
-             ctx, static_cast<int64_t>(value.NumEdges())) == std::nullopt;
+  return num_edges_.CheckValue(ctx, static_cast<int64_t>(value.NumEdges())) ==
+         std::nullopt;
 }
 
 std::string NumEdges::ToString() const {
@@ -85,7 +85,7 @@ std::string NumEdges::UnsatisfiedReason(librarian::AnalysisContext ctx,
                                         const Graph<>& value) const {
   return std::format(
       "number of edges (which is {}) {}", value.NumEdges(),
-      *num_edges_.IsSatisfiedWith(ctx, static_cast<int64_t>(value.NumEdges())));
+      *num_edges_.CheckValue(ctx, static_cast<int64_t>(value.NumEdges())));
 }
 
 namespace {

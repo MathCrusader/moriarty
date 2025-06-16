@@ -59,12 +59,12 @@ class LastDigit : public moriarty::MConstraint {
   }
   bool IsSatisfiedWith(moriarty::librarian::AnalysisContext ctx,
                        const TestType& value) const {
-    return digit_.IsSatisfiedWith(ctx, value.value % 10) == std::nullopt;
+    return digit_.CheckValue(ctx, value.value % 10) == std::nullopt;
   }
   std::string UnsatisfiedReason(moriarty::librarian::AnalysisContext ctx,
                                 const TestType& value) const {
     return std::format("the last digit of {} {}", value.value,
-                       *digit_.IsSatisfiedWith(ctx, value.value));
+                       *digit_.CheckValue(ctx, value.value));
   }
   std::vector<std::string> GetDependencies() const {
     return digit_.GetDependencies();
@@ -85,13 +85,13 @@ class NumberOfDigits : public moriarty::MConstraint {
 
   bool IsSatisfiedWith(moriarty::librarian::AnalysisContext ctx,
                        const TestType& value) const {
-    return num_digits_.IsSatisfiedWith(
-               ctx, std::to_string(value.value).size()) == std::nullopt;
+    return num_digits_.CheckValue(ctx, std::to_string(value.value).size()) ==
+           std::nullopt;
   }
   std::string UnsatisfiedReason(moriarty::librarian::AnalysisContext ctx,
                                 const TestType& value) const {
     return std::format("the number of digits in {} {}", value.value,
-                       *num_digits_.IsSatisfiedWith(ctx, value.value));
+                       *num_digits_.CheckValue(ctx, value.value));
   }
   std::vector<std::string> GetDependencies() const {
     return num_digits_.GetDependencies();

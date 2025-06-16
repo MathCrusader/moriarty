@@ -134,12 +134,12 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // `AddCustomConstraint` for simple construction.
   VariableType& AddConstraint(CustomConstraint<VariableType> constraint);
 
-  // IsSatisfiedWith()
+  // CheckValue()
   //
   // Determines if `value` satisfies all constraints on this variable.
-  // Return `std::nullopt` if `value` satisfies all constraints or a string
+  // Returns `std::nullopt` if `value` satisfies all constraints or a string
   // explaining why it does not.
-  [[nodiscard]] std::optional<std::string> IsSatisfiedWith(
+  [[nodiscard]] std::optional<std::string> CheckValue(
       AnalysisContext ctx, const ValueType& value) const;
 
   // Generate()
@@ -276,7 +276,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<const moriarty_internal::ValueSet> values)
       const override;
-  std::optional<std::string> IsSatisfiedWithValue(
+  std::optional<std::string> CheckValue(
       std::string_view variable_name,
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<const moriarty_internal::ValueSet> values)
@@ -378,8 +378,8 @@ V& MVariable<V, G>::AddConstraint(CustomConstraint<V> constraint) {
 }
 
 template <typename V, typename G>
-std::optional<std::string> MVariable<V, G>::IsSatisfiedWith(
-    AnalysisContext ctx, const G& value) const {
+std::optional<std::string> MVariable<V, G>::CheckValue(AnalysisContext ctx,
+                                                       const G& value) const {
   if (constraints_.IsSatisfiedWith(ctx, value)) return std::nullopt;
   return constraints_.UnsatisfiedReason(ctx, value);
 }
@@ -438,7 +438,7 @@ void MVariable<V, G>::Print(PrinterContext ctx, const G& value) const {
 template <typename V, typename G>
 G MVariable<V, G>::Read(ReaderContext ctx) const {
   G value = ReadImpl(ctx);
-  if (auto reason = IsSatisfiedWith(ctx, value)) {
+  if (auto reason = CheckValue(ctx, value)) {
     ctx.ThrowIOError(
         std::format("Read value does not satisfy constraints: {}", *reason));
   }
@@ -567,7 +567,7 @@ G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
   // validate. Generate them now.
   for (std::string_view dep : dependencies_) ctx.AssignVariable(dep);
 
-  if (auto reason = IsSatisfiedWith(ctx, potential_value))
+  if (auto reason = CheckValue(ctx, potential_value))
     throw moriarty::GenerationError(
         ctx.GetVariableName(),
         std::format("Generated value does not satisfy constraints: {}",
@@ -642,12 +642,12 @@ void MVariable<V, G>::PrintValue(
 }
 
 template <typename V, typename G>
-std::optional<std::string> MVariable<V, G>::IsSatisfiedWithValue(
+std::optional<std::string> MVariable<V, G>::CheckValue(
     std::string_view variable_name,
     std::reference_wrapper<const moriarty_internal::VariableSet> variables,
     std::reference_wrapper<const moriarty_internal::ValueSet> values) const {
   AnalysisContext ctx(variable_name, variables, values);
-  return IsSatisfiedWith(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
+  return CheckValue(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
 
 template <typename V, typename G>

@@ -141,8 +141,8 @@ std::optional<typename T::value_type> ViewOnlyContext::GetValueIfKnown(
 template <MoriartyVariable T>
 std::optional<typename T::value_type> ViewOnlyContext::GetUniqueValue(
     std::string_view variable_name) const {
-  auto stored_value = GetValueIfKnown<T>(variable_name);
-  if (stored_value) return *stored_value;
+  if (auto stored_value = GetValueIfKnown<T>(variable_name))
+    return *stored_value;
 
   T variable = GetVariable<T>(variable_name);
   return variable.GetUniqueValue({variable_name, variables_, values_});
@@ -151,8 +151,8 @@ std::optional<typename T::value_type> ViewOnlyContext::GetUniqueValue(
 template <MoriartyVariable T>
 bool ViewOnlyContext::IsSatisfiedWith(T variable,
                                       const T::value_type& value) const {
-  return variable.IsSatisfiedWith({"IsSatisfiedWith()", variables_, values_},
-                                  value) == std::nullopt;
+  return variable.CheckValue({"IsSatisfiedWith()", variables_, values_},
+                             value) == std::nullopt;
 }
 
 }  // namespace moriarty_internal

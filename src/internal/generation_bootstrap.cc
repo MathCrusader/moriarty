@@ -123,8 +123,7 @@ ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
   // TODO(darcybest): Determine if there's a better way of doing this...
   for (std::string_view name : order) {
     AbstractVariable* var = variables.GetAnonymousVariable(name);
-    if (auto reason =
-            var->IsSatisfiedWithValue(name, variables, known_values)) {
+    if (auto reason = var->CheckValue(name, variables, known_values)) {
       throw std::runtime_error(std::format(
           "Variable {} does not satisfy its constraints: {}", name, *reason));
     }

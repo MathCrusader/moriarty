@@ -183,7 +183,7 @@ class AbstractVariable {
   // should have 5 <= x <= 10.
   virtual void MergeFromAnonymous(const AbstractVariable& other) = 0;
 
-  // IsSatisfiedWithValue() [pure virtual]
+  // CheckValue() [pure virtual]
   //
   // Determines if the value stored in `ctx` satisfies all constraints for this
   // variable. `std::nullopt` means it is satisfied. A string is the reason why
@@ -191,7 +191,7 @@ class AbstractVariable {
   //
   // If a variable does not have a value, this will return false.
   // If a value does not have a variable, this will return true.
-  virtual std::optional<std::string> IsSatisfiedWithValue(
+  virtual std::optional<std::string> CheckValue(
       std::string_view variable_name,
       std::reference_wrapper<const VariableSet> variables,
       std::reference_wrapper<const ValueSet> values) const = 0;

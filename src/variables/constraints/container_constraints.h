@@ -190,7 +190,7 @@ Length::Length(Constraints&&... constraints)
 template <typename Container>
 bool Length::IsSatisfiedWith(librarian::AnalysisContext ctx,
                              const Container& value) const {
-  return length_.IsSatisfiedWith(ctx, static_cast<int64_t>(value.size())) ==
+  return length_.CheckValue(ctx, static_cast<int64_t>(value.size())) ==
          std::nullopt;
 }
 
@@ -199,7 +199,7 @@ std::string Length::UnsatisfiedReason(librarian::AnalysisContext ctx,
                                       const Container& value) const {
   return std::format(
       "has length (which is {}) that {}", librarian::DebugString(value.size()),
-      *length_.IsSatisfiedWith(ctx, static_cast<int64_t>(value.size())));
+      *length_.CheckValue(ctx, static_cast<int64_t>(value.size())));
 }
 
 // ====== Elements ======
@@ -220,8 +220,7 @@ bool Elements<MElementType>::IsSatisfiedWith(
     librarian::AnalysisContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
   for (const auto& elem : value) {
-    if (auto reason = element_constraints_.IsSatisfiedWith(ctx, elem))
-      return false;
+    if (auto reason = element_constraints_.CheckValue(ctx, elem)) return false;
   }
   return true;
 }
@@ -236,7 +235,7 @@ std::string Elements<MElementType>::UnsatisfiedReason(
     librarian::AnalysisContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
   auto it = std::ranges::find_if_not(value, [&](const auto& elem) {
-    return element_constraints_.IsSatisfiedWith(ctx, elem) == std::nullopt;
+    return element_constraints_.CheckValue(ctx, elem) == std::nullopt;
   });
   if (it == value.end()) {
     throw std::invalid_argument(
@@ -245,7 +244,7 @@ std::string Elements<MElementType>::UnsatisfiedReason(
 
   return std::format("array index {} (which is {}) {}", it - value.begin(),
                      librarian::DebugString(*it),
-                     *element_constraints_.IsSatisfiedWith(ctx, *it));
+                     *element_constraints_.CheckValue(ctx, *it));
 }
 
 template <typename MElementType>
@@ -270,7 +269,7 @@ template <size_t I, typename MElementType>
 bool Element<I, MElementType>::IsSatisfiedWith(
     librarian::AnalysisContext ctx,
     const MElementType::value_type& value) const {
-  return element_constraints_.IsSatisfiedWith(ctx, value) == std::nullopt;
+  return element_constraints_.CheckValue(ctx, value) == std::nullopt;
 }
 
 template <size_t I, typename MElementType>
@@ -284,7 +283,7 @@ std::string Element<I, MElementType>::UnsatisfiedReason(
     const MElementType::value_type& value) const {
   return std::format("tuple index {} (which is {}) {}", I,
                      librarian::DebugString(value),
-                     *element_constraints_.IsSatisfiedWith(ctx, value));
+                     *element_constraints_.CheckValue(ctx, value));
 }
 
 template <size_t I, typename MElementType>

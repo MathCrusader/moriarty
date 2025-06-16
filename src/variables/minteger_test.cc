@@ -233,7 +233,7 @@ TEST(MIntegerTest, IsSatisfiedWithWithExpressionsShouldWorkForBadData) {
   librarian::AnalysisContext ctx("_", variables, values);
   // Could be VariableNotFound as well (impl detail)
   EXPECT_THAT(
-      [&] { (void)MInteger(Between(1, "3 * N + 1")).IsSatisfiedWith(ctx, 2); },
+      [&] { (void)MInteger(Between(1, "3 * N + 1")).CheckValue(ctx, 2); },
       ThrowsVariableNotFound("N"));
 }
 
