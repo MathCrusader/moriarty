@@ -137,17 +137,10 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // IsSatisfiedWith()
   //
   // Determines if `value` satisfies all constraints on this variable.
-  [[nodiscard]] bool IsSatisfiedWith(AnalysisContext ctx,
-                                     const ValueType& value) const;
-
-  // UnsatisfiedReason()
-  //
-  // Returns a string explaining why `value` does not satisfy the constraints on
-  // this variable.
-  //
-  // Precondition: `IsSatisfiedWith(ctx, value)` is false.
-  [[nodiscard]] std::string UnsatisfiedReason(AnalysisContext ctx,
-                                              const ValueType& value) const;
+  // Return `std::nullopt` if `value` satisfies all constraints or a string
+  // explaining why it does not.
+  [[nodiscard]] std::optional<std::string> IsSatisfiedWith(
+      AnalysisContext ctx, const ValueType& value) const;
 
   // Generate()
   //
@@ -283,12 +276,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<const moriarty_internal::ValueSet> values)
       const override;
-  bool IsSatisfiedWithValue(
-      std::string_view variable_name,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<const moriarty_internal::ValueSet> values)
-      const override;
-  std::string UnsatisfiedWithValueReason(
+  std::optional<std::string> IsSatisfiedWithValue(
       std::string_view variable_name,
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<const moriarty_internal::ValueSet> values)
@@ -390,14 +378,9 @@ V& MVariable<V, G>::AddConstraint(CustomConstraint<V> constraint) {
 }
 
 template <typename V, typename G>
-bool MVariable<V, G>::IsSatisfiedWith(AnalysisContext ctx,
-                                      const G& value) const {
-  return constraints_.IsSatisfiedWith(ctx, value);
-}
-
-template <typename V, typename G>
-std::string MVariable<V, G>::UnsatisfiedReason(AnalysisContext ctx,
-                                               const G& value) const {
+std::optional<std::string> MVariable<V, G>::IsSatisfiedWith(
+    AnalysisContext ctx, const G& value) const {
+  if (constraints_.IsSatisfiedWith(ctx, value)) return std::nullopt;
   return constraints_.UnsatisfiedReason(ctx, value);
 }
 
@@ -455,9 +438,9 @@ void MVariable<V, G>::Print(PrinterContext ctx, const G& value) const {
 template <typename V, typename G>
 G MVariable<V, G>::Read(ReaderContext ctx) const {
   G value = ReadImpl(ctx);
-  if (!IsSatisfiedWith(ctx, value)) {
-    ctx.ThrowIOError(std::format("Read value does not satisfy constraints: {}",
-                                 UnsatisfiedReason(ctx, value)));
+  if (auto reason = IsSatisfiedWith(ctx, value)) {
+    ctx.ThrowIOError(
+        std::format("Read value does not satisfy constraints: {}", *reason));
   }
   return value;
 }
@@ -584,11 +567,11 @@ G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
   // validate. Generate them now.
   for (std::string_view dep : dependencies_) ctx.AssignVariable(dep);
 
-  if (!IsSatisfiedWith(ctx, potential_value))
+  if (auto reason = IsSatisfiedWith(ctx, potential_value))
     throw moriarty::GenerationError(
         ctx.GetVariableName(),
         std::format("Generated value does not satisfy constraints: {}",
-                    UnsatisfiedReason(ctx, potential_value)),
+                    *reason),
         RetryPolicy::kRetry);
 
   return potential_value;
@@ -659,21 +642,12 @@ void MVariable<V, G>::PrintValue(
 }
 
 template <typename V, typename G>
-bool MVariable<V, G>::IsSatisfiedWithValue(
+std::optional<std::string> MVariable<V, G>::IsSatisfiedWithValue(
     std::string_view variable_name,
     std::reference_wrapper<const moriarty_internal::VariableSet> variables,
     std::reference_wrapper<const moriarty_internal::ValueSet> values) const {
   AnalysisContext ctx(variable_name, variables, values);
   return IsSatisfiedWith(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
-}
-
-template <typename V, typename G>
-std::string MVariable<V, G>::UnsatisfiedWithValueReason(
-    std::string_view variable_name,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<const moriarty_internal::ValueSet> values) const {
-  AnalysisContext ctx(variable_name, variables, values);
-  return UnsatisfiedReason(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
 
 template <typename V, typename G>

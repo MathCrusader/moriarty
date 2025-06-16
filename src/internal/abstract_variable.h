@@ -20,6 +20,7 @@
 
 #include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -185,23 +186,12 @@ class AbstractVariable {
   // IsSatisfiedWithValue() [pure virtual]
   //
   // Determines if the value stored in `ctx` satisfies all constraints for this
-  // variable.
+  // variable. `std::nullopt` means it is satisfied. A string is the reason why
+  // it is not satisfied.
   //
   // If a variable does not have a value, this will return false.
   // If a value does not have a variable, this will return true.
-  virtual bool IsSatisfiedWithValue(
-      std::string_view variable_name,
-      std::reference_wrapper<const VariableSet> variables,
-      std::reference_wrapper<const ValueSet> values) const = 0;
-
-  // UnsatisfiedWithValueReason() [pure virtual]
-  //
-  // Determines if the value stored in `ctx` satisfies all constraints for this
-  // variable.
-  //
-  // If a variable does not have a value, this will return not ok.
-  // If a value does not have a variable, this will return ok.
-  virtual std::string UnsatisfiedWithValueReason(
+  virtual std::optional<std::string> IsSatisfiedWithValue(
       std::string_view variable_name,
       std::reference_wrapper<const VariableSet> variables,
       std::reference_wrapper<const ValueSet> values) const = 0;

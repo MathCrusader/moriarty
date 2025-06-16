@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <format>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -102,7 +103,7 @@ Graph<> MGraph::GenerateImpl(librarian::ResolverContext ctx) const {
                           RetryPolicy::kAbort);
   }
 
-  std::set<std::pair<Graph::NodeIdx, Graph::NodeIdx>> seen;
+  std::set<std::pair<Graph<>::NodeIdx, Graph<>::NodeIdx>> seen;
   Graph G(num_nodes);
   if (is_connected_) {
     for (int64_t i = 1; i < num_nodes; ++i) {
@@ -116,8 +117,8 @@ Graph<> MGraph::GenerateImpl(librarian::ResolverContext ctx) const {
   while (G.NumEdges() < num_edges) {
     int64_t u = ctx.RandomInteger(num_nodes);
     int64_t v = ctx.RandomInteger(num_nodes);
-    if (!multi_edges_allowed && !seen.insert(u, v).second) continue;
-    seen.insert(v, u);
+    if (!multi_edges_allowed_ && !seen.emplace(u, v).second) continue;
+    seen.emplace(v, u);
     G.AddEdge(u, v);
   }
 

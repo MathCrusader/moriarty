@@ -543,9 +543,8 @@ MATCHER_P2(IsSatisfiedWith, value, context, "") {
   moriarty::librarian::AnalysisContext ctx(var_name, context_copy.Variables(),
                                            context_copy.Values());
 
-  if (!arg.IsSatisfiedWith(ctx, ValueType(value))) {
-    std::string reason = arg.UnsatisfiedReason(ctx, ValueType(value));
-    *result_listener << "value does not satisfy constraints: " << reason;
+  if (auto reason = arg.IsSatisfiedWith(ctx, ValueType(value))) {
+    *result_listener << "value does not satisfy constraints: " << *reason;
     return false;
   }
 
@@ -582,15 +581,16 @@ MATCHER_P3(IsNotSatisfiedWith, value, expected_reason, context, "") {
   moriarty::librarian::AnalysisContext ctx(var_name, context_copy.Variables(),
                                            context_copy.Values());
 
-  if (!arg.IsSatisfiedWith(ctx, ValueType(value))) {
-    std::string actual_reason = arg.UnsatisfiedReason(ctx, ValueType(value));
-    if (!testing::Value(actual_reason, testing::HasSubstr(expected_reason))) {
+  if (auto actual_reason = arg.IsSatisfiedWith(ctx, ValueType(value))) {
+    if (!testing::Value(*actual_reason, testing::HasSubstr(expected_reason))) {
       *result_listener << "value does not satisfy constraints, but not for the "
                           "correct reason. Expected '"
-                       << expected_reason << "', got '" << actual_reason << "'";
+                       << expected_reason << "', got '" << *actual_reason
+                       << "'";
       return false;
     }
-    *result_listener << "value does not satisfy constraints: " << actual_reason;
+    *result_listener << "value does not satisfy constraints: "
+                     << *actual_reason;
     return true;
   }
 

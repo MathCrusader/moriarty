@@ -26,10 +26,9 @@ namespace moriarty_internal {
 std::optional<std::string> AllVariablesSatisfyConstraints(
     const VariableSet& variables, const ValueSet& values) {
   for (const auto& [name, var] : variables.ListVariables()) {
-    if (!var->IsSatisfiedWithValue(name, variables, values))
-      return std::format(
-          "Variable {} does not satisfy its constraints: {}", name,
-          var->UnsatisfiedWithValueReason(name, variables, values));
+    if (auto reason = var->IsSatisfiedWithValue(name, variables, values))
+      return std::format("Variable {} does not satisfy its constraints: {}",
+                         name, *reason);
   }
   return std::nullopt;
 }

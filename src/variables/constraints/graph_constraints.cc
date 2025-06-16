@@ -16,8 +16,11 @@
 
 #include "src/variables/constraints/graph_constraints.h"
 
+#include <optional>
+#include <set>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "src/contexts/librarian_context.h"
@@ -35,8 +38,8 @@ MInteger NumNodes::GetConstraints() const { return num_nodes_; }
 
 bool NumNodes::IsSatisfiedWith(librarian::AnalysisContext ctx,
                                const Graph<>& value) const {
-  return num_nodes_.IsSatisfiedWith(ctx,
-                                    static_cast<int64_t>(value.NumNodes()));
+  return num_nodes_.IsSatisfiedWith(
+             ctx, static_cast<int64_t>(value.NumNodes())) == std::nullopt;
 }
 
 std::string NumNodes::ToString() const {
@@ -50,9 +53,9 @@ std::vector<std::string> NumNodes::GetDependencies() const {
 
 std::string NumNodes::UnsatisfiedReason(librarian::AnalysisContext ctx,
                                         const Graph<>& value) const {
-  return std::format("number of nodes (which is {}) {}", value.NumNodes(),
-                     num_nodes_.UnsatisfiedReason(
-                         ctx, static_cast<int64_t>(value.NumNodes())));
+  return std::format(
+      "number of nodes (which is {}) {}", value.NumNodes(),
+      *num_nodes_.IsSatisfiedWith(ctx, static_cast<int64_t>(value.NumNodes())));
 }
 
 // ====== NumEdges ======
@@ -65,8 +68,8 @@ MInteger NumEdges::GetConstraints() const { return num_edges_; }
 
 bool NumEdges::IsSatisfiedWith(librarian::AnalysisContext ctx,
                                const Graph<>& value) const {
-  return num_edges_.IsSatisfiedWith(ctx,
-                                    static_cast<int64_t>(value.NumEdges()));
+  return num_edges_.IsSatisfiedWith(
+             ctx, static_cast<int64_t>(value.NumEdges())) == std::nullopt;
 }
 
 std::string NumEdges::ToString() const {
@@ -80,27 +83,31 @@ std::vector<std::string> NumEdges::GetDependencies() const {
 
 std::string NumEdges::UnsatisfiedReason(librarian::AnalysisContext ctx,
                                         const Graph<>& value) const {
-  return std::format("number of edges (which is {}) {}", value.NumEdges(),
-                     num_edges_.UnsatisfiedReason(
-                         ctx, static_cast<int64_t>(value.NumEdges())));
+  return std::format(
+      "number of edges (which is {}) {}", value.NumEdges(),
+      *num_edges_.IsSatisfiedWith(ctx, static_cast<int64_t>(value.NumEdges())));
 }
 
 namespace {
 
 class UnionFind {
  public:
-  UnionFind(int size) : parent(std::views::iota(size)) {}
+  UnionFind(int size) : parent_(size) {
+    for (int i = 0; i < size; ++i) parent_[i] = i;
+  }
 
-  int find(int i) { return parent[i] = (parent[i] == i ? i : find(parent[i])); }
+  int find(int i) {
+    return parent_[i] = (parent_[i] == i ? i : find(parent_[i]));
+  }
 
   void unite(int i, int j) {
     int I = find(i);
     int J = find(j);
-    if (I != J) parent[I] = J;
+    if (I != J) parent_[I] = J;
   }
 
  private:
-  std::vector<int> parent;
+  std::vector<int> parent_;
 };
 
 }  // namespace
@@ -111,7 +118,7 @@ bool Connected::IsSatisfiedWith(librarian::AnalysisContext ctx,
   if (value.NumNodes() == 0) return false;
 
   UnionFind uf(value.NumNodes());
-  auto edges = value.Edges();
+  auto edges = value.GetEdges();
   for (const auto& [u, v, _] : edges) uf.unite(u, v);
 
   for (int i = 1; i < value.NumNodes(); ++i)
@@ -131,11 +138,11 @@ std::string Connected::UnsatisfiedReason(librarian::AnalysisContext ctx,
 // ====== NoParallelEdges ======
 bool NoParallelEdges::IsSatisfiedWith(librarian::AnalysisContext ctx,
                                       const Graph<>& value) const {
-  std::set<std::pair<Graph::NodeIdx, Graph::NodeIdx>> seen;
-  auto edges = value.Edges();
+  std::set<std::pair<Graph<>::NodeIdx, Graph<>::NodeIdx>> seen;
+  auto edges = value.GetEdges();
   for (const auto& [u, v, _] : edges) {
-    if (!seen.insert(u, v).second) return false;
-    if (u != v && !seen.insert(v, u).second) return false;
+    if (!seen.emplace(u, v).second) return false;
+    if (u != v && !seen.emplace(v, u).second) return false;
   }
   return true;
 }
@@ -148,12 +155,12 @@ std::vector<std::string> NoParallelEdges::GetDependencies() const { return {}; }
 
 std::string NoParallelEdges::UnsatisfiedReason(librarian::AnalysisContext ctx,
                                                const Graph<>& value) const {
-  std::set<std::pair<Graph::NodeIdx, Graph::NodeIdx>> seen;
-  auto edges = value.Edges();
+  std::set<std::pair<Graph<>::NodeIdx, Graph<>::NodeIdx>> seen;
+  auto edges = value.GetEdges();
   for (const auto& [u, v, _] : edges) {
-    if (!seen.insert(u, v).second)
+    if (!seen.emplace(u, v).second)
       return std::format("contains the edge ({}, {}) multiple times", u, v);
-    if (u != v && !seen.insert(v, u).second)
+    if (u != v && !seen.emplace(v, u).second)
       return std::format("contains the edge ({}, {}) multiple times", u, v);
   }
   return "contains some edge multiple times";

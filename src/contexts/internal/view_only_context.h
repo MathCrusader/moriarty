@@ -152,7 +152,7 @@ template <MoriartyVariable T>
 bool ViewOnlyContext::IsSatisfiedWith(T variable,
                                       const T::value_type& value) const {
   return variable.IsSatisfiedWith({"IsSatisfiedWith()", variables_, values_},
-                                  value);
+                                  value) == std::nullopt;
 }
 
 }  // namespace moriarty_internal
