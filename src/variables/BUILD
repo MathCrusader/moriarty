@@ -29,7 +29,9 @@ licenses(["notice"])
 cc_library(
     name = "all_mvariables",
     deps = [
+        ":graph",
         ":marray",
+        ":mgraph",
         ":minteger",
         ":mstring",
         ":mtuple",

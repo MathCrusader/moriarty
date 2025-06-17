@@ -32,6 +32,7 @@ cc_library(
         ":base_constraints",
         ":container_constraints",
         ":custom_constraint",
+        ":graph_constraints",
         ":io_constraints",
         ":numeric_constraints",
         ":size_constraints",
