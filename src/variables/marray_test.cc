@@ -15,7 +15,9 @@
 
 #include "src/variables/marray.h"
 
+#include <algorithm>
 #include <cstdint>
+#include <functional>
 #include <sstream>
 #include <stdexcept>
 #include <unordered_set>
@@ -35,6 +37,7 @@
 #include "src/variables/constraints/container_constraints.h"
 #include "src/variables/constraints/io_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
+#include "src/variables/constraints/string_constraints.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"
 #include "src/variables/mtuple.h"
@@ -452,6 +455,38 @@ TEST(MArrayTest, ListEdgeCasesNoLengthFails) {
 TEST(MArrayTest, ExactlyConstraintWorks) {
   Exactly<std::vector<int64_t>> x = Exactly(std::vector<int64_t>{1, 2, 3});
   EXPECT_THAT(MArray<MInteger>(x), GeneratedValuesAre(ElementsAre(1, 2, 3)));
+}
+
+MATCHER(IsSorted, "is sorted in ascending order") {
+  return std::is_sorted(arg.begin(), arg.end());
+}
+MATCHER_P(IsSortedBy, comp, "is sorted by custom comparator") {
+  return std::is_sorted(
+      arg.begin(), arg.end(),
+      [&](const auto& a, const auto& b) { return std::invoke(comp, a, b); });
+}
+
+TEST(MArrayTest, SortedConstraintWorks) {
+  EXPECT_THAT(MArray<MInteger>(Length(10), Sorted<MInteger>()),
+              GeneratedValuesAre(IsSorted()));
+  EXPECT_THAT(MArray<MString>(Elements<MString>(Length(3), Alphabet("abc")),
+                              Length(20), Sorted<MString>()),
+              GeneratedValuesAre(IsSorted()));
+  EXPECT_THAT(MArray<MString>(DistinctElements(),
+                              Elements<MString>(Length(3), Alphabet("abc")),
+                              Length(20), Sorted<MString>()),
+              GeneratedValuesAre(IsSorted()));
+  EXPECT_THAT(MArray<MString>(DistinctElements(),
+                              Elements<MString>(Length(3), Alphabet("abc")),
+                              Length(20), Sorted<MString, std::greater<>>()),
+              GeneratedValuesAre(IsSortedBy(std::greater<>{})));
+
+  EXPECT_THAT(MArray<MArray<MInteger>>(
+                  DistinctElements(),
+                  Elements<MArray<MInteger>>(
+                      Length(3), Elements<MInteger>(Between(1, 10))),
+                  Length(20), Sorted<MArray<MInteger>>()),
+              GeneratedValuesAre(IsSorted()));
 }
 
 }  // namespace

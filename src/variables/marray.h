@@ -103,6 +103,9 @@ class MArray : public librarian::MVariable<
   MArray& AddConstraint(Elements<MElementType> constraint);
   // The array's elements must be distinct.
   MArray& AddConstraint(DistinctElements constraint);
+  // The array's elements must be in sorted order.
+  template <typename Comp, typename Proj>
+  MArray& AddConstraint(Sorted<MElementType, Comp, Proj> constraint);
 
   // ---------------------------------------------------------------------------
   //  Constrain the array's I/O
@@ -152,6 +155,9 @@ class MArray : public librarian::MVariable<
   MElementType element_constraints_;
   std::optional<MInteger> length_;
   bool distinct_elements_ = false;
+  std::optional<
+      std::function<bool(const element_value_type&, const element_value_type&)>>
+      comparator_;
   librarian::LockedOptional<Whitespace> separator_ =
       librarian::LockedOptional<Whitespace>{Whitespace::kSpace};
 
@@ -264,6 +270,13 @@ MArray<T>& MArray<T>::AddConstraint(DistinctElements constraint) {
 }
 
 template <typename T>
+template <typename Comp, typename Proj>
+MArray<T>& MArray<T>::AddConstraint(Sorted<T, Comp, Proj> constraint) {
+  comparator_ = constraint.GetComparator();
+  return this->InternalAddConstraint(std::move(constraint));
+}
+
+template <typename T>
 MArray<T>& MArray<T>::AddConstraint(IOSeparator constraint) {
   if (!separator_.Set(constraint.GetSeparator())) {
     throw ImpossibleToSatisfy(
@@ -303,15 +316,18 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
 
   int length = length_local.Generate(ctx.ForSubVariable("length"));
 
-  if (distinct_elements_) return GenerateNDistinctImpl(ctx, length);
-
   vector_value_type res;
-  res.reserve(length);
-
-  for (int i = 0; i < length; i++) {
-    res.push_back(element_constraints_.Generate(
-        ctx.ForSubVariable("elem[" + std::to_string(i) + "]")));
+  if (distinct_elements_) {
+    res = GenerateNDistinctImpl(ctx, length);
+  } else {
+    res.reserve(length);
+    for (int i = 0; i < length; i++) {
+      res.push_back(element_constraints_.Generate(
+          ctx.ForSubVariable("elem[" + std::to_string(i) + "]")));
+    }
   }
+
+  if (comparator_) std::sort(res.begin(), res.end(), *comparator_);
 
   return res;
 }

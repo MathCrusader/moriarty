@@ -18,6 +18,7 @@
 #define MORIARTY_SRC_VARIABLES_CONSTRAINTS_CONSTRAINT_VIOLATION_H_
 
 #include <optional>
+#include <ostream>
 #include <string>
 
 namespace moriarty {
@@ -42,6 +43,12 @@ class ConstraintViolation {
   // string. But note that an empty string does not mean the constraint is
   // satisfied.
   [[nodiscard]] std::string Reason() const { return reason_.value_or(""); }
+
+  friend std::ostream& operator<<(std::ostream& os,
+                                  const ConstraintViolation& violation) {
+    if (violation.IsOk()) return os << "Constraint is satisfied";
+    return os << "Constraint violation: " << violation.Reason();
+  }
 
  private:
   ConstraintViolation(int) : reason_(std::nullopt) {}

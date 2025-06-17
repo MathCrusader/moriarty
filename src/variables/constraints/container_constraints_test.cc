@@ -254,5 +254,32 @@ TEST(ContainerConstraintsTest, DistinctElementsIsSatisfiedWithWorks) {
   }
 }
 
+TEST(ContainerConstraintsTest, SortedWorks) {
+  {
+    EXPECT_THAT(Sorted<MString>().CheckValue(std::vector<std::string>{}),
+                HasNoConstraintViolation());
+    EXPECT_THAT((Sorted<MString, std::greater<>>().CheckValue(
+                    std::vector<std::string>{"moto", "hello"})),
+                HasNoConstraintViolation());
+    EXPECT_THAT(
+        (Sorted<MString, std::greater<>, std::function<char(std::string)>>(
+             std::greater{}, [](std::string s) { return s[1]; })
+             .CheckValue(std::vector<std::string>{"axc", "zby"})),
+        HasNoConstraintViolation());
+  }
+  {
+    EXPECT_THAT((Sorted<MInteger>().CheckValue({1, 2, 3, 3, 4})),
+                HasNoConstraintViolation());
+    EXPECT_THAT((Sorted<MInteger, std::greater<>>().CheckValue({1, 1, 1, 1})),
+                HasNoConstraintViolation());
+  }
+  {
+    EXPECT_THAT((Sorted<MInteger>().CheckValue({4, 3, 2, 1})),
+                HasConstraintViolation(HasSubstr("sorted")));
+    EXPECT_THAT((Sorted<MInteger>().CheckValue({2, 2, 2, 2, 1})),
+                HasConstraintViolation(HasSubstr("sorted")));
+  }
+}
+
 }  // namespace
 }  // namespace moriarty

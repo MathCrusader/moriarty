@@ -19,6 +19,7 @@
 
 #include <concepts>
 #include <format>
+#include <functional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -140,6 +141,36 @@ class DistinctElements : public BasicMConstraint {
       const std::vector<T>& value) const;
 };
 
+// Constraint stating that the elements of a container must be sorted.
+// Comp is the comparator used to compare elements, and Proj is the
+// projection function applied to each element before comparison (similar to
+// std::sort).
+template <typename MElementType, typename Comp = std::ranges::less,
+          typename Proj = std::identity>
+class Sorted : public BasicMConstraint {
+ public:
+  explicit Sorted(Comp comp = {}, Proj proj = {})
+      : BasicMConstraint("is sorted"), comp_(comp), proj_(proj) {}
+
+  // Determines if the container is sorted.
+  [[nodiscard]] ConstraintViolation CheckValue(
+      const std::vector<typename MElementType::value_type>& value) const;
+
+  // Compares two elements using the provided comparator and projection.
+  [[nodiscard]] bool Compare(const MElementType::value_type& lhs,
+                             const MElementType::value_type& rhs) const;
+
+  // Returns a function that can be used to compare elements using `comp` and
+  // `proj`.
+  [[nodiscard]] std::function<bool(const typename MElementType::value_type&,
+                                   const typename MElementType::value_type&)>
+  GetComparator() const;
+
+ private:
+  Comp comp_;
+  Proj proj_;
+};
+
 // -----------------------------------------------------------------------------
 //  Template Implementation Below
 
@@ -249,6 +280,35 @@ ConstraintViolation DistinctElements::CheckValue(
           std::format("array indices {} and {} (which are {}) are not distinct",
                       it->second, idx, librarian::DebugString(elem)));
     }
+  }
+  return ConstraintViolation::None();
+}
+
+// ====== Sorted ======
+template <typename MElementType, typename Comp, typename Proj>
+bool Sorted<MElementType, Comp, Proj>::Compare(
+    const MElementType::value_type& lhs,
+    const MElementType::value_type& rhs) const {
+  return std::invoke(comp_, std::invoke(proj_, lhs), std::invoke(proj_, rhs));
+}
+
+template <typename MElementType, typename Comp, typename Proj>
+std::function<bool(const typename MElementType::value_type&,
+                   const typename MElementType::value_type&)>
+Sorted<MElementType, Comp, Proj>::GetComparator() const {
+  return [this](const typename MElementType::value_type& lhs,
+                const typename MElementType::value_type& rhs) {
+    return Compare(lhs, rhs);
+  };
+}
+
+template <typename MElementType, typename Comp, typename Proj>
+ConstraintViolation Sorted<MElementType, Comp, Proj>::CheckValue(
+    const std::vector<typename MElementType::value_type>& value) const {
+  for (size_t i = 1; i < value.size(); ++i) {
+    if (Compare(value[i], value[i - 1]))
+      return ConstraintViolation(
+          std::format("is not sorted at indices {} and {}", i - 1, i));
   }
   return ConstraintViolation::None();
 }
