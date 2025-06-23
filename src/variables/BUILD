@@ -139,6 +139,12 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "real",
+    srcs = ["real.cc"],
+    hdrs = ["real.h"],
+)
+
 cc_test(
     name = "graph_test",
     srcs = ["graph_test.cc"],
@@ -227,6 +233,15 @@ cc_test(
         ":mtuple",
         "//src/librarian:mvariable",
         "//src/testing:gtest_helpers",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "real_test",
+    srcs = ["real_test.cc"],
+    deps = [
+        ":real",
         "@googletest//:gtest_main",
     ],
 )
