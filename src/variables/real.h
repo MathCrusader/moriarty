@@ -17,9 +17,11 @@
 #ifndef MORIARTY_SRC_VARIABLES_REAL_H_
 #define MORIARTY_SRC_VARIABLES_REAL_H_
 
+#include <compare>
 #include <concepts>
 #include <cstdint>
 #include <ostream>
+#include <string>
 #include <string_view>
 
 namespace moriarty {
@@ -74,6 +76,14 @@ class Real {
   // Returns the value of the Real variable as a fraction.
   Fraction GetValue() const { return {numerator_, denominator_}; }
 
+  std::string ToString() const {
+    if (denominator_ == 1) {
+      return std::to_string(numerator_);
+    } else {
+      return std::to_string(numerator_) + '/' + std::to_string(denominator_);
+    }
+  }
+
   friend std::ostream& operator<<(std::ostream& os, const Real::Fraction& f) {
     if (f.denominator == 1) {
       return os << f.numerator;
@@ -81,6 +91,10 @@ class Real {
       return os << f.numerator << '/' << f.denominator;
     }
   }
+
+  friend std::partial_ordering operator<=>(const Real& r, double d);
+  // Returns a partial order so that both have the same return types.
+  friend std::partial_ordering operator<=>(const Real& r, int64_t d);
 
  private:
   int64_t numerator_;
