@@ -1,8 +1,6 @@
 #include "src/variables/real.h"
 
-#include <bit>
 #include <cmath>
-#include <compare>
 #include <cstdint>
 #include <limits>
 #include <numeric>
@@ -197,97 +195,6 @@ Real::Real(std::string_view value) {
 
 double Real::GetApproxValue() const {
   return static_cast<double>(numerator_) / denominator_;
-}
-
-namespace {
-
-int HighestBit(__int128 value) {
-  if (value == 0) return 0;  // Special case for zero
-  uint64_t hi = static_cast<uint64_t>(value >> 64);
-  if (hi != 0) return 64 + (63 - std::countl_zero(hi));
-  uint64_t lo = static_cast<uint64_t>(value);
-  return 63 - std::countl_zero(lo);
-}
-
-}  // namespace
-
-std::partial_ordering operator<=>(const Real& r, double d) {
-  if (std::isnan(d)) return std::partial_ordering::unordered;
-  if (std::isinf(d)) {
-    return d > 0 ? std::partial_ordering::less : std::partial_ordering::greater;
-  }
-  if (r.numerator_ == 0) {
-    // 0 == +0.0 and 0 == -0.0
-    if (d == 0.0) return std::partial_ordering::equivalent;
-    return d > 0 ? std::partial_ordering::less : std::partial_ordering::greater;
-  }
-  if (d == 0.0) {
-    return r.numerator_ > 0 ? std::partial_ordering::greater
-                            : std::partial_ordering::less;
-  }
-  if (r.numerator_ < 0 && d > 0) return std::partial_ordering::less;
-  if (r.numerator_ > 0 && d < 0) return std::partial_ordering::greater;
-  bool flip = r.numerator_ < 0;
-
-  // d = mantissa * 2^exp, 0.5 ≤ abs(mantissa) < 1.0
-  int exp;
-  double mantissa = std::frexp(d, &exp);
-
-  // Scale mantissa to get an integer numerator
-  constexpr int kMantissaBits = std::numeric_limits<double>::digits;
-  uint64_t d_numer =
-      static_cast<uint64_t>(std::ldexp(std::abs(mantissa), kMantissaBits));
-  int d_exponent = exp - kMantissaBits;
-
-  // * r = a / b
-  // * d = m * 2^e
-  //
-  // Thus,  r < d => a < b * m * 2^e
-  // But we will handle the 2^e separately since `e` might be positive or
-  // negative.
-  __int128 lhs = static_cast<__int128>(r.numerator_);              // a
-  __int128 rhs = static_cast<__int128>(r.denominator_) * d_numer;  // b * m
-  if (flip) {
-    lhs = -lhs;
-    rhs = -rhs;
-  }
-
-  auto ans = [&]() {
-    if (d_exponent < 0) {  // a * 2^(-e) vs b * m
-      if (-d_exponent + HighestBit(lhs) >= 126) {
-        // a * 2^(-e) >= 2^126 > b * m
-        return std::partial_ordering::greater;
-      }
-      lhs <<= -d_exponent;  // a * 2^(-e) < 2^126, so safe.
-    } else {                // a vs b * m * 2^e
-      // Check if lhs is already smaller, since rhs is only getting larger
-      if (lhs < rhs) return std::partial_ordering::less;
-      if (d_exponent + HighestBit(rhs) >= 126) {
-        // b * m * 2^e >= 2^126 > a
-        return std::partial_ordering::less;
-      }
-      rhs <<= d_exponent;  // b * m * 2^e < 2^126, so safe.
-    }
-    if (lhs == rhs) return std::partial_ordering::equivalent;
-    return (lhs > rhs ? std::partial_ordering::greater
-                      : std::partial_ordering::less);
-  }();
-
-  if (flip) {
-    if (ans == std::partial_ordering::less)
-      ans = std::partial_ordering::greater;
-    if (ans == std::partial_ordering::greater)
-      ans = std::partial_ordering::less;
-  }
-  return ans;
-}
-
-std::partial_ordering operator<=>(const Real& r, int64_t d) {
-  __int128 lhs = static_cast<__int128>(r.numerator_);
-  __int128 rhs = static_cast<__int128>(r.denominator_) * d;
-  if (lhs == rhs) return std::partial_ordering::equivalent;
-  return (lhs < rhs ? std::partial_ordering::less
-                    : std::partial_ordering::greater);
 }
 
 }  // namespace moriarty

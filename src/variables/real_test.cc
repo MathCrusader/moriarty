@@ -15,29 +15,20 @@
 #include "src/variables/real.h"
 
 #include <compare>
+#include <cstdint>
 #include <limits>
 #include <ostream>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-namespace std {
+namespace moriarty {
 
-std::ostream& operator<<(std::ostream& os, std::partial_ordering p) {
-  if (p == std::partial_ordering::less) {
-    return os << "<";
-  } else if (p == std::partial_ordering::greater) {
-    return os << ">";
-  } else if (p == std::partial_ordering::equivalent) {
-    return os << "=";
-  } else {
-    return os << "unordered";
-  }
+// Printing for nicer output in tests.
+std::ostream& operator<<(std::ostream& os, moriarty::Real r) {
+  return os << r.ToString();
 }
 
-}  // namespace std
-
-namespace moriarty {
 namespace {
 
 using ::testing::FieldsAre;
@@ -186,83 +177,76 @@ TEST(RealComparisonTest, NaNDouble) {
 }
 
 TEST(RealComparisonTest, Infinity) {
-  EXPECT_EQ((Real(1) <=> std::numeric_limits<double>::infinity()),
-            std::partial_ordering::less);
-  EXPECT_EQ((Real(1) <=> -std::numeric_limits<double>::infinity()),
-            std::partial_ordering::greater);
+  EXPECT_LT(Real(1), std::numeric_limits<double>::infinity());
+  EXPECT_GT(Real(1), -std::numeric_limits<double>::infinity());
 }
 
 TEST(RealComparisonTest, ZeroVsZero) {
-  EXPECT_EQ((Real(0) <=> 0.0), std::partial_ordering::equivalent);
-  EXPECT_EQ((Real(0) <=> -0.0), std::partial_ordering::equivalent);
+  EXPECT_EQ(Real(0), 0.0);
+  EXPECT_EQ(Real(0), -0.0);
 }
 
 TEST(RealComparisonTest, ZeroVsPositiveNegative) {
-  EXPECT_EQ((Real(0) <=> 1.0), std::partial_ordering::less);
-  EXPECT_EQ((Real(0) <=> -1.0), std::partial_ordering::greater);
+  EXPECT_LT(Real(0), 1.0);
+  EXPECT_GT(Real(0), -1.0);
 }
 
-TEST(RealComparisonTest, PositiveVsZero) {
-  EXPECT_EQ((Real(1) <=> 0.0), std::partial_ordering::greater);
-}
+TEST(RealComparisonTest, PositiveVsZero) { EXPECT_GT(Real(1), 0.0); }
 
-TEST(RealComparisonTest, NegativeVsZero) {
-  EXPECT_EQ((Real(-1) <=> 0.0), std::partial_ordering::less);
-}
+TEST(RealComparisonTest, NegativeVsZero) { EXPECT_LT(Real(-1), 0.0); }
 
 TEST(RealComparisonTest, RealNegativeVsPositiveDouble) {
-  EXPECT_EQ((Real(-1) <=> 1000.0), std::partial_ordering::less);
+  EXPECT_LT(Real(-1), 1000.0);
 }
 
 TEST(RealComparisonTest, RealPositiveVsNegativeDouble) {
-  EXPECT_EQ((Real(1) <=> -1000.0), std::partial_ordering::greater);
+  EXPECT_GT(Real(1), -1000.0);
 }
 
-TEST(RealComparisonTest, EarlyOverflowLeftShift) {
-  EXPECT_EQ((Real(1LL << 62) <=> 0.00000000000001),
-            std::partial_ordering::greater);
+TEST(RealComparisonTest, OperandsWithDramaticallyDifferentScales) {
+  EXPECT_GT(Real(1LL << 62), 0.00000000000001);
+  EXPECT_GT(Real((1LL << 62), 1), std::pow(2, -100));
 }
 
-TEST(RealComparisonTest, EarlyOverflowRightShift) {
-  Real r((1LL << 62), 1);                                // Big numerator
-  double d = std::pow(2, -100);                          // Very small double
-  EXPECT_EQ((r <=> d), std::partial_ordering::greater);  // Early exit
-}
+TEST(RealComparisonTest, BasicTests) {
+  EXPECT_EQ(Real(1, 2), 0.5);
+  EXPECT_EQ(Real(4, 2), 2);
 
-TEST(RealComparisonTest, ExactEquality) {
-  EXPECT_EQ((Real(1, 2) <=> 0.5), std::partial_ordering::equivalent);
-}
+  EXPECT_NE(Real(1, 2), 0.6);
+  EXPECT_NE(Real(2, 4), -0.5);
+  EXPECT_NE(Real(4, 2), 3);
 
-TEST(RealComparisonTest, LessThan) {
-  EXPECT_EQ((Real(1, 3) <=> 0.5), std::partial_ordering::less);
-}
+  EXPECT_LT(Real(1, 3), 0.5);
+  EXPECT_LT(Real(2, -3), -0.5);
+  EXPECT_LT(Real(-4, 3), -1);
+  EXPECT_LT(Real(-2, -3),
+            std::numeric_limits<uint64_t>::max());  // -1 in signed
 
-TEST(RealComparisonTest, GreaterThan) {
-  EXPECT_EQ((Real(2, 3) <=> 0.5), std::partial_ordering::greater);
+  EXPECT_GT(Real(2, 3), 0.5);
+  EXPECT_GT(Real(-1, 3), -0.5);
+  EXPECT_GT(Real(-2, 3), -1);
 }
 
 TEST(RealComparisonTest, SubnormalDouble) {
   double tiny = std::numeric_limits<double>::denorm_min();
-  EXPECT_EQ((Real(1) <=> tiny), std::partial_ordering::greater);
-  EXPECT_EQ((Real(0) <=> tiny), std::partial_ordering::less);
-}
+  EXPECT_GT(Real(1), tiny);
+  EXPECT_LT(Real(0), tiny);
 
-TEST(RealComparisonTest, SubnormalAlwaysLessThanSmallestReal) {
   Real smallest_positive(1, std::numeric_limits<int64_t>::max());
   Real zero(0);
   Real smallest_negative(-1, std::numeric_limits<int64_t>::max());
 
   // Subnormal double: ~5e-324
   double subnormal = std::ldexp(1.0, -1074);
-  EXPECT_EQ((smallest_positive <=> subnormal), std::partial_ordering::greater);
-  EXPECT_EQ((smallest_negative <=> subnormal), std::partial_ordering::less);
-  EXPECT_EQ((zero <=> subnormal), std::partial_ordering::less);
+  EXPECT_GT(smallest_positive, subnormal);
+  EXPECT_LT(smallest_negative, subnormal);
+  EXPECT_LT(zero, subnormal);
 
   // Even smaller
   double zeroish = std::nextafter(0.0, 1.0);  // Same as above
-  EXPECT_EQ((smallest_positive <=> zeroish), std::partial_ordering::greater);
-  EXPECT_EQ((smallest_negative <=> zeroish), std::partial_ordering::less);
-  EXPECT_EQ((zero <=> zeroish), std::partial_ordering::less);
+  EXPECT_GT(smallest_positive, zeroish);
+  EXPECT_LT(smallest_negative, zeroish);
+  EXPECT_LT(zero, zeroish);
 }
 
 }  // namespace
