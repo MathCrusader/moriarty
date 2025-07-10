@@ -16,19 +16,35 @@
 
 #include "src/variables/constraints/numeric_constraints.h"
 
+#include <compare>
 #include <cstdint>
 #include <format>
 #include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
 #include "src/variables/constraints/constraint_violation.h"
+#include "src/variables/real.h"
 
 namespace moriarty {
+
+namespace {
+
+std::string ToString(const std::variant<int64_t, Expression, Real>& value) {
+  if (std::holds_alternative<int64_t>(value))
+    return std::to_string(std::get<int64_t>(value));
+  if (std::holds_alternative<Expression>(value))
+    return std::get<Expression>(value).ToString();
+
+  return std::get<Real>(value).ToString();
+}
+
+}  // namespace
 
 // -----------------------------------------------------------------------------
 //  ExactlyIntegerExpression
@@ -47,7 +63,7 @@ std::string ExactlyIntegerExpression::ToString() const {
   return std::format("is exactly {}", value_.ToString());
 }
 
-ConstraintViolation ExactlyIntegerExpression::CheckValue(
+ConstraintViolation ExactlyIntegerExpression::CheckIntegerValue(
     LookupVariableFn lookup_variable, int64_t value) const {
   int64_t expected = value_.Evaluate(lookup_variable);
   if (expected == value) return ConstraintViolation::None();
@@ -102,7 +118,7 @@ std::string OneOfIntegerExpression::ToString() const {
   return std::format("is one of {}", OptionString(options_));
 }
 
-ConstraintViolation OneOfIntegerExpression::CheckValue(
+ConstraintViolation OneOfIntegerExpression::CheckIntegerValue(
     LookupVariableFn lookup_variable, int64_t value) const {
   for (const auto& option : options_) {
     int64_t expected = option.Evaluate(lookup_variable);
@@ -120,7 +136,7 @@ std::vector<std::string> OneOfIntegerExpression::GetDependencies() const {
 //  Between
 
 Between::Between(int64_t minimum, int64_t maximum)
-    : minimum_(std::to_string(minimum)), maximum_(std::to_string(maximum)) {
+    : minimum_(minimum), maximum_(maximum) {
   if (minimum > maximum) {
     throw std::invalid_argument(
         "minimum must be less than or equal to maximum in Between()");
@@ -128,47 +144,95 @@ Between::Between(int64_t minimum, int64_t maximum)
 }
 
 Between::Between(int64_t minimum, IntegerExpression maximum)
-    : minimum_(std::to_string(minimum)),
-      maximum_(maximum),
-      dependencies_(maximum_.GetDependencies()) {}
+    : minimum_(minimum),
+      maximum_(Expression(maximum)),
+      dependencies_(std::get<Expression>(maximum_).GetDependencies()) {}
+
+Between::Between(int64_t minimum, Real maximum)
+    : minimum_(minimum), maximum_(maximum) {}
 
 Between::Between(IntegerExpression minimum, int64_t maximum)
-    : minimum_(minimum),
-      maximum_(std::to_string(maximum)),
-      dependencies_(minimum_.GetDependencies()) {}
+    : minimum_(Expression(minimum)),
+      maximum_(maximum),
+      dependencies_(std::get<Expression>(minimum_).GetDependencies()) {}
 
 Between::Between(IntegerExpression minimum, IntegerExpression maximum)
-    : minimum_(minimum), maximum_(maximum) {
-  dependencies_ = minimum_.GetDependencies();
-  auto max_deps = maximum_.GetDependencies();
+    : minimum_(Expression(minimum)), maximum_(Expression(maximum)) {
+  dependencies_ = std::get<Expression>(minimum_).GetDependencies();
+  auto max_deps = std::get<Expression>(maximum_).GetDependencies();
   dependencies_.insert(dependencies_.end(), max_deps.begin(), max_deps.end());
 }
 
+Between::Between(IntegerExpression minimum, Real maximum)
+    : minimum_(Expression(minimum)),
+      maximum_(maximum),
+      dependencies_(std::get<Expression>(minimum_).GetDependencies()) {}
+
+Between::Between(Real minimum, int64_t maximum)
+    : minimum_(minimum), maximum_(maximum) {
+  if (minimum > maximum) {
+    throw std::invalid_argument(
+        "minimum must be less than or equal to maximum in Between()");
+  }
+}
+
+Between::Between(Real minimum, IntegerExpression maximum)
+    : minimum_(minimum),
+      maximum_(Expression(maximum)),
+      dependencies_(std::get<Expression>(maximum_).GetDependencies()) {}
+
+Between::Between(Real minimum, Real maximum)
+    : minimum_(minimum), maximum_(maximum) {}
+
 Range Between::GetRange() const {
   Range r;
-  r.AtLeast(minimum_);
-  r.AtMost(maximum_);
+  std::visit([&](const auto& min) { r.AtLeast(min); }, minimum_);
+  std::visit([&](const auto& max) { r.AtMost(max); }, maximum_);
   return r;
 }
 
 std::string Between::ToString() const {
-  return std::format("is between {} and {}", minimum_.ToString(),
-                     maximum_.ToString());
+  return std::format("is between {} and {}", ::moriarty::ToString(minimum_),
+                     ::moriarty::ToString(maximum_));
 }
 
-ConstraintViolation Between::CheckValue(LookupVariableFn lookup_variable,
-                                        int64_t value) const {
+ConstraintViolation Between::CheckIntegerValue(LookupVariableFn lookup_variable,
+                                               int64_t value) const {
   std::optional<Range::ExtremeValues> extremes =
       GetRange().Extremes(lookup_variable);
   if (!extremes)
-    return ConstraintViolation(
-        std::format("is not between {} and {} (impossible)",
-                    minimum_.ToString(), maximum_.ToString()));
+    return ConstraintViolation(std::format(
+        "is not between {} and {} (impossible)", ::moriarty::ToString(minimum_),
+        ::moriarty::ToString(maximum_)));
   if (extremes->min <= value && value <= extremes->max)
     return ConstraintViolation::None();
-  return ConstraintViolation(std::format("is not between {} and {}",
-                                         minimum_.ToString(),
-                                         maximum_.ToString(), value));
+  return ConstraintViolation(
+      std::format("is not between {} and {}", ::moriarty::ToString(minimum_),
+                  ::moriarty::ToString(maximum_), value));
+}
+
+namespace {
+
+Real GetRealValue(const std::variant<int64_t, Expression, Real>& value,
+                  NumericRangeMConstraint::LookupVariableFn lookup_variable) {
+  if (std::holds_alternative<Real>(value)) return std::get<Real>(value);
+  if (std::holds_alternative<int64_t>(value))
+    return Real(std::get<int64_t>(value));
+  return Real(std::get<Expression>(value).Evaluate(lookup_variable));
+}
+
+}  // namespace
+
+ConstraintViolation Between::CheckRealValue(LookupVariableFn lookup_variable,
+                                            double value) const {
+  Real mini = GetRealValue(minimum_, lookup_variable);
+  Real maxi = GetRealValue(maximum_, lookup_variable);
+
+  if (!(mini <= value && value <= maxi)) {
+    return ConstraintViolation(std::format("is not between {} and {}",
+                                           mini.ToString(), maxi.ToString()));
+  }
+  return ConstraintViolation::None();
 }
 
 std::vector<std::string> Between::GetDependencies() const {
@@ -178,32 +242,52 @@ std::vector<std::string> Between::GetDependencies() const {
 // -----------------------------------------------------------------------------
 //  AtMost
 
-AtMost::AtMost(int64_t maximum) : maximum_(std::to_string(maximum)) {}
+AtMost::AtMost(int64_t maximum) : maximum_(maximum) {}
 
 AtMost::AtMost(IntegerExpression maximum)
-    : maximum_(maximum), dependencies_(maximum_.GetDependencies()) {}
+    : maximum_(Expression(maximum)),
+      dependencies_(std::get<Expression>(maximum_).GetDependencies()) {}
+
+AtMost::AtMost(Real maximum) : maximum_(maximum) {}
 
 Range AtMost::GetRange() const {
   Range r;
-  r.AtMost(maximum_);
+  std::visit([&](const auto& max) { r.AtMost(max); }, maximum_);
   return r;
 }
 
 std::string AtMost::ToString() const {
-  return std::format("is at most {}", maximum_.ToString());
+  return std::format("is at most {}", ::moriarty::ToString(maximum_));
 }
 
-ConstraintViolation AtMost::CheckValue(LookupVariableFn lookup_variable,
-                                       int64_t value) const {
+ConstraintViolation AtMost::CheckIntegerValue(LookupVariableFn lookup_variable,
+                                              int64_t value) const {
   std::optional<Range::ExtremeValues> extremes =
       GetRange().Extremes(lookup_variable);
   if (!extremes)
-    return ConstraintViolation(
-        std::format("is not at most {} (impossible)", maximum_.ToString()));
+    return ConstraintViolation(std::format("is not at most {} (impossible)",
+                                           ::moriarty::ToString(maximum_)));
   if (extremes->min <= value && value <= extremes->max)
     return ConstraintViolation::None();
   return ConstraintViolation(
-      std::format("is not at most {}", maximum_.ToString()));
+      std::format("is not at most {}", ::moriarty::ToString(maximum_)));
+}
+
+ConstraintViolation AtMost::CheckRealValue(LookupVariableFn lookup_variable,
+                                           double value) const {
+  Real maxi = GetRealValue(maximum_, lookup_variable);
+
+  if (value > maxi) {
+    return ConstraintViolation(
+        std::format("is not at most {}", maxi.ToString()));
+  }
+  std::partial_ordering maxi_cmp = maxi <=> value;
+  if (maxi_cmp != std::partial_ordering::greater &&
+      maxi_cmp != std::partial_ordering::equivalent) {
+    return ConstraintViolation(
+        std::format("is not at most {}", maxi.ToString()));
+  }
+  return ConstraintViolation::None();
 }
 
 std::vector<std::string> AtMost::GetDependencies() const {
@@ -213,32 +297,47 @@ std::vector<std::string> AtMost::GetDependencies() const {
 // -----------------------------------------------------------------------------
 //  AtLeast
 
-AtLeast::AtLeast(int64_t minimum) : minimum_(std::to_string(minimum)) {}
+AtLeast::AtLeast(int64_t minimum) : minimum_(minimum) {}
 
 AtLeast::AtLeast(IntegerExpression minimum)
-    : minimum_(minimum), dependencies_(minimum_.GetDependencies()) {}
+    : minimum_(Expression(minimum)),
+      dependencies_(std::get<Expression>(minimum_).GetDependencies()) {}
+
+AtLeast::AtLeast(Real minimum) : minimum_(minimum) {}
 
 Range AtLeast::GetRange() const {
   Range r;
-  r.AtLeast(minimum_);
+  std::visit([&](const auto& min) { r.AtLeast(min); }, minimum_);
   return r;
 }
 
 std::string AtLeast::ToString() const {
-  return std::format("is at least {}", minimum_.ToString());
+  return std::format("is at least {}", ::moriarty::ToString(minimum_));
 }
 
-ConstraintViolation AtLeast::CheckValue(LookupVariableFn lookup_variable,
-                                        int64_t value) const {
+ConstraintViolation AtLeast::CheckIntegerValue(LookupVariableFn lookup_variable,
+                                               int64_t value) const {
   std::optional<Range::ExtremeValues> extremes =
       GetRange().Extremes(lookup_variable);
   if (!extremes)
-    return ConstraintViolation(
-        std::format("is not at least {} (impossible)", minimum_.ToString()));
+    return ConstraintViolation(std::format("is not at least {} (impossible)",
+                                           ::moriarty::ToString(minimum_)));
   if (extremes->min <= value && value <= extremes->max)
     return ConstraintViolation::None();
   return ConstraintViolation(
-      std::format("is not at least {}", minimum_.ToString()));
+      std::format("is not at least {}", ::moriarty::ToString(minimum_)));
+}
+
+ConstraintViolation AtLeast::CheckRealValue(LookupVariableFn lookup_variable,
+                                            double value) const {
+  Real mini = GetRealValue(minimum_, lookup_variable);
+
+  if (value < mini) {
+    return ConstraintViolation(
+        std::format("is not at least {}", mini.ToString()));
+  }
+
+  return ConstraintViolation::None();
 }
 
 std::vector<std::string> AtLeast::GetDependencies() const {

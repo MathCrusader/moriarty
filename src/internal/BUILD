@@ -104,6 +104,7 @@ cc_library(
     ],
     deps = [
         ":expressions",
+        "//src/variables:real",
         "@abseil-cpp//absl/strings",
     ],
 )

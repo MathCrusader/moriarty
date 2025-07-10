@@ -111,6 +111,8 @@ cc_library(
     deps = [
         ":base_constraints",
         "//src/internal:range",
+        "//src/librarian:errors",
+        "//src/variables:real",
     ],
 )
 

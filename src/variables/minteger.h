@@ -107,7 +107,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   class RangeConstraint {
    public:
     explicit RangeConstraint(
-        std::unique_ptr<IntegerRangeMConstraint> constraint,
+        std::unique_ptr<NumericRangeMConstraint> constraint,
         std::function<void(MInteger&)> apply_to_fn);
     ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
                                    int64_t value) const;
@@ -116,7 +116,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
     void ApplyTo(MInteger& other) const;
 
    private:
-    std::unique_ptr<IntegerRangeMConstraint> constraint_;
+    std::unique_ptr<NumericRangeMConstraint> constraint_;
     std::function<void(MInteger&)> apply_to_fn_;
   };
 

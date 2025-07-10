@@ -31,6 +31,7 @@
 #include "src/variables/constraints/base_constraints.h"
 #include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/constraints/size_constraints.h"
+#include "src/variables/real.h"
 
 namespace moriarty {
 namespace {
@@ -126,6 +127,8 @@ TEST(MIntegerTest, BetweenShouldRestrictTheRangeProperly) {
               GeneratedValuesAre(AllOf(Ge(5), Le(10))));
   EXPECT_THAT(MInteger(Between(-1, 1)),
               GeneratedValuesAre(AllOf(Ge(-1), Le(1))));
+  EXPECT_THAT(MInteger(Between(Real("-0.5"), Real("10.2"))),
+              GeneratedValuesAre(AllOf(Ge(0), Le(10))));
 }
 
 TEST(MIntegerTest, RepeatedBetweenCallsShouldBeIntersectedTogether) {

@@ -157,86 +157,163 @@ TEST(NumericConstraintsTest, ToStringShouldWork) {
   }
 }
 
-TEST(NumericConstraintsTest, IsSatisfiedWithWithNonExpressionWorks) {
-  auto tmp = [](std::string_view s) -> int64_t {
+TEST(NumericConstraintsTest, IsSatisfiedWithWithIntegersWorks) {
+  auto vars = [](std::string_view s) -> int64_t {
     throw std::runtime_error("Should not be called");
   };
 
   {
-    EXPECT_THAT(Between(10, 20).CheckValue(tmp, 10),
+    EXPECT_THAT(Between(10, 20).CheckIntegerValue(vars, 10),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Between(10, 20).CheckValue(tmp, 15),
+    EXPECT_THAT(Between(10, 20).CheckIntegerValue(vars, 15),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Between(10, 20).CheckValue(tmp, 20),
+    EXPECT_THAT(Between(10, 20).CheckIntegerValue(vars, 20),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Between(10, 20).CheckValue(tmp, 9),
+    EXPECT_THAT(Between(10, 20).CheckIntegerValue(vars, 9),
                 HasConstraintViolation(HasSubstr("between")));
-    EXPECT_THAT(Between(10, 20).CheckValue(tmp, 21),
+    EXPECT_THAT(Between(10, 20).CheckIntegerValue(vars, 21),
                 HasConstraintViolation(HasSubstr("between")));
   }
   {
-    EXPECT_THAT(AtLeast(10).CheckValue(tmp, 10), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast(10).CheckValue(tmp, 11), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast(10).CheckValue(tmp, 9),
+    EXPECT_THAT(AtLeast(10).CheckIntegerValue(vars, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast(10).CheckIntegerValue(vars, 11),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast(10).CheckIntegerValue(vars, 9),
                 HasConstraintViolation(HasSubstr("at least")));
   }
   {
-    EXPECT_THAT(AtMost(10).CheckValue(tmp, 10), HasNoConstraintViolation());
-    EXPECT_THAT(AtMost(10).CheckValue(tmp, 9), HasNoConstraintViolation());
-    EXPECT_THAT(AtMost(10).CheckValue(tmp, 11),
+    EXPECT_THAT(AtMost(10).CheckIntegerValue(vars, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtMost(10).CheckIntegerValue(vars, 9),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtMost(10).CheckIntegerValue(vars, 11),
                 HasConstraintViolation(HasSubstr("at most")));
   }
 }
 
-TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
-  auto tmp = [](std::string_view s) -> int64_t {
+TEST(NumericConstraintsTest, IsSatisfiedWithRealsWorks) {
+  auto vars = [](std::string_view s) -> int64_t {
     if (s == "x") return 10;
     if (s == "y") return 20;
     throw std::runtime_error("Unknown variable");
   };
 
   {
-    EXPECT_THAT(ExactlyIntegerExpression("x").CheckValue(tmp, 10),
+    EXPECT_THAT(Between(10, 20).CheckRealValue(vars, 10.0),
                 HasNoConstraintViolation());
-    EXPECT_THAT(ExactlyIntegerExpression("x").CheckValue(tmp, 11),
-                HasConstraintViolation(HasSubstr("exactly")));
-    EXPECT_THAT(ExactlyIntegerExpression("x").CheckValue(tmp, 9),
-                HasConstraintViolation(HasSubstr("exactly")));
-  }
-  {
-    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckValue(tmp, 10),
+    EXPECT_THAT(Between(10, 20).CheckRealValue(vars, 15.5),
                 HasNoConstraintViolation());
-    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckValue(tmp, 14),
+    EXPECT_THAT(Between(10, 20).CheckRealValue(vars, 20.0),
                 HasNoConstraintViolation());
-    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckValue(tmp, 9),
-                HasConstraintViolation(HasSubstr("one of")));
-    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckValue(tmp, 15),
-                HasConstraintViolation(HasSubstr("one of")));
-  }
-  {
-    EXPECT_THAT(Between("x", "y^2").CheckValue(tmp, 10),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between("x", "y^2").CheckValue(tmp, 25),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between("x", "y^2").CheckValue(tmp, 400),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between("x", "y^2").CheckValue(tmp, 9),
+    EXPECT_THAT(Between(10, 20).CheckRealValue(vars, 9.9),
                 HasConstraintViolation(HasSubstr("between")));
-    EXPECT_THAT(Between("x", "y^2").CheckValue(tmp, 401),
+    EXPECT_THAT(Between(10, 20).CheckRealValue(vars, 20.1),
                 HasConstraintViolation(HasSubstr("between")));
   }
   {
-    EXPECT_THAT(AtLeast("x").CheckValue(tmp, 10), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast("x").CheckValue(tmp, 11), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast("x").CheckValue(tmp, 9),
+    EXPECT_THAT(AtLeast(10).CheckRealValue(vars, 10.0),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast(10).CheckRealValue(vars, 10.1),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast(10).CheckRealValue(vars, 9.9),
                 HasConstraintViolation(HasSubstr("at least")));
   }
   {
-    EXPECT_THAT(AtMost("x + 1").CheckValue(tmp, 11),
+    EXPECT_THAT(AtMost(10).CheckRealValue(vars, 10.0),
                 HasNoConstraintViolation());
-    EXPECT_THAT(AtMost("x + 1").CheckValue(tmp, 10),
+    EXPECT_THAT(AtMost(10).CheckRealValue(vars, 9.9),
                 HasNoConstraintViolation());
-    EXPECT_THAT(AtMost("x + 1").CheckValue(tmp, 12),
+    EXPECT_THAT(AtMost(10).CheckRealValue(vars, 10.1),
+                HasConstraintViolation(HasSubstr("at most")));
+  }
+  {
+    EXPECT_THAT(Between("x", "y").CheckRealValue(vars, 15.0),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Between("x", "y").CheckRealValue(vars, 9.0),
+                HasConstraintViolation(HasSubstr("between")));
+    EXPECT_THAT(Between("x", "y").CheckRealValue(vars, 21.0),
+                HasConstraintViolation(HasSubstr("between")));
+  }
+  {
+    EXPECT_THAT(AtLeast("x").CheckRealValue(vars, 10.0),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast("x").CheckRealValue(vars, 11.0),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast("x").CheckRealValue(vars, 9.0),
+                HasConstraintViolation(HasSubstr("at least")));
+  }
+  {
+    EXPECT_THAT(AtMost("y").CheckRealValue(vars, 20.0),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtMost("y").CheckRealValue(vars, 19.0),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtMost("y").CheckRealValue(vars, 21.0),
+                HasConstraintViolation(HasSubstr("at most")));
+  }
+  {
+    EXPECT_THAT(AtMost(Real("20.0")).CheckRealValue(vars, 20.0),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtMost(Real("1e6")).CheckRealValue(vars, 1000000.0),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtMost(Real("-10e-2")).CheckRealValue(vars, -0.1),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtMost(Real("-10e-2")).CheckRealValue(vars, -0.01),
+                HasConstraintViolation(HasSubstr("at most")));
+  }
+}
+
+TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
+  auto vars = [](std::string_view s) -> int64_t {
+    if (s == "x") return 10;
+    if (s == "y") return 20;
+    throw std::runtime_error("Unknown variable");
+  };
+
+  {
+    EXPECT_THAT(ExactlyIntegerExpression("x").CheckIntegerValue(vars, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(ExactlyIntegerExpression("x").CheckIntegerValue(vars, 11),
+                HasConstraintViolation(HasSubstr("exactly")));
+    EXPECT_THAT(ExactlyIntegerExpression("x").CheckIntegerValue(vars, 9),
+                HasConstraintViolation(HasSubstr("exactly")));
+  }
+  {
+    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckIntegerValue(vars, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckIntegerValue(vars, 14),
+                HasNoConstraintViolation());
+    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckIntegerValue(vars, 9),
+                HasConstraintViolation(HasSubstr("one of")));
+    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckIntegerValue(vars, 15),
+                HasConstraintViolation(HasSubstr("one of")));
+  }
+  {
+    EXPECT_THAT(Between("x", "y^2").CheckIntegerValue(vars, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Between("x", "y^2").CheckIntegerValue(vars, 25),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Between("x", "y^2").CheckIntegerValue(vars, 400),
+                HasNoConstraintViolation());
+    EXPECT_THAT(Between("x", "y^2").CheckIntegerValue(vars, 9),
+                HasConstraintViolation(HasSubstr("between")));
+    EXPECT_THAT(Between("x", "y^2").CheckIntegerValue(vars, 401),
+                HasConstraintViolation(HasSubstr("between")));
+  }
+  {
+    EXPECT_THAT(AtLeast("x").CheckIntegerValue(vars, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast("x").CheckIntegerValue(vars, 11),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtLeast("x").CheckIntegerValue(vars, 9),
+                HasConstraintViolation(HasSubstr("at least")));
+  }
+  {
+    EXPECT_THAT(AtMost("x + 1").CheckIntegerValue(vars, 11),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtMost("x + 1").CheckIntegerValue(vars, 10),
+                HasNoConstraintViolation());
+    EXPECT_THAT(AtMost("x + 1").CheckIntegerValue(vars, 12),
                 HasConstraintViolation(HasSubstr("at most")));
   }
 }

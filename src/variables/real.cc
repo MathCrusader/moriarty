@@ -1,5 +1,7 @@
 #include "src/variables/real.h"
 
+#include <sys/types.h>
+
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -195,6 +197,18 @@ Real::Real(std::string_view value) {
 
 double Real::GetApproxValue() const {
   return static_cast<double>(numerator_) / denominator_;
+}
+
+int64_t Real::Ceiling() const {
+  if (numerator_ % denominator_ == 0) return numerator_ / denominator_;
+  if (numerator_ >= 0) return numerator_ / denominator_ + 1;
+  return numerator_ / denominator_;  // Rounds towards zero
+}
+
+int64_t Real::Floor() const {
+  if (numerator_ % denominator_ == 0) return numerator_ / denominator_;
+  if (numerator_ >= 0) return numerator_ / denominator_;
+  return numerator_ / denominator_ - 1;
 }
 
 }  // namespace moriarty

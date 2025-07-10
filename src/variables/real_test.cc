@@ -249,5 +249,21 @@ TEST(RealComparisonTest, SubnormalDouble) {
   EXPECT_LT(zero, zeroish);
 }
 
+TEST(RealTest, FloorAndCeiling) {
+  // Ceiling tests
+  EXPECT_EQ(Real(5, 2).Ceiling(), 3);
+  EXPECT_EQ(Real(-5, 2).Ceiling(), -2);
+  EXPECT_EQ(Real(5, -2).Ceiling(), -2);
+  EXPECT_EQ(Real(-5, -2).Ceiling(), 3);
+  EXPECT_EQ(Real(0, 1).Ceiling(), 0);
+
+  // Floor tests
+  EXPECT_EQ(Real(5, 2).Floor(), 2);
+  EXPECT_EQ(Real(-5, 2).Floor(), -3);
+  EXPECT_EQ(Real(5, -2).Floor(), -3);
+  EXPECT_EQ(Real(-5, -2).Floor(), 2);
+  EXPECT_EQ(Real(0, 1).Floor(), 0);
+}
+
 }  // namespace
 }  // namespace moriarty

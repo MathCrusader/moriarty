@@ -294,7 +294,7 @@ std::vector<MInteger> MInteger::ListEdgeCasesImpl(
 
 namespace {
 
-IntegerRangeMConstraint::LookupVariableFn Wrap(librarian::AnalysisContext ctx) {
+NumericRangeMConstraint::LookupVariableFn Wrap(librarian::AnalysisContext ctx) {
   return [=](std::string_view variable) -> int64_t {
     auto value = ctx.GetUniqueValue<MInteger>(variable);
     if (!value) throw ValueNotFound(variable);
@@ -305,14 +305,14 @@ IntegerRangeMConstraint::LookupVariableFn Wrap(librarian::AnalysisContext ctx) {
 }  // namespace
 
 MInteger::RangeConstraint::RangeConstraint(
-    std::unique_ptr<IntegerRangeMConstraint> constraint,
+    std::unique_ptr<NumericRangeMConstraint> constraint,
     std::function<void(MInteger&)> apply_to_fn)
     : constraint_(std::move(constraint)),
       apply_to_fn_(std::move(apply_to_fn)) {};
 
 ConstraintViolation MInteger::RangeConstraint::CheckValue(
     librarian::AnalysisContext ctx, int64_t value) const {
-  return constraint_->CheckValue(Wrap(ctx), value);
+  return constraint_->CheckIntegerValue(Wrap(ctx), value);
 }
 
 std::string MInteger::RangeConstraint::ToString() const {

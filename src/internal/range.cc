@@ -40,11 +40,15 @@ void Range::AtLeast(Expression minimum) {
   min_exprs_.push_back(std::move(minimum));
 }
 
+void Range::AtLeast(const Real& minimum) { AtLeast(minimum.Ceiling()); }
+
 void Range::AtMost(int64_t maximum) { max_ = std::min(max_, maximum); }
 
 void Range::AtMost(Expression maximum) {
   max_exprs_.push_back(std::move(maximum));
 }
+
+void Range::AtMost(const Real& maximum) { AtMost(maximum.Floor()); }
 
 bool Range::IsEmpty() const { return min_ > max_; }
 

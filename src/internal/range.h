@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "src/internal/expressions.h"
+#include "src/variables/real.h"
 
 namespace moriarty {
 
@@ -60,6 +61,11 @@ class Range {
   // This range is at least `minimum`.
   void AtLeast(Expression minimum);
 
+  // AtLeast()
+  //
+  // This range is at least `minimum`.
+  void AtLeast(const Real& minimum);
+
   // AtMost()
   //
   // This range is at least `maximum`. For example,
@@ -74,6 +80,11 @@ class Range {
   //
   // This range is at most `maximum`.
   void AtMost(Expression maximum);
+
+  // AtMost()
+  //
+  // This range is at most `maximum`.
+  void AtMost(const Real& maximum);
 
   // IsEmpty()
   //

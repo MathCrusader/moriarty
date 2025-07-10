@@ -78,6 +78,12 @@ class Real {
   // Returns the value of the Real variable as a fraction.
   Fraction GetValue() const { return {numerator_, denominator_}; }
 
+  // Returns the smallest integer that is greater than or equal to me
+  int64_t Ceiling() const;
+
+  // Returns the largest integer that is less than or equal to me
+  int64_t Floor() const;
+
   std::string ToString() const {
     if (denominator_ == 1) {
       return std::to_string(numerator_);
