@@ -17,6 +17,8 @@
 
 #include <cstdint>
 #include <format>
+#include <limits>
+#include <stdexcept>
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -27,7 +29,7 @@ BasicRandomContext::BasicRandomContext(
 
 int64_t BasicRandomContext::RandomInteger(int64_t min, int64_t max) {
   if (min > max) {
-    throw std::runtime_error(std::format(
+    throw std::invalid_argument(std::format(
         "RandomInteger({}, {}) invalid (need min <= max)", min, max));
   }
   return engine_.get().RandInt(min, max);
@@ -35,15 +37,56 @@ int64_t BasicRandomContext::RandomInteger(int64_t min, int64_t max) {
 
 int64_t BasicRandomContext::RandomInteger(int64_t n) {
   if (n <= 0) {
-    throw std::runtime_error(
+    throw std::invalid_argument(
         std::format("RandomInteger({}) invalid (need n > 0)", n));
   }
   return RandomInteger(0, n - 1);
 }
 
+double BasicRandomContext::RandomReal(Real min, Real max) {
+  if (min > max) {
+    throw std::invalid_argument(
+        std::format("RandomReal({}, {}) invalid (need min <= max)",
+                    min.ToString(), max.ToString()));
+  }
+  // TODO: Handle this better, we have more context than normal doubles.
+  return RandomReal(min.GetApproxValue(), max.GetApproxValue());
+}
+
+double BasicRandomContext::RandomReal(Real n) {
+  auto [num, den] = n.GetValue();
+  if (num <= 0) {
+    throw std::invalid_argument(
+        std::format("RandomReal({}) invalid (need n > 0)", n.ToString()));
+  }
+  static constexpr int digits = std::numeric_limits<double>::digits;
+  int64_t k = RandomInteger(int64_t{1} << digits);
+  double value = static_cast<double>(num) / den * k;
+  return std::ldexp(value, -digits);
+}
+
+double BasicRandomContext::RandomReal(double min, double max) {
+  if (min > max) {
+    throw std::invalid_argument(
+        std::format("RandomReal({}, {}) invalid (need min <= max)", min, max));
+  }
+  if (min == max) return min;
+  return RandomReal(max - min) + min;
+}
+
+double BasicRandomContext::RandomReal(double n) {
+  if (n <= 0) {
+    throw std::invalid_argument(
+        std::format("RandomReal({}) invalid (need n > 0)", n));
+  }
+  static constexpr int digits = std::numeric_limits<double>::digits;
+  int64_t k = RandomInteger(int64_t{1} << digits);
+  return std::ldexp(static_cast<double>(k), -digits) * n;
+}
+
 std::vector<int> BasicRandomContext::RandomPermutation(int n) {
   if (n < 0) {
-    throw std::runtime_error(
+    throw std::invalid_argument(
         std::format("RandomPermutation({}) invalid (need n >= 0)", n));
   }
   return RandomPermutation<int>(n, 0);

@@ -19,6 +19,7 @@
 
 #include <map>
 #include <set>
+#include <stdexcept>
 #include <type_traits>
 #include <vector>
 
@@ -104,9 +105,9 @@ TEST(BasicRandomContextTest, RandomIntegerForInvalidRangesShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ (void)ctx.RandomInteger(5, 3); }, std::runtime_error);
-  EXPECT_THROW({ (void)ctx.RandomInteger(0); }, std::runtime_error);
-  EXPECT_THROW({ (void)ctx.RandomInteger(-5); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomInteger(5, 3); }, std::invalid_argument);
+  EXPECT_THROW({ (void)ctx.RandomInteger(0); }, std::invalid_argument);
+  EXPECT_THROW({ (void)ctx.RandomInteger(-5); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest,
@@ -125,6 +126,105 @@ TEST(BasicRandomContextTest,
     std::vector<int> samples;
     for (int i = 0; i < 6000; i++) samples.push_back(ctx.RandomInteger(13));
     EXPECT_THAT(samples, IsApproximatelyUniformlyRandom(13));
+  }
+}
+
+// -----------------------------------------------------------------------------
+//  RandomReal()
+
+TEST(BasicRandomContextTest, RandomRealWithRealArgumentsInTypicalCase) {
+  RandomEngine engine({1, 2, 3}, "v0.1");
+  BasicRandomContext ctx(engine);
+
+  EXPECT_THAT(ctx.RandomReal(Real(3, 2), Real(7, 2)), AllOf(Ge(1.5), Le(3.5)));
+  EXPECT_EQ(ctx.RandomReal(Real(5), Real(5)), 5.0);
+}
+
+TEST(BasicRandomContextTest, RandomRealWithSingleRealArgumentInTypicalCase) {
+  RandomEngine engine({1, 2, 3}, "v0.1");
+  BasicRandomContext ctx(engine);
+
+  EXPECT_THAT(ctx.RandomReal(Real(5, 2)), AllOf(Ge(0.0), Lt(2.5)));
+}
+
+TEST(BasicRandomContextTest, RandomRealWithDoubleArgumentsInTypicalCase) {
+  RandomEngine engine({1, 2, 3}, "v0.1");
+  BasicRandomContext ctx(engine);
+
+  EXPECT_THAT(ctx.RandomReal(1.5, 3.5), AllOf(Ge(1.5), Le(3.5)));
+  EXPECT_EQ(ctx.RandomReal(2.7, 2.7), 2.7);
+}
+
+TEST(BasicRandomContextTest, RandomRealWithSingleDoubleArgumentInTypicalCase) {
+  RandomEngine engine({1, 2, 3}, "v0.1");
+  BasicRandomContext ctx(engine);
+
+  EXPECT_THAT(ctx.RandomReal(2.5), AllOf(Ge(0.0), Lt(2.5)));
+}
+
+TEST(BasicRandomContextTest, RandomRealForInvalidRangesShouldFail) {
+  RandomEngine engine({1, 2, 3}, "v0.1");
+  BasicRandomContext ctx(engine);
+
+  // Test Real arguments
+  EXPECT_THROW(
+      { (void)ctx.RandomReal(Real(5), Real(3)); }, std::invalid_argument);
+  EXPECT_THROW({ (void)ctx.RandomReal(Real(-1)); }, std::invalid_argument);
+
+  // Test double arguments
+  EXPECT_THROW({ (void)ctx.RandomReal(5.0, 3.0); }, std::invalid_argument);
+  EXPECT_THROW({ (void)ctx.RandomReal(-1.0); }, std::invalid_argument);
+  EXPECT_THROW({ (void)ctx.RandomReal(0.0); }, std::invalid_argument);
+}
+
+TEST(BasicRandomContextTest, RandomRealGivesApproximatelyUniformDistribution) {
+  RandomEngine engine({1, 2, 3}, "v0.1");
+  BasicRandomContext ctx(engine);
+
+  {  // Test Real arguments [0.5, 5.3]
+    std::vector<int> buckets(4, 0);
+    for (int i = 0; i < 6000; i++) {
+      double val = ctx.RandomReal(Real(1, 2), Real(53, 10));
+      int bucket = [](double x) {
+        if (x < 1.7) return 0;  // [0.5, 1.7)
+        if (x < 2.9) return 1;  // [1.7, 2.9)
+        if (x < 4.1) return 2;  // [2.9, 4.1)
+        return 3;               // [4.1, 5.3]
+      }(val);
+      buckets[bucket]++;
+    }
+
+    // Each bucket should have approximately 1500 samples (6000/4)
+    for (int count : buckets) {
+      EXPECT_THAT(count, AllOf(Ge(1200), Le(1800)));  // Rough uniformity check
+    }
+  }
+
+  {                                  // Test double arguments [2.0, 6.0]
+    std::vector<int> buckets(4, 0);  // 4 buckets: [2,3), [3,4), [4,5), [5,6]
+    for (int i = 0; i < 6000; i++) {
+      double val = ctx.RandomReal(2.0, 6.0);
+      int bucket = static_cast<int>(val - 2.0);
+      if (bucket >= 4) bucket = 3;  // Handle edge case for exactly 6.0
+      buckets[bucket]++;
+    }
+
+    // Each bucket should have approximately 1500 samples (6000/4)
+    for (int count : buckets) {
+      EXPECT_THAT(count, AllOf(Ge(1200), Le(1800)));  // Rough uniformity check
+    }
+  }
+}
+
+TEST(BasicRandomContextTest, RandomRealSingleArgumentIsInCorrectRange) {
+  RandomEngine engine({1, 2, 3}, "v0.1");
+  BasicRandomContext ctx(engine);
+
+  // Test many samples to ensure they're all in [0, n)
+  for (int i = 0; i < 1000; i++) {
+    EXPECT_THAT(ctx.RandomReal(Real(3, 2)),
+                AllOf(Ge(0.0), Lt(1.5)));                       // [0, 1.5)
+    EXPECT_THAT(ctx.RandomReal(4.7), AllOf(Ge(0.0), Lt(4.7)));  // [0, 4.7)
   }
 }
 
@@ -196,7 +296,7 @@ TEST(BasicRandomContextTest, RandomElementFromAnEmptyContainerShouldFail) {
   BasicRandomContext ctx(engine);
 
   std::vector<int> empty;
-  EXPECT_THROW({ (void)ctx.RandomElement(empty); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomElement(empty); }, std::invalid_argument);
 }
 
 // -----------------------------------------------------------------------------
@@ -271,10 +371,11 @@ TEST(BasicRandomContextTest, RandomElementsWithNegativeInputShouldFail) {
   std::vector<int> v = {11, 22, 33, 44};
 
   EXPECT_THROW(
-      { (void)ctx.RandomElementsWithReplacement(v, -1); }, std::runtime_error);
+      { (void)ctx.RandomElementsWithReplacement(v, -1); },
+      std::invalid_argument);
   EXPECT_THROW(
       { (void)ctx.RandomElementsWithoutReplacement(v, -1); },
-      std::runtime_error);
+      std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, RandomElementsFromAnEmptyContainerShouldFail) {
@@ -284,10 +385,10 @@ TEST(BasicRandomContextTest, RandomElementsFromAnEmptyContainerShouldFail) {
   std::vector<std::string> empty;
   EXPECT_THROW(
       { (void)ctx.RandomElementsWithReplacement(empty, 1); },
-      std::runtime_error);
+      std::invalid_argument);
   EXPECT_THROW(
       { (void)ctx.RandomElementsWithoutReplacement(empty, 1); },
-      std::runtime_error);
+      std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest,
@@ -307,7 +408,7 @@ TEST(BasicRandomContextTest, RandomElementsAskingForTooManyDistinctShouldFail) {
   std::vector<std::string> v = {"123456", "456789", "789123"};
   EXPECT_THROW(
       { (void)ctx.RandomElementsWithoutReplacement(v, 4); },
-      std::runtime_error);
+      std::invalid_argument);
 }
 
 // -----------------------------------------------------------------------------
@@ -317,7 +418,7 @@ TEST(BasicRandomContextTest, RandomPermutationOfNegativeSizeShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ (void)ctx.RandomPermutation(-1); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomPermutation(-1); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, RandomPermutationOfSizeZeroShouldBeEmpty) {
@@ -375,15 +476,15 @@ TEST(BasicRandomContextTest, DistinctIntegersWithNegativeNOrKShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ (void)ctx.DistinctIntegers(-1, 5); }, std::runtime_error);
-  EXPECT_THROW({ (void)ctx.DistinctIntegers(10, -5); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.DistinctIntegers(-1, 5); }, std::invalid_argument);
+  EXPECT_THROW({ (void)ctx.DistinctIntegers(10, -5); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, DistinctIntegersWithKGreaterThanNShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ (void)ctx.DistinctIntegers(5, 10); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.DistinctIntegers(5, 10); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, DistinctIntegersWithZeroIsFine) {
@@ -432,9 +533,10 @@ TEST(BasicRandomContextTest, RandomCompositionWithNegativeArgumentShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ (void)ctx.RandomComposition(-1, 5); }, std::runtime_error);
-  EXPECT_THROW({ (void)ctx.RandomComposition(10, -5); }, std::runtime_error);
-  EXPECT_THROW({ (void)ctx.RandomComposition(10, 5, -1); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomComposition(-1, 5); }, std::invalid_argument);
+  EXPECT_THROW({ (void)ctx.RandomComposition(10, -5); }, std::invalid_argument);
+  EXPECT_THROW(
+      { (void)ctx.RandomComposition(10, 5, -1); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, RandomCompositionWithZeroBucketsAndZeroSumIsFine) {
@@ -449,14 +551,15 @@ TEST(BasicRandomContextTest,
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ (void)ctx.RandomComposition(5, 0); }, std::runtime_error);
+  EXPECT_THROW({ (void)ctx.RandomComposition(5, 0); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, RandomCompositionWithTooLargeMinBucketShouldFail) {
   RandomEngine engine({1, 2, 3}, "v0.1");
   BasicRandomContext ctx(engine);
 
-  EXPECT_THROW({ (void)ctx.RandomComposition(4, 2, 3); }, std::runtime_error);
+  EXPECT_THROW(
+      { (void)ctx.RandomComposition(4, 2, 3); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, RandomCompositionWithExactMinBucketIsFine) {

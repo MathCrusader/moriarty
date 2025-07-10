@@ -100,6 +100,8 @@ class Real {
     }
   }
 
+  friend std::strong_ordering operator<=>(const Real& lhs, const Real& rhs);
+
   template <std::floating_point Float>
   friend std::partial_ordering operator<=>(const Real& r, Float d);
   friend std::strong_ordering operator<=>(const Real& r,

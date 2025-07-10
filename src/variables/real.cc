@@ -3,6 +3,7 @@
 #include <sys/types.h>
 
 #include <cmath>
+#include <compare>
 #include <cstdint>
 #include <limits>
 #include <numeric>
@@ -209,6 +210,14 @@ int64_t Real::Floor() const {
   if (numerator_ % denominator_ == 0) return numerator_ / denominator_;
   if (numerator_ >= 0) return numerator_ / denominator_;
   return numerator_ / denominator_ - 1;
+}
+
+std::strong_ordering operator<=>(const Real& lhs, const Real& rhs) {
+  if (lhs.denominator_ == rhs.denominator_)
+    return lhs.numerator_ <=> rhs.numerator_;
+  __int128 lhs_num = static_cast<__int128>(lhs.numerator_) * rhs.denominator_;
+  __int128 rhs_num = static_cast<__int128>(rhs.numerator_) * lhs.denominator_;
+  return lhs_num <=> rhs_num;
 }
 
 }  // namespace moriarty

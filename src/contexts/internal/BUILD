@@ -50,6 +50,7 @@ cc_library(
     hdrs = ["basic_random_context.h"],
     deps = [
         "//src/internal:random_engine",
+        "//src/variables:real",
     ],
 )
 

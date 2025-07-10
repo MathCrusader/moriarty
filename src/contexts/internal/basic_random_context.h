@@ -27,6 +27,7 @@
 #include <unordered_set>
 
 #include "src/internal/random_engine.h"
+#include "src/variables/real.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -52,6 +53,26 @@ class BasicRandomContext {
   // Returns a random integer in the semi-closed interval [0, n). Useful for
   // random indices.
   [[nodiscard]] int64_t RandomInteger(int64_t n);
+
+  // RandomReal()
+  //
+  // Returns a random real number in the closed interval [min, max].
+  [[nodiscard]] double RandomReal(Real min, Real max);
+
+  // RandomReal()
+  //
+  // Returns a random real number in the semi-closed interval [0, n).
+  [[nodiscard]] double RandomReal(Real n);
+
+  // RandomReal()
+  //
+  // Returns a random real number in the closed interval [min, max].
+  [[nodiscard]] double RandomReal(double min, double max);
+
+  // RandomReal()
+  //
+  // Returns a random real number in the semi-closed interval [0, n).
+  [[nodiscard]] double RandomReal(double n);
 
   // Shuffle()
   //
@@ -156,9 +177,8 @@ template <typename Container>
 ElementType<Container> BasicRandomContext::RandomElement(
     const Container& container) {
   std::span c(container);
-  if (c.empty()) {
-    throw std::runtime_error("RandomElement() called with empty c.");
-  }
+  if (c.empty())
+    throw std::invalid_argument("RandomElement() called with empty c.");
 
   int64_t idx = RandomInteger(c.size());
   return c[idx];
@@ -172,13 +192,13 @@ BasicRandomContext::RandomElementsWithReplacement(const Container& container,
   using T = ElementType<Container>;
 
   if (k < 0) {
-    throw std::runtime_error(
+    throw std::invalid_argument(
         std::format("RandomElementsWithReplacement(<container>, {}) is invalid "
                     "(need k >= 0)",
                     k));
   }
   if (c.empty() && k > 0) {
-    throw std::runtime_error(
+    throw std::invalid_argument(
         std::format("RandomElementsWithReplacement(<empty_container>, {}) is "
                     "invalid (need nonempty container)",
                     k));
@@ -199,13 +219,13 @@ BasicRandomContext::RandomElementsWithoutReplacement(const Container& container,
   using T = ElementType<Container>;
 
   if (k < 0) {
-    throw std::runtime_error(
+    throw std::invalid_argument(
         std::format("RandomElementsWithoutReplacement(<container>, {}) is "
                     "invalid (need k >= 0)",
                     k));
   }
   if (k > c.size()) {
-    throw std::runtime_error(
+    throw std::invalid_argument(
         std::format("RandomElementsWithReplacement(<container>, {}) is invalid "
                     "since <container>.size() == {} (need k <= size)",
                     k, c.size()));
@@ -222,7 +242,7 @@ BasicRandomContext::RandomElementsWithoutReplacement(const Container& container,
 template <std::integral T>
 std::vector<T> BasicRandomContext::RandomPermutation(int n, T min) {
   if (n < 0) {
-    throw std::runtime_error(std::format(
+    throw std::invalid_argument(std::format(
         "RandomPermutation({}, {}) is invalid (need n >= 0)", n, min));
   }
   return DistinctIntegers(n, n, min);
@@ -231,7 +251,7 @@ std::vector<T> BasicRandomContext::RandomPermutation(int n, T min) {
 template <std::integral T>
 std::vector<T> BasicRandomContext::DistinctIntegers(T n, int k, T min) {
   if (!(0 <= k && k <= n)) {
-    throw std::runtime_error(std::format(
+    throw std::invalid_argument(std::format(
         "DistinctIntegers({}, {}, {}) is invalid (need 0 <= k <= n)", n, k,
         min));
   }
@@ -270,14 +290,14 @@ std::vector<T> BasicRandomContext::RandomComposition(T n, int k,
   if (n == 0 && k == 0 && min_bucket_size == 0) return std::vector<T>();
 
   if (n < 0 || k <= 0 || min_bucket_size < 0) {
-    throw std::runtime_error(std::format(
+    throw std::invalid_argument(std::format(
         "RandomComposition({}, {}, {}) is invalid (need n >= 0, k > 0, "
         "min_bucket_size >= 0)",
         n, k, min_bucket_size));
   }
 
   if (min_bucket_size > 0 && n / min_bucket_size < k) {
-    throw std::runtime_error(
+    throw std::invalid_argument(
         std::format("RandomComposition({}, {}, {}) is impossible: "
                     "min_bucket_size uses more than n elements already",
                     n, k, min_bucket_size));
