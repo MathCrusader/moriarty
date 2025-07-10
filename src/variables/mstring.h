@@ -22,13 +22,13 @@
 #include <string>
 #include <vector>
 
+#include "src/constraints/base_constraints.h"
+#include "src/constraints/container_constraints.h"
+#include "src/constraints/size_constraints.h"
+#include "src/constraints/string_constraints.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/librarian/mvariable.h"
-#include "src/variables/constraints/base_constraints.h"
-#include "src/variables/constraints/container_constraints.h"
-#include "src/variables/constraints/size_constraints.h"
-#include "src/variables/constraints/string_constraints.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

@@ -20,7 +20,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/policies.h"
-#include "src/testing/gtest_helpers.h"
+#include "src/librarian/testing/gtest_helpers.h"
 
 namespace moriarty {
 namespace {

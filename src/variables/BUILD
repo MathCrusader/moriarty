@@ -29,7 +29,6 @@ licenses(["notice"])
 cc_library(
     name = "all_mvariables",
     deps = [
-        ":graph",
         ":marray",
         ":mgraph",
         ":minteger",
@@ -39,26 +38,19 @@ cc_library(
 )
 
 cc_library(
-    name = "graph",
-    hdrs = ["graph.h"],
-    deps = [
-    ],
-)
-
-cc_library(
     name = "marray",
     hdrs = ["marray.h"],
     deps = [
         ":minteger",
+        "//src/constraints:base_constraints",
+        "//src/constraints:container_constraints",
+        "//src/constraints:io_constraints",
+        "//src/constraints:size_constraints",
         "//src/contexts:librarian_context",
         "//src/librarian:errors",
         "//src/librarian:mvariable",
         "//src/librarian:policies",
-        "//src/util:locked_optional",
-        "//src/variables/constraints:base_constraints",
-        "//src/variables/constraints:container_constraints",
-        "//src/variables/constraints:io_constraints",
-        "//src/variables/constraints:size_constraints",
+        "//src/librarian/util:locked_optional",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/strings",
@@ -70,13 +62,13 @@ cc_library(
     srcs = ["mgraph.cc"],
     hdrs = ["mgraph.h"],
     deps = [
-        ":graph",
         ":minteger",
+        "//src/constraints:base_constraints",
+        "//src/constraints:graph_constraints",
+        "//src/constraints:size_constraints",
         "//src/contexts:librarian_context",
         "//src/librarian:mvariable",
-        "//src/variables/constraints:base_constraints",
-        "//src/variables/constraints:graph_constraints",
-        "//src/variables/constraints:size_constraints",
+        "//src/types:graph",
     ],
 )
 
@@ -85,6 +77,9 @@ cc_library(
     srcs = ["minteger.cc"],
     hdrs = ["minteger.h"],
     deps = [
+        "//src/constraints:base_constraints",
+        "//src/constraints:numeric_constraints",
+        "//src/constraints:size_constraints",
         "//src/contexts:librarian_context",
         "//src/internal:random_engine",
         "//src/internal:range",
@@ -93,10 +88,7 @@ cc_library(
         "//src/librarian:one_of_handler",
         "//src/librarian:policies",
         "//src/librarian:size_property",
-        "//src/util:cow_ptr",
-        "//src/variables/constraints:base_constraints",
-        "//src/variables/constraints:numeric_constraints",
-        "//src/variables/constraints:size_constraints",
+        "//src/librarian/util:cow_ptr",
     ],
 )
 
@@ -106,17 +98,17 @@ cc_library(
     hdrs = ["mstring.h"],
     deps = [
         ":minteger",
+        "//src/constraints:base_constraints",
+        "//src/constraints:container_constraints",
+        "//src/constraints:numeric_constraints",
+        "//src/constraints:size_constraints",
+        "//src/constraints:string_constraints",
         "//src/contexts:librarian_context",
         "//src/internal:random_engine",
         "//src/internal:simple_pattern",
         "//src/librarian:errors",
         "//src/librarian:mvariable",
         "//src/librarian:policies",
-        "//src/variables/constraints:base_constraints",
-        "//src/variables/constraints:container_constraints",
-        "//src/variables/constraints:numeric_constraints",
-        "//src/variables/constraints:size_constraints",
-        "//src/variables/constraints:string_constraints",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/log:absl_check",
@@ -128,29 +120,14 @@ cc_library(
     name = "mtuple",
     hdrs = ["mtuple.h"],
     deps = [
+        "//src/constraints:io_constraints",
         "//src/contexts:librarian_context",
         "//src/librarian:errors",
         "//src/librarian:mvariable",
-        "//src/util:locked_optional",
-        "//src/variables/constraints:io_constraints",
+        "//src/librarian/util:locked_optional",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/log:check",
         "@abseil-cpp//absl/strings",
-    ],
-)
-
-cc_library(
-    name = "real",
-    srcs = ["real.cc"],
-    hdrs = ["real.h"],
-)
-
-cc_test(
-    name = "graph_test",
-    srcs = ["graph_test.cc"],
-    deps = [
-        ":graph",
-        "@googletest//:gtest_main",
     ],
 )
 
@@ -162,12 +139,12 @@ cc_test(
         ":minteger",
         ":mstring",
         ":mtuple",
+        "//src/constraints:base_constraints",
+        "//src/constraints:container_constraints",
+        "//src/constraints:io_constraints",
+        "//src/constraints:numeric_constraints",
         "//src/librarian:mvariable",
-        "//src/testing:gtest_helpers",
-        "//src/variables/constraints:base_constraints",
-        "//src/variables/constraints:container_constraints",
-        "//src/variables/constraints:io_constraints",
-        "//src/variables/constraints:numeric_constraints",
+        "//src/librarian/testing:gtest_helpers",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@googletest//:gtest_main",
     ],
@@ -176,16 +153,14 @@ cc_test(
 cc_test(
     name = "minteger_test",
     size = "small",
-    srcs = [
-        "minteger_test.cc",
-    ],
+    srcs = ["minteger_test.cc"],
     deps = [
         ":minteger",
+        "//src/constraints:base_constraints",
+        "//src/constraints:numeric_constraints",
+        "//src/constraints:size_constraints",
         "//src/librarian:size_property",
-        "//src/testing:gtest_helpers",
-        "//src/variables/constraints:base_constraints",
-        "//src/variables/constraints:numeric_constraints",
-        "//src/variables/constraints:size_constraints",
+        "//src/librarian/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],
 )
@@ -194,30 +169,26 @@ cc_test(
     name = "mgraph_test",
     srcs = ["mgraph_test.cc"],
     deps = [
-        ":graph",
         ":mgraph",
         ":minteger",
-        "//src/testing:gtest_helpers",
-        "//src/variables/constraints:graph_constraints",
+        "//src/constraints:graph_constraints",
+        "//src/librarian/testing:gtest_helpers",
+        "//src/types:graph",
         "@googletest//:gtest_main",
     ],
 )
 
 cc_test(
     name = "mstring_test",
-    size = "small",
-    timeout = "moderate",
-    srcs = [
-        "mstring_test.cc",
-    ],
+    srcs = ["mstring_test.cc"],
     deps = [
         ":minteger",
         ":mstring",
+        "//src/constraints:container_constraints",
+        "//src/constraints:numeric_constraints",
+        "//src/constraints:string_constraints",
         "//src/librarian:mvariable",
-        "//src/testing:gtest_helpers",
-        "//src/variables/constraints:container_constraints",
-        "//src/variables/constraints:numeric_constraints",
-        "//src/variables/constraints:string_constraints",
+        "//src/librarian/testing:gtest_helpers",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/strings",
         "@googletest//:gtest_main",
@@ -232,16 +203,7 @@ cc_test(
         ":mstring",
         ":mtuple",
         "//src/librarian:mvariable",
-        "//src/testing:gtest_helpers",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "real_test",
-    srcs = ["real_test.cc"],
-    deps = [
-        ":real",
+        "//src/librarian/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],
 )

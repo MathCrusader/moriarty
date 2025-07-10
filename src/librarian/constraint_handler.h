@@ -21,9 +21,9 @@
 #include <utility>
 #include <vector>
 
+#include "src/constraints/constraint_violation.h"
 #include "src/contexts/librarian_context.h"
-#include "src/util/cow_ptr.h"
-#include "src/variables/constraints/constraint_violation.h"
+#include "src/librarian/util/cow_ptr.h"
 
 namespace moriarty {
 namespace librarian {

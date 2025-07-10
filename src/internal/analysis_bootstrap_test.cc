@@ -18,9 +18,9 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/testing/gtest_helpers.h"
-#include "src/testing/mtest_type.h"
-#include "src/variables/constraints/base_constraints.h"
+#include "src/constraints/base_constraints.h"
+#include "src/librarian/testing/gtest_helpers.h"
+#include "src/librarian/testing/mtest_type.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

@@ -27,7 +27,7 @@
 #include <unordered_set>
 
 #include "src/internal/random_engine.h"
-#include "src/variables/real.h"
+#include "src/types/real.h"
 
 namespace moriarty {
 namespace moriarty_internal {

@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "src/internal/expressions.h"
-#include "src/variables/real.h"
+#include "src/types/real.h"
 
 namespace moriarty {
 

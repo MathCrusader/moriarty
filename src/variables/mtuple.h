@@ -27,16 +27,16 @@
 #include <vector>
 
 #include "absl/strings/str_join.h"
+#include "src/constraints/base_constraints.h"
+#include "src/constraints/constraint_violation.h"
+#include "src/constraints/container_constraints.h"
+#include "src/constraints/io_constraints.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
-#include "src/util/locked_optional.h"
-#include "src/variables/constraints/base_constraints.h"
-#include "src/variables/constraints/constraint_violation.h"
-#include "src/variables/constraints/container_constraints.h"
-#include "src/variables/constraints/io_constraints.h"
+#include "src/librarian/util/locked_optional.h"
 
 namespace moriarty {
 

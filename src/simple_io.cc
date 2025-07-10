@@ -27,9 +27,9 @@
 #include <variant>
 #include <vector>
 
+#include "src/constraints/numeric_constraints.h"
 #include "src/context.h"
 #include "src/test_case.h"
-#include "src/variables/constraints/numeric_constraints.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

@@ -20,12 +20,12 @@
 #include <optional>
 #include <string>
 
+#include "src/constraints/base_constraints.h"
+#include "src/constraints/graph_constraints.h"
+#include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
 #include "src/librarian/mvariable.h"
-#include "src/variables/constraints/base_constraints.h"
-#include "src/variables/constraints/graph_constraints.h"
-#include "src/variables/constraints/size_constraints.h"
-#include "src/variables/graph.h"
+#include "src/types/graph.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

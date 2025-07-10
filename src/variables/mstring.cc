@@ -25,14 +25,14 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
+#include "src/constraints/base_constraints.h"
+#include "src/constraints/container_constraints.h"
+#include "src/constraints/numeric_constraints.h"
+#include "src/constraints/size_constraints.h"
+#include "src/constraints/string_constraints.h"
 #include "src/contexts/librarian_context.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/policies.h"
-#include "src/variables/constraints/base_constraints.h"
-#include "src/variables/constraints/container_constraints.h"
-#include "src/variables/constraints/numeric_constraints.h"
-#include "src/variables/constraints/size_constraints.h"
-#include "src/variables/constraints/string_constraints.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

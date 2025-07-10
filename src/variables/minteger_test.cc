@@ -23,15 +23,15 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/constraints/base_constraints.h"
+#include "src/constraints/numeric_constraints.h"
+#include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/errors.h"
-#include "src/testing/gtest_helpers.h"
-#include "src/variables/constraints/base_constraints.h"
-#include "src/variables/constraints/numeric_constraints.h"
-#include "src/variables/constraints/size_constraints.h"
-#include "src/variables/real.h"
+#include "src/librarian/testing/gtest_helpers.h"
+#include "src/types/real.h"
 
 namespace moriarty {
 namespace {

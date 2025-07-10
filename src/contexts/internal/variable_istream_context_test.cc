@@ -18,13 +18,13 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/constraints/container_constraints.h"
 #include "src/internal/value_set.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
+#include "src/librarian/testing/gtest_helpers.h"
 #include "src/test_case.h"
-#include "src/testing/gtest_helpers.h"
-#include "src/variables/constraints/container_constraints.h"
 #include "src/variables/marray.h"
 #include "src/variables/minteger.h"
 

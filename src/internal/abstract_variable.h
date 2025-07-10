@@ -23,8 +23,8 @@
 #include <string>
 #include <vector>
 
+#include "src/constraints/constraint_violation.h"
 #include "src/librarian/io_config.h"
-#include "src/variables/constraints/constraint_violation.h"
 
 namespace moriarty {
 

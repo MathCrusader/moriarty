@@ -21,12 +21,12 @@
 #include <format>
 #include <functional>
 
+#include "src/constraints/size_constraints.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_bootstrap.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/variables/constraints/size_constraints.h"
 
 namespace moriarty {
 namespace moriarty_internal {

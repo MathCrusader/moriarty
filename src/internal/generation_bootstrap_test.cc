@@ -22,12 +22,12 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/constraints/base_constraints.h"
+#include "src/constraints/numeric_constraints.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/testing/gtest_helpers.h"
-#include "src/variables/constraints/base_constraints.h"
-#include "src/variables/constraints/numeric_constraints.h"
+#include "src/librarian/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

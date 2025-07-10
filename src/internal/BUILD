@@ -32,8 +32,8 @@ cc_library(
         "abstract_variable.h",
     ],
     deps = [
+        "//src/constraints:constraint_violation",
         "//src/librarian:io_config",
-        "//src/variables/constraints:constraint_violation",
     ],
 )
 
@@ -78,7 +78,7 @@ cc_library(
     deps = [
         "//src/librarian:errors",
         "//src/librarian:policies",
-        "//src/util:str_hash",
+        "//src/librarian/util:str_hash",
     ],
 )
 
@@ -104,7 +104,7 @@ cc_library(
     ],
     deps = [
         ":expressions",
-        "//src/variables:real",
+        "//src/types:real",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -115,7 +115,7 @@ cc_library(
     hdrs = ["simple_pattern.h"],
     deps = [
         "//src/internal:expressions",
-        "//src/util:debug_string",
+        "//src/librarian/util:debug_string",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -127,7 +127,7 @@ cc_library(
     deps = [
         ":abstract_variable",
         "//src/librarian:errors",
-        "//src/util:str_hash",
+        "//src/librarian/util:str_hash",
     ],
 )
 
@@ -143,7 +143,7 @@ cc_library(
         ":abstract_variable",
         "//src/librarian:conversions",
         "//src/librarian:errors",
-        "//src/util:str_hash",
+        "//src/librarian/util:str_hash",
     ],
 )
 
@@ -152,8 +152,8 @@ cc_test(
     srcs = ["analysis_bootstrap_test.cc"],
     deps = [
         ":analysis_bootstrap",
-        "//src/testing:gtest_helpers",
-        "//src/testing:mtest_type",
+        "//src/librarian/testing:gtest_helpers",
+        "//src/librarian/testing:mtest_type",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
@@ -197,7 +197,7 @@ cc_test(
     deps = [
         ":generation_handler",
         "//src/librarian:policies",
-        "//src/testing:gtest_helpers",
+        "//src/librarian/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],
 )
@@ -234,7 +234,7 @@ cc_test(
         ":expressions",
         ":random_engine",
         ":simple_pattern",
-        "//src/testing:gtest_helpers",
+        "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
@@ -245,7 +245,7 @@ cc_test(
     srcs = ["value_set_test.cc"],
     deps = [
         ":value_set",
-        "//src/testing:gtest_helpers",
+        "//src/librarian/testing:gtest_helpers",
         "//src/variables:marray",
         "//src/variables:minteger",
         "//src/variables:mstring",
@@ -264,8 +264,8 @@ cc_test(
         ":random_engine",
         ":value_set",
         ":variable_set",
-        "//src/testing:gtest_helpers",
-        "//src/testing:mtest_type",
+        "//src/librarian/testing:gtest_helpers",
+        "//src/librarian/testing:mtest_type",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
@@ -293,7 +293,7 @@ cc_test(
         ":random_engine",
         ":value_set",
         ":variable_set",
-        "//src/testing:gtest_helpers",
+        "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "//src/variables:mstring",
         "@googletest//:gtest_main",

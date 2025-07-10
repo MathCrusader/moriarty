@@ -20,12 +20,12 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/constraints/container_constraints.h"
+#include "src/constraints/numeric_constraints.h"
+#include "src/constraints/string_constraints.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/mvariable.h"
-#include "src/testing/gtest_helpers.h"
-#include "src/variables/constraints/container_constraints.h"
-#include "src/variables/constraints/numeric_constraints.h"
-#include "src/variables/constraints/string_constraints.h"
+#include "src/librarian/testing/gtest_helpers.h"
 
 namespace moriarty {
 namespace {

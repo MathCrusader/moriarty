@@ -21,12 +21,12 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/constraints/io_constraints.h"
 #include "src/context.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
+#include "src/librarian/testing/gtest_helpers.h"
 #include "src/test_case.h"
-#include "src/testing/gtest_helpers.h"
-#include "src/variables/constraints/io_constraints.h"
 #include "src/variables/marray.h"
 #include "src/variables/minteger.h"
 

@@ -28,6 +28,10 @@
 #include <utility>
 #include <vector>
 
+#include "src/constraints/base_constraints.h"
+#include "src/constraints/constraint_violation.h"
+#include "src/constraints/numeric_constraints.h"
+#include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
@@ -35,10 +39,6 @@
 #include "src/librarian/one_of_handler.h"
 #include "src/librarian/policies.h"
 #include "src/librarian/size_property.h"
-#include "src/variables/constraints/base_constraints.h"
-#include "src/variables/constraints/constraint_violation.h"
-#include "src/variables/constraints/numeric_constraints.h"
-#include "src/variables/constraints/size_constraints.h"
 
 namespace moriarty {
 

@@ -33,6 +33,9 @@
 #include <utility>
 #include <vector>
 
+#include "src/constraints/base_constraints.h"
+#include "src/constraints/constraint_violation.h"
+#include "src/constraints/custom_constraint.h"
 #include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/internal/view_only_context.h"
 #include "src/contexts/librarian_context.h"
@@ -44,9 +47,6 @@
 #include "src/librarian/io_config.h"
 #include "src/librarian/one_of_handler.h"
 #include "src/librarian/policies.h"
-#include "src/variables/constraints/base_constraints.h"
-#include "src/variables/constraints/constraint_violation.h"
-#include "src/variables/constraints/custom_constraint.h"
 
 namespace moriarty {
 

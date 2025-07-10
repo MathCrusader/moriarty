@@ -19,12 +19,12 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/constraints/base_constraints.h"
+#include "src/constraints/graph_constraints.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/errors.h"
-#include "src/testing/gtest_helpers.h"
-#include "src/variables/constraints/base_constraints.h"
-#include "src/variables/constraints/graph_constraints.h"
-#include "src/variables/graph.h"
+#include "src/librarian/testing/gtest_helpers.h"
+#include "src/types/graph.h"
 
 namespace moriarty {
 namespace {

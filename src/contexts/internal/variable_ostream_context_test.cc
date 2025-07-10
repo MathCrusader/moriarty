@@ -17,8 +17,8 @@
 #include "src/contexts/internal/variable_ostream_context.h"
 
 #include "gtest/gtest.h"
+#include "src/librarian/testing/gtest_helpers.h"
 #include "src/test_case.h"
-#include "src/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

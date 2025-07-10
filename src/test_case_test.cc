@@ -26,8 +26,8 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/testing/gtest_helpers.h"
-#include "src/testing/mtest_type.h"
+#include "src/librarian/testing/gtest_helpers.h"
+#include "src/librarian/testing/mtest_type.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

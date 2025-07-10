@@ -26,7 +26,7 @@
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
-#include "src/util/debug_string.h"
+#include "src/librarian/util/debug_string.h"
 
 namespace moriarty {
 namespace moriarty_internal {

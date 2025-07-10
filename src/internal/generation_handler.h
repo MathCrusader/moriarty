@@ -26,7 +26,7 @@
 #include <vector>
 
 #include "src/librarian/policies.h"
-#include "src/util/str_hash.h"
+#include "src/librarian/util/str_hash.h"
 
 // FIXME: Should this fail if you Start() a variable that was Complete()d?
 

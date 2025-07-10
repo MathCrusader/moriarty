@@ -30,9 +30,9 @@ cc_library(
     name = "constraint_handler",
     hdrs = ["constraint_handler.h"],
     deps = [
+        "//src/constraints:constraint_violation",
         "//src/contexts:librarian_context",
-        "//src/util:cow_ptr",
-        "//src/variables/constraints:constraint_violation",
+        "//src/librarian/util:cow_ptr",
     ],
 )
 
@@ -50,7 +50,7 @@ cc_library(
     deps = [
         "//src/librarian:io_config",
         "//src/librarian:policies",
-        "//src/util:debug_string",
+        "//src/librarian/util:debug_string",
     ],
 )
 
@@ -69,12 +69,12 @@ cc_library(
         ":constraint_handler",
         ":conversions",
         ":one_of_handler",
+        "//src/constraints:custom_constraint",
         "//src/contexts:librarian_context",
         "//src/internal:abstract_variable",
         "//src/internal:generation_handler",
         "//src/internal:random_engine",
         "//src/internal:variable_name_utils",
-        "//src/variables/constraints:custom_constraint",
     ],
 )
 
@@ -103,11 +103,11 @@ cc_test(
     srcs = ["constraint_handler_test.cc"],
     deps = [
         ":constraint_handler",
+        "//src/constraints:constraint_violation",
         "//src/contexts:librarian_context",
-        "//src/testing:gtest_helpers",
+        "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "//src/variables:mstring",
-        "//src/variables/constraints:constraint_violation",
         "@googletest//:gtest_main",
     ],
 )
@@ -118,7 +118,7 @@ cc_test(
     deps = [
         ":errors",
         "//src/librarian:policies",
-        "//src/testing:gtest_helpers",
+        "//src/librarian/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],
 )
@@ -135,8 +135,8 @@ cc_test(
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "//src/testing:gtest_helpers",
-        "//src/testing:mtest_type",
+        "//src/librarian/testing:gtest_helpers",
+        "//src/librarian/testing:mtest_type",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],

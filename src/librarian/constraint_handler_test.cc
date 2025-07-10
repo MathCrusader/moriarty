@@ -18,11 +18,11 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/constraints/constraint_violation.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
-#include "src/testing/gtest_helpers.h"
-#include "src/variables/constraints/constraint_violation.h"
+#include "src/librarian/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mstring.h"
 

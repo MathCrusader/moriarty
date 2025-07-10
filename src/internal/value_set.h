@@ -26,7 +26,7 @@
 
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/errors.h"
-#include "src/util/str_hash.h"
+#include "src/librarian/util/str_hash.h"
 
 namespace moriarty {
 namespace moriarty_internal {

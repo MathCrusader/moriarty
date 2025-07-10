@@ -31,7 +31,7 @@ cc_library(
         "//src/librarian:errors",
         "//src/librarian:io_config",
         "//src/librarian:policies",
-        "//src/util:debug_string",
+        "//src/librarian/util:debug_string",
     ],
 )
 
@@ -50,7 +50,7 @@ cc_library(
     hdrs = ["basic_random_context.h"],
     deps = [
         "//src/internal:random_engine",
-        "//src/variables:real",
+        "//src/types:real",
     ],
 )
 
@@ -98,12 +98,12 @@ cc_library(
     srcs = ["variable_random_context.cc"],
     hdrs = ["variable_random_context.h"],
     deps = [
+        "//src/constraints:size_constraints",
         "//src/internal:abstract_variable",
         "//src/internal:generation_bootstrap",
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "//src/variables/constraints:size_constraints",
     ],
 )
 
@@ -201,7 +201,7 @@ cc_test(
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "//src/testing:gtest_helpers",
+        "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
@@ -212,11 +212,11 @@ cc_test(
     srcs = ["variable_istream_context_test.cc"],
     deps = [
         ":variable_istream_context",
+        "//src/constraints:container_constraints",
         "//src/librarian:policies",
-        "//src/testing:gtest_helpers",
+        "//src/librarian/testing:gtest_helpers",
         "//src/variables:marray",
         "//src/variables:minteger",
-        "//src/variables/constraints:container_constraints",
         "@googletest//:gtest_main",
     ],
 )
@@ -226,7 +226,7 @@ cc_test(
     srcs = ["variable_ostream_context_test.cc"],
     deps = [
         ":variable_ostream_context",
-        "//src/testing:gtest_helpers",
+        "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
@@ -240,7 +240,7 @@ cc_test(
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "//src/testing:gtest_helpers",
+        "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
@@ -251,7 +251,7 @@ cc_test(
     srcs = ["view_only_context_test.cc"],
     deps = [
         ":view_only_context",
-        "//src/testing:gtest_helpers",
+        "//src/librarian/testing:gtest_helpers",
         "//src/variables:marray",
         "//src/variables:minteger",
         "//src/variables:mstring",
