@@ -48,31 +48,25 @@ MInteger& MInteger::AddConstraint(Exactly<int64_t> constraint) {
   return InternalAddExactlyConstraint(std::move(constraint));
 }
 
-MInteger& MInteger::AddConstraint(ExactlyIntegerExpression constraint) {
-  bounds_.Mutable().Intersect(constraint.GetRange());
-  return InternalAddConstraint(RangeConstraint(
-      std::make_unique<ExactlyIntegerExpression>(constraint),
-      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
-}
-
 MInteger& MInteger::AddConstraint(Exactly<std::string> constraint) {
-  return AddConstraint(ExactlyIntegerExpression(constraint.GetValue()));
+  librarian::ExactlyIntegerExpression expr(constraint.GetValue());
+  bounds_.Mutable().Intersect(expr.GetRange());
+  return InternalAddConstraint(RangeConstraint(
+      std::make_unique<librarian::ExactlyIntegerExpression>(expr),
+      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
 }
 
 MInteger& MInteger::AddConstraint(OneOf<int64_t> constraint) {
   return InternalAddOneOfConstraint(std::move(constraint));
 }
 
-MInteger& MInteger::AddConstraint(OneOfIntegerExpression constraint) {
-  if (!one_of_expr_.Mutable().ConstrainOptions(constraint.GetOptions()))
-    throw ImpossibleToSatisfy(ToString(), constraint.ToString());
-  return InternalAddConstraint(RangeConstraint(
-      std::make_unique<OneOfIntegerExpression>(std::move(constraint)),
-      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
-}
-
 MInteger& MInteger::AddConstraint(OneOf<std::string> constraint) {
-  return AddConstraint(OneOfIntegerExpression(constraint.GetOptions()));
+  librarian::OneOfIntegerExpression exprs(constraint.GetOptions());
+  if (!one_of_expr_.Mutable().ConstrainOptions(exprs.GetOptions()))
+    throw ImpossibleToSatisfy(ToString(), exprs.ToString());
+  return InternalAddConstraint(RangeConstraint(
+      std::make_unique<librarian::OneOfIntegerExpression>(std::move(exprs)),
+      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
 }
 
 MInteger& MInteger::AddConstraint(Between constraint) {
@@ -103,15 +97,13 @@ MInteger& MInteger::AddConstraint(SizeCategory constraint) {
 
 std::optional<int64_t> MInteger::GetUniqueValueImpl(
     librarian::AnalysisContext ctx) const {
-  auto option1 = GetOneOf().GetUniqueValue();
-  if (option1) return *option1;
+  if (auto int_option = GetOneOf().GetUniqueValue()) {
+    return *int_option;
+  }
 
-  // FIXME: This is silly to recompile the expression every time.
-  auto option2 = one_of_expr_->GetUniqueValue();
-  if (option2) {
-    Expression expr(*option2);
+  if (auto expr_option = one_of_expr_->GetUniqueValue()) {
     try {
-      return expr.Evaluate([&](std::string_view var) {
+      return expr_option->Evaluate([&](std::string_view var) {
         auto value = ctx.GetUniqueValue<MInteger>(var);
         if (!value) throw ValueNotFound(var);
         return *value;
@@ -162,7 +154,7 @@ namespace {
 [[nodiscard]] std::vector<int64_t> ExtractOneOfOptions(
     librarian::ResolverContext ctx,
     const librarian::OneOfHandler<int64_t>& ints,
-    const librarian::OneOfHandler<std::string>& exprs) {
+    const librarian::OneOfHandler<Expression>& exprs) {
   std::vector<int64_t> options;
 
   if (ints.HasBeenConstrained()) {
@@ -171,11 +163,9 @@ namespace {
     }
   }
 
-  // FIXME: This is stilly to reparse the expression every time.
   if (exprs.HasBeenConstrained()) {
     std::vector<int64_t> options;
-    for (const std::string& option : exprs.GetOptions()) {
-      Expression expr(option);
+    for (const Expression& expr : exprs.GetOptions()) {
       options.push_back(expr.Evaluate([&](std::string_view var) {
         return ctx.GenerateVariable<MInteger>(var);
       }));

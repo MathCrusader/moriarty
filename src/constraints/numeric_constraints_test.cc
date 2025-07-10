@@ -20,6 +20,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/internal/expressions.h"
 #include "src/internal/range.h"
 #include "src/librarian/testing/gtest_helpers.h"
 
@@ -29,6 +30,8 @@ namespace {
 using ::moriarty::AtLeast;
 using ::moriarty::AtMost;
 using ::moriarty::Between;
+using ::moriarty::librarian::ExactlyIntegerExpression;
+using ::moriarty::librarian::OneOfIntegerExpression;
 using ::moriarty_testing::HasConstraintViolation;
 using ::moriarty_testing::HasNoConstraintViolation;
 using ::testing::ElementsAre;
@@ -121,11 +124,14 @@ TEST(NumericConstraintsTest, GetRangeShouldGiveCorrectValues) {
 TEST(NumericConstraintsTest, GetOptionsShouldGiveCorrectValues) {
   {
     OneOfIntegerExpression one_of({"1", "2", "3"});
-    EXPECT_THAT(one_of.GetOptions(), ElementsAre("1", "2", "3"));
+    EXPECT_THAT(one_of.GetOptions(),
+                ElementsAre(Expression("1"), Expression("2"), Expression("3")));
   }
   {
-    OneOfIntegerExpression one_of({"x", "y", "z"});
-    EXPECT_THAT(one_of.GetOptions(), ElementsAre("x", "y", "z"));
+    OneOfIntegerExpression one_of({"x + 5", "y", "z"});
+    EXPECT_THAT(
+        one_of.GetOptions(),
+        ElementsAre(Expression("x + 5"), Expression("y"), Expression("z")));
   }
 }
 

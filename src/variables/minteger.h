@@ -30,6 +30,7 @@
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
+#include "src/internal/expressions.h"
 #include "src/internal/range.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/one_of_handler.h"
@@ -63,15 +64,11 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // The integer must be exactly this value.
   MInteger& AddConstraint(Exactly<int64_t> constraint);
   // The integer must be exactly this integer expression (e.g., "3 * N + 1").
-  MInteger& AddConstraint(ExactlyIntegerExpression constraint);
-  // The integer must be exactly this integer expression (e.g., "3 * N + 1").
   MInteger& AddConstraint(Exactly<std::string> constraint);
 
   // The integer must be one of these values.
   MInteger& AddConstraint(OneOf<int64_t> constraint);
-  // The integer must be one of these integer expressions.
-  MInteger& AddConstraint(OneOfIntegerExpression constraint);
-  // The integer must be one of these integer expressions.
+  // The integer must be one of these integer expressions (e.g., "3 * N + 1").
   MInteger& AddConstraint(OneOf<std::string> constraint);
 
   // ---------------------------------------------------------------------------
@@ -94,12 +91,14 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
 
  private:
   librarian::CowPtr<Range> bounds_;
-  librarian::CowPtr<librarian::OneOfHandler<std::string>> one_of_expr_;
+  librarian::CowPtr<librarian::OneOfHandler<Expression>> one_of_expr_;
   librarian::CowPtr<librarian::SizeHandler> size_handler_;
 
-  // Computes and returns the minimum and maximum of `bounds_`. Returns
-  // `kInvalidArgumentError` if the range is empty. The `ResolverContext`
-  // version may generate other dependent variables if needed along the way.
+  // Computes and returns the minimum and maximum of `bounds_`. Throws if the
+  // range is empty. The `ResolverContext` version may generate other dependent
+  // variables if needed along the way, but the `AnalysisContext` version won't.
+  // std::nullopt means that the bounds cannot be determined without generating
+  // some values.
   std::optional<Range::ExtremeValues> GetExtremeValues(
       librarian::AnalysisContext ctx) const;
   Range::ExtremeValues GetExtremeValues(librarian::ResolverContext ctx) const;
@@ -117,7 +116,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
 
    private:
     std::unique_ptr<NumericRangeMConstraint> constraint_;
-    std::function<void(MInteger&)> apply_to_fn_;
+    std::function<void(MInteger&)> apply_to_fn_;  // TODO: consider cow_ptr
   };
 
   // ---------------------------------------------------------------------------

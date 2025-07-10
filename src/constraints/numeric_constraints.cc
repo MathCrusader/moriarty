@@ -49,6 +49,8 @@ std::string ToString(const std::variant<int64_t, Expression, Real>& value) {
 // -----------------------------------------------------------------------------
 //  ExactlyIntegerExpression
 
+namespace librarian {
+
 ExactlyIntegerExpression::ExactlyIntegerExpression(IntegerExpression value)
     : value_(value), dependencies_(value_.GetDependencies()) {}
 
@@ -81,7 +83,7 @@ std::vector<std::string> ExactlyIntegerExpression::GetDependencies() const {
 
 OneOfIntegerExpression::OneOfIntegerExpression(
     std::initializer_list<IntegerExpression> options)
-    : moriarty::OneOfIntegerExpression(
+    : moriarty::librarian::OneOfIntegerExpression(
           std::span<const IntegerExpression>{options}) {}
 
 OneOfIntegerExpression::OneOfIntegerExpression(
@@ -107,11 +109,8 @@ std::string OptionString(const std::vector<Expression>& exprs) {
 
 }  // namespace
 
-std::vector<std::string> OneOfIntegerExpression::GetOptions() const {
-  std::vector<std::string> options;
-  options.reserve(options_.size());
-  for (const auto& option : options_) options.push_back(option.ToString());
-  return options;
+std::vector<Expression> OneOfIntegerExpression::GetOptions() const {
+  return options_;
 }
 
 std::string OneOfIntegerExpression::ToString() const {
@@ -131,6 +130,8 @@ ConstraintViolation OneOfIntegerExpression::CheckIntegerValue(
 std::vector<std::string> OneOfIntegerExpression::GetDependencies() const {
   return dependencies_;
 }
+
+}  // namespace librarian
 
 // -----------------------------------------------------------------------------
 //  Between

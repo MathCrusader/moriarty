@@ -52,62 +52,6 @@ class NumericRangeMConstraint : public MConstraint {
   virtual std::vector<std::string> GetDependencies() const = 0;
 };
 
-// Constraint stating that the variable must be exactly the value of this
-// expression. E.g., `ExactlyIntegerExpression("3 * N + 1")`.
-class ExactlyIntegerExpression : public NumericRangeMConstraint {
- public:
-  // The numeric value must be exactly this value.
-  explicit ExactlyIntegerExpression(IntegerExpression value);
-
-  // Returns the range of values that this constraint represents.
-  [[nodiscard]] Range GetRange() const;
-
-  // Returns a human-readable representation of this constraint.
-  [[nodiscard]] std::string ToString() const;
-
-  // Returns true if the given value satisfies this constraint.
-  [[nodiscard]] ConstraintViolation CheckIntegerValue(
-      LookupVariableFn lookup_variable, int64_t value) const;
-
-  // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
-
- private:
-  Expression value_;
-  std::vector<std::string> dependencies_;
-};
-
-// Constraint stating that the variable must be exactly the value of this
-// expression. E.g., `OneOfIntegerExpression({"3 * N + 1", "14"})`.
-class OneOfIntegerExpression : public NumericRangeMConstraint {
- public:
-  // The numeric value must be exactly these values.
-  template <typename Container>
-  explicit OneOfIntegerExpression(const Container& options);
-  explicit OneOfIntegerExpression(std::span<const IntegerExpression> options);
-  explicit OneOfIntegerExpression(
-      std::initializer_list<IntegerExpression> options);
-
-  ~OneOfIntegerExpression() override = default;
-
-  // Returns the options that this constraint represents.
-  [[nodiscard]] std::vector<std::string> GetOptions() const;
-
-  // Returns a human-readable representation of this constraint.
-  [[nodiscard]] std::string ToString() const override;
-
-  // Returns true if the given value satisfies this constraint.
-  [[nodiscard]] ConstraintViolation CheckIntegerValue(
-      LookupVariableFn lookup_variable, int64_t value) const override;
-
-  // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const override;
-
- private:
-  std::vector<Expression> options_;
-  std::vector<std::string> dependencies_;
-};
-
 // Constraint stating that the numeric value must be in the inclusive range
 // [minimum, maximum]. Note that if `Real` is used for either `minimum` or
 // `maximum`, then this constraint is not valid for MInteger.
@@ -254,14 +198,78 @@ class AtLeast : public NumericRangeMConstraint {
   std::vector<std::string> dependencies_;
 };
 
+namespace librarian {
+
+// Constraint stating that the variable must be exactly the value of this
+// expression. E.g., `ExactlyIntegerExpression("3 * N + 1")`.
+class ExactlyIntegerExpression : public NumericRangeMConstraint {
+ public:
+  // The numeric value must be exactly this value.
+  explicit ExactlyIntegerExpression(IntegerExpression value);
+
+  // Returns the range of values that this constraint represents.
+  [[nodiscard]] Range GetRange() const;
+
+  // Returns a human-readable representation of this constraint.
+  [[nodiscard]] std::string ToString() const;
+
+  // Returns true if the given value satisfies this constraint.
+  [[nodiscard]] ConstraintViolation CheckIntegerValue(
+      LookupVariableFn lookup_variable, int64_t value) const;
+
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
+ private:
+  Expression value_;
+  std::vector<std::string> dependencies_;
+};
+
+// Constraint stating that the variable must be exactly the value of this
+// expression. E.g., `OneOfIntegerExpression({"3 * N + 1", "14"})`.
+class OneOfIntegerExpression : public NumericRangeMConstraint {
+ public:
+  // The numeric value must be exactly these values.
+  template <typename Container>
+  explicit OneOfIntegerExpression(const Container& options);
+  explicit OneOfIntegerExpression(std::span<const IntegerExpression> options);
+  explicit OneOfIntegerExpression(
+      std::initializer_list<IntegerExpression> options);
+
+  ~OneOfIntegerExpression() override = default;
+
+  // Returns the options that this constraint represents.
+  [[nodiscard]] std::vector<Expression> GetOptions() const;
+
+  // Returns a human-readable representation of this constraint.
+  [[nodiscard]] std::string ToString() const override;
+
+  // Returns true if the given value satisfies this constraint.
+  [[nodiscard]] ConstraintViolation CheckIntegerValue(
+      LookupVariableFn lookup_variable, int64_t value) const override;
+
+  // Returns all variables that this constraint depends on.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const override;
+
+ private:
+  std::vector<Expression> options_;
+  std::vector<std::string> dependencies_;
+};
+
+}  // namespace librarian
+
 // -----------------------------------------------------------------------------
 //  Template implementation below
+
+namespace librarian {
 
 template <typename Container>
 OneOfIntegerExpression::OneOfIntegerExpression(const Container& options) {
   for (const std::string& option : options)
     options_.push_back(Expression(option));
 }
+
+}  // namespace librarian
 
 }  // namespace moriarty
 

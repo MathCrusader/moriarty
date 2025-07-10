@@ -907,4 +907,7 @@ Expression::Expression(std::string_view str) : str_(str) {
   dependencies_ = expr_->ReleaseDependencies();
 }
 
+bool Expression::operator==(const Expression& other) const {
+  return str_ == other.str_;
+}
 }  // namespace moriarty

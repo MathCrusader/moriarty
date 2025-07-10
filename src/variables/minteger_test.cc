@@ -292,13 +292,9 @@ TEST(MIntegerTest, AllOverloadsOfExactlyAreEffective) {
   {  // No variables
     EXPECT_THAT(MInteger(Exactly(10)), GeneratedValuesAre(10));
     EXPECT_THAT(MInteger(Exactly("10")), GeneratedValuesAre(10));
-    EXPECT_THAT(MInteger(ExactlyIntegerExpression("10")),
-                GeneratedValuesAre(10));
   }
   {  // With variables
     EXPECT_THAT(MInteger(Exactly("3 * N + 1")),
-                GeneratedValuesAre(31, Context().WithValue<MInteger>("N", 10)));
-    EXPECT_THAT(MInteger(ExactlyIntegerExpression("3 * N + 1")),
                 GeneratedValuesAre(31, Context().WithValue<MInteger>("N", 10)));
   }
 }

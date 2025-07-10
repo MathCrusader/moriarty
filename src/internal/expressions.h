@@ -47,6 +47,8 @@ class Expression {
 
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
 
+  [[nodiscard]] bool operator==(const Expression& other) const;
+
  private:
   // Note: We are using a shared_ptr here since this type is completely
   // immutable after construction. It is passed to several functions, but since
