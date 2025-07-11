@@ -41,6 +41,10 @@ std::function<int64_t(std::string_view)> FromMap(
       [=](std::string_view var) -> int64_t { return map.at(std::string(var)); };
 }
 
+Range NewRange(int64_t min, int64_t max) {
+  return Range().AtLeast(min).AtMost(max);
+}
+
 Range Intersect(Range r1, const Range& r2) {
   r1.Intersect(r2);
   return r1;
@@ -90,41 +94,42 @@ testing::AssertionResult IsEmptyRange(const Range& r) {
 
 TEST(RangeTest, IntersectNonEmptyIntersectionsWork) {
   // Partial overlap
-  EXPECT_TRUE(EqualRanges(Intersect({1, 10}, {5, 12}), Range(5, 10)));
+  EXPECT_TRUE(EqualRanges(Intersect(NewRange(1, 10), NewRange(5, 12)),
+                          NewRange(5, 10)));
   // Subset
-  EXPECT_TRUE(EqualRanges(Intersect({1, 10}, {5, 8}), Range(5, 8)));
-  EXPECT_TRUE(EqualRanges(Intersect({1, 10}, {0, 18}), Range(1, 10)));
+  EXPECT_TRUE(
+      EqualRanges(Intersect(NewRange(1, 10), NewRange(5, 8)), NewRange(5, 8)));
+  EXPECT_TRUE(EqualRanges(Intersect(NewRange(1, 10), NewRange(0, 18)),
+                          NewRange(1, 10)));
   // Equal
-  EXPECT_TRUE(EqualRanges(Intersect({1, 10}, {1, 10}), Range(1, 10)));
+  EXPECT_TRUE(EqualRanges(Intersect(NewRange(1, 10), NewRange(1, 10)),
+                          NewRange(1, 10)));
   // Singleton overlap
-  EXPECT_TRUE(EqualRanges(Intersect({1, 10}, {10, 100}), Range(10, 10)));
-  EXPECT_TRUE(EqualRanges(Intersect({1, 10}, {-5, 1}), Range(1, 1)));
+  EXPECT_TRUE(EqualRanges(Intersect(NewRange(1, 10), NewRange(10, 100)),
+                          NewRange(10, 10)));
+  EXPECT_TRUE(
+      EqualRanges(Intersect(NewRange(1, 10), NewRange(-5, 1)), NewRange(1, 1)));
 }
 
 TEST(RangeTest, EmptyRangeWorks) {
-  EXPECT_TRUE(IsEmptyRange({0, -1}));
-  EXPECT_TRUE(IsEmptyRange({10, 2}));
-  EXPECT_TRUE(Range(0, -1).IsEmpty());
-  EXPECT_TRUE(Range(10, 2).IsEmpty());
+  EXPECT_TRUE(IsEmptyRange(NewRange(0, -1)));
+  EXPECT_TRUE(IsEmptyRange(NewRange(10, 2)));
 
-  EXPECT_FALSE(IsEmptyRange({0, 0}));
-  EXPECT_FALSE(IsEmptyRange({5, 10}));
-  EXPECT_FALSE(Range(0, 0).IsEmpty());
-  EXPECT_FALSE(Range(5, 10).IsEmpty());
+  EXPECT_FALSE(IsEmptyRange(NewRange(0, 0)));
+  EXPECT_FALSE(IsEmptyRange(NewRange(5, 10)));
 
   EXPECT_TRUE(IsEmptyRange(EmptyRange()));
-  EXPECT_TRUE(EmptyRange().IsEmpty());
 }
 
 TEST(RangeTest, EqualityWorks) {
   // Normal cases
-  EXPECT_EQ(Range(1, 2), Range(1, 2));
-  EXPECT_NE(Range(1, 3), Range(1, 2));
+  EXPECT_EQ(NewRange(1, 2), NewRange(1, 2));
+  EXPECT_NE(NewRange(1, 3), NewRange(1, 2));
   Range r;
   r.AtLeast(1);
   r.AtMost(2);
-  EXPECT_EQ(r, Range(1, 2));
-  EXPECT_EQ(EmptyRange(), Range(10, 5));
+  EXPECT_EQ(r, NewRange(1, 2));
+  EXPECT_EQ(EmptyRange(), NewRange(1, 0));  // Not guaranteed to be equal
 
   // Expressions are considered. This is not guaranteed to be stable over time.
   Range r1;
@@ -135,7 +140,7 @@ TEST(RangeTest, EqualityWorks) {
   r2.AtMost(Expression("2"));
   EXPECT_NE(r1, r2);
 
-  Range r3(1, 4);
+  Range r3 = NewRange(1, 4);
   r3.AtLeast(Expression("a"));
   r3.AtMost(Expression("b"));
   Range r4;
@@ -148,21 +153,21 @@ TEST(RangeTest, EqualityWorks) {
 
 TEST(RangeTest, EmptyIntersectionsWork) {
   // Normal cases
-  EXPECT_TRUE(IsEmptyRange(Intersect({1, 10}, {11, 100})));
-  EXPECT_TRUE(IsEmptyRange(Intersect({101, 1000}, {11, 100})));
+  EXPECT_TRUE(IsEmptyRange(Intersect(NewRange(1, 10), NewRange(11, 100))));
+  EXPECT_TRUE(IsEmptyRange(Intersect(NewRange(101, 1000), NewRange(11, 100))));
 
   // Input was already empty
-  EXPECT_TRUE(IsEmptyRange(Intersect({10, 1}, {5, 5})));
-  EXPECT_TRUE(IsEmptyRange(Intersect({10, 1}, {10, 1})));
+  EXPECT_TRUE(IsEmptyRange(Intersect(NewRange(10, 1), NewRange(5, 5))));
+  EXPECT_TRUE(IsEmptyRange(Intersect(NewRange(10, 1), NewRange(10, 1))));
 
-  EXPECT_FALSE(IsEmptyRange(Intersect({10, 10}, {10, 100})));
+  EXPECT_FALSE(IsEmptyRange(Intersect(NewRange(10, 10), NewRange(10, 100))));
 }
 
 TEST(RangeTest, ExtremesWork) {
   EXPECT_EQ(Range::ExtremeValues({1, 2}), Range::ExtremeValues({1, 2}));
 
   // Normal case
-  EXPECT_THAT(Range(1, 2).Extremes(NoVariablesKnown),
+  EXPECT_THAT(NewRange(1, 2).Extremes(NoVariablesKnown),
               Optional(Range::ExtremeValues({1, 2})));
 
   // Default constructor gives full 64-bit range
@@ -176,16 +181,17 @@ TEST(RangeTest, ExtremesWork) {
 }
 
 TEST(RangeTest, ExtremesWithFnShouldWork) {
-  Range r;
-  r.AtLeast(Expression("x"));
-  r.AtMost(Expression("y + 1"));
   auto get_value = [](std::string_view var) -> int64_t {
     if (var == "x") return 1;
     if (var == "y") return 20;
     throw std::runtime_error("Unexpected variable: " + std::string(var));
   };
 
-  EXPECT_THAT(r.Extremes(get_value), Optional(Range::ExtremeValues({1, 21})));
+  EXPECT_THAT(Range()
+                  .AtLeast(Expression("x"))
+                  .AtMost(Expression("y + 1"))
+                  .Extremes(get_value),
+              Optional(Range::ExtremeValues({1, 21})));
 }
 
 TEST(RangeTest,
@@ -285,7 +291,7 @@ TEST(RangeTest, AtLeastShouldConsiderBothIntegerAndExpression) {
 
 TEST(RangeTest, ToStringWithEmptyOrDefaultRangeShouldWork) {
   EXPECT_EQ(Range().ToString(), "(-inf, inf)");
-  EXPECT_EQ(EmptyRange().ToString(), "(Empty Range)");
+  EXPECT_EQ(EmptyRange().ToString(), "[1, 0]");  // Not guaranteed to be equal
 }
 
 TEST(RangeTest, TwoSidedInequalitiesToStringShouldWork) {

@@ -39,13 +39,6 @@ namespace moriarty {
 //   not overwrite the old ones.
 class Range {
  public:
-  // Creates a range covering all 64-bit signed integers.
-  Range() = default;
-
-  // Creates a range covering [`minimum`, `maximum`].
-  // If `minimum` > `maximum`, then the range is empty.
-  Range(int64_t minimum, int64_t maximum);
-
   // AtLeast()
   //
   // This range is at least `minimum`. For example,
@@ -54,17 +47,9 @@ class Range {
   // Multiple calls to `AtLeast` are ANDed  together. For example,
   //   `AtLeast(5); AtLeast("X + Y"); AtLeast("W");`
   // means that this is at least max({5, Evaluate("X + Y"), Evaluate("W")}).
-  void AtLeast(int64_t minimum);
-
-  // AtLeast()
-  //
-  // This range is at least `minimum`.
-  void AtLeast(Expression minimum);
-
-  // AtLeast()
-  //
-  // This range is at least `minimum`.
-  void AtLeast(const Real& minimum);
+  Range& AtLeast(int64_t minimum);
+  Range& AtLeast(Expression minimum);
+  Range& AtLeast(const Real& minimum);
 
   // AtMost()
   //
@@ -74,22 +59,9 @@ class Range {
   // Multiple calls to `AtMost` are ANDed  together. For example,
   //   `AtMost(5); AtMost("X + Y"); AtMost("W");`
   // means that this is at least min({5, Evaluate("X + Y"), Evaluate("W")}).
-  void AtMost(int64_t maximum);
-
-  // AtMost()
-  //
-  // This range is at most `maximum`.
-  void AtMost(Expression maximum);
-
-  // AtMost()
-  //
-  // This range is at most `maximum`.
-  void AtMost(const Real& maximum);
-
-  // IsEmpty()
-  //
-  // Returns true if the range is empty.
-  [[nodiscard]] bool IsEmpty() const;
+  Range& AtMost(int64_t maximum);
+  Range& AtMost(Expression maximum);
+  Range& AtMost(const Real& maximum);
 
   struct ExtremeValues {
     int64_t min;
@@ -127,8 +99,10 @@ class Range {
   friend bool operator==(const Range& r1, const Range& r2);
 
  private:
-  int64_t min_ = std::numeric_limits<int64_t>::min();
-  int64_t max_ = std::numeric_limits<int64_t>::max();
+  int64_t min_int_ = std::numeric_limits<int64_t>::min();
+  int64_t max_int_ = std::numeric_limits<int64_t>::max();
+  std::optional<Real> min_real_;
+  std::optional<Real> max_real_;
 
   // `min_exprs_` and `max_exprs_` are lists of Expressions that represent the
   // lower/upper bounds. They must be evaluated when `Extremes()` is called in

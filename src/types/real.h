@@ -109,6 +109,7 @@ class Real {
   friend std::strong_ordering operator<=>(const Real& r,
                                           std::unsigned_integral auto d);
 
+  friend bool operator==(const Real& lhs, const Real& rhs) = default;
   friend bool operator==(const Real& r, std::floating_point auto d);
   friend bool operator==(const Real& r, std::signed_integral auto d);
   friend bool operator==(const Real& r, std::unsigned_integral auto d);
@@ -117,6 +118,8 @@ class Real {
   int64_t numerator_;
   int64_t denominator_ = 1;
 };
+
+std::strong_ordering operator<=>(const Real& lhs, const Real& rhs);
 
 // ----------------------------------------------------------------------------
 //  Template implementation below

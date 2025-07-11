@@ -29,28 +29,39 @@
 
 #include "absl/strings/str_join.h"
 #include "src/internal/expressions.h"
+#include "src/types/real.h"
 
 namespace moriarty {
 
-Range::Range(int64_t minimum, int64_t maximum) : min_(minimum), max_(maximum) {}
+Range& Range::AtLeast(int64_t minimum) {
+  min_int_ = std::max(min_int_, minimum);
+  return *this;
+}
 
-void Range::AtLeast(int64_t minimum) { min_ = std::max(min_, minimum); }
-
-void Range::AtLeast(Expression minimum) {
+Range& Range::AtLeast(Expression minimum) {
   min_exprs_.push_back(std::move(minimum));
+  return *this;
 }
 
-void Range::AtLeast(const Real& minimum) { AtLeast(minimum.Ceiling()); }
+Range& Range::AtLeast(const Real& minimum) {
+  min_real_ = min_real_ ? std::max(*min_real_, minimum) : minimum;
+  return *this;
+}
 
-void Range::AtMost(int64_t maximum) { max_ = std::min(max_, maximum); }
+Range& Range::AtMost(int64_t maximum) {
+  max_int_ = std::min(max_int_, maximum);
+  return *this;
+}
 
-void Range::AtMost(Expression maximum) {
+Range& Range::AtMost(Expression maximum) {
   max_exprs_.push_back(std::move(maximum));
+  return *this;
 }
 
-void Range::AtMost(const Real& maximum) { AtMost(maximum.Floor()); }
-
-bool Range::IsEmpty() const { return min_ > max_; }
+Range& Range::AtMost(const Real& maximum) {
+  max_real_ = max_real_ ? std::min(*max_real_, maximum) : maximum;
+  return *this;
+}
 
 namespace {
 
@@ -71,9 +82,11 @@ int64_t FindExtreme(int64_t initial_value, std::span<const Expression> exprs,
 
 std::optional<Range::ExtremeValues> Range::Extremes(
     std::function<int64_t(std::string_view)> get_value) const {
+  int64_t min = min_real_ ? std::max(min_int_, min_real_->Ceiling()) : min_int_;
+  int64_t max = max_real_ ? std::min(max_int_, max_real_->Floor()) : max_int_;
   ExtremeValues extremes = {
-      .min = FindExtreme(min_, min_exprs_, get_value, std::greater<int64_t>()),
-      .max = FindExtreme(max_, max_exprs_, get_value, std::less<int64_t>())};
+      .min = FindExtreme(min, min_exprs_, get_value, std::greater<int64_t>()),
+      .max = FindExtreme(max, max_exprs_, get_value, std::less<int64_t>())};
 
   if (extremes.min > extremes.max) return std::nullopt;
 
@@ -81,8 +94,10 @@ std::optional<Range::ExtremeValues> Range::Extremes(
 }
 
 void Range::Intersect(const Range& other) {
-  AtLeast(other.min_);
-  AtMost(other.max_);
+  AtLeast(other.min_int_);
+  AtMost(other.max_int_);
+  if (other.min_real_) AtLeast(*other.min_real_);
+  if (other.max_real_) AtMost(*other.max_real_);
 
   min_exprs_.insert(min_exprs_.end(), other.min_exprs_.begin(),
                     other.min_exprs_.end());
@@ -96,18 +111,21 @@ namespace {
 // restriction, then nullopt is returned. If there is one restriction, it will
 // just return that. Otherwise, will return a comma separated list of bounds.
 std::optional<std::string> BoundsToString(
-    bool is_minimum, int64_t numeric_limit,
+    bool is_minimum, int64_t int_limit, const std::optional<Real>& real_limit,
     std::span<const Expression> expression_limits) {
-  bool unchanged_numeric_limit =
-      (is_minimum && numeric_limit == std::numeric_limits<int64_t>::min()) ||
-      (!is_minimum && numeric_limit == std::numeric_limits<int64_t>::max());
+  bool has_int_limit =
+      int_limit != (is_minimum ? std::numeric_limits<int64_t>::min()
+                               : std::numeric_limits<int64_t>::max());
+  bool has_real_limit = real_limit.has_value();
 
   // No restrictions.
-  if (expression_limits.empty() && unchanged_numeric_limit) return std::nullopt;
+  if (expression_limits.empty() && !has_int_limit && !has_real_limit)
+    return std::nullopt;
 
   std::vector<std::string> bounds;
   bounds.reserve(expression_limits.size() + 1);
-  if (!unchanged_numeric_limit) bounds.push_back(std::to_string(numeric_limit));
+  if (has_int_limit) bounds.push_back(std::to_string(int_limit));
+  if (has_real_limit) bounds.push_back(real_limit->ToString());
   for (const Expression& expr : expression_limits)
     bounds.push_back(expr.ToString());
 
@@ -121,12 +139,10 @@ std::optional<std::string> BoundsToString(
 }  // namespace
 
 std::string Range::ToString() const {
-  if (min_ > max_) return "(Empty Range)";
-
   std::optional<std::string> min_bounds =
-      BoundsToString(/* is_minimum = */ true, min_, min_exprs_);
+      BoundsToString(/* is_minimum = */ true, min_int_, min_real_, min_exprs_);
   std::optional<std::string> max_bounds =
-      BoundsToString(/* is_minimum = */ false, max_, max_exprs_);
+      BoundsToString(/* is_minimum = */ false, max_int_, max_real_, max_exprs_);
 
   if (!min_bounds.has_value() && !max_bounds.has_value()) return "(-inf, inf)";
   if (!min_bounds.has_value()) return std::format("(-inf, {}]", *max_bounds);
@@ -136,9 +152,9 @@ std::string Range::ToString() const {
 }
 
 bool operator==(const Range& r1, const Range& r2) {
-  if (r1.IsEmpty() || r2.IsEmpty()) return r1.IsEmpty() == r2.IsEmpty();
-
-  if (std::tie(r1.min_, r1.max_) != std::tie(r2.min_, r2.max_)) return false;
+  if (std::tie(r1.min_int_, r1.max_int_, r1.min_real_, r1.max_real_) !=
+      std::tie(r2.min_int_, r2.max_int_, r2.min_real_, r2.max_real_))
+    return false;
   if (r1.min_exprs_.size() != r2.min_exprs_.size() ||
       r1.max_exprs_.size() != r2.max_exprs_.size())
     return false;
@@ -153,6 +169,6 @@ bool operator==(const Range& r1, const Range& r2) {
   return true;
 }
 
-Range EmptyRange() { return Range(0, -1); }
+Range EmptyRange() { return Range().AtLeast(1).AtMost(0); }
 
 }  // namespace moriarty

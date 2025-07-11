@@ -43,8 +43,9 @@
 namespace moriarty {
 
 MInteger& MInteger::AddConstraint(Exactly<int64_t> constraint) {
-  bounds_.Mutable().Intersect(
-      Range(constraint.GetValue(), constraint.GetValue()));
+  bounds_.Mutable()
+      .AtLeast(constraint.GetValue())
+      .AtMost(constraint.GetValue());
   return InternalAddExactlyConstraint(std::move(constraint));
 }
 

@@ -55,7 +55,7 @@ std::optional<CommonSize> MergeSizes(CommonSize size1, CommonSize size2) {
 moriarty::Range GetRange(CommonSize size, int64_t N) {
   switch (size) {
     case CommonSize::kAny:
-      return moriarty::Range(1, N);
+      return moriarty::Range().AtLeast(1).AtMost(N);
     case CommonSize::kMin:
       return GetMinRange(N);
     case CommonSize::kMax:
@@ -121,37 +121,39 @@ int64_t GetHugeMinimumThreshold(int64_t N) {
 
 moriarty::Range GetMinRange(int64_t N) {
   if (N <= 0) return moriarty::EmptyRange();
-  return Range(1, 1);
+  return Range().AtLeast(1).AtMost(1);
 }
 
 moriarty::Range GetTinyRange(int64_t N) {
   if (N <= 0) return moriarty::EmptyRange();
-  return Range(1, GetTinyMaximumThreshold(N));
+  return Range().AtLeast(1).AtMost(GetTinyMaximumThreshold(N));
 }
 
 moriarty::Range GetSmallRange(int64_t N) {
   if (N <= 0) return moriarty::EmptyRange();
-  return Range(1, GetSmallMaximumThreshold(N));
+  return Range().AtLeast(1).AtMost(GetSmallMaximumThreshold(N));
 }
 
 moriarty::Range GetMediumRange(int64_t N) {
   if (N <= 0) return moriarty::EmptyRange();
-  return Range(GetSmallMaximumThreshold(N), GetMediumMaximumThreshold(N));
+  return Range()
+      .AtLeast(GetSmallMaximumThreshold(N))
+      .AtMost(GetMediumMaximumThreshold(N));
 }
 
 moriarty::Range GetLargeRange(int64_t N) {
   if (N <= 0) return moriarty::EmptyRange();
-  return Range(GetMediumMaximumThreshold(N), N);
+  return Range().AtLeast(GetMediumMaximumThreshold(N)).AtMost(N);
 }
 
 moriarty::Range GetHugeRange(int64_t N) {
   if (N <= 0) return moriarty::EmptyRange();
-  return Range(GetHugeMinimumThreshold(N), N);
+  return Range().AtLeast(GetHugeMinimumThreshold(N)).AtMost(N);
 }
 
 moriarty::Range GetMaxRange(int64_t N) {
   if (N <= 0) return moriarty::EmptyRange();
-  return Range(N, N);
+  return Range().AtLeast(N).AtMost(N);
 }
 
 std::string ToString(CommonSize size) {

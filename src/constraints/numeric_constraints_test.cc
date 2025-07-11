@@ -42,6 +42,10 @@ int64_t NoVariablesKnown(std::string_view var) {
   throw std::invalid_argument("No variables known");
 }
 
+Range NewRange(int64_t min, int64_t max) {
+  return Range().AtLeast(min).AtMost(max);
+}
+
 testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
   auto extremes1 = r1.Extremes(NoVariablesKnown);
   auto extremes2 = r2.Extremes(NoVariablesKnown);
@@ -99,13 +103,13 @@ TEST(NumericConstraintsTest, InvalidExpressionsShouldThrow) {
 TEST(NumericConstraintsTest, GetRangeShouldGiveCorrectValues) {
   {
     EXPECT_TRUE(EqualRanges(ExactlyIntegerExpression("3 * 10 + 1").GetRange(),
-                            Range(31, 31)));
+                            NewRange(31, 31)));
   }
   {
-    EXPECT_TRUE(EqualRanges(Between(10, 20).GetRange(), Range(10, 20)));
-    EXPECT_TRUE(EqualRanges(Between("10", 20).GetRange(), Range(10, 20)));
-    EXPECT_TRUE(EqualRanges(Between(10, "20").GetRange(), Range(10, 20)));
-    EXPECT_TRUE(EqualRanges(Between("10", "20").GetRange(), Range(10, 20)));
+    EXPECT_TRUE(EqualRanges(Between(10, 20).GetRange(), NewRange(10, 20)));
+    EXPECT_TRUE(EqualRanges(Between("10", 20).GetRange(), NewRange(10, 20)));
+    EXPECT_TRUE(EqualRanges(Between(10, "20").GetRange(), NewRange(10, 20)));
+    EXPECT_TRUE(EqualRanges(Between("10", "20").GetRange(), NewRange(10, 20)));
   }
   {
     Range expected;
