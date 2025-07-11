@@ -34,9 +34,9 @@ using ::testing::Values;
 
 class SizePropertyTest : public testing::TestWithParam<int64_t> {};
 
-moriarty::Range::ExtremeValues ExtractExtremes(moriarty::Range r) {
-  std::optional<moriarty::Range::ExtremeValues> extremes =
-      r.Extremes([](std::string_view) -> int64_t {
+moriarty::Range::ExtremeValues<int64_t> ExtractExtremes(moriarty::Range r) {
+  std::optional<moriarty::Range::ExtremeValues<int64_t>> extremes =
+      r.IntegerExtremes([](std::string_view) -> int64_t {
         throw std::invalid_argument("No variables known");
       });
   if (!extremes.has_value()) {
@@ -45,9 +45,9 @@ moriarty::Range::ExtremeValues ExtractExtremes(moriarty::Range r) {
   return *extremes;
 }
 
-MATCHER(EmptyRange, "should have an empty extreme range") {
-  std::optional<moriarty::Range::ExtremeValues> extremes =
-      arg.Extremes([](std::string_view) -> int64_t {
+MATCHER(HasEmptyIntRange, "should have an empty extreme range") {
+  std::optional<moriarty::Range::ExtremeValues<int64_t>> extremes =
+      arg.IntegerExtremes([](std::string_view) -> int64_t {
         throw std::invalid_argument("No variables known");
       });
   if (!extremes.has_value()) return true;
@@ -58,7 +58,7 @@ MATCHER(EmptyRange, "should have an empty extreme range") {
 }
 
 TEST_P(SizePropertyTest, MinimumShouldBeExtremal) {
-  moriarty::Range::ExtremeValues extremes =
+  moriarty::Range::ExtremeValues<int64_t> extremes =
       ExtractExtremes(GetMinRange(GetParam()));
 
   EXPECT_EQ(extremes.min, 1);
@@ -66,7 +66,7 @@ TEST_P(SizePropertyTest, MinimumShouldBeExtremal) {
 }
 
 TEST_P(SizePropertyTest, MaximumShouldBeExtremal) {
-  moriarty::Range::ExtremeValues extremes =
+  moriarty::Range::ExtremeValues<int64_t> extremes =
       ExtractExtremes(GetMaxRange(GetParam()));
 
   EXPECT_EQ(extremes.min, GetParam());
@@ -74,18 +74,20 @@ TEST_P(SizePropertyTest, MaximumShouldBeExtremal) {
 }
 
 TEST_P(SizePropertyTest, AllSizesShouldBeOrdered) {
-  moriarty::Range::ExtremeValues min = ExtractExtremes(GetMinRange(GetParam()));
-  moriarty::Range::ExtremeValues tiny =
+  moriarty::Range::ExtremeValues<int64_t> min =
+      ExtractExtremes(GetMinRange(GetParam()));
+  moriarty::Range::ExtremeValues<int64_t> tiny =
       ExtractExtremes(GetTinyRange(GetParam()));
-  moriarty::Range::ExtremeValues small =
+  moriarty::Range::ExtremeValues<int64_t> small =
       ExtractExtremes(GetSmallRange(GetParam()));
-  moriarty::Range::ExtremeValues medium =
+  moriarty::Range::ExtremeValues<int64_t> medium =
       ExtractExtremes(GetMediumRange(GetParam()));
-  moriarty::Range::ExtremeValues large =
+  moriarty::Range::ExtremeValues<int64_t> large =
       ExtractExtremes(GetLargeRange(GetParam()));
-  moriarty::Range::ExtremeValues huge =
+  moriarty::Range::ExtremeValues<int64_t> huge =
       ExtractExtremes(GetHugeRange(GetParam()));
-  moriarty::Range::ExtremeValues max = ExtractExtremes(GetMaxRange(GetParam()));
+  moriarty::Range::ExtremeValues<int64_t> max =
+      ExtractExtremes(GetMaxRange(GetParam()));
 
   // Left endpoints are ordered.
   EXPECT_LE(min.min, tiny.min);
@@ -105,18 +107,20 @@ TEST_P(SizePropertyTest, AllSizesShouldBeOrdered) {
 }
 
 TEST_P(SizePropertyTest, AllSizesShouldBeBetweenOneAndN) {
-  moriarty::Range::ExtremeValues min = ExtractExtremes(GetMinRange(GetParam()));
-  moriarty::Range::ExtremeValues tiny =
+  moriarty::Range::ExtremeValues<int64_t> min =
+      ExtractExtremes(GetMinRange(GetParam()));
+  moriarty::Range::ExtremeValues<int64_t> tiny =
       ExtractExtremes(GetTinyRange(GetParam()));
-  moriarty::Range::ExtremeValues small =
+  moriarty::Range::ExtremeValues<int64_t> small =
       ExtractExtremes(GetSmallRange(GetParam()));
-  moriarty::Range::ExtremeValues medium =
+  moriarty::Range::ExtremeValues<int64_t> medium =
       ExtractExtremes(GetMediumRange(GetParam()));
-  moriarty::Range::ExtremeValues large =
+  moriarty::Range::ExtremeValues<int64_t> large =
       ExtractExtremes(GetLargeRange(GetParam()));
-  moriarty::Range::ExtremeValues huge =
+  moriarty::Range::ExtremeValues<int64_t> huge =
       ExtractExtremes(GetHugeRange(GetParam()));
-  moriarty::Range::ExtremeValues max = ExtractExtremes(GetMaxRange(GetParam()));
+  moriarty::Range::ExtremeValues<int64_t> max =
+      ExtractExtremes(GetMaxRange(GetParam()));
 
   // Left endpoints are >= 1.
   EXPECT_GE(min.min, 1);
@@ -158,23 +162,23 @@ INSTANTIATE_TEST_SUITE_P(LargerValues, SizePropertyTest,
                                 std::numeric_limits<int64_t>::max()));
 
 TEST(SizePropertyTest, ZeroNShouldGiveEmptyRange) {
-  EXPECT_THAT(GetMinRange(0), EmptyRange());
-  EXPECT_THAT(GetTinyRange(0), EmptyRange());
-  EXPECT_THAT(GetSmallRange(0), EmptyRange());
-  EXPECT_THAT(GetMediumRange(0), EmptyRange());
-  EXPECT_THAT(GetLargeRange(0), EmptyRange());
-  EXPECT_THAT(GetHugeRange(0), EmptyRange());
-  EXPECT_THAT(GetMaxRange(0), EmptyRange());
+  EXPECT_THAT(GetMinRange(0), HasEmptyIntRange());
+  EXPECT_THAT(GetTinyRange(0), HasEmptyIntRange());
+  EXPECT_THAT(GetSmallRange(0), HasEmptyIntRange());
+  EXPECT_THAT(GetMediumRange(0), HasEmptyIntRange());
+  EXPECT_THAT(GetLargeRange(0), HasEmptyIntRange());
+  EXPECT_THAT(GetHugeRange(0), HasEmptyIntRange());
+  EXPECT_THAT(GetMaxRange(0), HasEmptyIntRange());
 }
 
 TEST(SizePropertyTest, NegativeNShouldGiveEmptyRange) {
-  EXPECT_THAT(GetMinRange(-5), EmptyRange());
-  EXPECT_THAT(GetTinyRange(-5), EmptyRange());
-  EXPECT_THAT(GetSmallRange(-5), EmptyRange());
-  EXPECT_THAT(GetMediumRange(-5), EmptyRange());
-  EXPECT_THAT(GetLargeRange(-5), EmptyRange());
-  EXPECT_THAT(GetHugeRange(-5), EmptyRange());
-  EXPECT_THAT(GetMaxRange(-5), EmptyRange());
+  EXPECT_THAT(GetMinRange(-5), HasEmptyIntRange());
+  EXPECT_THAT(GetTinyRange(-5), HasEmptyIntRange());
+  EXPECT_THAT(GetSmallRange(-5), HasEmptyIntRange());
+  EXPECT_THAT(GetMediumRange(-5), HasEmptyIntRange());
+  EXPECT_THAT(GetLargeRange(-5), HasEmptyIntRange());
+  EXPECT_THAT(GetHugeRange(-5), HasEmptyIntRange());
+  EXPECT_THAT(GetMaxRange(-5), HasEmptyIntRange());
 }
 
 TEST(SizePropertyTest, MergeSizesWithAnyShouldTakeOtherOption) {

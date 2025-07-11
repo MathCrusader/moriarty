@@ -23,6 +23,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/types/real.h"
 
 namespace moriarty {
 namespace {
@@ -52,8 +53,8 @@ Range Intersect(Range r1, const Range& r2) {
 
 // Checks if two ranges are equal, taking into account any expressions.
 testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
-  auto extremes1 = r1.Extremes(NoVariablesKnown);
-  auto extremes2 = r2.Extremes(NoVariablesKnown);
+  auto extremes1 = r1.IntegerExtremes(NoVariablesKnown);
+  auto extremes2 = r2.IntegerExtremes(NoVariablesKnown);
 
   if (!extremes1.has_value() && !extremes2.has_value())
     return testing::AssertionSuccess() << "both ranges are empty";
@@ -82,7 +83,7 @@ testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
 
 // Checks if a range is empty, taking into account any expressions.
 testing::AssertionResult IsEmptyRange(const Range& r) {
-  auto extremes = r.Extremes(NoVariablesKnown);
+  auto extremes = r.IntegerExtremes(NoVariablesKnown);
 
   if (!extremes)
     return testing::AssertionSuccess() << "is an empty range";
@@ -164,20 +165,21 @@ TEST(RangeTest, EmptyIntersectionsWork) {
 }
 
 TEST(RangeTest, ExtremesWork) {
-  EXPECT_EQ(Range::ExtremeValues({1, 2}), Range::ExtremeValues({1, 2}));
+  EXPECT_EQ(Range::ExtremeValues<int64_t>({1, 2}),
+            Range::ExtremeValues<int64_t>({1, 2}));
 
   // Normal case
-  EXPECT_THAT(NewRange(1, 2).Extremes(NoVariablesKnown),
-              Optional(Range::ExtremeValues({1, 2})));
+  EXPECT_THAT(NewRange(1, 2).IntegerExtremes(NoVariablesKnown),
+              Optional(Range::ExtremeValues<int64_t>({1, 2})));
 
   // Default constructor gives full 64-bit range
-  EXPECT_THAT(
-      Range().Extremes(NoVariablesKnown),
-      Optional(Range::ExtremeValues({std::numeric_limits<int64_t>::min(),
-                                     std::numeric_limits<int64_t>::max()})));
+  EXPECT_THAT(Range().IntegerExtremes(NoVariablesKnown),
+              Optional(Range::ExtremeValues<int64_t>(
+                  {std::numeric_limits<int64_t>::min(),
+                   std::numeric_limits<int64_t>::max()})));
 
   // Empty range returns nullopt
-  EXPECT_THAT(EmptyRange().Extremes(NoVariablesKnown), std::nullopt);
+  EXPECT_THAT(EmptyRange().IntegerExtremes(NoVariablesKnown), std::nullopt);
 }
 
 TEST(RangeTest, ExtremesWithFnShouldWork) {
@@ -190,8 +192,8 @@ TEST(RangeTest, ExtremesWithFnShouldWork) {
   EXPECT_THAT(Range()
                   .AtLeast(Expression("x"))
                   .AtMost(Expression("y + 1"))
-                  .Extremes(get_value),
-              Optional(Range::ExtremeValues({1, 21})));
+                  .IntegerExtremes(get_value),
+              Optional(Range::ExtremeValues<int64_t>({1, 21})));
 }
 
 TEST(RangeTest,
@@ -201,16 +203,16 @@ TEST(RangeTest,
   R.AtLeast(6);
   R.AtLeast(4);
 
-  EXPECT_THAT(
-      R.Extremes(NoVariablesKnown),
-      Optional(Range::ExtremeValues({6, std::numeric_limits<int64_t>::max()})));
+  EXPECT_THAT(R.IntegerExtremes(NoVariablesKnown),
+              Optional(Range::ExtremeValues<int64_t>(
+                  {6, std::numeric_limits<int64_t>::max()})));
 
   R.AtMost(30);
   R.AtMost(20);
   R.AtMost(10);
   R.AtMost(15);
-  EXPECT_THAT(R.Extremes(NoVariablesKnown),
-              Optional(Range::ExtremeValues({6, 10})));
+  EXPECT_THAT(R.IntegerExtremes(NoVariablesKnown),
+              Optional(Range::ExtremeValues<int64_t>({6, 10})));
 
   R.AtMost(5);
   EXPECT_TRUE(IsEmptyRange(R));
@@ -221,12 +223,28 @@ TEST(RangeTest, ExpressionsWorkInAtLeastAndAtMost) {
   R.AtLeast(Expression("N + 5"));
   R.AtMost(Expression("3 * N + 1"));
 
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 4}})),
-              Optional(Range::ExtremeValues({9, 13})));
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 2}})),
-              Optional(Range::ExtremeValues({7, 7})));
-  EXPECT_EQ(R.Extremes(FromMap({{"N", 0}})),
-            std::nullopt);  // Empy
+  EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 4}})),
+              Optional(Range::ExtremeValues<int64_t>({9, 13})));
+  EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 2}})),
+              Optional(Range::ExtremeValues<int64_t>({7, 7})));
+  EXPECT_EQ(R.IntegerExtremes(FromMap({{"N", 0}})), std::nullopt);
+}
+
+TEST(RangeTest, RealsWorkInAtLeastAndAtMost) {
+  EXPECT_EQ(
+      Range().AtLeast(Real(5, 2)).AtMost(Real(0)).RealExtremes(FromMap({})),
+      std::nullopt);
+  EXPECT_THAT(
+      Range().AtLeast(Real(5, 2)).AtMost(Real("1e6")).RealExtremes(FromMap({})),
+      Optional(Range::ExtremeValues<Real>({Real(5, 2), Real(1000000)})));
+  EXPECT_THAT(Range().AtLeast(Real(5, 2)).AtMost(100).RealExtremes(FromMap({})),
+              Optional(Range::ExtremeValues<Real>({Real(5, 2), Real(100)})));
+  EXPECT_THAT(Range()
+                  .AtLeast(Real("2.4"))
+                  .AtLeast(Real(5, 2))
+                  .AtMost(100)
+                  .RealExtremes(FromMap({})),
+              Optional(Range::ExtremeValues<Real>({Real(5, 2), Real(100)})));
 }
 
 TEST(RangeTest,
@@ -241,52 +259,93 @@ TEST(RangeTest,
   R.AtMost(Expression("N + 15"));   // Valid: (-infinity, 0]
 
   // Left of valid range (-infinity, -6)
-  EXPECT_THAT(R.Extremes(FromMap({{"N", -10}})), std::nullopt);
+  EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", -10}})), std::nullopt);
   // Between -N + 3 and N + 15 [-6, -1]
-  EXPECT_THAT(R.Extremes(FromMap({{"N", -6}})),
-              Optional(Range::ExtremeValues({9, 9})));
+  EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", -6}})),
+              Optional(Range::ExtremeValues<int64_t>({9, 9})));
   // Between N + 5 and N + 15 [-1, 0]
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 0}})),
-              Optional(Range::ExtremeValues({5, 15})));
+  EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 0}})),
+              Optional(Range::ExtremeValues<int64_t>({5, 15})));
   // Between N + 5 and -N + 15 [0, 2]
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 1}})),
-              Optional(Range::ExtremeValues({6, 14})));
+  EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 1}})),
+              Optional(Range::ExtremeValues<int64_t>({6, 14})));
   // Between 3 * N + 1 and -N + 15 [2, 3.5]
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 3}})),
-              Optional(Range::ExtremeValues({10, 12})));
+  EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 3}})),
+              Optional(Range::ExtremeValues<int64_t>({10, 12})));
   // Right of valid range (3.5, infinity)
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 4}})), std::nullopt);
+  EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 4}})), std::nullopt);
 }
 
-TEST(RangeTest, AtMostShouldConsiderBothIntegerAndExpression) {
-  Range R;
+TEST(RangeTest, IntegersShouldConsiderAllTypes) {
+  {  // At most with expression and integer
+    Range R = Range().AtLeast(-100).AtMost(3).AtMost(Expression("N"));
 
-  R.AtLeast(-100);
+    // "N" smaller
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 1}})),
+                Optional(Range::ExtremeValues<int64_t>({-100, 1})));
+    // "N" and 3 the same
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 3}})),
+                Optional(Range::ExtremeValues<int64_t>({-100, 3})));
+    // "N" larger
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 5}})),
+                Optional(Range::ExtremeValues<int64_t>({-100, 3})));
+  }
+  {  // At most with expression and Real
+    Range R = Range().AtLeast(-100).AtMost(Real(3, 2)).AtMost(Expression("N"));
 
-  R.AtMost(10);                       // Upper bound for [3, infinity)
-  R.AtMost(Expression("3 * N + 1"));  // Upper bound for (-infinity, 3]
+    // "N" smaller
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 0}})),
+                Optional(Range::ExtremeValues<int64_t>({-100, 0})));
+    // "N" and floor(3/2) the same
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 1}})),
+                Optional(Range::ExtremeValues<int64_t>({-100, 1})));
+    // "N" larger
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 5}})),
+                Optional(Range::ExtremeValues<int64_t>({-100, 1})));
+  }
+  {  // At least with expression and integer
+    Range R = Range().AtMost(100).AtLeast(2).AtLeast(Expression("N"));
 
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 0}})),
-              Optional(Range::ExtremeValues({-100, 1})));
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 3}})),
-              Optional(Range::ExtremeValues({-100, 10})));
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 5}})),
-              Optional(Range::ExtremeValues({-100, 10})));
-}
+    // "N" smaller
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 0}})),
+                Optional(Range::ExtremeValues<int64_t>({2, 100})));
+    // "N" and 2 the same
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 1}})),
+                Optional(Range::ExtremeValues<int64_t>({2, 100})));
+    // "N" larger
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 5}})),
+                Optional(Range::ExtremeValues<int64_t>({5, 100})));
+  }
+  {  // At least with expression and Real
+    Range R = Range().AtMost(100).AtLeast(Real(3, 2)).AtLeast(Expression("N"));
 
-TEST(RangeTest, AtLeastShouldConsiderBothIntegerAndExpression) {
-  Range R;
-  R.AtMost(100);
-
-  R.AtLeast(10);                       // Lower bound for [3, infinity)
-  R.AtLeast(Expression("3 * N + 1"));  // Lower bound for (-infinity, 3]
-
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 0}})),
-              Optional(Range::ExtremeValues({10, 100})));
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 3}})),
-              Optional(Range::ExtremeValues({10, 100})));
-  EXPECT_THAT(R.Extremes(FromMap({{"N", 5}})),
-              Optional(Range::ExtremeValues({16, 100})));
+    // "N" smaller
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 0}})),
+                Optional(Range::ExtremeValues<int64_t>({2, 100})));
+    // "N" and ceil(3/2) the same
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 1}})),
+                Optional(Range::ExtremeValues<int64_t>({2, 100})));
+    // "N" larger
+    EXPECT_THAT(R.IntegerExtremes(FromMap({{"N", 5}})),
+                Optional(Range::ExtremeValues<int64_t>({5, 100})));
+  }
+  {  // At least / at most with real and integer
+    auto get = [](std::string_view var) -> int64_t {
+      throw std::runtime_error("Unexpected variable: " + std::string(var));
+    };
+    EXPECT_THAT(
+        Range().AtMost(100).AtLeast(Real(3, 2)).AtLeast(1).IntegerExtremes(get),
+        Optional(Range::ExtremeValues<int64_t>({2, 100})));
+    EXPECT_THAT(
+        Range().AtMost(100).AtLeast(Real(3, 2)).AtLeast(3).IntegerExtremes(get),
+        Optional(Range::ExtremeValues<int64_t>({3, 100})));
+    EXPECT_THAT(
+        Range().AtLeast(-100).AtMost(Real(3, 2)).AtMost(0).IntegerExtremes(get),
+        Optional(Range::ExtremeValues<int64_t>({-100, 0})));
+    EXPECT_THAT(
+        Range().AtLeast(-100).AtMost(Real(3, 2)).AtMost(3).IntegerExtremes(get),
+        Optional(Range::ExtremeValues<int64_t>({-100, 1})));
+  }
 }
 
 TEST(RangeTest, ToStringWithEmptyOrDefaultRangeShouldWork) {
@@ -333,12 +392,14 @@ TEST(RangeTest, InequalitiesWithMultipleItemsShouldWork) {
   Range r1;
   r1.AtLeast(1);
   r1.AtLeast(Expression("3 * N"));
-  EXPECT_EQ(r1.ToString(), "[max(1, 3 * N), inf)");
+  r1.AtLeast(Real(5, 2));
+  EXPECT_EQ(r1.ToString(), "[max(1, 5/2, 3 * N), inf)");
 
   Range r2;
   r2.AtMost(5);
   r2.AtMost(Expression("3 * N"));
-  EXPECT_EQ(r2.ToString(), "(-inf, min(5, 3 * N)]");
+  r2.AtMost(Real(-5, 2));
+  EXPECT_EQ(r2.ToString(), "(-inf, min(5, -5/2, 3 * N)]");
 
   Range r3;
   r3.AtLeast(Expression("a"));

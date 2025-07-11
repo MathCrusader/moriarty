@@ -115,16 +115,16 @@ std::optional<int64_t> MInteger::GetUniqueValueImpl(
     }
   }
 
-  std::optional<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
+  std::optional<Range::ExtremeValues<int64_t>> extremes = GetExtremeValues(ctx);
   if (!extremes || extremes->min != extremes->max) return std::nullopt;
 
   return extremes->min;
 }
 
-Range::ExtremeValues MInteger::GetExtremeValues(
+Range::ExtremeValues<int64_t> MInteger::GetExtremeValues(
     librarian::ResolverContext ctx) const {
-  std::optional<Range::ExtremeValues> extremes =
-      bounds_->Extremes([&](std::string_view var) {
+  std::optional<Range::ExtremeValues<int64_t>> extremes =
+      bounds_->IntegerExtremes([&](std::string_view var) {
         return ctx.GenerateVariable<MInteger>(var);
       });
   if (!extremes) {
@@ -135,11 +135,11 @@ Range::ExtremeValues MInteger::GetExtremeValues(
   return *extremes;
 }
 
-std::optional<Range::ExtremeValues> MInteger::GetExtremeValues(
+std::optional<Range::ExtremeValues<int64_t>> MInteger::GetExtremeValues(
     librarian::AnalysisContext ctx) const {
   try {
-    std::optional<Range::ExtremeValues> extremes =
-        bounds_->Extremes([&](std::string_view var) {
+    std::optional<Range::ExtremeValues<int64_t>> extremes =
+        bounds_->IntegerExtremes([&](std::string_view var) {
           auto value = ctx.GetUniqueValue<MInteger>(var);
           if (!value) throw ValueNotFound(var);
           return *value;
@@ -179,7 +179,7 @@ namespace {
 }  // namespace
 
 int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
-  Range::ExtremeValues extremes = GetExtremeValues(ctx);
+  Range::ExtremeValues<int64_t> extremes = GetExtremeValues(ctx);
 
   if (GetOneOf().HasBeenConstrained() || one_of_expr_->HasBeenConstrained()) {
     std::vector<int64_t> options =
@@ -207,8 +207,8 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
   Range range = librarian::GetRange(size_handler_->GetConstrainedSize(),
                                     extremes.max - extremes.min + 1);
 
-  std::optional<Range::ExtremeValues> rng_extremes =
-      range.Extremes([&](std::string_view var) -> int64_t {
+  std::optional<Range::ExtremeValues<int64_t>> rng_extremes =
+      range.IntegerExtremes([&](std::string_view var) -> int64_t {
         return ctx.GenerateVariable<MInteger>(var);
       });
 
@@ -236,7 +236,7 @@ void MInteger::PrintImpl(librarian::PrinterContext ctx,
 
 std::vector<MInteger> MInteger::ListEdgeCasesImpl(
     librarian::AnalysisContext ctx) const {
-  std::optional<Range::ExtremeValues> extremes = GetExtremeValues(ctx);
+  std::optional<Range::ExtremeValues<int64_t>> extremes = GetExtremeValues(ctx);
 
   int64_t min = extremes ? extremes->min : std::numeric_limits<int64_t>::min();
   int64_t max = extremes ? extremes->max : std::numeric_limits<int64_t>::max();

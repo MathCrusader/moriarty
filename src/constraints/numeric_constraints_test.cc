@@ -47,8 +47,8 @@ Range NewRange(int64_t min, int64_t max) {
 }
 
 testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
-  auto extremes1 = r1.Extremes(NoVariablesKnown);
-  auto extremes2 = r2.Extremes(NoVariablesKnown);
+  auto extremes1 = r1.IntegerExtremes(NoVariablesKnown);
+  auto extremes2 = r2.IntegerExtremes(NoVariablesKnown);
 
   if (!extremes1.has_value() && !extremes2.has_value())
     return testing::AssertionSuccess() << "both ranges are empty";

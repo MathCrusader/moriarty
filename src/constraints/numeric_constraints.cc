@@ -199,8 +199,8 @@ std::string Between::ToString() const {
 
 ConstraintViolation Between::CheckIntegerValue(LookupVariableFn lookup_variable,
                                                int64_t value) const {
-  std::optional<Range::ExtremeValues> extremes =
-      GetRange().Extremes(lookup_variable);
+  std::optional<Range::ExtremeValues<int64_t>> extremes =
+      GetRange().IntegerExtremes(lookup_variable);
   if (!extremes)
     return ConstraintViolation(std::format(
         "is not between {} and {} (impossible)", ::moriarty::ToString(minimum_),
@@ -263,8 +263,8 @@ std::string AtMost::ToString() const {
 
 ConstraintViolation AtMost::CheckIntegerValue(LookupVariableFn lookup_variable,
                                               int64_t value) const {
-  std::optional<Range::ExtremeValues> extremes =
-      GetRange().Extremes(lookup_variable);
+  std::optional<Range::ExtremeValues<int64_t>> extremes =
+      GetRange().IntegerExtremes(lookup_variable);
   if (!extremes)
     return ConstraintViolation(std::format("is not at most {} (impossible)",
                                            ::moriarty::ToString(maximum_)));
@@ -318,8 +318,8 @@ std::string AtLeast::ToString() const {
 
 ConstraintViolation AtLeast::CheckIntegerValue(LookupVariableFn lookup_variable,
                                                int64_t value) const {
-  std::optional<Range::ExtremeValues> extremes =
-      GetRange().Extremes(lookup_variable);
+  std::optional<Range::ExtremeValues<int64_t>> extremes =
+      GetRange().IntegerExtremes(lookup_variable);
   if (!extremes)
     return ConstraintViolation(std::format("is not at least {} (impossible)",
                                            ::moriarty::ToString(minimum_)));

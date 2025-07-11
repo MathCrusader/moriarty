@@ -63,21 +63,31 @@ class Range {
   Range& AtMost(Expression maximum);
   Range& AtMost(const Real& maximum);
 
+  template <typename T>
   struct ExtremeValues {
-    int64_t min;
-    int64_t max;
+    T min;
+    T max;
 
     friend bool operator==(const ExtremeValues& e1,
                            const ExtremeValues& e2) = default;
   };
 
-  // Extremes()
+  // IntegerExtremes()
   //
-  // Returns the two extremes of the range (min and max). Returns `std::nullopt`
-  // if the range is empty.
+  // Returns the two (integer-valued) extremes of the range (min and max).
+  // Returns `std::nullopt` if the range is empty.
   //
   // Uses get_value(var_name) to get the current value of any needed variables.
-  std::optional<ExtremeValues> Extremes(
+  std::optional<ExtremeValues<int64_t>> IntegerExtremes(
+      std::function<int64_t(std::string_view)> get_value) const;
+
+  // RealExtremes()
+  //
+  // Returns the two (real-valued) extremes of the range (min and max). Returns
+  // `std::nullopt` if the range is empty.
+  //
+  // Uses get_value(var_name) to get the current value of any needed variables.
+  std::optional<ExtremeValues<Real>> RealExtremes(
       std::function<int64_t(std::string_view)> get_value) const;
 
   // Intersect()

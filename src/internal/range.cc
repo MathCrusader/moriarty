@@ -80,17 +80,34 @@ int64_t FindExtreme(int64_t initial_value, std::span<const Expression> exprs,
 
 }  // namespace
 
-std::optional<Range::ExtremeValues> Range::Extremes(
+std::optional<Range::ExtremeValues<int64_t>> Range::IntegerExtremes(
     std::function<int64_t(std::string_view)> get_value) const {
   int64_t min = min_real_ ? std::max(min_int_, min_real_->Ceiling()) : min_int_;
   int64_t max = max_real_ ? std::min(max_int_, max_real_->Floor()) : max_int_;
-  ExtremeValues extremes = {
+  ExtremeValues<int64_t> extremes = {
       .min = FindExtreme(min, min_exprs_, get_value, std::greater<int64_t>()),
       .max = FindExtreme(max, max_exprs_, get_value, std::less<int64_t>())};
 
   if (extremes.min > extremes.max) return std::nullopt;
 
   return extremes;
+}
+
+std::optional<Range::ExtremeValues<Real>> Range::RealExtremes(
+    std::function<int64_t(std::string_view)> get_value) const {
+  ExtremeValues<int64_t> int_extremes = {
+      .min =
+          FindExtreme(min_int_, min_exprs_, get_value, std::greater<int64_t>()),
+      .max =
+          FindExtreme(max_int_, max_exprs_, get_value, std::less<int64_t>())};
+
+  ExtremeValues<Real> real_extremes = {
+      .min = min_real_ ? std::max(*min_real_, Real(int_extremes.min))
+                       : Real(int_extremes.min),
+      .max = max_real_ ? std::min(*max_real_, Real(int_extremes.max))
+                       : Real(int_extremes.max)};
+  if (real_extremes.min > real_extremes.max) return std::nullopt;
+  return real_extremes;
 }
 
 void Range::Intersect(const Range& other) {

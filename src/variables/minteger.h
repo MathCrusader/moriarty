@@ -99,9 +99,10 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // variables if needed along the way, but the `AnalysisContext` version won't.
   // std::nullopt means that the bounds cannot be determined without generating
   // some values.
-  std::optional<Range::ExtremeValues> GetExtremeValues(
+  std::optional<Range::ExtremeValues<int64_t>> GetExtremeValues(
       librarian::AnalysisContext ctx) const;
-  Range::ExtremeValues GetExtremeValues(librarian::ResolverContext ctx) const;
+  Range::ExtremeValues<int64_t> GetExtremeValues(
+      librarian::ResolverContext ctx) const;
 
   class RangeConstraint {
    public:
