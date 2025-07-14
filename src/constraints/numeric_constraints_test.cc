@@ -16,11 +16,12 @@
 
 #include "src/constraints/numeric_constraints.h"
 
+#include <cstdint>
+#include <optional>
 #include <string_view>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/internal/expressions.h"
 #include "src/internal/range.h"
 #include "src/librarian/testing/gtest_helpers.h"
 
@@ -30,13 +31,14 @@ namespace {
 using ::moriarty::AtLeast;
 using ::moriarty::AtMost;
 using ::moriarty::Between;
-using ::moriarty::librarian::ExactlyIntegerExpression;
-using ::moriarty::librarian::OneOfIntegerExpression;
+using ::moriarty::librarian::ExactlyNumeric;
+using ::moriarty::librarian::OneOfNumeric;
 using ::moriarty_testing::HasConstraintViolation;
 using ::moriarty_testing::HasNoConstraintViolation;
-using ::testing::ElementsAre;
 using ::testing::HasSubstr;
+using ::testing::Optional;
 using ::testing::Throws;
+using ::testing::UnorderedElementsAre;
 
 int64_t NoVariablesKnown(std::string_view var) {
   throw std::invalid_argument("No variables known");
@@ -79,9 +81,8 @@ TEST(NumericConstraintsTest, InvalidBetweenShouldThrow) {
 
 TEST(NumericConstraintsTest, InvalidExpressionsShouldThrow) {
   {
-    EXPECT_THAT([] { ExactlyIntegerExpression("2 *"); },
-                Throws<std::invalid_argument>());
-    EXPECT_THAT([] { OneOfIntegerExpression({"3", "2 *"}); },
+    EXPECT_THAT([] { ExactlyNumeric("2 *"); }, Throws<std::invalid_argument>());
+    EXPECT_THAT([] { OneOfNumeric(std::vector<std::string_view>{"3", "2 *"}); },
                 Throws<std::invalid_argument>());
     EXPECT_THAT([] { Between("2 *", 5); }, Throws<std::invalid_argument>());
     EXPECT_THAT([] { Between(5, "2 *"); }, Throws<std::invalid_argument>());
@@ -89,9 +90,8 @@ TEST(NumericConstraintsTest, InvalidExpressionsShouldThrow) {
     EXPECT_THAT([] { AtLeast("2 *"); }, Throws<std::invalid_argument>());
   }
   {
-    EXPECT_THAT([] { ExactlyIntegerExpression(""); },
-                Throws<std::invalid_argument>());
-    EXPECT_THAT([] { OneOfIntegerExpression({""}); },
+    EXPECT_THAT([] { ExactlyNumeric(""); }, Throws<std::invalid_argument>());
+    EXPECT_THAT([] { OneOfNumeric(std::vector<std::string_view>{""}); },
                 Throws<std::invalid_argument>());
     EXPECT_THAT([] { Between("", 5); }, Throws<std::invalid_argument>());
     EXPECT_THAT([] { Between(5, ""); }, Throws<std::invalid_argument>());
@@ -102,8 +102,8 @@ TEST(NumericConstraintsTest, InvalidExpressionsShouldThrow) {
 
 TEST(NumericConstraintsTest, GetRangeShouldGiveCorrectValues) {
   {
-    EXPECT_TRUE(EqualRanges(ExactlyIntegerExpression("3 * 10 + 1").GetRange(),
-                            NewRange(31, 31)));
+    EXPECT_TRUE(
+        EqualRanges(ExactlyNumeric("3 * 10 + 1").GetRange(), NewRange(31, 31)));
   }
   {
     EXPECT_TRUE(EqualRanges(Between(10, 20).GetRange(), NewRange(10, 20)));
@@ -126,28 +126,93 @@ TEST(NumericConstraintsTest, GetRangeShouldGiveCorrectValues) {
 }
 
 TEST(NumericConstraintsTest, GetOptionsShouldGiveCorrectValues) {
+  auto fn = [](std::string_view var) -> int64_t {
+    if (var == "x") return 10;
+    if (var == "y") return 20;
+    if (var == "z") return 30;
+    throw std::runtime_error("Unknown variable");
+  };
+
+  EXPECT_THAT(
+      OneOfNumeric(std::vector<std::string_view>{"1", "2", "3"}).GetOptions(fn),
+      UnorderedElementsAre(1, 2, 3));
+  EXPECT_THAT(OneOfNumeric(std::vector<std::string_view>{"x + 5", "y", "z"})
+                  .GetOptions(fn),
+              UnorderedElementsAre(15, 20, 30));
+  EXPECT_THAT(
+      OneOfNumeric(std::vector<std::string_view>{"1", "3", "5"}).GetOptions(fn),
+      UnorderedElementsAre(1, 3, 5));
+  EXPECT_THAT(
+      OneOfNumeric(std::vector<Real>{Real(1, 2), Real(3, 2), Real(5, 1)})
+          .GetOptions(fn),
+      UnorderedElementsAre(Real(1, 2), Real(3, 2), 5));
+
   {
-    OneOfIntegerExpression one_of({"1", "2", "3"});
-    EXPECT_THAT(one_of.GetOptions(),
-                ElementsAre(Expression("1"), Expression("2"), Expression("3")));
+    OneOfNumeric o1(std::vector<int64_t>{15, 25, 30});
+    OneOfNumeric o2(std::vector<std::string_view>{"x + 5", "y", "z"});
+    EXPECT_TRUE(o1.ConstrainOptions(o2));
+    EXPECT_THAT(o1.GetOptions(fn), UnorderedElementsAre(15, 30));
   }
-  {
-    OneOfIntegerExpression one_of({"x + 5", "y", "z"});
+}
+
+TEST(NumericConstraintsTest, OneOfGetUniqueValueShouldWork) {
+  auto fn = [](std::string_view var) -> int64_t {
+    if (var == "x") return 10;
+    if (var == "y") return 20;
+    if (var == "z") return 30;
+    throw std::runtime_error("Unknown variable");
+  };
+
+  {  // No unique value
+    EXPECT_EQ(OneOfNumeric().GetUniqueValue(fn), std::nullopt);
+    EXPECT_EQ(OneOfNumeric(std::vector<std::string_view>{"1", "2", "3"})
+                  .GetUniqueValue(fn),
+              std::nullopt);
+    EXPECT_EQ(
+        OneOfNumeric(std::vector<Real>{Real(1, 2), Real(3, 2), Real(5, 1)})
+            .GetUniqueValue(fn),
+        std::nullopt);
+
+    OneOfNumeric o1(std::vector<int64_t>{15, 25, 30});
+    OneOfNumeric o2(std::vector<std::string_view>{"x + 5", "y", "z"});
+    EXPECT_TRUE(o1.ConstrainOptions(o2));
+    EXPECT_EQ(o1.GetUniqueValue(fn), std::nullopt);
+
+    EXPECT_FALSE(o1.ConstrainOptions(OneOfNumeric(std::vector<int64_t>{0})));
+    EXPECT_EQ(o1.GetUniqueValue(fn), std::nullopt);
+  }
+
+  {  // Has unique value
+    EXPECT_THAT(OneOfNumeric(std::vector<int64_t>{3}).GetUniqueValue(fn),
+                Optional(3));
     EXPECT_THAT(
-        one_of.GetOptions(),
-        ElementsAre(Expression("x + 5"), Expression("y"), Expression("z")));
+        OneOfNumeric(std::vector<std::string_view>{"x + 20", "y + 10", "z"})
+            .GetUniqueValue(fn),
+        Optional(30));
+
+    OneOfNumeric o1(std::vector<int64_t>{15, 25, 35});
+    OneOfNumeric o2(std::vector<std::string_view>{"x + 5", "y", "z"});
+    EXPECT_TRUE(o1.ConstrainOptions(o2));
+    EXPECT_THAT(o1.GetUniqueValue(fn), Optional(15));
   }
 }
 
 TEST(NumericConstraintsTest, ToStringShouldWork) {
   {
-    EXPECT_EQ(ExactlyIntegerExpression("3 * X + 1").ToString(),
-              "is exactly 3 * X + 1");
+    EXPECT_EQ(ExactlyNumeric("3 * X + 1").ToString(), "is exactly 3 * X + 1");
   }
   {
-    EXPECT_EQ(OneOfIntegerExpression({"1", "x+3"}).ToString(),
-              "is one of {1, x+3}");
-    EXPECT_EQ(OneOfIntegerExpression({"x+3"}).ToString(), "is one of {x+3}");
+    EXPECT_EQ(
+        OneOfNumeric(std::vector<std::string_view>{"1", "x+3"}).ToString(),
+        "is one of: [1, x+3]");
+    EXPECT_EQ(OneOfNumeric(std::vector<std::string_view>{"x+3"}).ToString(),
+              "is one of: [x+3]");
+    OneOfNumeric o1(std::vector<int64_t>{15, 25, 30});
+    OneOfNumeric o2(std::vector<std::string_view>{"x + 5", "y", "z"});
+    EXPECT_TRUE(o1.ConstrainOptions(o2));
+    EXPECT_EQ(
+        o1.ToString(),
+        "is one of the elements from each list: {[x + 5, y, z], [15, 25, 30]}");
   }
   {
     EXPECT_EQ(Between(10, 20).ToString(), "is between 10 and 20");
@@ -281,21 +346,25 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
   };
 
   {
-    EXPECT_THAT(ExactlyIntegerExpression("x").CheckIntegerValue(vars, 10),
+    EXPECT_THAT(ExactlyNumeric("x").CheckIntegerValue(vars, 10),
                 HasNoConstraintViolation());
-    EXPECT_THAT(ExactlyIntegerExpression("x").CheckIntegerValue(vars, 11),
+    EXPECT_THAT(ExactlyNumeric("x").CheckIntegerValue(vars, 11),
                 HasConstraintViolation(HasSubstr("exactly")));
-    EXPECT_THAT(ExactlyIntegerExpression("x").CheckIntegerValue(vars, 9),
+    EXPECT_THAT(ExactlyNumeric("x").CheckIntegerValue(vars, 9),
                 HasConstraintViolation(HasSubstr("exactly")));
   }
   {
-    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckIntegerValue(vars, 10),
+    EXPECT_THAT(OneOfNumeric(std::vector<std::string_view>{"x", "14"})
+                    .CheckIntegerValue(vars, 10),
                 HasNoConstraintViolation());
-    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckIntegerValue(vars, 14),
+    EXPECT_THAT(OneOfNumeric(std::vector<std::string_view>{"x", "14"})
+                    .CheckIntegerValue(vars, 14),
                 HasNoConstraintViolation());
-    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckIntegerValue(vars, 9),
+    EXPECT_THAT(OneOfNumeric(std::vector<std::string_view>{"x", "14"})
+                    .CheckIntegerValue(vars, 9),
                 HasConstraintViolation(HasSubstr("one of")));
-    EXPECT_THAT(OneOfIntegerExpression({"x", "14"}).CheckIntegerValue(vars, 15),
+    EXPECT_THAT(OneOfNumeric(std::vector<std::string_view>{"x", "14"})
+                    .CheckIntegerValue(vars, 15),
                 HasConstraintViolation(HasSubstr("one of")));
   }
   {
@@ -326,6 +395,68 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
     EXPECT_THAT(AtMost("x + 1").CheckIntegerValue(vars, 12),
                 HasConstraintViolation(HasSubstr("at most")));
   }
+}
+
+TEST(NumericConstraintsTest, MergeFromWorks) {
+  {
+    OneOfNumeric o1(std::vector<std::string_view>{"x", "y"});
+    OneOfNumeric o2(std::vector<std::string_view>{"y", "z"});
+    EXPECT_TRUE(o1.ConstrainOptions(o2));
+    EXPECT_EQ(o1.ToString(),
+              "is one of the elements from each list: {[x, y], [y, z]}");
+  }
+  {
+    OneOfNumeric o1(std::vector<int64_t>{1, 2, 3});
+    OneOfNumeric o2(std::vector<std::string_view>{"y", "z"});
+    EXPECT_TRUE(o1.ConstrainOptions(o2));
+    EXPECT_EQ(o1.ToString(),
+              "is one of the elements from each list: {[y, z], [1, 2, 3]}");
+  }
+  {
+    OneOfNumeric o1(std::vector<int64_t>{1, 2, 3});
+    OneOfNumeric o2(std::vector<int64_t>{3, 4, 2});
+    EXPECT_TRUE(o1.ConstrainOptions(o2));
+    EXPECT_EQ(o1.ToString(), "is one of: [2, 3]");
+  }
+  {
+    OneOfNumeric o1(std::vector<int64_t>{1, 2, 3});
+    OneOfNumeric o2(std::vector<Real>{Real(3), Real(4, 2), Real(-22)});
+    EXPECT_TRUE(o1.ConstrainOptions(o2));
+    EXPECT_EQ(o1.ToString(), "is one of: [2, 3]");
+  }
+  {
+    OneOfNumeric o1(std::vector<int64_t>{1, 2, 3});
+    OneOfNumeric o2(std::vector<std::string_view>{"y", "z"});
+    EXPECT_TRUE(o1.ConstrainOptions(o2));
+    OneOfNumeric o3(std::vector<Real>{Real(3), Real(4, 2), Real(-22)});
+    OneOfNumeric o4(std::vector<std::string_view>{"z", "x"});
+    EXPECT_TRUE(o3.ConstrainOptions(o4));
+    EXPECT_TRUE(o1.ConstrainOptions(o3));
+    EXPECT_EQ(
+        o1.ToString(),
+        "is one of the elements from each list: {[y, z], [z, x], [2, 3]}");
+  }
+  {
+    OneOfNumeric o1(std::vector<int64_t>{1, 2, 3});
+    OneOfNumeric o2(std::vector<Real>{Real(1, 2)});
+    EXPECT_FALSE(o1.ConstrainOptions(o2));
+
+    OneOfNumeric o3(std::vector<std::string_view>{"a", "b"});
+    OneOfNumeric o4(std::vector<std::string_view>{"z", "x"});
+    EXPECT_TRUE(o3.ConstrainOptions(o4));  // It's possible a == x, etc.
+  }
+}
+
+TEST(NumericConstraintsTest, OneOfHasBeenConstrainedWorks) {
+  OneOfNumeric o1(std::vector<int64_t>{1, 2, 3});
+  EXPECT_TRUE(o1.HasBeenConstrained());
+  EXPECT_TRUE(o1.ConstrainOptions(OneOfNumeric(std::vector<int64_t>{3, 4, 2})));
+  EXPECT_TRUE(o1.HasBeenConstrained());
+  EXPECT_TRUE(o1.ConstrainOptions(
+      OneOfNumeric(std::vector<std::string_view>{"x", "y"})));
+  EXPECT_TRUE(o1.HasBeenConstrained());
+
+  EXPECT_FALSE(OneOfNumeric().HasBeenConstrained());
 }
 
 }  // namespace

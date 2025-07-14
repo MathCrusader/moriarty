@@ -29,6 +29,8 @@ namespace librarian {
 // Maintains a list of possible values for a variable. Initially, all values are
 // considered possible. As new calls come in, values are removed from the list
 // of possibilities.
+//
+// Note: See OneOfNumeric for a numeric specialization of this class.
 template <typename T>
 class OneOfHandler {
  public:

@@ -30,10 +30,8 @@
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
-#include "src/internal/expressions.h"
 #include "src/internal/range.h"
 #include "src/librarian/mvariable.h"
-#include "src/librarian/one_of_handler.h"
 #include "src/librarian/size_property.h"
 #include "src/librarian/util/cow_ptr.h"
 
@@ -91,7 +89,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
 
  private:
   librarian::CowPtr<Range> bounds_;
-  librarian::CowPtr<librarian::OneOfHandler<Expression>> one_of_expr_;
+  librarian::CowPtr<librarian::OneOfNumeric> numeric_one_of_;
   librarian::CowPtr<librarian::SizeHandler> size_handler_;
 
   // Computes and returns the minimum and maximum of `bounds_`. Throws if the

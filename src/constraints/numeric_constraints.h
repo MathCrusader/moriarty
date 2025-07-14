@@ -20,6 +20,7 @@
 #include <concepts>
 #include <cstdint>
 #include <functional>
+#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -31,6 +32,7 @@
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
 #include "src/librarian/errors.h"
+#include "src/librarian/one_of_handler.h"
 #include "src/types/real.h"
 
 namespace moriarty {
@@ -200,77 +202,68 @@ class AtLeast : public NumericRangeMConstraint {
 
 namespace librarian {
 
-// Constraint stating that the variable must be exactly the value of this
-// expression. E.g., `ExactlyIntegerExpression("3 * N + 1")`.
-class ExactlyIntegerExpression : public NumericRangeMConstraint {
+// Constraint stating that the variable must be exactly this value. This allows
+// any numeric type (int, Real, IntegerExpression).
+class ExactlyNumeric : public NumericRangeMConstraint {
  public:
-  // The numeric value must be exactly this value.
-  explicit ExactlyIntegerExpression(IntegerExpression value);
+  explicit ExactlyNumeric(int64_t value);
+  explicit ExactlyNumeric(Real value);
+  explicit ExactlyNumeric(IntegerExpression value);
+  ~ExactlyNumeric() override = default;
 
-  // Returns the range of values that this constraint represents.
   [[nodiscard]] Range GetRange() const;
-
-  // Returns a human-readable representation of this constraint.
-  [[nodiscard]] std::string ToString() const;
-
-  // Returns true if the given value satisfies this constraint.
-  [[nodiscard]] ConstraintViolation CheckIntegerValue(
-      LookupVariableFn lookup_variable, int64_t value) const;
-
-  // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
-
- private:
-  Expression value_;
-  std::vector<std::string> dependencies_;
-};
-
-// Constraint stating that the variable must be exactly the value of this
-// expression. E.g., `OneOfIntegerExpression({"3 * N + 1", "14"})`.
-class OneOfIntegerExpression : public NumericRangeMConstraint {
- public:
-  // The numeric value must be exactly these values.
-  template <typename Container>
-  explicit OneOfIntegerExpression(const Container& options);
-  explicit OneOfIntegerExpression(std::span<const IntegerExpression> options);
-  explicit OneOfIntegerExpression(
-      std::initializer_list<IntegerExpression> options);
-
-  ~OneOfIntegerExpression() override = default;
-
-  // Returns the options that this constraint represents.
-  [[nodiscard]] std::vector<Expression> GetOptions() const;
-
-  // Returns a human-readable representation of this constraint.
   [[nodiscard]] std::string ToString() const override;
-
-  // Returns true if the given value satisfies this constraint.
   [[nodiscard]] ConstraintViolation CheckIntegerValue(
       LookupVariableFn lookup_variable, int64_t value) const override;
-
-  // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const override;
 
  private:
-  std::vector<Expression> options_;
+  std::variant<int64_t, Expression, Real> value_;
+  std::vector<std::string> dependencies_;
+};
+
+// Constraint stating that the variable must be one of these values. This allows
+// any numeric type (int, Real, IntegerExpression).
+//
+// This class is a specialization of `OneOfHandler`, but for numeric values.
+// The API is slightly different.
+class OneOfNumeric : public NumericRangeMConstraint {
+ public:
+  OneOfNumeric() = default;  // No options, empty set.
+  explicit OneOfNumeric(std::span<const std::string> options);
+  explicit OneOfNumeric(std::span<const IntegerExpression> options);
+  explicit OneOfNumeric(std::span<const Real> options);
+  explicit OneOfNumeric(std::span<const int64_t> options);
+  ~OneOfNumeric() override = default;
+
+  [[nodiscard]] bool HasBeenConstrained() const;
+  [[nodiscard]] std::optional<Real> GetUniqueValue(LookupVariableFn fn) const;
+
+  [[nodiscard]] bool ConstrainOptions(const OneOfNumeric& other);
+  [[nodiscard]] bool ConstrainOptions(IntegerExpression other);
+  [[nodiscard]] bool ConstrainOptions(Real other);
+  [[nodiscard]] bool ConstrainOptions(int64_t other);
+
+  // Similar to OneOfHandler::HasOption()
+  [[nodiscard]] ConstraintViolation CheckIntegerValue(
+      LookupVariableFn lookup_variable, int64_t value) const override;
+
+  [[nodiscard]] std::vector<Real> GetOptions(
+      LookupVariableFn lookup_variable) const;
+  [[nodiscard]] std::string ToString() const override;
+  [[nodiscard]] std::vector<std::string> GetDependencies() const override;
+
+ private:
+  OneOfHandler<Real> numeric_options_;
+
+  // Each element represents a list of expressions that the value must come
+  // from. We must handle it like this since we do not know the value of
+  // variables.
+  std::vector<std::vector<Expression>> expr_options_;
   std::vector<std::string> dependencies_;
 };
 
 }  // namespace librarian
-
-// -----------------------------------------------------------------------------
-//  Template implementation below
-
-namespace librarian {
-
-template <typename Container>
-OneOfIntegerExpression::OneOfIntegerExpression(const Container& options) {
-  for (const std::string& option : options)
-    options_.push_back(Expression(option));
-}
-
-}  // namespace librarian
-
 }  // namespace moriarty
 
 #endif  // MORIARTY_SRC_VARIABLES_NUMERIC_CONSTRAINTS_H_

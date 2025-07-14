@@ -112,6 +112,7 @@ cc_library(
         ":base_constraints",
         "//src/internal:range",
         "//src/librarian:errors",
+        "//src/librarian:one_of_handler",
         "//src/types:real",
     ],
 )

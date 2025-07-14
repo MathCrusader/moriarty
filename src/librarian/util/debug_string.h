@@ -34,6 +34,13 @@ template <typename T>
 std::string DebugString(const T& x, int max_len = kMaxDebugStringLength,
                         bool include_backticks = true);
 
+template <typename T>
+  requires(requires(T x) {
+    { x.ToString() } -> std::same_as<std::string>;
+  })
+std::string DebugString(const T& x, int max_len = kMaxDebugStringLength,
+                        bool include_backticks = true);
+
 template <std::integral IntLike>
 std::string DebugString(IntLike x, int max_len = kMaxDebugStringLength,
                         bool include_backticks = true);
@@ -75,6 +82,14 @@ template <typename T>
   })
 std::string DebugString(const T& x, int max_len, bool include_backticks) {
   return DebugString(x.DebugString(), max_len, include_backticks);
+}
+
+template <typename T>
+  requires(requires(T x) {
+    { x.ToString() } -> std::same_as<std::string>;
+  })
+std::string DebugString(const T& x, int max_len, bool include_backticks) {
+  return DebugString(x.ToString(), max_len, include_backticks);
 }
 
 template <std::integral IntLike>

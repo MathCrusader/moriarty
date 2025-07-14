@@ -33,16 +33,17 @@
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
-#include "src/internal/expressions.h"
 #include "src/internal/range.h"
 #include "src/librarian/errors.h"
-#include "src/librarian/one_of_handler.h"
 #include "src/librarian/policies.h"
 #include "src/librarian/size_property.h"
 
 namespace moriarty {
 
 MInteger& MInteger::AddConstraint(Exactly<int64_t> constraint) {
+  if (!numeric_one_of_.Mutable().ConstrainOptions(constraint.GetValue())) {
+    throw ImpossibleToSatisfy(ToString(), constraint.ToString());
+  }
   bounds_.Mutable()
       .AtLeast(constraint.GetValue())
       .AtMost(constraint.GetValue());
@@ -50,23 +51,34 @@ MInteger& MInteger::AddConstraint(Exactly<int64_t> constraint) {
 }
 
 MInteger& MInteger::AddConstraint(Exactly<std::string> constraint) {
-  librarian::ExactlyIntegerExpression expr(constraint.GetValue());
-  bounds_.Mutable().Intersect(expr.GetRange());
+  if (!numeric_one_of_.Mutable().ConstrainOptions(constraint.GetValue())) {
+    throw ImpossibleToSatisfy(ToString(), constraint.ToString());
+  }
+  auto actual_constraint =
+      std::make_unique<librarian::ExactlyNumeric>(constraint.GetValue());
+  bounds_.Mutable().Intersect(actual_constraint->GetRange());
   return InternalAddConstraint(RangeConstraint(
-      std::make_unique<librarian::ExactlyIntegerExpression>(expr),
+      std::move(actual_constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
 }
 
 MInteger& MInteger::AddConstraint(OneOf<int64_t> constraint) {
+  librarian::OneOfNumeric actual_constraint(constraint.GetOptions());
+  if (!numeric_one_of_.Mutable().ConstrainOptions(
+          std::move(actual_constraint))) {
+    throw ImpossibleToSatisfy(ToString(), constraint.ToString());
+  }
   return InternalAddOneOfConstraint(std::move(constraint));
 }
 
 MInteger& MInteger::AddConstraint(OneOf<std::string> constraint) {
-  librarian::OneOfIntegerExpression exprs(constraint.GetOptions());
-  if (!one_of_expr_.Mutable().ConstrainOptions(exprs.GetOptions()))
-    throw ImpossibleToSatisfy(ToString(), exprs.ToString());
+  auto actual_constraint =
+      std::make_unique<librarian::OneOfNumeric>(constraint.GetOptions());
+  if (!numeric_one_of_.Mutable().ConstrainOptions(*actual_constraint)) {
+    throw ImpossibleToSatisfy(ToString(), constraint.ToString());
+  }
   return InternalAddConstraint(RangeConstraint(
-      std::make_unique<librarian::OneOfIntegerExpression>(std::move(exprs)),
+      std::move(actual_constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
 }
 
@@ -98,21 +110,20 @@ MInteger& MInteger::AddConstraint(SizeCategory constraint) {
 
 std::optional<int64_t> MInteger::GetUniqueValueImpl(
     librarian::AnalysisContext ctx) const {
-  if (auto int_option = GetOneOf().GetUniqueValue()) {
-    return *int_option;
-  }
-
-  if (auto expr_option = one_of_expr_->GetUniqueValue()) {
-    try {
-      return expr_option->Evaluate([&](std::string_view var) {
-        auto value = ctx.GetUniqueValue<MInteger>(var);
-        if (!value) throw ValueNotFound(var);
-        return *value;
-      });
-    } catch (const ValueNotFound& e) {
-      // There is a unique-value, but we can't evaluate it.
-      return std::nullopt;
+  try {
+    if (auto one_of =
+            numeric_one_of_->GetUniqueValue([&](std::string_view var) {
+              auto value = ctx.GetUniqueValue<MInteger>(var);
+              if (!value) throw ValueNotFound(var);
+              return *value;
+            })) {
+      auto value = one_of->GetValue();
+      if (value.denominator != 1) return std::nullopt;
+      return value.numerator;
     }
+  } catch (const ValueNotFound& e) {
+    // There might be a unique-value, but we can't evaluate it.
+    return std::nullopt;
   }
 
   std::optional<Range::ExtremeValues<int64_t>> extremes = GetExtremeValues(ctx);
@@ -150,43 +161,22 @@ std::optional<Range::ExtremeValues<int64_t>> MInteger::GetExtremeValues(
   }
 }
 
-namespace {
-
-[[nodiscard]] std::vector<int64_t> ExtractOneOfOptions(
-    librarian::ResolverContext ctx,
-    const librarian::OneOfHandler<int64_t>& ints,
-    const librarian::OneOfHandler<Expression>& exprs) {
-  std::vector<int64_t> options;
-
-  if (ints.HasBeenConstrained()) {
-    for (int64_t option : ints.GetOptions()) {
-      options.push_back(option);
-    }
-  }
-
-  if (exprs.HasBeenConstrained()) {
-    std::vector<int64_t> options;
-    for (const Expression& expr : exprs.GetOptions()) {
-      options.push_back(expr.Evaluate([&](std::string_view var) {
-        return ctx.GenerateVariable<MInteger>(var);
-      }));
-    }
-  }
-
-  return options;
-}
-
-}  // namespace
-
 int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
   Range::ExtremeValues<int64_t> extremes = GetExtremeValues(ctx);
 
-  if (GetOneOf().HasBeenConstrained() || one_of_expr_->HasBeenConstrained()) {
-    std::vector<int64_t> options =
-        ExtractOneOfOptions(ctx, GetOneOf(), *one_of_expr_);
-    std::erase_if(options, [&](int64_t value) {
-      return !(extremes.min <= value && value <= extremes.max);
-    });
+  if (numeric_one_of_->HasBeenConstrained()) {
+    std::vector<Real> real_options =
+        numeric_one_of_->GetOptions([&](std::string_view var) {
+          return ctx.GenerateVariable<MInteger>(var);
+        });
+    std::vector<int64_t> options;
+    for (const Real& value : real_options) {
+      if (value.GetValue().denominator != 1) continue;
+      int64_t int_value = value.GetValue().numerator;
+      if (extremes.min <= int_value && int_value <= extremes.max) {
+        options.push_back(int_value);
+      }
+    }
     if (options.empty()) {
       throw GenerationError(ctx.GetVariableName(), ToString(),
                             RetryPolicy::kAbort);
