@@ -289,17 +289,23 @@ testing::AssertionResult AllGenerateSameValues(std::vector<T> vars);
 MATCHER_P(GeneratedValuesAre, matcher,
           std::format("generated values {} satisfy constraints",
                       negation ? "should not" : "should")) {
-  // The `auto` is hiding an std::vector<> of the generated type
-  auto values = GenerateLots(arg);
+  try {
+    // The `auto` is hiding an std::vector<> of the generated type
+    auto values = GenerateLots(arg);
 
-  for (int i = 0; i < values.size(); i++) {
-    auto value = values[i];  // `auto` is hiding the generated type
-    if (!testing::ExplainMatchResult(matcher, value, result_listener)) {
-      *result_listener << "The " << i + 1 << "-th generated value ("
-                       << testing::PrintToString(value)
-                       << ") does not satisfy matcher; ";
-      return false;
+    for (int i = 0; i < values.size(); i++) {
+      auto value = values[i];  // `auto` is hiding the generated type
+      if (!testing::ExplainMatchResult(matcher, value, result_listener)) {
+        *result_listener << "The " << i + 1 << "-th generated value ("
+                         << testing::PrintToString(value)
+                         << ") does not satisfy matcher; ";
+        return false;
+      }
     }
+  } catch (moriarty::GenerationError& e) {
+    *result_listener << "moriarty::GenerationError exception thrown:"
+                     << e.Message();
+    return false;
   }
 
   *result_listener << "all generated values satisfy constraints";
@@ -315,16 +321,22 @@ MATCHER_P2(GeneratedValuesAre, matcher, context,
            std::format("generated values {} satisfy constraints",
                        negation ? "should not" : "should")) {
   // The `auto` is hiding an std::vector<> of the generated type
-  auto values = GenerateLots(arg, context);
+  try {
+    auto values = GenerateLots(arg, context);
 
-  for (int i = 0; i < values.size(); i++) {
-    auto value = values[i];  // `auto` is hiding the generated type
-    if (!testing::ExplainMatchResult(matcher, value, result_listener)) {
-      *result_listener << "The " << i + 1 << "-th generated value ("
-                       << testing::PrintToString(value)
-                       << ") does not satisfy matcher; ";
-      return false;
+    for (int i = 0; i < values.size(); i++) {
+      auto value = values[i];  // `auto` is hiding the generated type
+      if (!testing::ExplainMatchResult(matcher, value, result_listener)) {
+        *result_listener << "The " << i + 1 << "-th generated value ("
+                         << testing::PrintToString(value)
+                         << ") does not satisfy matcher; ";
+        return false;
+      }
     }
+  } catch (moriarty::GenerationError& e) {
+    *result_listener << "moriarty::GenerationError exception thrown:"
+                     << e.Message();
+    return false;
   }
 
   *result_listener << "all generated values satisfy constraints";
@@ -411,7 +423,8 @@ std::vector<typename T::value_type> GenerateN(T variable, int N,
   std::vector<typename T::value_type> res;
   res.reserve(N);
   for (int i = 0; i < N; i++) {
-    // We need to make a copy so that we don't set values for future `i` values.
+    // We need to make a copy so that we don't set values for future `i`
+    // values.
     Context context_copy = context;
 
     moriarty::moriarty_internal::ValueSet values =
@@ -659,8 +672,8 @@ MATCHER_P(ThrowsVariableNotFound, expected_variable_name,
           std::format("{} a function that throws a VariableNotFound exception "
                       "with the variable name `{}`",
                       (negation ? "is not" : "is"), expected_variable_name)) {
-  // This first line is to get a better compile error message when arg is not of
-  // the expected type.
+  // This first line is to get a better compile error message when arg is not
+  // of the expected type.
   std::function<void()> fn = arg;
 
   std::function<void()> function = moriarty_testing_internal::single_call(fn);
@@ -670,9 +683,9 @@ MATCHER_P(ThrowsVariableNotFound, expected_variable_name,
     return false;
   } catch (const moriarty::VariableNotFound& e) {
     if (e.VariableName() != expected_variable_name) {
-      *result_listener
-          << "threw the expected exception type, but the wrong variable name. `"
-          << e.VariableName() << "`";
+      *result_listener << "threw the expected exception type, but the wrong "
+                          "variable name. `"
+                       << e.VariableName() << "`";
       return false;
     }
     *result_listener << "threw the expected exception";
@@ -689,8 +702,8 @@ MATCHER_P(ThrowsValueNotFound, expected_variable_name,
           std::format("{} a function that throws a ValueNotFound exception "
                       "with the variable name `{}`",
                       (negation ? "is not" : "is"), expected_variable_name)) {
-  // This first line is to get a better compile error message when arg is not of
-  // the expected type.
+  // This first line is to get a better compile error message when arg is not
+  // of the expected type.
   std::function<void()> fn = arg;
 
   std::function<void()> function = moriarty_testing_internal::single_call(fn);
@@ -700,9 +713,9 @@ MATCHER_P(ThrowsValueNotFound, expected_variable_name,
     return false;
   } catch (const moriarty::ValueNotFound& e) {
     if (e.VariableName() != expected_variable_name) {
-      *result_listener
-          << "threw the expected exception type, but the wrong variable name. `"
-          << e.VariableName() << "`";
+      *result_listener << "threw the expected exception type, but the wrong "
+                          "variable name. `"
+                       << e.VariableName() << "`";
       return false;
     }
     *result_listener << "threw the expected exception";
@@ -719,8 +732,8 @@ MATCHER_P2(ThrowsMVariableTypeMismatch, from_type, to_type,
            std::format("{} a function that throws a MVariableTypeMismatch "
                        "exception when trying to convert {} to {}",
                        (negation ? "is not" : "is"), from_type, to_type)) {
-  // This first line is to get a better compile error message when arg is not of
-  // the expected type.
+  // This first line is to get a better compile error message when arg is not
+  // of the expected type.
   std::function<void()> fn = arg;
 
   std::function<void()> function = moriarty_testing_internal::single_call(fn);
@@ -750,8 +763,8 @@ MATCHER_P2(
     std::format("{} a function that throws a ValueTypeMismatch "
                 "exception when trying to convert the variable named {} to {}",
                 (negation ? "is not" : "is"), name, type)) {
-  // This first line is to get a better compile error message when arg is not of
-  // the expected type.
+  // This first line is to get a better compile error message when arg is not
+  // of the expected type.
   std::function<void()> fn = arg;
 
   std::function<void()> function = moriarty_testing_internal::single_call(fn);
@@ -780,8 +793,8 @@ MATCHER_P(ThrowsImpossibleToSatisfy, substr,
           std::format("{} a function that throws ImpossibleToSatisfy "
                       "exception that contains the substring {}",
                       (negation ? "is not" : "is"), substr)) {
-  // This first line is to get a better compile error message when arg is not of
-  // the expected type.
+  // This first line is to get a better compile error message when arg is not
+  // of the expected type.
   std::function<void()> fn = arg;
 
   std::function<void()> function = moriarty_testing_internal::single_call(fn);
@@ -811,8 +824,8 @@ MATCHER_P2(
     std::format("{} a function that throws a GenerationError "
                 "exception from the variable {} that contains the substring {}",
                 (negation ? "is not" : "is"), variable, substr)) {
-  // This first line is to get a better compile error message when arg is not of
-  // the expected type.
+  // This first line is to get a better compile error message when arg is not
+  // of the expected type.
   std::function<void()> fn = arg;
 
   std::function<void()> function = moriarty_testing_internal::single_call(fn);
@@ -822,9 +835,9 @@ MATCHER_P2(
     return false;
   } catch (const moriarty::GenerationError& e) {
     if (e.VariableName() != variable) {
-      *result_listener
-          << "threw the expected exception type, but the wrong variable name. `"
-          << e.VariableName() << "`";
+      *result_listener << "threw the expected exception type, but the wrong "
+                          "variable name. `"
+                       << e.VariableName() << "`";
       return false;
     }
     if (!testing::Value(e.Message(), testing::HasSubstr(substr))) {

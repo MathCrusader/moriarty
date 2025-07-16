@@ -31,7 +31,6 @@
 #include "src/constraints/constraint_violation.h"
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
-#include "src/librarian/errors.h"
 #include "src/librarian/one_of_handler.h"
 #include "src/types/real.h"
 
@@ -47,10 +46,7 @@ class NumericRangeMConstraint : public MConstraint {
   virtual ConstraintViolation CheckIntegerValue(
       LookupVariableFn lookup_variable, int64_t value) const = 0;
   virtual ConstraintViolation CheckRealValue(LookupVariableFn lookup_variable,
-                                             double value) const {
-    throw InvalidConstraint(
-        "CheckRealValue() is not implemented for this constraint");
-  };
+                                             double value) const = 0;
   virtual std::vector<std::string> GetDependencies() const = 0;
 };
 
@@ -215,6 +211,8 @@ class ExactlyNumeric : public NumericRangeMConstraint {
   [[nodiscard]] std::string ToString() const override;
   [[nodiscard]] ConstraintViolation CheckIntegerValue(
       LookupVariableFn lookup_variable, int64_t value) const override;
+  [[nodiscard]] ConstraintViolation CheckRealValue(
+      LookupVariableFn lookup_variable, double value) const override;
   [[nodiscard]] std::vector<std::string> GetDependencies() const override;
 
  private:
@@ -247,6 +245,8 @@ class OneOfNumeric : public NumericRangeMConstraint {
   // Similar to OneOfHandler::HasOption()
   [[nodiscard]] ConstraintViolation CheckIntegerValue(
       LookupVariableFn lookup_variable, int64_t value) const override;
+  [[nodiscard]] ConstraintViolation CheckRealValue(
+      LookupVariableFn lookup_variable, double value) const override;
 
   [[nodiscard]] std::vector<Real> GetOptions(
       LookupVariableFn lookup_variable) const;

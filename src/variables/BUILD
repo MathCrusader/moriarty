@@ -32,6 +32,7 @@ cc_library(
         ":marray",
         ":mgraph",
         ":minteger",
+        ":mreal",
         ":mstring",
         ":mtuple",
     ],
@@ -89,6 +90,24 @@ cc_library(
         "//src/librarian:policies",
         "//src/librarian:size_property",
         "//src/librarian/util:cow_ptr",
+    ],
+)
+
+cc_library(
+    name = "mreal",
+    srcs = ["mreal.cc"],
+    hdrs = ["mreal.h"],
+    deps = [
+        ":minteger",
+        "//src/constraints:numeric_constraints",
+        "//src/internal:expressions",
+        "//src/internal:range",
+        "//src/librarian:mvariable",
+        "//src/librarian:one_of_handler",
+        "//src/librarian:size_property",
+        "//src/librarian/util:cow_ptr",
+        "//src/librarian/util:debug_string",
+        "//src/types:real",
     ],
 )
 
@@ -191,6 +210,21 @@ cc_test(
         "//src/librarian/testing:gtest_helpers",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/strings",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "mreal_test",
+    srcs = ["mreal_test.cc"],
+    deps = [
+        ":minteger",
+        ":mreal",
+        "//src/constraints:base_constraints",
+        "//src/constraints:numeric_constraints",
+        "//src/contexts:librarian_context",
+        "//src/librarian/testing:gtest_helpers",
+        "//src/types:real",
         "@googletest//:gtest_main",
     ],
 )

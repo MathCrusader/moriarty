@@ -514,11 +514,10 @@ TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithVariablesShouldWork) {
                                Context().WithValue<MInteger>("N", 10)),
                 Optional(10));
 
-    // We cannot figure this out today, but we should be able to with a little
-    // work.
-    // EXPECT_THAT(GetUniqueValue(MInteger(OneOf({"N", "N+1"}), OneOf({9, 10})),
-    //                            Context().WithValue<MInteger>("N", 10)),
-    //             Optional(10));
+    // More complex logic
+    EXPECT_THAT(GetUniqueValue(MInteger(OneOf({"N", "N+1"}), OneOf({9, 10})),
+                               Context().WithValue<MInteger>("N", 10)),
+                Optional(10));
   }
 }
 

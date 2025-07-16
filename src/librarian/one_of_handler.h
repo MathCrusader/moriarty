@@ -19,6 +19,7 @@
 
 #include <algorithm>
 #include <optional>
+#include <stdexcept>
 #include <vector>
 
 namespace moriarty {
@@ -108,6 +109,10 @@ std::optional<T> OneOfHandler<T>::GetUniqueValue() const {
 
 template <typename T>
 const std::vector<T>& OneOfHandler<T>::GetOptions() const {
+  if (!HasBeenConstrained()) {
+    throw std::runtime_error(
+        "You cannot call GetOptions() if HasBeenConstrained() == false.");
+  }
   return *valid_options_;
 }
 

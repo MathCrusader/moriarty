@@ -30,6 +30,7 @@
 #include "src/constraints/constraint_violation.h"
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
+#include "src/librarian/util/debug_string.h"
 #include "src/types/real.h"
 
 namespace moriarty {
@@ -44,6 +45,11 @@ std::string NumericToString(
     return std::get<Expression>(value).ToString();
 
   return std::get<Real>(value).ToString();
+}
+
+bool CloseEnough(double a, double b) {
+  // FIXME: Set up appropriate global tolerance.
+  return std::abs(a - b) < 1e-9;
 }
 
 }  // namespace
@@ -311,6 +317,35 @@ ConstraintViolation ExactlyNumeric::CheckIntegerValue(
       "ExactlyNumeric::CheckIntegerValue: unexpected value type");
 }
 
+ConstraintViolation ExactlyNumeric::CheckRealValue(
+    LookupVariableFn lookup_variable, double value) const {
+  if (std::holds_alternative<Expression>(value_)) {
+    int64_t expected = std::get<Expression>(value_).Evaluate(lookup_variable);
+    if (CloseEnough(expected, value)) return ConstraintViolation::None();
+    return ConstraintViolation(
+        std::format("is not exactly {} (got {})",
+                    std::get<Expression>(value_).ToString(), value));
+  }
+
+  if (std::holds_alternative<int64_t>(value_)) {
+    if (CloseEnough(std::get<int64_t>(value_), value))
+      return ConstraintViolation::None();
+    return ConstraintViolation(std::format("is not exactly {} (got {})",
+                                           std::get<int64_t>(value_), value));
+  }
+
+  if (std::holds_alternative<Real>(value_)) {
+    if (CloseEnough(std::get<Real>(value_).GetApproxValue(), value))
+      return ConstraintViolation::None();
+    return ConstraintViolation(std::format("is not exactly {} (got {})",
+                                           std::get<Real>(value_).ToString(),
+                                           value));
+  }
+
+  throw std::logic_error(
+      "ExactlyNumeric::CheckIntegerValue: unexpected value type");
+}
+
 std::vector<std::string> ExactlyNumeric::GetDependencies() const {
   return dependencies_;
 }
@@ -476,7 +511,33 @@ ConstraintViolation OneOfNumeric::CheckIntegerValue(
                            });
     if (it == option_list.end()) {
       return ConstraintViolation(
-          std::format("{} is not {}", value,
+          std::format("{} is not {}", DebugString(value),
+                      OptionString(expr_options_, numeric_options_)));
+    }
+  }
+  return ConstraintViolation::None();
+}
+
+ConstraintViolation OneOfNumeric::CheckRealValue(
+    LookupVariableFn lookup_variable, double value) const {
+  if (numeric_options_.HasBeenConstrained() &&
+      std::find_if(numeric_options_.GetOptions().begin(),
+                   numeric_options_.GetOptions().end(),
+                   [&](const Real& option) {
+                     return CloseEnough(option.GetApproxValue(), value);
+                   }) == numeric_options_.GetOptions().end()) {
+    return ConstraintViolation(std::format(
+        "{} is not {}", value, OptionString(expr_options_, numeric_options_)));
+  }
+
+  for (const std::vector<Expression>& option_list : expr_options_) {
+    auto it = std::find_if(
+        option_list.begin(), option_list.end(), [&](const Expression& expr) {
+          return CloseEnough(expr.Evaluate(lookup_variable), value);
+        });
+    if (it == option_list.end()) {
+      return ConstraintViolation(
+          std::format("{} is not {}", DebugString(value),
                       OptionString(expr_options_, numeric_options_)));
     }
   }

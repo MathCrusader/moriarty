@@ -1,0 +1,132 @@
+/*
+ * Copyright 2025 Darcy Best
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#ifndef MORIARTY_SRC_VARIABLES_MREAL_H_
+#define MORIARTY_SRC_VARIABLES_MREAL_H_
+
+#include <cstdint>
+
+#include "src/constraints/numeric_constraints.h"
+#include "src/internal/range.h"
+#include "src/librarian/mvariable.h"
+#include "src/librarian/size_property.h"
+#include "src/librarian/util/cow_ptr.h"
+#include "src/types/real.h"
+
+namespace moriarty {
+
+// MReal
+//
+// Describes constraints placed on a real number.
+//
+// Note: We intentially do not support `long double`, since the precision of
+// `long double` has different precision on various systems.
+class MReal : public librarian::MVariable<MReal, double> {
+ public:
+  // Create an MReal from a set of constraints. Logically equivalent to
+  // calling AddConstraint() for each constraint.
+  //
+  // E.g., MReal(Between(0, Real("5.28")), SizeCategory::Small())
+  template <typename... Constraints>
+    requires(ConstraintFor<MReal, Constraints> && ...)
+  explicit MReal(Constraints&&... constraints);
+
+  ~MReal() override = default;
+
+  using MVariable<MReal, double>::AddConstraint;  // Custom constraints
+
+  // ---------------------------------------------------------------------------
+  //  Constrain the value to a specific set of values
+
+  // The number must be exactly this value. Prefer to use the `Exactly<Real>()`
+  // constraint instead of `Exactly<double>()`.
+  MReal& AddConstraint(Exactly<double> constraint);
+  // The number must be exactly this value.
+  MReal& AddConstraint(Exactly<Real> constraint);
+  // The number must be exactly this value.
+  MReal& AddConstraint(Exactly<int64_t> constraint);
+  // The number must be exactly this integer expression (e.g., "3 * N + 1").
+  MReal& AddConstraint(Exactly<std::string> constraint);
+
+  // The number must be one of these values.
+  MReal& AddConstraint(OneOf<Real> constraint);
+  // The number must be one of these values.
+  MReal& AddConstraint(OneOf<int64_t> constraint);
+  // The number must be one of these integer expressions (e.g., "3 * N + 1").
+  MReal& AddConstraint(OneOf<std::string> constraint);
+
+  // ---------------------------------------------------------------------------
+  //  Constrain the interval of values that the number can be in
+
+  // The number must be in this inclusive range.
+  MReal& AddConstraint(Between constraint);
+  // The number must be this value or smaller.
+  MReal& AddConstraint(AtMost constraint);
+  // The number must be this value or larger.
+  MReal& AddConstraint(AtLeast constraint);
+
+  // ---------------------------------------------------------------------------
+  //  Pseudo-constraints on size
+
+  // TODO: Add AddConstraint(SizeCategory constraint)
+
+  [[nodiscard]] std::string Typename() const override { return "MReal"; }
+
+ private:
+  librarian::CowPtr<Range> bounds_;
+  librarian::CowPtr<librarian::OneOfNumeric> numeric_one_of_;
+  librarian::CowPtr<librarian::SizeHandler> size_handler_;
+
+  class RangeConstraint {
+   public:
+    explicit RangeConstraint(
+        std::unique_ptr<NumericRangeMConstraint> constraint,
+        std::function<void(MReal&)> apply_to_fn);
+    ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                   double value) const;
+    std::string ToString() const;
+    std::vector<std::string> GetDependencies() const;
+    void ApplyTo(MReal& other) const;
+
+   private:
+    std::unique_ptr<NumericRangeMConstraint> constraint_;
+    std::function<void(MReal&)> apply_to_fn_;  // TODO: consider cow_ptr
+  };
+
+  // ---------------------------------------------------------------------------
+  //  MVariable overrides
+  double GenerateImpl(librarian::ResolverContext ctx) const override;
+  double ReadImpl(librarian::ReaderContext ctx) const override;
+  void PrintImpl(librarian::PrinterContext ctx,
+                 const double& value) const override;
+  std::optional<double> GetUniqueValueImpl(
+      librarian::AnalysisContext ctx) const override;
+  // ---------------------------------------------------------------------------
+};
+
+// -----------------------------------------------------------------------------
+//  Implementation details
+// -----------------------------------------------------------------------------
+
+template <typename... Constraints>
+  requires(ConstraintFor<MReal, Constraints> && ...)
+MReal::MReal(Constraints&&... constraints) {
+  (AddConstraint(std::forward<Constraints>(constraints)), ...);
+}
+
+}  // namespace moriarty
+
+#endif  // MORIARTY_SRC_VARIABLES_MREAL_H_
