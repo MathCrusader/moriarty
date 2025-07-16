@@ -28,17 +28,17 @@ licenses(["notice"])
 exports_files(["LICENSE"])
 
 # The core items in Moriarty. You can use this to have a single dependency in a C++ lib file.
-# cc_static_library(
-#     name = "core_moriarty",
-#     visibility = [
-#         "//visibility:public",
-#     ],
-#     deps = [
-#         "//src:context",
-#         "//src:moriarty",
-#         "//src:simple_io",
-#         "//src:test_case",
-#         "//src/constraints:all_mconstraints",
-#         "//src/variables:all_mvariables",
-#     ],
-# )
+cc_static_library(
+    name = "core_moriarty",
+    visibility = [
+        "//visibility:public",
+    ],
+    deps = [
+        "//src:context",
+        "//src:moriarty",
+        "//src:simple_io",
+        "//src:test_case",
+        "//src/constraints:all_mconstraints",
+        "//src/variables:all_mvariables",
+    ],
+)
