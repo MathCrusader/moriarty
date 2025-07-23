@@ -53,12 +53,9 @@ namespace moriarty {
 // Determines if ConstraintType is a valid constraint to be applied to
 // MVariableType.
 template <typename MVariableType, typename ConstraintType>
-concept ConstraintFor =
-    MoriartyVariable<MVariableType> &&
-    std::derived_from<std::decay_t<ConstraintType>, MConstraint> && requires {
-      std::declval<MVariableType>().AddConstraint(
-          std::declval<ConstraintType>());
-    };
+concept ConstraintFor = MoriartyVariable<MVariableType> && requires {
+  std::declval<MVariableType>().AddConstraint(std::declval<ConstraintType>());
+};
 
 namespace librarian {
 

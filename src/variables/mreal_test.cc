@@ -85,6 +85,11 @@ TEST(MRealTest, PrintShouldSucceed) {
                std::invalid_argument);
 }
 
+TEST(MRealTest, IOWithAddConstraintIODigitsVersionShouldSucceed) {
+  EXPECT_EQ(Print(MReal(MReal::IODigits(3)), 123.456789), "123.457");
+  EXPECT_EQ(Read(MReal(MReal::IODigits(5)), "123.45678"), 123.45678);
+}
+
 TEST(MRealTest, ValidReadInStrictModeShouldSucceed) {
   {  // Strict mode
     EXPECT_EQ(Read(MReal().SetIODigits(6), "123.456789"), 123.456789);

@@ -97,6 +97,15 @@ class MReal : public librarian::MVariable<MReal, double> {
   // it will accept any number of digits after the decimal point.
   MReal& SetIODigits(int num_digits);
 
+  struct IODigits {
+    int num_digits;
+  };
+  // The number of digits. This is an IO constraint, so is not treated the same
+  // way as other constraints. See SetIODigits().
+  MReal& AddConstraint(IODigits constraint) {
+    return SetIODigits(constraint.num_digits);
+  }
+
   [[nodiscard]] std::string Typename() const override { return "MReal"; }
 
  private:
