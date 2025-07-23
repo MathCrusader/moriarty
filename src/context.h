@@ -49,7 +49,6 @@ class GenerateContext : public moriarty_internal::ViewOnlyContext,
                         public moriarty_internal::VariableRandomContext {
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
-  // See `src/Moriarty.h` for entry points.
   GenerateContext(
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<const moriarty_internal::ValueSet> values,
@@ -89,7 +88,6 @@ class ImportContext : public moriarty_internal::ViewOnlyContext,
                       public moriarty_internal::VariableIStreamContext {
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
-  // See `src/Moriarty.h` for entry points.
   ImportContext(
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<InputCursor> input);
@@ -126,7 +124,6 @@ class ExportContext : public moriarty_internal::ViewOnlyContext,
                       public moriarty_internal::VariableOStreamContext {
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
-  // See `src/Moriarty.h` for entry points.
   ExportContext(
       std::reference_wrapper<std::ostream> os,
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
@@ -166,9 +163,6 @@ class ConstraintContext : public moriarty_internal::NameContext,
   // ** See parent classes for more functions. **
   // ********************************************
 };
-
-// The function signature for an importer.
-using ImportFn = std::function<std::vector<ConcreteTestCase>(ImportContext)>;
 
 }  // namespace moriarty
 

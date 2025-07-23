@@ -93,11 +93,6 @@ class TestCase {
   TestCase& UnsafeSetAnonymousValue(std::string_view variable_name,
                                     std::any value);
 
-  // FIXME: Remove after Context refactor
-  void SetVariables(moriarty_internal::VariableSet variables) {
-    variables_ = std::move(variables);
-  }
-
  private:
   moriarty_internal::VariableSet variables_;
   moriarty_internal::ValueSet values_;
@@ -125,9 +120,7 @@ class ConcreteTestCase {
   //
   // Returns the value of the variable `variable_name`.
   template <MoriartyVariable T>
-  T::value_type GetValue(std::string_view variable_name) const {
-    return values_.Get<T>(variable_name);
-  }
+  [[nodiscard]] T::value_type GetValue(std::string_view variable_name) const;
 
   // This is a dangerous function that should only be used if you know what
   // you're doing. `value` must have a particular memory layout, and if you pass
@@ -173,6 +166,11 @@ ConcreteTestCase& ConcreteTestCase::SetValue(std::string_view variable_name,
                                              T::value_type value) {
   values_.Set<T>(variable_name, std::move(value));
   return *this;
+}
+
+template <MoriartyVariable T>
+T::value_type ConcreteTestCase::GetValue(std::string_view variable_name) const {
+  return values_.Get<T>(variable_name);
 }
 
 }  // namespace moriarty
