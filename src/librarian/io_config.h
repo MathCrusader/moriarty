@@ -33,8 +33,23 @@ enum class Whitespace { kSpace, kTab, kNewline };
 struct InputCursor {
   static constexpr int kRecentlyReadSize = 3;
 
+  // Creates an InputCursor with the strictest settings.
+  static InputCursor CreatePreciseStrictness(
+      std::reference_wrapper<std::istream> is) {
+    return InputCursor(is, WhitespaceStrictness::kPrecise,
+                       NumericStrictness::kPrecise);
+  }
+
+  // Creates an InputCursor with the most flexible settings.
+  static InputCursor CreateFlexibleStrictness(
+      std::reference_wrapper<std::istream> is) {
+    return InputCursor(is, WhitespaceStrictness::kFlexible,
+                       NumericStrictness::kFlexible);
+  }
+
   std::reference_wrapper<std::istream> is;
-  WhitespaceStrictness strictness;
+  WhitespaceStrictness whitespace_strictness = WhitespaceStrictness::kPrecise;
+  NumericStrictness numeric_strictness = NumericStrictness::kPrecise;
   int line_num = 1;                       // 1-based
   int col_num = 0;                        // 1-based
   int token_num_file = 0;                 // 1-based

@@ -83,12 +83,27 @@ class MReal : public librarian::MVariable<MReal, double> {
 
   // TODO: Add AddConstraint(SizeCategory constraint)
 
+  // ---------------------------------------------------------------------------
+  //  Input/Output style
+
+  // SetIODigits()
+  //
+  // Default: 6. Must be between 1 and 20 (inclusive)
+  //
+  // For Print(): Sets the number of digits to use when printing this value.
+  //
+  // For Read(): If PrecisionStrictness is kPrecise, then Read ensures
+  // there are exactly `num_digits_` digits after the decimal point. Otherwise,
+  // it will accept any number of digits after the decimal point.
+  MReal& SetIODigits(int num_digits);
+
   [[nodiscard]] std::string Typename() const override { return "MReal"; }
 
  private:
   librarian::CowPtr<Range> bounds_;
   librarian::CowPtr<librarian::OneOfNumeric> numeric_one_of_;
   librarian::CowPtr<librarian::SizeHandler> size_handler_;
+  int io_digits_ = 6;
 
   class RangeConstraint {
    public:

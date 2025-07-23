@@ -62,18 +62,48 @@ TEST(MRealTest, PrintShouldSucceed) {
   EXPECT_EQ(Print(MReal(), 0), "0.000000");
   EXPECT_EQ(Print(MReal(), 1), "1.000000");
   EXPECT_EQ(Print(MReal(), 1.23456789), "1.234568");
+  EXPECT_EQ(Print(MReal(), -11.23456789), "-11.234568");
+
+  // Check that the precision is correct.
+  EXPECT_EQ(Print(MReal().SetIODigits(1), 1.23456789), "1.2");
+  EXPECT_EQ(Print(MReal().SetIODigits(2), -1.23456789), "-1.23");
+  EXPECT_EQ(Print(MReal().SetIODigits(3), 21.23456789), "21.235");
+  EXPECT_EQ(Print(MReal().SetIODigits(4), -1.23456789), "-1.2346");
+  EXPECT_EQ(Print(MReal().SetIODigits(5), -1.23456789), "-1.23457");
+  EXPECT_EQ(Print(MReal().SetIODigits(6), 21.23456789), "21.234568");
+  EXPECT_EQ(Print(MReal().SetIODigits(7), -1.23456789), "-1.2345679");
+  EXPECT_EQ(Print(MReal().SetIODigits(8), 1.23456789), "1.23456789");
+  EXPECT_EQ(Print(MReal().SetIODigits(9), -1.23456789), "-1.234567890");
+  EXPECT_EQ(Print(MReal().SetIODigits(10), 1.23456789), "1.2345678900");
+  EXPECT_EQ(Print(MReal().SetIODigits(11), -1.23456789), "-1.23456789000");
+
+  EXPECT_THROW((void)Print(MReal().SetIODigits(0), 1.23456789),
+               std::invalid_argument);
+  EXPECT_THROW((void)Print(MReal().SetIODigits(21), 1.23456789),
+               std::invalid_argument);
+  EXPECT_THROW((void)Print(MReal().SetIODigits(-2), 1.23456789),
+               std::invalid_argument);
 }
 
-TEST(MRealTest, ValidReadShouldSucceed) {
-  EXPECT_EQ(Read(MReal(), "123.456"), 123.456);
-  EXPECT_EQ(Read(MReal(), "456 "), 456);
-  EXPECT_EQ(Read(MReal(), "-789.789"), -789.789);
-  EXPECT_EQ(Read(MReal(), "-7.89e12"), -7890000000000.0);
-  EXPECT_EQ(Read(MReal(), "-7.89e-4"), -0.000789);
+TEST(MRealTest, ValidReadInStrictModeShouldSucceed) {
+  {  // Strict mode
+    EXPECT_EQ(Read(MReal().SetIODigits(6), "123.456789"), 123.456789);
+    EXPECT_EQ(Read(MReal().SetIODigits(3), "-789.789"), -789.789);
+  }
+  {  // Flexible mode
+    Context c = Context().WithFlexibleMode();
+    EXPECT_EQ(Read(MReal(), "456 ", c), 456);
+    EXPECT_EQ(Read(MReal(), "-7.89e12", c), -7890000000000.0);
+    EXPECT_EQ(Read(MReal(), "-7.89e-4", c), -0.000789);
+  }
 }
 
 TEST(MRealTest, ReadWithTokensAfterwardsIsFine) {
-  EXPECT_EQ(Read(MReal(), "-123 you should ignore this"), -123);
+  EXPECT_EQ(Read(MReal().SetIODigits(3), "-123.456 you should ignore this"),
+            -123.456);
+  EXPECT_EQ(Read(MReal(), "-123 you should ignore this",
+                 Context().WithFlexibleMode()),
+            -123);
 }
 
 TEST(MRealTest, InvalidReadShouldFail) {
@@ -87,6 +117,11 @@ TEST(MRealTest, InvalidReadShouldFail) {
   EXPECT_THROW({ (void)Read(MReal(), "c123"); }, IOError);
   EXPECT_THROW({ (void)Read(MReal(), "12c3"); }, IOError);
   EXPECT_THROW({ (void)Read(MReal(), "123c"); }, IOError);
+  // Multiple decimals
+  EXPECT_THROW({ (void)Read(MReal(), "123.45.67"); }, IOError);
+  EXPECT_THROW(
+      { (void)Read(MReal(), "123.45e0.7", Context().WithFlexibleMode()); },
+      IOError);
 }
 
 TEST(MRealTest, BetweenShouldRestrictTheRangeProperly) {

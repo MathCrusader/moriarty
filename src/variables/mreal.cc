@@ -21,7 +21,6 @@
 
 #include "src/contexts/librarian_context.h"
 #include "src/librarian/errors.h"
-#include "src/librarian/util/debug_string.h"
 #include "src/types/real.h"
 #include "src/variables/minteger.h"
 
@@ -123,6 +122,14 @@ MReal& MReal::AddConstraint(AtLeast constraint) {
       [constraint](MReal& other) { other.AddConstraint(constraint); }));
 }
 
+MReal& MReal::SetIODigits(int num_digits) {
+  if (!(1 <= num_digits && num_digits <= 20)) {
+    throw std::invalid_argument("num_digits must be between 1 and 20.");
+  }
+  io_digits_ = num_digits;
+  return *this;
+}
+
 double MReal::GenerateImpl(librarian::ResolverContext ctx) const {
   if (GetOneOf().HasBeenConstrained()) {
     return GetOneOf().SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
@@ -151,22 +158,12 @@ double MReal::GenerateImpl(librarian::ResolverContext ctx) const {
 }
 
 double MReal::ReadImpl(librarian::ReaderContext ctx) const {
-  std::string str = ctx.ReadToken();
-
-  try {
-    return Real(str).GetApproxValue();
-  } catch (const std::invalid_argument& e) {
-    ctx.ThrowIOError(std::format("Invalid real value: {}\n{}",
-                                 librarian::DebugString(str), e.what()));
-  }
-  // Should not get here.
-  throw std::runtime_error(std::format("Failed to read MReal from '{}'", str));
+  return ctx.ReadReal(io_digits_);
 }
 
 void MReal::PrintImpl(librarian::PrinterContext ctx,
                       const double& value) const {
-  // FIXME: don't hardcode precision
-  ctx.PrintToken(std::format("{:.6f}", value));
+  ctx.PrintToken(std::format("{:.{}f}", value, io_digits_));
 }
 
 std::optional<double> MReal::GetUniqueValueImpl(

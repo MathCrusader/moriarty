@@ -120,6 +120,7 @@
 #include "src/internal/variable_set.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
+#include "src/librarian/policies.h"
 
 namespace moriarty_testing {
 
@@ -144,6 +145,24 @@ class Context {
     return *this;
   }
 
+  // WithPreciseMode()
+  //
+  // Sets the whitespace and numeric strictness to `kPrecise`.
+  Context& WithPreciseMode() {
+    whitespace_strictness_ = moriarty::WhitespaceStrictness::kPrecise;
+    numeric_strictness_ = moriarty::NumericStrictness::kPrecise;
+    return *this;
+  }
+
+  // WithFlexibleMode()
+  //
+  // Sets the whitespace and numeric strictness to `kFlexible`.
+  Context& WithFlexibleMode() {
+    whitespace_strictness_ = moriarty::WhitespaceStrictness::kFlexible;
+    numeric_strictness_ = moriarty::NumericStrictness::kFlexible;
+    return *this;
+  }
+
   const moriarty::moriarty_internal::VariableSet& Variables() const& {
     return variables_;
   }
@@ -154,9 +173,21 @@ class Context {
   }
   moriarty::moriarty_internal::ValueSet& Values() & { return values_; }
 
+  moriarty::WhitespaceStrictness WhitespaceStrictness() const {
+    return whitespace_strictness_;
+  }
+
+  moriarty::NumericStrictness NumericStrictness() const {
+    return numeric_strictness_;
+  }
+
  private:
   moriarty::moriarty_internal::VariableSet variables_;
   moriarty::moriarty_internal::ValueSet values_;
+  moriarty::WhitespaceStrictness whitespace_strictness_ =
+      moriarty::WhitespaceStrictness::kPrecise;
+  moriarty::NumericStrictness numeric_strictness_ =
+      moriarty::NumericStrictness::kPrecise;
 };
 
 // Generate() [For tests only]
@@ -459,7 +490,8 @@ T::value_type Read(T variable, std::istream& is, Context context) {
   moriarty::moriarty_internal::AbstractVariable* var =
       context.Variables().GetAnonymousVariable(var_name);
 
-  moriarty::InputCursor cr(is, moriarty::WhitespaceStrictness::kPrecise);
+  moriarty::InputCursor cr(is, context.WhitespaceStrictness(),
+                           context.NumericStrictness());
   var->ReadValue(var_name, cr, context.Variables(), context.Values());
   return context.Values().Get<T>(var_name);
 }

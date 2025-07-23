@@ -74,6 +74,18 @@ class BasicIStreamContext {
   // Reads the next token from the input stream and casts it to an integer.
   int64_t ReadInteger();
 
+  // ReadReal()
+  //
+  // Reads the next token from the input stream and casts it to a double.
+  //
+  // * If PrecisionStrictness is kPrecise, then this ensures that the number is
+  //   not in exponential notation and that the number of digits after the
+  //   decimal point is exactly `num_digits`. `num_digits` must be greater than
+  //   0. If you want `num_digits` == 0, use ReadInteger().
+  // * If PrecisionStrictness is kFlexible, then `num_digits` is ignored and
+  //   exponential notation is allowed.
+  double ReadReal(int num_digits = 0);
+
   // TODO: Add helper functions. ReadSpace(), ReadEoln(), ReadTokens(),
   // ReadInt64(), etc.
  private:
@@ -81,7 +93,8 @@ class BasicIStreamContext {
 
   InputCursor& GetCursor();
   std::istream& GetIStream();
-  WhitespaceStrictness GetStrictness() const;
+  WhitespaceStrictness GetWhitespaceStrictness() const;
+  NumericStrictness GetNumericStrictness() const;
 
   // TODO: Determine if we should provide an API for:
   //  * update/access strictness and is_.

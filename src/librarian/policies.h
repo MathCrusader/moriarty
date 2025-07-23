@@ -20,11 +20,29 @@
 namespace moriarty {
 
 // How to handle whitespace when reading from an input stream.
-//
-// * Precise means that the whitespace must be exactly as expected.
-// * Flexible treats all whitespace characters as the same, and collapses all
-//   back-to-back whitespace together.
-enum class WhitespaceStrictness { kPrecise, kFlexible };
+enum class WhitespaceStrictness {
+  // The whitespace must be exactly as expected.
+  kPrecise,
+  // All whitespace characters are treated as the same, and back-to-back
+  // whitespace is collapsed.
+  kFlexible
+};
+
+// How strict the precision of a number should be when reading from an input
+// stream.
+enum class NumericStrictness {
+  // Ensures the following:
+  //  * No leading '+'.
+  //  * No -0.
+  //  * No inf/nan.
+  //  * No unnecessary leading zeroes.
+  //  * No exponential notation.
+  //  * The number of digits after the decimal point is exactly as specified.
+  kPrecise,
+  // No restriction on the number. Calls std::from_chars(), but allows leading
+  // '+'.
+  kFlexible
+};
 
 // Determines if a generation should be retried or not.
 enum class RetryPolicy { kRetry, kAbort };
