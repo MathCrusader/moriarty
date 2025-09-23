@@ -22,6 +22,7 @@
 #include <format>
 #include <functional>
 #include <istream>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 
@@ -71,7 +72,7 @@ char WhitespaceAsChar(Whitespace whitespace) {
     case Whitespace::kSpace:
       return ' ';
   }
-  assert(false);
+  throw std::logic_error("Invalid whitespace enum value");
 }
 
 void RegisterNewline(char c, InputCursor& cursor) {
