@@ -35,6 +35,9 @@ namespace moriarty {
 // Describes constraints placed on an undirected graph.
 class MGraph : public librarian::MVariable<MGraph, Graph<>> {
  public:
+  class PartialReader;  // Forward declaration
+  using partial_reader_type = PartialReader;
+
   // Create an MGraph from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
   //
@@ -79,6 +82,10 @@ class MGraph : public librarian::MVariable<MGraph, Graph<>> {
 
   [[nodiscard]] std::string Typename() const override { return "MGraph"; }
 
+  [[nodiscard]] PartialReader CreatePartialReader(int num_chunks) const {
+    return PartialReader();
+  }
+
  private:
   std::optional<MInteger> num_nodes_constraints_;
   std::optional<MInteger> num_edges_constraints_;
@@ -95,6 +102,24 @@ class MGraph : public librarian::MVariable<MGraph, Graph<>> {
   std::optional<Graph<>> GetUniqueValueImpl(
       librarian::AnalysisContext ctx) const override;
   // ---------------------------------------------------------------------------
+
+ public:
+  // Internal-to-Moriarty class. You shouldn't need to use this directly (its
+  // API can and will change without warning).
+  //
+  // Allows the graph to be read in chunks at a time.
+  // For now, this assumes edge list and each node is 0-based.
+  //
+  // In the future, we'll add options for:
+  //  - Adjacency list, adjacency matrix, parent list (in trees), etc.
+  class PartialReader {
+   public:
+    void ReadNext(librarian::ReaderContext ctx, int /*idx*/);
+    Graph<> Finalize() &&;
+
+   private:
+    std::vector<std::pair<int, int>> edges_;
+  };
 };
 
 // -----------------------------------------------------------------------------

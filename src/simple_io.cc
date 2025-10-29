@@ -260,8 +260,9 @@ void ReadLine(ImportContext ctx, const SimpleIO::Line& line,
     }
     ctx.ReadWhitespace(Whitespace::kNewline);
   }
-  for (int var_idx = 0; var_idx < readers.size(); var_idx++) {
-    readers[var_idx]->Finalize();
+  for (auto& reader : readers) {
+    std::move(*reader).Finalize();
+    reader.reset();
   }
 }
 

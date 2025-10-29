@@ -39,12 +39,12 @@ namespace moriarty_internal {
 
 // A PartialReader is an interface for reading a value from a stream over
 // several calls. For example, each call to `ReadNext()` may read the next
-// element in an array. `Finalize` is called when all items have been read.
+// element in an array. `Finalize()` is called when all items have been read.
 class PartialReader {
  public:
   virtual ~PartialReader() = default;
   virtual void ReadNext() = 0;
-  virtual void Finalize() = 0;
+  virtual void Finalize() && = 0;
 };
 
 }  // namespace moriarty_internal

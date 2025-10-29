@@ -408,7 +408,7 @@ TEST(MArrayTest,
 
 TEST(MArrayTest, DirectlyUsingPartialReaderShouldWork) {
   MArray<MInteger> arr(Elements<MInteger>(Between(1, 10)), Length(6));
-  MArray<MInteger>::ArrayPartialReader reader = arr.CreatePartialReader(6);
+  MArray<MInteger>::PartialReader reader = arr.CreatePartialReader(6);
 
   Context context;
   std::istringstream input("1\n2\n3\n4\n5\n6\n");
@@ -420,7 +420,7 @@ TEST(MArrayTest, DirectlyUsingPartialReaderShouldWork) {
     reader.ReadNext(ctx, i);
     ASSERT_EQ(input.get(), '\n');  // Consume the separator
   }
-  EXPECT_THAT(reader.Finalize(), ElementsAre(1, 2, 3, 4, 5, 6));
+  EXPECT_THAT(std::move(reader).Finalize(), ElementsAre(1, 2, 3, 4, 5, 6));
 }
 
 TEST(MArrayTest, IndirectlyUsingPartialReaderShouldWork) {
@@ -437,7 +437,7 @@ TEST(MArrayTest, IndirectlyUsingPartialReaderShouldWork) {
     reader->ReadNext();
     ASSERT_EQ(input.get(), '\n');  // Consume the separator
   }
-  reader->Finalize();
+  std::move(*reader).Finalize();
   EXPECT_THAT(context.Values().Get<MArray<MInteger>>("A"),
               ElementsAre(1, 2, 3, 4, 5, 6));
 }

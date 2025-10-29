@@ -299,7 +299,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // Wrapper class around an MVariable's PartialReader. Expected API is:
   //   void ReadNext(ReaderContext, int idx);  // Read the next value
-  //   ValueType Finalize();                   // Return the read value
+  //   ValueType Finalize() &&;                // Return the read value
   template <typename ReaderType>
   class PartialReaderWrapper : public moriarty_internal::PartialReader {
    public:
@@ -308,9 +308,9 @@ class MVariable : public moriarty_internal::AbstractVariable {
         std::reference_wrapper<moriarty_internal::ValueSet> values)
         : reader_(std::move(reader)), ctx_(std::move(ctx)), values_(values) {}
     void ReadNext() override { reader_.ReadNext(ctx_, idx_++); }
-    void Finalize() override {
+    void Finalize() && override {
       values_.get().Set<VariableType>(ctx_.GetVariableName(),
-                                      reader_.Finalize());
+                                      std::move(reader_).Finalize());
     }
 
    private:

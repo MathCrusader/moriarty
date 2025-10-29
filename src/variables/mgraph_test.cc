@@ -86,6 +86,22 @@ TEST(MGraphTest, ReadShouldSucceed) {
   EXPECT_EQ(Read(MGraph(NumNodes(0), NumEdges(0)), ""), Graph<>(0));
 }
 
+TEST(MGraphTest, PartialReadShouldSucceed) {
+  auto reader = MGraph(NumNodes(3), NumEdges(3)).CreatePartialReader(2);
+
+  Context context;
+  std::istringstream input(std::string{Graph1String()});
+  InputCursor cursor(input, WhitespaceStrictness::kPrecise);
+  librarian::ReaderContext ctx("A", cursor, Context().Variables(),
+                               Context().Values());
+
+  for (int i = 0; i < 3; i++) {
+    reader.ReadNext(ctx, i);
+    ASSERT_EQ(input.get(), '\n');  // Consume the separator
+  }
+  EXPECT_EQ(std::move(reader).Finalize(), Graph1());
+}
+
 TEST(MGraphTest, ReadShouldFailOnInvalidInput) {
   EXPECT_THROW(
       { (void)Read(MGraph(NumNodes(2), NumEdges(3)), "0 1\n1 2\n2 1\n"); },

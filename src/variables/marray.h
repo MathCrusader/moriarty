@@ -61,8 +61,8 @@ class MArray : public librarian::MVariable<
  public:
   using element_value_type = typename MElementType::value_type;
   using vector_value_type = typename std::vector<element_value_type>;
-  class ArrayPartialReader;  // Forward declaration
-  using partial_reader_type = ArrayPartialReader;
+  class PartialReader;  // Forward declaration
+  using partial_reader_type = PartialReader;
 
   // Create an MArray from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
@@ -125,13 +125,13 @@ class MArray : public librarian::MVariable<
   // without reading the separators. Call ReadNext() exactly N times, then call
   // Finalize() to get the final value, which will leave this in a
   // moved-from-state.
-  ArrayPartialReader CreatePartialReader(int N) const {
-    return ArrayPartialReader(N, element_constraints_, length_);
+  PartialReader CreatePartialReader(int N) const {
+    return PartialReader(N, element_constraints_, length_);
   }
 
-  class ArrayPartialReader {
+  class PartialReader {
    public:
-    explicit ArrayPartialReader(
+    explicit PartialReader(
         int N, std::reference_wrapper<const MElementType> element_constraints,
         std::reference_wrapper<const std::optional<MInteger>> length)
         : element_constraints_(element_constraints), length_(length) {
@@ -143,7 +143,7 @@ class MArray : public librarian::MVariable<
     void ReadNext(librarian::ReaderContext ctx, int idx) {
       array_.push_back(element_constraints_.get().Read(ctx));
     }
-    vector_value_type Finalize() { return std::move(array_); }
+    vector_value_type Finalize() && { return std::move(array_); }
 
    private:
     std::vector<element_value_type> array_;
