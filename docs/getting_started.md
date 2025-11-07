@@ -1,5 +1,7 @@
 # Getting Started
 
+[THIS IS OUT OF DATE. IT USES V1 NOTATION, NOT THE CURRENT NOTATION]
+
 This tutorial will take you through the process of generating some data and
 printing it to the screen.
 
