@@ -108,8 +108,25 @@ class MReal : public librarian::MVariable<MReal, double> {
 
   [[nodiscard]] std::string Typename() const override { return "MReal"; }
 
+  // MReal::CoreConstraints
+  //
+  // A base set of constraints for `MReal` that are used during generation.
+  // Note: Returned references are invalidated after any non-const call to this
+  // class or the corresponding `MReal`.
+  class CoreConstraints {
+   public:
+    const Range& Bounds() const;
+
+   private:
+    friend class MReal;
+    struct Data {
+      Range bounds;
+    };
+    librarian::CowPtr<Data> data_;
+  };
+
  private:
-  librarian::CowPtr<Range> bounds_;
+  CoreConstraints core_constraints_;
   librarian::CowPtr<librarian::OneOfNumeric> numeric_one_of_;
   librarian::CowPtr<librarian::SizeHandler> size_handler_;
   int io_digits_ = 6;

@@ -28,7 +28,7 @@ namespace moriarty {
 
 MReal& MReal::AddConstraint(Exactly<double> constraint) {
   double value = constraint.GetValue();
-  bounds_.Mutable().AtLeast(value).AtMost(value);
+  core_constraints_.data_.Mutable().bounds.AtLeast(value).AtMost(value);
   return InternalAddExactlyConstraint(std::move(constraint));
 }
 
@@ -38,7 +38,8 @@ MReal& MReal::AddConstraint(Exactly<int64_t> constraint) {
   }
   auto actual_constraint =
       std::make_unique<librarian::ExactlyNumeric>(constraint.GetValue());
-  bounds_.Mutable().Intersect(actual_constraint->GetRange());
+  core_constraints_.data_.Mutable().bounds.Intersect(
+      actual_constraint->GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::move(actual_constraint),
       [constraint](MReal& other) { other.AddConstraint(constraint); }));
@@ -50,7 +51,8 @@ MReal& MReal::AddConstraint(Exactly<Real> constraint) {
   }
   auto actual_constraint =
       std::make_unique<librarian::ExactlyNumeric>(constraint.GetValue());
-  bounds_.Mutable().Intersect(actual_constraint->GetRange());
+  core_constraints_.data_.Mutable().bounds.Intersect(
+      actual_constraint->GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::move(actual_constraint),
       [constraint](MReal& other) { other.AddConstraint(constraint); }));
@@ -62,7 +64,8 @@ MReal& MReal::AddConstraint(Exactly<std::string> constraint) {
   }
   auto actual_constraint =
       std::make_unique<librarian::ExactlyNumeric>(constraint.GetValue());
-  bounds_.Mutable().Intersect(actual_constraint->GetRange());
+  core_constraints_.data_.Mutable().bounds.Intersect(
+      actual_constraint->GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::move(actual_constraint),
       [constraint](MReal& other) { other.AddConstraint(constraint); }));
@@ -102,21 +105,21 @@ MReal& MReal::AddConstraint(OneOf<std::string> constraint) {
 }
 
 MReal& MReal::AddConstraint(Between constraint) {
-  bounds_.Mutable().Intersect(constraint.GetRange());
+  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<Between>(constraint),
       [constraint](MReal& other) { other.AddConstraint(constraint); }));
 }
 
 MReal& MReal::AddConstraint(AtMost constraint) {
-  bounds_.Mutable().Intersect(constraint.GetRange());
+  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<AtMost>(constraint),
       [constraint](MReal& other) { other.AddConstraint(constraint); }));
 }
 
 MReal& MReal::AddConstraint(AtLeast constraint) {
-  bounds_.Mutable().Intersect(constraint.GetRange());
+  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<AtLeast>(constraint),
       [constraint](MReal& other) { other.AddConstraint(constraint); }));
@@ -129,6 +132,8 @@ MReal& MReal::SetIODigits(int num_digits) {
   io_digits_ = num_digits;
   return *this;
 }
+
+const Range& MReal::CoreConstraints::Bounds() const { return data_->bounds; }
 
 double MReal::GenerateImpl(librarian::ResolverContext ctx) const {
   if (GetOneOf().HasBeenConstrained()) {
@@ -144,9 +149,10 @@ double MReal::GenerateImpl(librarian::ResolverContext ctx) const {
   }
 
   std::optional<Range::ExtremeValues<Real>> extremes =
-      bounds_->RealExtremes([&](std::string_view var) -> int64_t {
-        return ctx.GenerateVariable<MInteger>(var);
-      });
+      core_constraints_.Bounds().RealExtremes(
+          [&](std::string_view var) -> int64_t {
+            return ctx.GenerateVariable<MInteger>(var);
+          });
   if (!extremes) {
     throw GenerationError(
         ctx.GetVariableName(),
@@ -181,11 +187,12 @@ std::optional<double> MReal::GetUniqueValueImpl(
     }
 
     std::optional<Range::ExtremeValues<Real>> extremes =
-        bounds_->RealExtremes([&](std::string_view var) -> int64_t {
-          auto value = ctx.GetUniqueValue<MInteger>(var);
-          if (!value) throw ValueNotFound(var);
-          return *value;
-        });
+        core_constraints_.Bounds().RealExtremes(
+            [&](std::string_view var) -> int64_t {
+              auto value = ctx.GetUniqueValue<MInteger>(var);
+              if (!value) throw ValueNotFound(var);
+              return *value;
+            });
     if (!extremes || extremes->min != extremes->max) return std::nullopt;
     return extremes->min.GetApproxValue();
   } catch (const ValueNotFound& e) {

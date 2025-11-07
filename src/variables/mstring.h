@@ -29,6 +29,7 @@
 #include "src/contexts/librarian_context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/librarian/mvariable.h"
+#include "src/librarian/util/cow_ptr.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
@@ -88,11 +89,31 @@ class MString : public librarian::MVariable<MString, std::string> {
 
   [[nodiscard]] std::string Typename() const override { return "MString"; }
 
+  // MString::CoreConstraints
+  //
+  // A base set of constraints for `MString` that are used during generation.
+  // Note: Returned references/spans are invalidated after any non-const
+  // call to this class or the corresponding `MString`.
+  class CoreConstraints {
+   public:
+    const std::optional<MInteger>& Length() const;
+    const librarian::OneOfHandler<char>& Alphabet() const;
+    bool DistinctCharacters() const;
+    std::span<const moriarty_internal::SimplePattern> SimplePatterns() const;
+
+   private:
+    friend class MString;
+    struct Data {
+      std::optional<MInteger> length;
+      librarian::OneOfHandler<char> alphabet;
+      bool distinct_characters = false;
+      std::vector<moriarty_internal::SimplePattern> simple_patterns;
+    };
+    librarian::CowPtr<Data> data_;
+  };
+
  private:
-  std::optional<MInteger> length_;
-  librarian::OneOfHandler<char> alphabet_;
-  bool distinct_characters_ = false;
-  std::vector<moriarty_internal::SimplePattern> simple_patterns_;
+  CoreConstraints core_constraints_;
 
   std::string GenerateSimplePattern(librarian::ResolverContext ctx) const;
   std::string GenerateImplWithDistinctCharacters(

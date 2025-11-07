@@ -46,8 +46,10 @@ MString& MString::AddConstraint(OneOf<std::string> constraint) {
 }
 
 MString& MString::AddConstraint(Length constraint) {
-  if (!length_) length_ = MInteger();
-  length_->MergeFrom(constraint.GetConstraints());
+  if (!core_constraints_.data_->length)
+    core_constraints_.data_.Mutable().length = MInteger();
+  core_constraints_.data_.Mutable().length->MergeFrom(
+      constraint.GetConstraints());
   return InternalAddConstraint(std::move(constraint));
 }
 
@@ -58,18 +60,19 @@ MString& MString::AddConstraint(Alphabet constraint) {
   auto last = std::unique(options.begin(), options.end());
   options.erase(last, options.end());
 
-  if (!alphabet_.ConstrainOptions(options))
+  if (!core_constraints_.data_.Mutable().alphabet.ConstrainOptions(options))
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   return InternalAddConstraint(std::move(constraint));
 }
 
 MString& MString::AddConstraint(DistinctCharacters constraint) {
-  distinct_characters_ = true;
+  core_constraints_.data_.Mutable().distinct_characters = true;
   return InternalAddConstraint(std::move(constraint));
 }
 
 MString& MString::AddConstraint(SimplePattern constraint) {
-  simple_patterns_.push_back(constraint.GetCompiledPattern());
+  core_constraints_.data_.Mutable().simple_patterns.push_back(
+      constraint.GetCompiledPattern());
   return InternalAddConstraint(std::move(constraint));
 }
 
@@ -77,14 +80,33 @@ MString& MString::AddConstraint(SizeCategory constraint) {
   return AddConstraint(Length(constraint));
 }
 
+const std::optional<MInteger>& MString::CoreConstraints::Length() const {
+  return data_->length;
+}
+
+const librarian::OneOfHandler<char>& MString::CoreConstraints::Alphabet()
+    const {
+  return data_->alphabet;
+}
+
+bool MString::CoreConstraints::DistinctCharacters() const {
+  return data_->distinct_characters;
+}
+
+std::span<const moriarty_internal::SimplePattern>
+MString::CoreConstraints::SimplePatterns() const {
+  return data_->simple_patterns;
+}
+
 std::vector<MString> MString::ListEdgeCasesImpl(
     librarian::AnalysisContext ctx) const {
-  if (!length_) {
+  if (!core_constraints_.data_->length) {
     throw std::runtime_error(
         "Attempting to get difficult instances of a string with no "
         "length parameter given.");
   }
-  std::vector<MInteger> lengthCases = length_->ListEdgeCases(ctx);
+  std::vector<MInteger> lengthCases =
+      core_constraints_.data_->length->ListEdgeCases(ctx);
 
   std::vector<MString> values;
   values.reserve(lengthCases.size());
@@ -101,31 +123,35 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
   if (GetOneOf().HasBeenConstrained())
     return GetOneOf().SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
 
-  if (simple_patterns_.empty() && !alphabet_.HasBeenConstrained()) {
+  if (core_constraints_.SimplePatterns().empty() &&
+      !core_constraints_.Alphabet().HasBeenConstrained()) {
     throw GenerationError(
         ctx.GetVariableName(),
         "Need either Alphabet() or SimplePattern() to generate a string",
         RetryPolicy::kAbort);
   }
-  if (simple_patterns_.empty() && !length_) {
+  if (core_constraints_.SimplePatterns().empty() &&
+      !core_constraints_.Length()) {
     throw GenerationError(
         ctx.GetVariableName(),
         "Need either Length() or SimplePattern() to generate a string",
         RetryPolicy::kAbort);
   }
 
-  if (!simple_patterns_.empty()) return GenerateSimplePattern(ctx);
+  if (!core_constraints_.SimplePatterns().empty())
+    return GenerateSimplePattern(ctx);
 
-  MInteger length_local = *length_;
+  MInteger length_local = *core_constraints_.Length();
 
   // Negative string length is impossible.
   length_local.AddConstraint(AtLeast(0));
 
-  if (distinct_characters_) return GenerateImplWithDistinctCharacters(ctx);
+  if (core_constraints_.DistinctCharacters())
+    return GenerateImplWithDistinctCharacters(ctx);
 
   int length = length_local.Generate(ctx.ForSubVariable("length"));
 
-  std::vector<char> alphabet(alphabet_.GetOptions());
+  std::vector<char> alphabet(core_constraints_.Alphabet().GetOptions());
   std::vector<char> ret = ctx.RandomElementsWithReplacement(alphabet, length);
 
   return std::string(ret.begin(), ret.end());
@@ -133,12 +159,12 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
 
 std::string MString::GenerateSimplePattern(
     librarian::ResolverContext ctx) const {
-  ABSL_CHECK(!simple_patterns_.empty());
+  ABSL_CHECK(!core_constraints_.SimplePatterns().empty());
 
   std::optional<std::string> maybe_alphabet =
       [&]() -> std::optional<std::string> {
-    if (!alphabet_.HasBeenConstrained()) return std::nullopt;
-    std::vector<char> alphabet(alphabet_.GetOptions());
+    if (!core_constraints_.Alphabet().HasBeenConstrained()) return std::nullopt;
+    std::vector<char> alphabet(core_constraints_.Alphabet().GetOptions());
     return std::string(alphabet.begin(), alphabet.end());
   }();
 
@@ -149,8 +175,8 @@ std::string MString::GenerateSimplePattern(
   try {
     // Use the last pattern, since it's probably the most specific. This choice
     // is arbitrary since all patterns must be satisfied.
-    return simple_patterns_.back().GenerateWithRestrictions(maybe_alphabet,
-                                                            lookup, rand);
+    return core_constraints_.SimplePatterns().back().GenerateWithRestrictions(
+        maybe_alphabet, lookup, rand);
   } catch (const std::runtime_error& e) {
     throw GenerationError(
         ctx.GetVariableName(),
@@ -163,13 +189,14 @@ std::string MString::GenerateImplWithDistinctCharacters(
     librarian::ResolverContext ctx) const {
   // Creating a copy in case the alphabet changes in the future, we don't want
   // to limit the length forever.
-  MInteger mlength = *length_;
+  MInteger mlength = *core_constraints_.Length();
   // Each char appears at most once.
-  mlength.AddConstraint(AtMost(alphabet_.GetOptions().size()));
+  mlength.AddConstraint(
+      AtMost(core_constraints_.Alphabet().GetOptions().size()));
   int length = mlength.Generate(ctx.ForSubVariable("length"));
 
-  std::vector<char> ret =
-      ctx.RandomElementsWithoutReplacement(alphabet_.GetOptions(), length);
+  std::vector<char> ret = ctx.RandomElementsWithoutReplacement(
+      core_constraints_.Alphabet().GetOptions(), length);
 
   return std::string(ret.begin(), ret.end());
 }
