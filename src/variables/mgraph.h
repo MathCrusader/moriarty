@@ -86,12 +86,33 @@ class MGraph : public librarian::MVariable<MGraph, Graph<>> {
     return PartialReader();
   }
 
+  // MGraph::CoreConstraints
+  //
+  // A base set of constraints for `MGraph` that are used during generation.
+  // Note: Returned references are invalidated after any non-const call to this
+  // class or the corresponding `MGraph`.
+  class CoreConstraints {
+   public:
+    const std::optional<MInteger>& NumNodes() const;
+    const std::optional<MInteger>& NumEdges() const;
+    bool IsConnected() const;
+    bool MultiEdgesAllowed() const;
+    bool LoopsAllowed() const;
+
+   private:
+    friend class MGraph;
+    struct Data {
+      std::optional<MInteger> num_nodes;
+      std::optional<MInteger> num_edges;
+      bool is_connected = false;
+      bool multi_edges_allowed = true;
+      bool loops_allowed = true;
+    };
+    librarian::CowPtr<Data> data_;
+  };
+
  private:
-  std::optional<MInteger> num_nodes_constraints_;
-  std::optional<MInteger> num_edges_constraints_;
-  bool is_connected_ = false;
-  bool multi_edges_allowed_ = true;
-  bool loops_allowed_ = true;
+  CoreConstraints core_constraints_;
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides

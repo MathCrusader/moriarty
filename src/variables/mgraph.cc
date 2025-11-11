@@ -43,14 +43,18 @@ MGraph& MGraph::AddConstraint(OneOf<Graph<>> constraint) {
 }
 
 MGraph& MGraph::AddConstraint(NumNodes constraint) {
-  if (!num_nodes_constraints_) num_nodes_constraints_ = MInteger();
-  num_nodes_constraints_->MergeFrom(constraint.GetConstraints());
+  if (!core_constraints_.NumNodes())
+    core_constraints_.data_.Mutable().num_nodes = MInteger();
+  core_constraints_.data_.Mutable().num_nodes->MergeFrom(
+      constraint.GetConstraints());
   return InternalAddConstraint(std::move(constraint));
 }
 
 MGraph& MGraph::AddConstraint(NumEdges constraint) {
-  if (!num_edges_constraints_) num_edges_constraints_ = MInteger();
-  num_edges_constraints_->MergeFrom(constraint.GetConstraints());
+  if (!core_constraints_.NumEdges())
+    core_constraints_.data_.Mutable().num_edges = MInteger();
+  core_constraints_.data_.Mutable().num_edges->MergeFrom(
+      constraint.GetConstraints());
   return InternalAddConstraint(std::move(constraint));
 }
 
@@ -59,23 +63,23 @@ MGraph& MGraph::AddConstraint(SizeCategory constraint) {
 }
 
 MGraph& MGraph::AddConstraint(Connected constraint) {
-  is_connected_ = true;
+  core_constraints_.data_.Mutable().is_connected = true;
   return InternalAddConstraint(std::move(constraint));
 }
 
 MGraph& MGraph::AddConstraint(NoParallelEdges constraint) {
-  multi_edges_allowed_ = false;
+  core_constraints_.data_.Mutable().multi_edges_allowed = false;
   return InternalAddConstraint(std::move(constraint));
 }
 
 MGraph& MGraph::AddConstraint(Loopless constraint) {
-  loops_allowed_ = false;
+  core_constraints_.data_.Mutable().loops_allowed = false;
   return InternalAddConstraint(std::move(constraint));
 }
 
 MGraph& MGraph::AddConstraint(SimpleGraph constraint) {
-  multi_edges_allowed_ = false;
-  loops_allowed_ = false;
+  core_constraints_.data_.Mutable().multi_edges_allowed = false;
+  core_constraints_.data_.Mutable().loops_allowed = false;
   return InternalAddConstraint(std::move(constraint));
 }
 
@@ -85,27 +89,28 @@ Graph<> MGraph::GenerateImpl(librarian::ResolverContext ctx) const {
 
   // TODO: These checks are too strong when we constrain in other ways (simple,
   // tree, connected, planar, etc)
-  if (!num_nodes_constraints_) {
+  if (!core_constraints_.NumNodes()) {
     throw GenerationError(ctx.GetVariableName(),
                           "Need NumNodes() to generate a graph",
                           RetryPolicy::kAbort);
   }
-  if (!num_edges_constraints_) {
+  if (!core_constraints_.NumEdges()) {
     throw GenerationError(ctx.GetVariableName(),
                           "Need NumEdges() to generate a graph",
                           RetryPolicy::kAbort);
   }
 
-  MInteger node_con = *num_nodes_constraints_;
+  MInteger node_con = *core_constraints_.NumNodes();
   node_con.AddConstraint(AtLeast(0));
 
   int64_t num_nodes = node_con.Generate(ctx.ForSubVariable("num_nodes"));
 
-  MInteger edge_con = *num_edges_constraints_;
+  MInteger edge_con = *core_constraints_.NumEdges();
   edge_con.AddConstraint(AtLeast(0));
-  if (is_connected_) edge_con.AddConstraint(AtLeast(num_nodes - 1));
-  if (!multi_edges_allowed_) {
-    if (loops_allowed_)
+  if (core_constraints_.IsConnected())
+    edge_con.AddConstraint(AtLeast(num_nodes - 1));
+  if (!core_constraints_.MultiEdgesAllowed()) {
+    if (core_constraints_.LoopsAllowed())
       edge_con.AddConstraint(AtMost((num_nodes * (num_nodes + 1)) / 2));
     else
       edge_con.AddConstraint(AtMost((num_nodes * (num_nodes - 1)) / 2));
@@ -120,7 +125,7 @@ Graph<> MGraph::GenerateImpl(librarian::ResolverContext ctx) const {
 
   std::set<std::pair<Graph<>::NodeIdx, Graph<>::NodeIdx>> seen;
   Graph G(num_nodes);
-  if (is_connected_) {
+  if (core_constraints_.IsConnected()) {
     for (int64_t i = 1; i < num_nodes; ++i) {
       int64_t v = ctx.RandomInteger(i);
       seen.emplace(i, v);
@@ -132,8 +137,9 @@ Graph<> MGraph::GenerateImpl(librarian::ResolverContext ctx) const {
   while (G.NumEdges() < num_edges) {
     int64_t u = ctx.RandomInteger(num_nodes);
     int64_t v = ctx.RandomInteger(num_nodes);
-    if (!loops_allowed_ && u == v) continue;
-    if (!multi_edges_allowed_ && !seen.emplace(u, v).second) continue;
+    if (!core_constraints_.LoopsAllowed() && u == v) continue;
+    if (!core_constraints_.MultiEdgesAllowed() && !seen.emplace(u, v).second)
+      continue;
     seen.emplace(v, u);
     G.AddEdge(u, v);
   }
@@ -142,17 +148,17 @@ Graph<> MGraph::GenerateImpl(librarian::ResolverContext ctx) const {
 }
 
 Graph<> MGraph::ReadImpl(librarian::ReaderContext ctx) const {
-  if (!num_nodes_constraints_)
+  if (!core_constraints_.NumNodes())
     ctx.ThrowIOError("Unknown number of nodes before read.");
   std::optional<int64_t> num_nodes =
-      num_nodes_constraints_->GetUniqueValue(ctx);
+      core_constraints_.NumNodes()->GetUniqueValue(ctx);
   if (!num_nodes)
     ctx.ThrowIOError("Cannot determine the number of nodes before read.");
 
-  if (!num_edges_constraints_)
+  if (!core_constraints_.NumEdges())
     ctx.ThrowIOError("Unknown number of edges before read.");
   std::optional<int64_t> num_edges =
-      num_edges_constraints_->GetUniqueValue(ctx);
+      core_constraints_.NumEdges()->GetUniqueValue(ctx);
   if (!num_edges)
     ctx.ThrowIOError("Cannot determine the number of edges before read.");
 
@@ -188,11 +194,13 @@ std::optional<Graph<>> MGraph::GetUniqueValueImpl(
   if (option) return *option;
 
   std::optional<int64_t> nodes =
-      num_nodes_constraints_ ? num_nodes_constraints_->GetUniqueValue(ctx)
-                             : std::nullopt;
+      core_constraints_.NumNodes()
+          ? core_constraints_.NumNodes()->GetUniqueValue(ctx)
+          : std::nullopt;
   std::optional<int64_t> edges =
-      num_edges_constraints_ ? num_edges_constraints_->GetUniqueValue(ctx)
-                             : std::nullopt;
+      core_constraints_.NumEdges()
+          ? core_constraints_.NumEdges()->GetUniqueValue(ctx)
+          : std::nullopt;
 
   if (nodes && edges && *edges == 0) return Graph(*nodes);
 
@@ -221,6 +229,26 @@ Graph<> MGraph::PartialReader::Finalize() && {
   Graph<> g(max_n + 1);
   for (const auto& [u, v] : edges_) g.AddEdge(u, v);
   return g;
+}
+
+const std::optional<MInteger>& MGraph::CoreConstraints::NumNodes() const {
+  return data_->num_nodes;
+}
+
+const std::optional<MInteger>& MGraph::CoreConstraints::NumEdges() const {
+  return data_->num_edges;
+}
+
+bool MGraph::CoreConstraints::IsConnected() const {
+  return data_->is_connected;
+}
+
+bool MGraph::CoreConstraints::MultiEdgesAllowed() const {
+  return data_->multi_edges_allowed;
+}
+
+bool MGraph::CoreConstraints::LoopsAllowed() const {
+  return data_->loops_allowed;
 }
 
 }  // namespace moriarty

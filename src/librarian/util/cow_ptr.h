@@ -17,7 +17,6 @@
 #ifndef MORIARTY_SRC_LIBRARIAN_LIB_COW_PTR_H_
 #define MORIARTY_SRC_LIBRARIAN_LIB_COW_PTR_H_
 
-#include <concepts>
 #include <memory>
 
 namespace moriarty {
@@ -34,8 +33,7 @@ namespace librarian {
 template <typename T>
 class CowPtr {
  public:
-  CowPtr()
-    requires std::default_initializable<T>;
+  CowPtr();
   explicit CowPtr(T obj);
   explicit CowPtr(T* ptr);  // Ownership transfered to CowPtr.
 
@@ -61,9 +59,7 @@ class CowPtr {
 //  Template implementation below
 
 template <typename T>
-CowPtr<T>::CowPtr()
-  requires std::default_initializable<T>
-    : ptr_(std::make_shared<T>()) {}
+CowPtr<T>::CowPtr() : ptr_(std::make_shared<T>()) {}
 
 template <typename T>
 CowPtr<T>::CowPtr(T obj) : ptr_(std::make_shared<T>(std::move(obj))) {}

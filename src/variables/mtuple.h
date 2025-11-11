@@ -99,8 +99,29 @@ class MTuple : public librarian::MVariable<
   template <size_t I, typename MElementType>
   MTuple& AddConstraint(Element<I, MElementType> constraint);
 
+  // MTuple::CoreConstraints
+  //
+  // A base set of constraints for `MTuple` that are used during generation.
+  // Note: Returned references are invalidated after any non-const call to this
+  // class or the corresponding `MTuple`.
+  class CoreConstraints {
+   public:
+    const std::tuple<MElementTypes...>& Elements() const;
+
+    template <size_t I>
+    const std::tuple_element_t<I, std::tuple<MElementTypes...>>& Element()
+        const;
+
+   private:
+    friend class MTuple;
+    struct Data {  // Must be public since MTuple is a templated class.
+      std::tuple<MElementTypes...> elements;
+    };
+    librarian::CowPtr<Data> data_;
+  };
+
  private:
-  std::tuple<MElementTypes...> elements_;
+  CoreConstraints core_constraints_;
   librarian::LockedOptional<Whitespace> separator_ =
       librarian::LockedOptional<Whitespace>{Whitespace::kSpace};
 
@@ -178,7 +199,7 @@ template <typename... T>
 std::string MTuple<T...>::Typename() const {
   std::tuple typenames = std::apply(
       [](auto&&... elem) { return std::make_tuple(elem.Typename()...); },
-      elements_);
+      core_constraints_.Elements());
   return std::format("MTuple<{}>", absl::StrJoin(typenames, ", "));
 }
 
@@ -211,7 +232,8 @@ MTuple<T...>& MTuple<T...>::AddConstraint(Element<I, MElementType> constraint) {
       "Element I in the tuple does not match the type passed in the "
       "constraint");
 
-  std::get<I>(elements_).MergeFrom(constraint.GetConstraints());
+  std::get<I>(core_constraints_.data_.Mutable().elements)
+      .MergeFrom(constraint.GetConstraints());
   return this->InternalAddConstraint(
       ElementConstraintWrapper(std::move(constraint)));
 }
@@ -224,7 +246,7 @@ MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
         [&](int n) { return ctx.RandomInteger(n); });
 
   auto generate_one = [&]<std::size_t I>() {
-    return std::get<I>(elements_).Generate(
+    return core_constraints_.template Element<I>().Generate(
         ctx.ForSubVariable(moriarty_internal::TupleSubVariable<I>()));
   };
 
@@ -238,7 +260,7 @@ void MTuple<T...>::PrintImpl(librarian::PrinterContext ctx,
                              const tuple_value_type& value) const {
   auto print_one = [&]<std::size_t I>() {
     if (I > 0) ctx.PrintWhitespace(separator_.Get());
-    std::get<I>(elements_).Print(ctx, std::get<I>(value));
+    core_constraints_.template Element<I>().Print(ctx, std::get<I>(value));
   };
 
   [&]<size_t... I>(std::index_sequence<I...>) {
@@ -251,7 +273,7 @@ MTuple<T...>::tuple_value_type MTuple<T...>::ReadImpl(
     librarian::ReaderContext ctx) const {
   auto read_one = [&]<std::size_t I>() {
     if (I > 0) ctx.ReadWhitespace(separator_.Get());
-    return std::get<I>(elements_).Read(ctx);
+    return core_constraints_.template Element<I>().Read(ctx);
   };
 
   return [&]<size_t... I>(std::index_sequence<I...>) {
@@ -292,6 +314,19 @@ template <size_t I, typename MElementType>
 void MTuple<T...>::ElementConstraintWrapper<I, MElementType>::ApplyTo(
     MTuple& other) const {
   other.AddConstraint(constraint_);
+}
+
+template <typename... MElementTypes>
+const std::tuple<MElementTypes...>&
+MTuple<MElementTypes...>::CoreConstraints::Elements() const {
+  return data_->elements;
+}
+
+template <typename... MElementTypes>
+template <size_t I>
+const std::tuple_element_t<I, std::tuple<MElementTypes...>>&
+MTuple<MElementTypes...>::CoreConstraints::Element() const {
+  return std::get<I>(Elements());
 }
 
 }  // namespace moriarty

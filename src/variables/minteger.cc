@@ -44,8 +44,8 @@ MInteger& MInteger::AddConstraint(Exactly<int64_t> constraint) {
   if (!numeric_one_of_.Mutable().ConstrainOptions(constraint.GetValue())) {
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   }
-  bounds_.Mutable()
-      .AtLeast(constraint.GetValue())
+  core_constraints_.data_.Mutable()
+      .bounds.AtLeast(constraint.GetValue())
       .AtMost(constraint.GetValue());
   return InternalAddExactlyConstraint(std::move(constraint));
 }
@@ -56,7 +56,8 @@ MInteger& MInteger::AddConstraint(Exactly<std::string> constraint) {
   }
   auto actual_constraint =
       std::make_unique<librarian::ExactlyNumeric>(constraint.GetValue());
-  bounds_.Mutable().Intersect(actual_constraint->GetRange());
+  core_constraints_.data_.Mutable().bounds.Intersect(
+      actual_constraint->GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::move(actual_constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
@@ -83,21 +84,21 @@ MInteger& MInteger::AddConstraint(OneOf<std::string> constraint) {
 }
 
 MInteger& MInteger::AddConstraint(Between constraint) {
-  bounds_.Mutable().Intersect(constraint.GetRange());
+  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<Between>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
 }
 
 MInteger& MInteger::AddConstraint(AtMost constraint) {
-  bounds_.Mutable().Intersect(constraint.GetRange());
+  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<AtMost>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
 }
 
 MInteger& MInteger::AddConstraint(AtLeast constraint) {
-  bounds_.Mutable().Intersect(constraint.GetRange());
+  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<AtLeast>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
@@ -135,7 +136,7 @@ std::optional<int64_t> MInteger::GetUniqueValueImpl(
 Range::ExtremeValues<int64_t> MInteger::GetExtremeValues(
     librarian::ResolverContext ctx) const {
   std::optional<Range::ExtremeValues<int64_t>> extremes =
-      bounds_->IntegerExtremes([&](std::string_view var) {
+      core_constraints_.Bounds().IntegerExtremes([&](std::string_view var) {
         return ctx.GenerateVariable<MInteger>(var);
       });
   if (!extremes) {
@@ -150,7 +151,7 @@ std::optional<Range::ExtremeValues<int64_t>> MInteger::GetExtremeValues(
     librarian::AnalysisContext ctx) const {
   try {
     std::optional<Range::ExtremeValues<int64_t>> extremes =
-        bounds_->IntegerExtremes([&](std::string_view var) {
+        core_constraints_.Bounds().IntegerExtremes([&](std::string_view var) {
           auto value = ctx.GetUniqueValue<MInteger>(var);
           if (!value) throw ValueNotFound(var);
           return *value;
@@ -307,5 +308,7 @@ std::vector<std::string> MInteger::RangeConstraint::GetDependencies() const {
 void MInteger::RangeConstraint::ApplyTo(MInteger& other) const {
   apply_to_fn_(other);
 }
+
+const Range& MInteger::CoreConstraints::Bounds() const { return data_->bounds; }
 
 }  // namespace moriarty

@@ -87,8 +87,25 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
 
   [[nodiscard]] std::string Typename() const override { return "MInteger"; }
 
+  // MInteger::CoreConstraints
+  //
+  // A base set of constraints for `MInteger` that are used during generation.
+  // Note: Returned references are invalidated after any non-const call to this
+  // class or the corresponding `MInteger`.
+  class CoreConstraints {
+   public:
+    const Range& Bounds() const;
+
+   private:
+    friend class MInteger;
+    struct Data {
+      Range bounds;
+    };
+    librarian::CowPtr<Data> data_;
+  };
+
  private:
-  librarian::CowPtr<Range> bounds_;
+  CoreConstraints core_constraints_;
   librarian::CowPtr<librarian::OneOfNumeric> numeric_one_of_;
   librarian::CowPtr<librarian::SizeHandler> size_handler_;
 

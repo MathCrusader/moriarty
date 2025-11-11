@@ -46,7 +46,7 @@ MString& MString::AddConstraint(OneOf<std::string> constraint) {
 }
 
 MString& MString::AddConstraint(Length constraint) {
-  if (!core_constraints_.data_->length)
+  if (!core_constraints_.Length())
     core_constraints_.data_.Mutable().length = MInteger();
   core_constraints_.data_.Mutable().length->MergeFrom(
       constraint.GetConstraints());
@@ -106,7 +106,7 @@ std::vector<MString> MString::ListEdgeCasesImpl(
         "length parameter given.");
   }
   std::vector<MInteger> lengthCases =
-      core_constraints_.data_->length->ListEdgeCases(ctx);
+      core_constraints_.Length()->ListEdgeCases(ctx);
 
   std::vector<MString> values;
   values.reserve(lengthCases.size());
