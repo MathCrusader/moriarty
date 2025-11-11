@@ -244,12 +244,12 @@ void ReadLine(ImportContext ctx, const SimpleIO::Line& line,
                     line_count, line.num_lines->ToString()));
   }
 
-  std::vector<std::unique_ptr<moriarty_internal::PartialReader>> readers;
+  std::vector<std::unique_ptr<moriarty_internal::ChunkedReader>> readers;
   for (const auto& var : line.tokens) {
     if (std::holds_alternative<StringLiteral>(var)) {
       throw std::runtime_error("Cannot have literal in multiline section");
     }
-    readers.push_back(ctx.GetPartialReader(std::get<std::string>(var),
+    readers.push_back(ctx.GetChunkedReader(std::get<std::string>(var),
                                            line_count, test_case));
   }
 

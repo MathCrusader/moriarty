@@ -261,7 +261,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
       std::reference_wrapper<moriarty_internal::ValueSet> values)
       const override;
-  std::unique_ptr<moriarty_internal::PartialReader> GetPartialReader(
+  std::unique_ptr<moriarty_internal::ChunkedReader> GetChunkedReader(
       std::string_view variable_name, int N,
       std::reference_wrapper<InputCursor> input,
       std::reference_wrapper<const moriarty_internal::VariableSet> variables,
@@ -297,13 +297,13 @@ class MVariable : public moriarty_internal::AbstractVariable {
     CustomConstraint<VariableType> constraint_;
   };
 
-  // Wrapper class around an MVariable's PartialReader. Expected API is:
+  // Wrapper class around an MVariable's ChunkedReader. Expected API is:
   //   void ReadNext(ReaderContext, int idx);  // Read the next value
   //   ValueType Finalize() &&;                // Return the read value
   template <typename ReaderType>
-  class PartialReaderWrapper : public moriarty_internal::PartialReader {
+  class ChunkedReaderWrapper : public moriarty_internal::ChunkedReader {
    public:
-    PartialReaderWrapper(
+    ChunkedReaderWrapper(
         ReaderType reader, ReaderContext ctx,
         std::reference_wrapper<moriarty_internal::ValueSet> values)
         : reader_(std::move(reader)), ctx_(std::move(ctx)), values_(values) {}
@@ -609,20 +609,20 @@ void MVariable<V, G>::ReadValue(
 }
 
 template <typename V, typename G>
-std::unique_ptr<moriarty_internal::PartialReader>
-MVariable<V, G>::GetPartialReader(
+std::unique_ptr<moriarty_internal::ChunkedReader>
+MVariable<V, G>::GetChunkedReader(
     std::string_view variable_name, int N,
     std::reference_wrapper<InputCursor> input,
     std::reference_wrapper<const moriarty_internal::VariableSet> variables,
     std::reference_wrapper<moriarty_internal::ValueSet> values) const {
-  if constexpr (requires { typename V::partial_reader_type; }) {
+  if constexpr (requires { typename V::chunked_reader_type; }) {
     ReaderContext ctx(variable_name, input, variables, values);
     return std::make_unique<
-        PartialReaderWrapper<typename V::partial_reader_type>>(
-        UnderlyingVariableType().CreatePartialReader(N), ctx, values);
+        ChunkedReaderWrapper<typename V::chunked_reader_type>>(
+        UnderlyingVariableType().CreateChunkedReader(N), ctx, values);
   } else {
     throw std::runtime_error(
-        std::format("PartialReader not implemented for {}", Typename()));
+        std::format("ChunkedReader not implemented for {}", Typename()));
   }
 }
 

@@ -63,11 +63,11 @@ class VariableIStreamContext {
   void ReadVariableTo(std::string_view variable_name,
                       ConcreteTestCase& test_case);
 
-  // GetPartialReader()
+  // GetChunkedReader()
   //
   // Returns `variable_name`'s partial reader. This is used to read
   // a variable from the input stream over multiple calls.
-  std::unique_ptr<moriarty_internal::PartialReader> GetPartialReader(
+  std::unique_ptr<moriarty_internal::ChunkedReader> GetChunkedReader(
       std::string_view variable_name, int calls,
       ConcreteTestCase& test_case) const;
 

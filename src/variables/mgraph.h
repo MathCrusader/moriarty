@@ -35,8 +35,8 @@ namespace moriarty {
 // Describes constraints placed on an undirected graph.
 class MGraph : public librarian::MVariable<MGraph, Graph<>> {
  public:
-  class PartialReader;  // Forward declaration
-  using partial_reader_type = PartialReader;
+  class Reader;  // Forward declaration
+  using chunked_reader_type = Reader;
 
   // Create an MGraph from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
@@ -82,8 +82,8 @@ class MGraph : public librarian::MVariable<MGraph, Graph<>> {
 
   [[nodiscard]] std::string Typename() const override { return "MGraph"; }
 
-  [[nodiscard]] PartialReader CreatePartialReader(int num_chunks) const {
-    return PartialReader();
+  [[nodiscard]] Reader CreateChunkedReader(int num_chunks) const {
+    return Reader();
   }
 
   // MGraph::CoreConstraints
@@ -133,7 +133,7 @@ class MGraph : public librarian::MVariable<MGraph, Graph<>> {
   //
   // In the future, we'll add options for:
   //  - Adjacency list, adjacency matrix, parent list (in trees), etc.
-  class PartialReader {
+  class Reader {
    public:
     void ReadNext(librarian::ReaderContext ctx, int /*idx*/);
     Graph<> Finalize() &&;

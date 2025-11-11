@@ -406,9 +406,9 @@ TEST(MArrayTest,
       IOError);
 }
 
-TEST(MArrayTest, DirectlyUsingPartialReaderShouldWork) {
+TEST(MArrayTest, DirectlyUsingChunkedReaderShouldWork) {
   MArray<MInteger> arr(Elements<MInteger>(Between(1, 10)), Length(6));
-  MArray<MInteger>::PartialReader reader = arr.CreatePartialReader(6);
+  MArray<MInteger>::Reader reader = arr.CreateChunkedReader(6);
 
   Context context;
   std::istringstream input("1\n2\n3\n4\n5\n6\n");
@@ -423,14 +423,14 @@ TEST(MArrayTest, DirectlyUsingPartialReaderShouldWork) {
   EXPECT_THAT(std::move(reader).Finalize(), ElementsAre(1, 2, 3, 4, 5, 6));
 }
 
-TEST(MArrayTest, IndirectlyUsingPartialReaderShouldWork) {
+TEST(MArrayTest, IndirectlyUsingChunkedReaderShouldWork) {
   Context context;
   std::istringstream input("1\n2\n3\n4\n5\n6\n");
   InputCursor cursor(input, WhitespaceStrictness::kPrecise);
 
   MArray<MInteger> arr(Elements<MInteger>(Between(1, 10)), Length(6));
-  std::unique_ptr<moriarty_internal::PartialReader> reader =
-      static_cast<moriarty_internal::AbstractVariable&>(arr).GetPartialReader(
+  std::unique_ptr<moriarty_internal::ChunkedReader> reader =
+      static_cast<moriarty_internal::AbstractVariable&>(arr).GetChunkedReader(
           "A", 6, cursor, context.Variables(), context.Values());
 
   for (int i = 0; i < 6; i++) {

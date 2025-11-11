@@ -37,12 +37,12 @@ concept MoriartyVariable = requires {
 
 namespace moriarty_internal {
 
-// A PartialReader is an interface for reading a value from a stream over
+// A ChunkedReader is an interface for reading a value from a stream over
 // several calls. For example, each call to `ReadNext()` may read the next
 // element in an array. `Finalize()` is called when all items have been read.
-class PartialReader {
+class ChunkedReader {
  public:
-  virtual ~PartialReader() = default;
+  virtual ~ChunkedReader() = default;
   virtual void ReadNext() = 0;
   virtual void Finalize() && = 0;
 };
@@ -148,10 +148,10 @@ class AbstractVariable {
                          std::reference_wrapper<const VariableSet> variables,
                          std::reference_wrapper<ValueSet> values) const = 0;
 
-  // GetPartialReader() [pure virtual]
+  // GetChunkedReader() [pure virtual]
   //
-  // Returns a PartialReader that can be used to read a value from `ctx` over
-  // multiple calls. The returned PartialReader will be called `N` times, then
+  // Returns a ChunkedReader that can be used to read a value from `ctx` over
+  // multiple calls. The returned ChunkedReader will be called `N` times, then
   // finalized.
   //
   // In principle, calling the returned object `N` times should be similar to
@@ -160,7 +160,7 @@ class AbstractVariable {
   //
   // It is expected that all references passed in will be valid until
   // `Finalize()` is called.
-  [[nodiscard]] virtual std::unique_ptr<PartialReader> GetPartialReader(
+  [[nodiscard]] virtual std::unique_ptr<ChunkedReader> GetChunkedReader(
       std::string_view variable_name, int N,
       std::reference_wrapper<InputCursor> input,
       std::reference_wrapper<const VariableSet> variables,

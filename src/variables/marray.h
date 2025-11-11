@@ -61,8 +61,8 @@ class MArray : public librarian::MVariable<
  public:
   using element_value_type = typename MElementType::value_type;
   using vector_value_type = typename std::vector<element_value_type>;
-  class PartialReader;  // Forward declaration
-  using partial_reader_type = PartialReader;
+  class Reader;  // Forward declaration
+  using chunked_reader_type = Reader;
   using comparator_type =
       std::function<bool(const element_value_type&, const element_value_type&)>;
 
@@ -121,20 +121,19 @@ class MArray : public librarian::MVariable<
   // "MArray<MInteger>"). This is mostly used for debugging/error messages.
   [[nodiscard]] std::string Typename() const override;
 
-  // CreatePartialReader()
+  // CreateChunkedReader()
   //
   // The partial reader reads one element at a time from the input stream,
   // without reading the separators. Call ReadNext() exactly N times, then call
   // Finalize() to get the final value, which will leave this in a
   // moved-from-state.
-  PartialReader CreatePartialReader(int N) const {
-    return PartialReader(N, core_constraints_.Elements(),
-                         core_constraints_.Length());
+  Reader CreateChunkedReader(int N) const {
+    return Reader(N, core_constraints_.Elements(), core_constraints_.Length());
   }
 
-  class PartialReader {
+  class Reader {
    public:
-    explicit PartialReader(
+    explicit Reader(
         int N, std::reference_wrapper<const MElementType> element_constraints,
         std::reference_wrapper<const std::optional<MInteger>> length)
         : element_constraints_(element_constraints), length_(length) {

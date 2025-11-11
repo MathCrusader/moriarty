@@ -87,7 +87,7 @@ TEST(MGraphTest, ReadShouldSucceed) {
 }
 
 TEST(MGraphTest, PartialReadShouldSucceed) {
-  auto reader = MGraph(NumNodes(3), NumEdges(3)).CreatePartialReader(2);
+  auto reader = MGraph(NumNodes(3), NumEdges(3)).CreateChunkedReader(2);
 
   Context context;
   std::istringstream input(std::string{Graph1String()});

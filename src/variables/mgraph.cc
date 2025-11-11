@@ -214,8 +214,7 @@ std::optional<Graph<>> MGraph::GetUniqueValueImpl(
   return std::nullopt;
 }
 
-void MGraph::PartialReader::ReadNext(librarian::ReaderContext ctx,
-                                     int /*idx*/) {
+void MGraph::Reader::ReadNext(librarian::ReaderContext ctx, int /*idx*/) {
   int u = ctx.ReadInteger();
   ctx.ReadWhitespace(Whitespace::kSpace);
   int v = ctx.ReadInteger();
@@ -223,7 +222,7 @@ void MGraph::PartialReader::ReadNext(librarian::ReaderContext ctx,
   edges_.emplace_back(u, v);
 }
 
-Graph<> MGraph::PartialReader::Finalize() && {
+Graph<> MGraph::Reader::Finalize() && {
   int max_n = 0;
   for (const auto& [u, v] : edges_) max_n = std::max({max_n, u, v});
   Graph<> g(max_n + 1);

@@ -27,13 +27,13 @@ void VariableIStreamContext::ReadVariableTo(std::string_view variable_name,
                                     values.UnsafeGet(variable_name));
 }
 
-std::unique_ptr<moriarty_internal::PartialReader>
-VariableIStreamContext::GetPartialReader(std::string_view variable_name,
+std::unique_ptr<moriarty_internal::ChunkedReader>
+VariableIStreamContext::GetChunkedReader(std::string_view variable_name,
                                          int calls,
                                          ConcreteTestCase& test_case) const {
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
-  return variable->GetPartialReader(variable_name, calls, input_, variables_,
+  return variable->GetChunkedReader(variable_name, calls, input_, variables_,
                                     test_case.UnsafeGetValues());
 }
 
