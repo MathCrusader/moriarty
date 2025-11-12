@@ -25,14 +25,15 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/io_config.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace librarian {
 
 AnalysisContext::AnalysisContext(
     std::string_view variable_name,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<const moriarty_internal::ValueSet> values)
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<const moriarty_internal::ValueSet> values)
     : NameContext(variable_name), ViewOnlyContext(variables, values) {}
 
 AnalysisContext::AnalysisContext(std::string_view name,
@@ -41,34 +42,34 @@ AnalysisContext::AnalysisContext(std::string_view name,
 
 AssignmentContext::AssignmentContext(
     std::string_view variable_name,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<moriarty_internal::ValueSet> values)
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<moriarty_internal::ValueSet> values)
     : NameContext(variable_name),
       ViewOnlyContext(variables, values),
       MutableValuesContext(values) {}
 
 PrinterContext::PrinterContext(
-    std::string_view variable_name, std::reference_wrapper<std::ostream> os,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<const moriarty_internal::ValueSet> values)
+    std::string_view variable_name, Ref<std::ostream> os,
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<const moriarty_internal::ValueSet> values)
     : NameContext(variable_name),
       ViewOnlyContext(variables, values),
       BasicOStreamContext(os) {}
 
 ReaderContext::ReaderContext(
-    std::string_view variable_name, std::reference_wrapper<InputCursor> input,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<const moriarty_internal::ValueSet> values)
+    std::string_view variable_name, Ref<InputCursor> input,
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<const moriarty_internal::ValueSet> values)
     : NameContext(variable_name),
       ViewOnlyContext(variables, values),
       BasicIStreamContext(input) {}
 
 ResolverContext::ResolverContext(
     std::string_view variable_name,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<moriarty_internal::ValueSet> values,
-    std::reference_wrapper<moriarty_internal::RandomEngine> engine,
-    std::reference_wrapper<moriarty_internal::GenerationHandler> handler)
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<moriarty_internal::ValueSet> values,
+    Ref<moriarty_internal::RandomEngine> engine,
+    Ref<moriarty_internal::GenerationHandler> handler)
     : NameContext(variable_name),
       ViewOnlyContext(variables, values),
       MutableValuesContext(values),

@@ -14,7 +14,6 @@
 
 #include "src/contexts/internal/resolve_values_context.h"
 
-#include <functional>
 #include <string_view>
 
 #include "src/internal/abstract_variable.h"
@@ -22,15 +21,16 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
 ResolveValuesContext::ResolveValuesContext(
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<moriarty_internal::ValueSet> values,
-    std::reference_wrapper<moriarty_internal::RandomEngine> engine,
-    std::reference_wrapper<moriarty_internal::GenerationHandler> handler)
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<moriarty_internal::ValueSet> values,
+    Ref<moriarty_internal::RandomEngine> engine,
+    Ref<moriarty_internal::GenerationHandler> handler)
     : variables_(variables),
       values_(values),
       engine_(engine),

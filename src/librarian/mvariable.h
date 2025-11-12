@@ -47,6 +47,7 @@
 #include "src/librarian/io_config.h"
 #include "src/librarian/one_of_handler.h"
 #include "src/librarian/policies.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 
@@ -246,42 +247,32 @@ class MVariable : public moriarty_internal::AbstractVariable {
       const override;
   void AssignValue(
       std::string_view variable_name,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<moriarty_internal::ValueSet> values,
-      std::reference_wrapper<moriarty_internal::RandomEngine> engine,
-      std::reference_wrapper<moriarty_internal::GenerationHandler> handler)
-      const override;
+      Ref<const moriarty_internal::VariableSet> variables,
+      Ref<moriarty_internal::ValueSet> values,
+      Ref<moriarty_internal::RandomEngine> engine,
+      Ref<moriarty_internal::GenerationHandler> handler) const override;
   void AssignUniqueValue(
       std::string_view variable_name,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<moriarty_internal::ValueSet> values)
-      const override;
-  void ReadValue(
-      std::string_view variable_name, std::reference_wrapper<InputCursor> input,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<moriarty_internal::ValueSet> values)
-      const override;
+      Ref<const moriarty_internal::VariableSet> variables,
+      Ref<moriarty_internal::ValueSet> values) const override;
+  void ReadValue(std::string_view variable_name, Ref<InputCursor> input,
+                 Ref<const moriarty_internal::VariableSet> variables,
+                 Ref<moriarty_internal::ValueSet> values) const override;
   std::unique_ptr<moriarty_internal::ChunkedReader> GetChunkedReader(
-      std::string_view variable_name, int N,
-      std::reference_wrapper<InputCursor> input,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<moriarty_internal::ValueSet> values)
-      const override;
-  void PrintValue(
-      std::string_view variable_name, std::reference_wrapper<std::ostream> os,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<const moriarty_internal::ValueSet> values)
-      const override;
+      std::string_view variable_name, int N, Ref<InputCursor> input,
+      Ref<const moriarty_internal::VariableSet> variables,
+      Ref<moriarty_internal::ValueSet> values) const override;
+  void PrintValue(std::string_view variable_name, Ref<std::ostream> os,
+                  Ref<const moriarty_internal::VariableSet> variables,
+                  Ref<const moriarty_internal::ValueSet> values) const override;
   ConstraintViolation CheckValue(
       std::string_view variable_name,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<const moriarty_internal::ValueSet> values)
-      const override;
+      Ref<const moriarty_internal::VariableSet> variables,
+      Ref<const moriarty_internal::ValueSet> values) const override;
   std::vector<std::unique_ptr<AbstractVariable>> ListAnonymousEdgeCases(
       std::string_view variable_name,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<const moriarty_internal::ValueSet> values)
-      const override;
+      Ref<const moriarty_internal::VariableSet> variables,
+      Ref<const moriarty_internal::ValueSet> values) const override;
   // ---------------------------------------------------------------------------
 
   class CustomConstraintWrapper {
@@ -303,9 +294,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   template <typename ReaderType>
   class ChunkedReaderWrapper : public moriarty_internal::ChunkedReader {
    public:
-    ChunkedReaderWrapper(
-        ReaderType reader, ReaderContext ctx,
-        std::reference_wrapper<moriarty_internal::ValueSet> values)
+    ChunkedReaderWrapper(ReaderType reader, ReaderContext ctx,
+                         Ref<moriarty_internal::ValueSet> values)
         : reader_(std::move(reader)), ctx_(std::move(ctx)), values_(values) {}
     void ReadNext() override { reader_.ReadNext(ctx_, idx_++); }
     void Finalize() && override {
@@ -317,7 +307,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
     ReaderType reader_;
     int idx_ = 0;
     ReaderContext ctx_;
-    std::reference_wrapper<moriarty_internal::ValueSet> values_;
+    Ref<moriarty_internal::ValueSet> values_;
   };
 };
 
@@ -574,11 +564,10 @@ G MVariable<V, G>::GenerateOnce(ResolverContext ctx) const {
 template <typename V, typename G>
 void MVariable<V, G>::AssignValue(
     std::string_view variable_name,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<moriarty_internal::ValueSet> values,
-    std::reference_wrapper<moriarty_internal::RandomEngine> engine,
-    std::reference_wrapper<moriarty_internal::GenerationHandler> handler)
-    const {
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<moriarty_internal::ValueSet> values,
+    Ref<moriarty_internal::RandomEngine> engine,
+    Ref<moriarty_internal::GenerationHandler> handler) const {
   ResolverContext ctx(variable_name, variables, values, engine, handler);
 
   if (ctx.ValueIsKnown(ctx.GetVariableName())) return;
@@ -590,8 +579,8 @@ void MVariable<V, G>::AssignValue(
 template <typename V, typename G>
 void MVariable<V, G>::AssignUniqueValue(
     std::string_view variable_name,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<moriarty_internal::ValueSet> values) const {
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<moriarty_internal::ValueSet> values) const {
   AssignmentContext ctx(variable_name, variables, values);
   if (ctx.ValueIsKnown(ctx.GetVariableName())) return;
 
@@ -601,9 +590,9 @@ void MVariable<V, G>::AssignUniqueValue(
 
 template <typename V, typename G>
 void MVariable<V, G>::ReadValue(
-    std::string_view variable_name, std::reference_wrapper<InputCursor> input,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<moriarty_internal::ValueSet> values) const {
+    std::string_view variable_name, Ref<InputCursor> input,
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<moriarty_internal::ValueSet> values) const {
   ReaderContext ctx(variable_name, input, variables, values);
   values.get().Set<V>(ctx.GetVariableName(), Read(ctx));
 }
@@ -611,10 +600,9 @@ void MVariable<V, G>::ReadValue(
 template <typename V, typename G>
 std::unique_ptr<moriarty_internal::ChunkedReader>
 MVariable<V, G>::GetChunkedReader(
-    std::string_view variable_name, int N,
-    std::reference_wrapper<InputCursor> input,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<moriarty_internal::ValueSet> values) const {
+    std::string_view variable_name, int N, Ref<InputCursor> input,
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<moriarty_internal::ValueSet> values) const {
   if constexpr (requires { typename V::chunked_reader_type; }) {
     ReaderContext ctx(variable_name, input, variables, values);
     return std::make_unique<
@@ -628,9 +616,9 @@ MVariable<V, G>::GetChunkedReader(
 
 template <typename V, typename G>
 void MVariable<V, G>::PrintValue(
-    std::string_view variable_name, std::reference_wrapper<std::ostream> os,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<const moriarty_internal::ValueSet> values) const {
+    std::string_view variable_name, Ref<std::ostream> os,
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<const moriarty_internal::ValueSet> values) const {
   PrinterContext ctx(variable_name, os, variables, values);
   Print(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
@@ -638,8 +626,8 @@ void MVariable<V, G>::PrintValue(
 template <typename V, typename G>
 ConstraintViolation MVariable<V, G>::CheckValue(
     std::string_view variable_name,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<const moriarty_internal::ValueSet> values) const {
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<const moriarty_internal::ValueSet> values) const {
   AnalysisContext ctx(variable_name, variables, values);
   return CheckValue(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
@@ -648,8 +636,8 @@ template <typename V, typename G>
 std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>>
 MVariable<V, G>::ListAnonymousEdgeCases(
     std::string_view variable_name,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<const moriarty_internal::ValueSet> values) const {
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<const moriarty_internal::ValueSet> values) const {
   AnalysisContext ctx(variable_name, variables, values);
   std::vector<V> instances = ListEdgeCases(ctx);
   std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>> new_vec;

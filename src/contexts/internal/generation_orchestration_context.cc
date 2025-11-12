@@ -1,15 +1,16 @@
 #include "src/contexts/internal/generation_orchestration_context.h"
 
-#include <functional>
 #include <optional>
 #include <string>
 #include <string_view>
+
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
 GenerationOrchestrationContext::GenerationOrchestrationContext(
-    std::reference_wrapper<GenerationHandler> handler)
+    Ref<GenerationHandler> handler)
     : handler_(handler) {}
 
 void GenerationOrchestrationContext::MarkStartGeneration(

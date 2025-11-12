@@ -40,6 +40,11 @@ cc_library(
 )
 
 cc_library(
+    name = "ref",
+    hdrs = ["ref.h"],
+)
+
+cc_library(
     name = "str_hash",
     hdrs = ["str_hash.h"],
 )

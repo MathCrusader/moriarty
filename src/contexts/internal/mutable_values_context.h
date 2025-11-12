@@ -17,11 +17,11 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_
 
-#include <functional>
 #include <string_view>
 
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -31,7 +31,7 @@ namespace moriarty_internal {
 // Allows you to update the values currently stored.
 class MutableValuesContext {
  public:
-  explicit MutableValuesContext(std::reference_wrapper<ValueSet> values);
+  explicit MutableValuesContext(Ref<ValueSet> values);
 
   // SetValue()
   //
@@ -45,7 +45,7 @@ class MutableValuesContext {
   void EraseValue(std::string_view variable_name);
 
  private:
-  std::reference_wrapper<ValueSet> values_;
+  Ref<ValueSet> values_;
 };
 
 // -----------------------------------------------------------------------------

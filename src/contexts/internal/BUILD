@@ -32,6 +32,7 @@ cc_library(
         "//src/librarian:io_config",
         "//src/librarian:policies",
         "//src/librarian/util:debug_string",
+        "//src/librarian/util:ref",
     ],
 )
 
@@ -41,6 +42,7 @@ cc_library(
     hdrs = ["basic_ostream_context.h"],
     deps = [
         "//src/librarian:io_config",
+        "//src/librarian/util:ref",
     ],
 )
 
@@ -50,6 +52,7 @@ cc_library(
     hdrs = ["basic_random_context.h"],
     deps = [
         "//src/internal:random_engine",
+        "//src/librarian/util:ref",
         "//src/types:real",
     ],
 )
@@ -60,6 +63,7 @@ cc_library(
     hdrs = ["generation_orchestration_context.h"],
     deps = [
         "//src/internal:generation_handler",
+        "//src/librarian/util:ref",
     ],
 )
 
@@ -69,6 +73,7 @@ cc_library(
     hdrs = ["mutable_values_context.h"],
     deps = [
         "//src/internal:value_set",
+        "//src/librarian/util:ref",
     ],
 )
 
@@ -90,6 +95,7 @@ cc_library(
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/librarian/util:ref",
     ],
 )
 
@@ -104,6 +110,7 @@ cc_library(
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/librarian/util:ref",
     ],
 )
 
@@ -117,6 +124,7 @@ cc_library(
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:policies",
+        "//src/librarian/util:ref",
     ],
 )
 
@@ -129,6 +137,7 @@ cc_library(
         "//src/internal:abstract_variable",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/librarian/util:ref",
     ],
 )
 
@@ -139,6 +148,7 @@ cc_library(
     deps = [
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/librarian/util:ref",
     ],
 )
 

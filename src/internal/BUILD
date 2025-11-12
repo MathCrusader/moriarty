@@ -34,6 +34,7 @@ cc_library(
     deps = [
         "//src/constraints:constraint_violation",
         "//src/librarian:io_config",
+        "//src/librarian/util:ref",
     ],
 )
 

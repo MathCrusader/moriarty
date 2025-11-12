@@ -18,11 +18,11 @@
 #define MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
 
 #include <deque>
-#include <functional>
 #include <istream>
 #include <string>
 
 #include "src/librarian/policies.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 
@@ -34,20 +34,18 @@ struct InputCursor {
   static constexpr int kRecentlyReadSize = 3;
 
   // Creates an InputCursor with the strictest settings.
-  static InputCursor CreatePreciseStrictness(
-      std::reference_wrapper<std::istream> is) {
+  static InputCursor CreatePreciseStrictness(Ref<std::istream> is) {
     return InputCursor(is, WhitespaceStrictness::kPrecise,
                        NumericStrictness::kPrecise);
   }
 
   // Creates an InputCursor with the most flexible settings.
-  static InputCursor CreateFlexibleStrictness(
-      std::reference_wrapper<std::istream> is) {
+  static InputCursor CreateFlexibleStrictness(Ref<std::istream> is) {
     return InputCursor(is, WhitespaceStrictness::kFlexible,
                        NumericStrictness::kFlexible);
   }
 
-  std::reference_wrapper<std::istream> is;
+  Ref<std::istream> is;
   WhitespaceStrictness whitespace_strictness = WhitespaceStrictness::kPrecise;
   NumericStrictness numeric_strictness = NumericStrictness::kPrecise;
   int line_num = 1;                       // 1-based

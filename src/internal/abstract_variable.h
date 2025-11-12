@@ -18,13 +18,13 @@
 #ifndef MORIARTY_SRC_INTERNAL_ABSTRACT_VARIABLE_H_
 #define MORIARTY_SRC_INTERNAL_ABSTRACT_VARIABLE_H_
 
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "src/constraints/constraint_violation.h"
 #include "src/librarian/io_config.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 
@@ -117,12 +117,10 @@ class AbstractVariable {
   //
   // Note that the variable stored in `ctx` with the same name may or may not be
   // identically `this` variable, but it should be assumed to be equivalent.
-  virtual void AssignValue(
-      std::string_view variable_name,
-      std::reference_wrapper<const VariableSet> variables,
-      std::reference_wrapper<ValueSet> values,
-      std::reference_wrapper<RandomEngine> engine,
-      std::reference_wrapper<GenerationHandler> handler) const = 0;
+  virtual void AssignValue(std::string_view variable_name,
+                           Ref<const VariableSet> variables,
+                           Ref<ValueSet> values, Ref<RandomEngine> engine,
+                           Ref<GenerationHandler> handler) const = 0;
 
   // AssignUniqueValue() [pure virtual]
   //
@@ -134,19 +132,17 @@ class AbstractVariable {
   //
   // Example: MInteger(Between(7, 7)) might be able to determine that its
   // unique value is 7.
-  virtual void AssignUniqueValue(
-      std::string_view variable_name,
-      std::reference_wrapper<const VariableSet> variables,
-      std::reference_wrapper<ValueSet> values) const = 0;
+  virtual void AssignUniqueValue(std::string_view variable_name,
+                                 Ref<const VariableSet> variables,
+                                 Ref<ValueSet> values) const = 0;
 
   // ReadValue() [pure virtual]
   //
   // Reads a value from `ctx` using the constraints of this variable to
   // determine formatting, etc. Stores the value in `values_ctx`.
-  virtual void ReadValue(std::string_view variable_name,
-                         std::reference_wrapper<InputCursor> input,
-                         std::reference_wrapper<const VariableSet> variables,
-                         std::reference_wrapper<ValueSet> values) const = 0;
+  virtual void ReadValue(std::string_view variable_name, Ref<InputCursor> input,
+                         Ref<const VariableSet> variables,
+                         Ref<ValueSet> values) const = 0;
 
   // GetChunkedReader() [pure virtual]
   //
@@ -161,19 +157,16 @@ class AbstractVariable {
   // It is expected that all references passed in will be valid until
   // `Finalize()` is called.
   [[nodiscard]] virtual std::unique_ptr<ChunkedReader> GetChunkedReader(
-      std::string_view variable_name, int N,
-      std::reference_wrapper<InputCursor> input,
-      std::reference_wrapper<const VariableSet> variables,
-      std::reference_wrapper<ValueSet> values) const = 0;
+      std::string_view variable_name, int N, Ref<InputCursor> input,
+      Ref<const VariableSet> variables, Ref<ValueSet> values) const = 0;
 
   // PrintValue() [pure virtual]
   //
   // Prints the value of this variable to `ctx` using the constraints on this
   // variable to determine formatting, etc.
-  virtual void PrintValue(
-      std::string_view variable_name, std::reference_wrapper<std::ostream> os,
-      std::reference_wrapper<const VariableSet> variables,
-      std::reference_wrapper<const ValueSet> values) const = 0;
+  virtual void PrintValue(std::string_view variable_name, Ref<std::ostream> os,
+                          Ref<const VariableSet> variables,
+                          Ref<const ValueSet> values) const = 0;
 
   // MergeFromAnonymous() [pure virtual]
   //
@@ -191,18 +184,16 @@ class AbstractVariable {
   //
   // If a variable does not have a value, this will return false.
   // If a value does not have a variable, this will return true.
-  virtual ConstraintViolation CheckValue(
-      std::string_view variable_name,
-      std::reference_wrapper<const VariableSet> variables,
-      std::reference_wrapper<const ValueSet> values) const = 0;
+  virtual ConstraintViolation CheckValue(std::string_view variable_name,
+                                         Ref<const VariableSet> variables,
+                                         Ref<const ValueSet> values) const = 0;
 
   // ListAnonymousEdgeCases() [pure virtual]
   //
   // Returns a list of pointers to the edge cases of this variable.
   virtual std::vector<std::unique_ptr<AbstractVariable>> ListAnonymousEdgeCases(
-      std::string_view variable_name,
-      std::reference_wrapper<const VariableSet> variables,
-      std::reference_wrapper<const ValueSet> values) const = 0;
+      std::string_view variable_name, Ref<const VariableSet> variables,
+      Ref<const ValueSet> values) const = 0;
 
   // GetDependencies() [pure virtual]
   //

@@ -20,13 +20,13 @@
 
 #include <cstdint>
 #include <format>
-#include <functional>
 #include <iterator>
 #include <span>
 #include <stdexcept>
 #include <unordered_set>
 
 #include "src/internal/random_engine.h"
+#include "src/librarian/util/ref.h"
 #include "src/types/real.h"
 
 namespace moriarty {
@@ -41,7 +41,7 @@ using ElementType = std::iter_value_t<decltype(std::begin(T{}))>;
 // DistinctIntegers, RandomPermutation, etc).
 class BasicRandomContext {
  public:
-  explicit BasicRandomContext(std::reference_wrapper<RandomEngine> engine);
+  explicit BasicRandomContext(Ref<RandomEngine> engine);
 
   // RandomInteger()
   //
@@ -147,7 +147,7 @@ class BasicRandomContext {
                                                  T min_bucket_size = 1);
 
  private:
-  std::reference_wrapper<RandomEngine> engine_;
+  Ref<RandomEngine> engine_;
 
   // Shuffles so that the first k elements are the prefix of a random shuffle.
   // The last n-k elements are not shuffled, and likely in pseudo-increasing

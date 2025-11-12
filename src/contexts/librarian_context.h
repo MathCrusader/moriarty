@@ -17,7 +17,6 @@
 #ifndef MORIARTY_SRC_CONTEXTS_LIBRARIAN_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_LIBRARIAN_CONTEXT_H_
 
-#include <functional>
 #include <ostream>
 #include <string_view>
 
@@ -34,6 +33,7 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/io_config.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace librarian {
@@ -48,10 +48,9 @@ namespace librarian {
 class AnalysisContext : public moriarty_internal::NameContext,
                         public moriarty_internal::ViewOnlyContext {
  public:
-  AnalysisContext(
-      std::string_view variable_name,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<const moriarty_internal::ValueSet> values);
+  AnalysisContext(std::string_view variable_name,
+                  Ref<const moriarty_internal::VariableSet> variables,
+                  Ref<const moriarty_internal::ValueSet> values);
   AnalysisContext(std::string_view name, const ViewOnlyContext& other);
   template <typename T>
   AnalysisContext(const T& other)
@@ -69,10 +68,9 @@ class AssignmentContext : public moriarty_internal::NameContext,
                           public moriarty_internal::ViewOnlyContext,
                           public moriarty_internal::MutableValuesContext {
  public:
-  AssignmentContext(
-      std::string_view variable_name,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<moriarty_internal::ValueSet> values);
+  AssignmentContext(std::string_view variable_name,
+                    Ref<const moriarty_internal::VariableSet> variables,
+                    Ref<moriarty_internal::ValueSet> values);
 
   // ********************************************
   // ** See parent classes for more functions. **
@@ -86,10 +84,9 @@ class PrinterContext : public moriarty_internal::NameContext,
                        public moriarty_internal::ViewOnlyContext,
                        public moriarty_internal::BasicOStreamContext {
  public:
-  PrinterContext(
-      std::string_view variable_name, std::reference_wrapper<std::ostream> os,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<const moriarty_internal::ValueSet> values);
+  PrinterContext(std::string_view variable_name, Ref<std::ostream> os,
+                 Ref<const moriarty_internal::VariableSet> variables,
+                 Ref<const moriarty_internal::ValueSet> values);
 
   // ********************************************
   // ** See parent classes for more functions. **
@@ -103,10 +100,9 @@ class ReaderContext : public moriarty_internal::NameContext,
                       public moriarty_internal::ViewOnlyContext,
                       public moriarty_internal::BasicIStreamContext {
  public:
-  ReaderContext(
-      std::string_view variable_name, std::reference_wrapper<InputCursor> input,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<const moriarty_internal::ValueSet> values);
+  ReaderContext(std::string_view variable_name, Ref<InputCursor> input,
+                Ref<const moriarty_internal::VariableSet> variables,
+                Ref<const moriarty_internal::ValueSet> values);
 
   // ********************************************
   // ** See parent classes for more functions. **
@@ -124,12 +120,11 @@ class ResolverContext
       public moriarty_internal::BasicRandomContext,
       public moriarty_internal::GenerationOrchestrationContext {
  public:
-  ResolverContext(
-      std::string_view variable_name,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<moriarty_internal::ValueSet> values,
-      std::reference_wrapper<moriarty_internal::RandomEngine> engine,
-      std::reference_wrapper<moriarty_internal::GenerationHandler> handler);
+  ResolverContext(std::string_view variable_name,
+                  Ref<const moriarty_internal::VariableSet> variables,
+                  Ref<moriarty_internal::ValueSet> values,
+                  Ref<moriarty_internal::RandomEngine> engine,
+                  Ref<moriarty_internal::GenerationHandler> handler);
 
   // ForVariable()
   //
@@ -150,10 +145,10 @@ class ResolverContext
   // ********************************************
 
  private:
-  std::reference_wrapper<const moriarty_internal::VariableSet> variables_;
-  std::reference_wrapper<moriarty_internal::ValueSet> values_;
-  std::reference_wrapper<moriarty_internal::RandomEngine> engine_;
-  std::reference_wrapper<moriarty_internal::GenerationHandler> handler_;
+  Ref<const moriarty_internal::VariableSet> variables_;
+  Ref<moriarty_internal::ValueSet> values_;
+  Ref<moriarty_internal::RandomEngine> engine_;
+  Ref<moriarty_internal::GenerationHandler> handler_;
 };
 
 }  // namespace librarian

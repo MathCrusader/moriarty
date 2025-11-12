@@ -20,7 +20,6 @@
 #include <cmath>
 #include <cstdint>
 #include <format>
-#include <functional>
 #include <istream>
 #include <stdexcept>
 #include <string>
@@ -30,12 +29,12 @@
 #include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
 #include "src/librarian/util/debug_string.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-BasicIStreamContext::BasicIStreamContext(
-    std::reference_wrapper<InputCursor> input)
+BasicIStreamContext::BasicIStreamContext(Ref<InputCursor> input)
     : input_(input) {}
 
 void BasicIStreamContext::ThrowIOError(std::string_view message) const {

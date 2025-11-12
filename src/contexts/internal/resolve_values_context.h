@@ -17,7 +17,6 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_RESOLVE_VALUES_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_RESOLVE_VALUES_CONTEXT_H_
 
-#include <functional>
 #include <stdexcept>
 #include <string_view>
 
@@ -26,6 +25,7 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -36,10 +36,10 @@ namespace moriarty_internal {
 class ResolveValuesContext {
  public:
   explicit ResolveValuesContext(
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<moriarty_internal::ValueSet> values,
-      std::reference_wrapper<moriarty_internal::RandomEngine> engine,
-      std::reference_wrapper<moriarty_internal::GenerationHandler> handler);
+      Ref<const moriarty_internal::VariableSet> variables,
+      Ref<moriarty_internal::ValueSet> values,
+      Ref<moriarty_internal::RandomEngine> engine,
+      Ref<moriarty_internal::GenerationHandler> handler);
 
   // TODO: Add `AddImpliedConstraint` to add constraints to the context.
 
@@ -69,10 +69,10 @@ class ResolveValuesContext {
   void AssignVariable(std::string_view variable_name);
 
  private:
-  std::reference_wrapper<const moriarty_internal::VariableSet> variables_;
-  std::reference_wrapper<moriarty_internal::ValueSet> values_;
-  std::reference_wrapper<moriarty_internal::RandomEngine> engine_;
-  std::reference_wrapper<moriarty_internal::GenerationHandler> handler_;
+  Ref<const moriarty_internal::VariableSet> variables_;
+  Ref<moriarty_internal::ValueSet> values_;
+  Ref<moriarty_internal::RandomEngine> engine_;
+  Ref<moriarty_internal::GenerationHandler> handler_;
 };
 
 // -----------------------------------------------------------------------------

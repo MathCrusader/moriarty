@@ -19,7 +19,6 @@
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_RANDOM_CONTEXT_H_
 
 #include <format>
-#include <functional>
 
 #include "src/constraints/size_constraints.h"
 #include "src/internal/abstract_variable.h"
@@ -27,6 +26,7 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -36,10 +36,9 @@ namespace moriarty_internal {
 // A class to handle Moriarty type-specific randomness.
 class VariableRandomContext {
  public:
-  explicit VariableRandomContext(
-      std::reference_wrapper<const VariableSet> variables,
-      std::reference_wrapper<const ValueSet> values,
-      std::reference_wrapper<RandomEngine> engine);
+  explicit VariableRandomContext(Ref<const VariableSet> variables,
+                                 Ref<const ValueSet> values,
+                                 Ref<RandomEngine> engine);
 
   // Random()
   //
@@ -96,9 +95,9 @@ class VariableRandomContext {
   [[nodiscard]] T::value_type MaxValue(std::string_view variable_name);
 
  private:
-  std::reference_wrapper<const VariableSet> variables_;
-  std::reference_wrapper<const ValueSet> values_;
-  std::reference_wrapper<RandomEngine> engine_;
+  Ref<const VariableSet> variables_;
+  Ref<const ValueSet> values_;
+  Ref<RandomEngine> engine_;
 };
 
 // --------------------------------------------------------------------------

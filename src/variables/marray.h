@@ -42,6 +42,7 @@
 #include "src/librarian/mvariable.h"
 #include "src/librarian/policies.h"
 #include "src/librarian/util/locked_optional.h"
+#include "src/librarian/util/ref.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
@@ -133,9 +134,8 @@ class MArray : public librarian::MVariable<
 
   class Reader {
    public:
-    explicit Reader(
-        int N, std::reference_wrapper<const MElementType> element_constraints,
-        std::reference_wrapper<const std::optional<MInteger>> length)
+    explicit Reader(int N, Ref<const MElementType> element_constraints,
+                    Ref<const std::optional<MInteger>> length)
         : element_constraints_(element_constraints), length_(length) {
       // TODO: Add safety checks if N is massive?
       // TODO: Ensure `length_` is satisfied?
@@ -149,8 +149,8 @@ class MArray : public librarian::MVariable<
 
    private:
     std::vector<element_value_type> array_;
-    std::reference_wrapper<const MElementType> element_constraints_;
-    std::reference_wrapper<const std::optional<MInteger>> length_;
+    Ref<const MElementType> element_constraints_;
+    Ref<const std::optional<MInteger>> length_;
   };
 
   // MArray::CoreConstraints

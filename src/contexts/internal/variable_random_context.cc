@@ -14,19 +14,17 @@
 
 #include "src/contexts/internal/variable_random_context.h"
 
-#include <functional>
-
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-VariableRandomContext::VariableRandomContext(
-    std::reference_wrapper<const VariableSet> variables,
-    std::reference_wrapper<const ValueSet> values,
-    std::reference_wrapper<RandomEngine> engine)
+VariableRandomContext::VariableRandomContext(Ref<const VariableSet> variables,
+                                             Ref<const ValueSet> values,
+                                             Ref<RandomEngine> engine)
     : variables_(variables), values_(values), engine_(engine) {}
 
 }  // namespace moriarty_internal

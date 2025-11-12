@@ -17,13 +17,13 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_VIEW_ONLY_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_VIEW_ONLY_CONTEXT_H_
 
-#include <functional>
 #include <optional>
 #include <string_view>
 
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -35,8 +35,8 @@ namespace moriarty_internal {
 // or values.
 class ViewOnlyContext {
  public:
-  explicit ViewOnlyContext(std::reference_wrapper<const VariableSet> variables,
-                           std::reference_wrapper<const ValueSet> values);
+  explicit ViewOnlyContext(Ref<const VariableSet> variables,
+                           Ref<const ValueSet> values);
 
   // GetVariable()
   //
@@ -115,8 +115,8 @@ class ViewOnlyContext {
   [[nodiscard]] const ValueSet& UnsafeGetValues() const;
 
  private:
-  std::reference_wrapper<const VariableSet> variables_;
-  std::reference_wrapper<const ValueSet> values_;
+  Ref<const VariableSet> variables_;
+  Ref<const ValueSet> values_;
 };
 
 template <MoriartyVariable T>

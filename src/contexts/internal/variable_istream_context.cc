@@ -6,15 +6,15 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/io_config.h"
+#include "src/librarian/util/ref.h"
 #include "src/test_case.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-VariableIStreamContext::VariableIStreamContext(
-    std::reference_wrapper<InputCursor> input,
-    std::reference_wrapper<const VariableSet> variables,
-    std::reference_wrapper<const ValueSet> values)
+VariableIStreamContext::VariableIStreamContext(Ref<InputCursor> input,
+                                               Ref<const VariableSet> variables,
+                                               Ref<const ValueSet> values)
     : variables_(variables), values_(values), input_(input) {}
 
 void VariableIStreamContext::ReadVariableTo(std::string_view variable_name,

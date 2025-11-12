@@ -14,15 +14,13 @@
 
 #include "src/contexts/internal/mutable_values_context.h"
 
-#include <functional>
-
 #include "src/internal/value_set.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-MutableValuesContext::MutableValuesContext(
-    std::reference_wrapper<ValueSet> values)
+MutableValuesContext::MutableValuesContext(Ref<ValueSet> values)
     : values_(values) {}
 
 void MutableValuesContext::EraseValue(std::string_view variable_name) {

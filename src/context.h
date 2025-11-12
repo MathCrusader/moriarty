@@ -17,7 +17,6 @@
 #ifndef MORIARTY_SRC_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXT_H_
 
-#include <functional>
 #include <iostream>
 #include <optional>
 #include <span>
@@ -34,7 +33,8 @@
 #include "src/internal/value_set.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
-#include "test_case.h"
+#include "src/librarian/util/ref.h"
+#include "src/test_case.h"
 
 namespace moriarty {
 
@@ -49,10 +49,9 @@ class GenerateContext : public moriarty_internal::ViewOnlyContext,
                         public moriarty_internal::VariableRandomContext {
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
-  GenerateContext(
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<const moriarty_internal::ValueSet> values,
-      std::reference_wrapper<moriarty_internal::RandomEngine> rng);
+  GenerateContext(Ref<const moriarty_internal::VariableSet> variables,
+                  Ref<const moriarty_internal::ValueSet> values,
+                  Ref<moriarty_internal::RandomEngine> rng);
 
   // *****************************************************
   // ** See parent classes for all available functions. **
@@ -88,9 +87,8 @@ class ImportContext : public moriarty_internal::ViewOnlyContext,
                       public moriarty_internal::VariableIStreamContext {
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
-  ImportContext(
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<InputCursor> input);
+  ImportContext(Ref<const moriarty_internal::VariableSet> variables,
+                Ref<InputCursor> input);
 
   // *****************************************************
   // ** See parent classes for all available functions. **
@@ -107,7 +105,7 @@ using ImportFn = std::function<std::vector<ConcreteTestCase>(ImportContext)>;
 // TODO: Auto-Validate?
 struct ImportOptions {
   // The input stream to read from.
-  std::reference_wrapper<std::istream> is = std::cin;
+  Ref<std::istream> is = std::cin;
 
   // How strict the importer should be about whitespace.
   WhitespaceStrictness whitespace_strictness = WhitespaceStrictness::kPrecise;
@@ -124,11 +122,10 @@ class ExportContext : public moriarty_internal::ViewOnlyContext,
                       public moriarty_internal::VariableOStreamContext {
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
-  ExportContext(
-      std::reference_wrapper<std::ostream> os,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<const moriarty_internal::ValueSet> values);
-  ExportContext(ExportContext ctx, std::reference_wrapper<std::ostream> os);
+  ExportContext(Ref<std::ostream> os,
+                Ref<const moriarty_internal::VariableSet> variables,
+                Ref<const moriarty_internal::ValueSet> values);
+  ExportContext(ExportContext ctx, Ref<std::ostream> os);
 
   // *****************************************************
   // ** See parent classes for all available functions. **
@@ -141,7 +138,7 @@ using ExportFn =
 
 struct ExportOptions {
   // The output stream to write to.
-  std::reference_wrapper<std::ostream> os = std::cout;
+  Ref<std::ostream> os = std::cout;
 };
 
 // -----------------------------------------------------------------------------
@@ -153,10 +150,9 @@ struct ExportOptions {
 class ConstraintContext : public moriarty_internal::NameContext,
                           public moriarty_internal::ViewOnlyContext {
  public:
-  ConstraintContext(
-      std::string_view variable_name,
-      std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-      std::reference_wrapper<const moriarty_internal::ValueSet> values);
+  ConstraintContext(std::string_view variable_name,
+                    Ref<const moriarty_internal::VariableSet> variables,
+                    Ref<const moriarty_internal::ValueSet> values);
   ConstraintContext(std::string_view name, const ViewOnlyContext& other);
 
   // ********************************************

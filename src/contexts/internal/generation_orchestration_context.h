@@ -17,10 +17,10 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_GENERATION_ORCHESTRATION_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_GENERATION_ORCHESTRATION_CONTEXT_H_
 
-#include <functional>
 #include <string_view>
 
 #include "src/internal/generation_handler.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -30,8 +30,7 @@ namespace moriarty_internal {
 // Orchestrates the entire generation process.
 class GenerationOrchestrationContext {
  public:
-  explicit GenerationOrchestrationContext(
-      std::reference_wrapper<GenerationHandler> handler);
+  explicit GenerationOrchestrationContext(Ref<GenerationHandler> handler);
 
   // MarkStartGeneration()
   //
@@ -74,7 +73,7 @@ class GenerationOrchestrationContext {
       std::string variable_name) const;
 
  private:
-  std::reference_wrapper<GenerationHandler> handler_;
+  Ref<GenerationHandler> handler_;
 };
 
 }  // namespace moriarty_internal

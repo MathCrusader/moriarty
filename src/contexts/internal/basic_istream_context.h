@@ -18,11 +18,11 @@
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_BASIC_ISTREAM_CONTEXT_H_
 
 #include <cstdint>
-#include <functional>
 #include <string>
 
 #include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -33,7 +33,7 @@ namespace moriarty_internal {
 // The held istream will have its exceptions enabled.
 class BasicIStreamContext {
  public:
-  explicit BasicIStreamContext(std::reference_wrapper<InputCursor> input);
+  explicit BasicIStreamContext(Ref<InputCursor> input);
 
   // ReadToken()
   //
@@ -89,7 +89,7 @@ class BasicIStreamContext {
   // TODO: Add helper functions. ReadSpace(), ReadEoln(), ReadTokens(),
   // ReadInt64(), etc.
  private:
-  std::reference_wrapper<InputCursor> input_;
+  Ref<InputCursor> input_;
 
   InputCursor& GetCursor();
   std::istream& GetIStream();

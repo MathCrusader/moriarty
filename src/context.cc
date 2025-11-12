@@ -14,8 +14,6 @@
 
 #include "src/context.h"
 
-#include <functional>
-
 #include "src/contexts/internal/basic_istream_context.h"
 #include "src/contexts/internal/basic_random_context.h"
 #include "src/contexts/internal/variable_random_context.h"
@@ -24,34 +22,32 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/io_config.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 
 GenerateContext::GenerateContext(
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<const moriarty_internal::ValueSet> values,
-    std::reference_wrapper<moriarty_internal::RandomEngine> rng)
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<const moriarty_internal::ValueSet> values,
+    Ref<moriarty_internal::RandomEngine> rng)
     : ViewOnlyContext(variables, values),
       BasicRandomContext(rng),
       VariableRandomContext(variables, values, rng) {}
 
 ImportContext::ImportContext(
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<InputCursor> input)
+    Ref<const moriarty_internal::VariableSet> variables, Ref<InputCursor> input)
     : ViewOnlyContext(variables, values_),
       BasicIStreamContext(input),
       VariableIStreamContext(input, variables, values_) {}
 
 ExportContext::ExportContext(
-    std::reference_wrapper<std::ostream> os,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<const moriarty_internal::ValueSet> values)
+    Ref<std::ostream> os, Ref<const moriarty_internal::VariableSet> variables,
+    Ref<const moriarty_internal::ValueSet> values)
     : ViewOnlyContext(variables, values),
       BasicOStreamContext(os),
       VariableOStreamContext(os, variables, values) {}
 
-ExportContext::ExportContext(ExportContext ctx,
-                             std::reference_wrapper<std::ostream> os)
+ExportContext::ExportContext(ExportContext ctx, Ref<std::ostream> os)
     : ViewOnlyContext(ctx),
       BasicOStreamContext(os),
       VariableOStreamContext(ctx) {
@@ -60,8 +56,8 @@ ExportContext::ExportContext(ExportContext ctx,
 
 ConstraintContext::ConstraintContext(
     std::string_view variable_name,
-    std::reference_wrapper<const moriarty_internal::VariableSet> variables,
-    std::reference_wrapper<const moriarty_internal::ValueSet> values)
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<const moriarty_internal::ValueSet> values)
     : NameContext(variable_name), ViewOnlyContext(variables, values) {}
 
 ConstraintContext::ConstraintContext(std::string_view name,

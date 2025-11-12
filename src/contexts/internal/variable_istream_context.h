@@ -17,13 +17,13 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_ISTREAM_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_ISTREAM_CONTEXT_H_
 
-#include <functional>
 #include <memory>
 #include <string_view>
 
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/io_config.h"
+#include "src/librarian/util/ref.h"
 #include "src/test_case.h"
 
 namespace moriarty {
@@ -34,9 +34,9 @@ namespace moriarty_internal {
 // Read variables from an input stream.
 class VariableIStreamContext {
  public:
-  VariableIStreamContext(std::reference_wrapper<InputCursor> input,
-                         std::reference_wrapper<const VariableSet> variables,
-                         std::reference_wrapper<const ValueSet> values);
+  VariableIStreamContext(Ref<InputCursor> input,
+                         Ref<const VariableSet> variables,
+                         Ref<const ValueSet> values);
 
   // ReadVariable()
   //
@@ -72,9 +72,9 @@ class VariableIStreamContext {
       ConcreteTestCase& test_case) const;
 
  private:
-  std::reference_wrapper<const VariableSet> variables_;
-  std::reference_wrapper<const ValueSet> values_;
-  std::reference_wrapper<InputCursor> input_;
+  Ref<const VariableSet> variables_;
+  Ref<const ValueSet> values_;
+  Ref<InputCursor> input_;
 };
 
 // ----------------------------------------------------------------------------

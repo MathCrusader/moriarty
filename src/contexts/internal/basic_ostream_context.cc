@@ -17,13 +17,12 @@
 #include <ostream>
 
 #include "src/librarian/io_config.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-BasicOStreamContext::BasicOStreamContext(
-    std::reference_wrapper<std::ostream> os)
-    : os_(os) {
+BasicOStreamContext::BasicOStreamContext(Ref<std::ostream> os) : os_(os) {
   os_.get().exceptions(std::ostream::failbit | std::ostream::badbit);
 }
 

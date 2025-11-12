@@ -17,11 +17,11 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_BASIC_OSTREAM_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_BASIC_OSTREAM_CONTEXT_H_
 
-#include <functional>
 #include <ostream>
 #include <string_view>
 
 #include "src/librarian/io_config.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -32,7 +32,7 @@ namespace moriarty_internal {
 // The held ostream will have its exceptions enabled.
 class BasicOStreamContext {
  public:
-  explicit BasicOStreamContext(std::reference_wrapper<std::ostream> os);
+  explicit BasicOStreamContext(Ref<std::ostream> os);
 
   // PrintToken()
   //
@@ -45,10 +45,10 @@ class BasicOStreamContext {
   void PrintWhitespace(moriarty::Whitespace whitespace);
 
  protected:
-  void UpdateBasicOStream(std::reference_wrapper<std::ostream> os) { os_ = os; }
+  void UpdateBasicOStream(Ref<std::ostream> os) { os_ = os; }
 
  private:
-  std::reference_wrapper<std::ostream> os_;
+  Ref<std::ostream> os_;
 
   // TODO: Determine if we should provide an API for:
   //  * update/access os_.

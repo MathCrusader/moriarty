@@ -33,6 +33,7 @@ cc_library(
         "//src/constraints:constraint_violation",
         "//src/contexts:librarian_context",
         "//src/librarian/util:cow_ptr",
+        "//src/librarian/util:ref",
     ],
 )
 
@@ -59,6 +60,7 @@ cc_library(
     hdrs = ["io_config.h"],
     deps = [
         "//src/librarian:policies",
+        "//src/librarian/util:ref",
     ],
 )
 

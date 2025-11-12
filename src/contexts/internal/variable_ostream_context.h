@@ -17,12 +17,12 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_OSTREAM_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_VARIABLE_OSTREAM_CONTEXT_H_
 
-#include <functional>
 #include <ostream>
 
 #include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/util/ref.h"
 #include "src/test_case.h"
 
 namespace moriarty {
@@ -33,9 +33,8 @@ namespace moriarty_internal {
 // Print variables to an output stream.
 class VariableOStreamContext {
  public:
-  VariableOStreamContext(std::reference_wrapper<std::ostream> os,
-                         std::reference_wrapper<const VariableSet> variables,
-                         std::reference_wrapper<const ValueSet> values);
+  VariableOStreamContext(Ref<std::ostream> os, Ref<const VariableSet> variables,
+                         Ref<const ValueSet> values);
 
   // PrintVariable()
   //
@@ -56,14 +55,12 @@ class VariableOStreamContext {
                          const ConcreteTestCase& test_case);
 
  protected:
-  void UpdateVariableOStream(std::reference_wrapper<std::ostream> os) {
-    os_ = os;
-  }
+  void UpdateVariableOStream(Ref<std::ostream> os) { os_ = os; }
 
  private:
-  std::reference_wrapper<const VariableSet> variables_;
-  std::reference_wrapper<const ValueSet> values_;
-  std::reference_wrapper<std::ostream> os_;
+  Ref<const VariableSet> variables_;
+  Ref<const ValueSet> values_;
+  Ref<std::ostream> os_;
 };
 
 // -----------------------------------------------------------------------------
