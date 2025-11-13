@@ -142,7 +142,7 @@ class MArray : public librarian::MVariable<
       array_.reserve(N);
     }
 
-    void ReadNext(librarian::ReaderContext ctx, int idx) {
+    void ReadNext(librarian::ReaderContext ctx) {
       array_.push_back(element_constraints_.get().Read(ctx));
     }
     vector_value_type Finalize() && { return std::move(array_); }

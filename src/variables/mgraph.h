@@ -135,7 +135,7 @@ class MGraph : public librarian::MVariable<MGraph, Graph<>> {
   //  - Adjacency list, adjacency matrix, parent list (in trees), etc.
   class Reader {
    public:
-    void ReadNext(librarian::ReaderContext ctx, int /*idx*/);
+    void ReadNext(librarian::ReaderContext ctx);
     Graph<> Finalize() &&;
 
    private:

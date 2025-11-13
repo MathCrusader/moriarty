@@ -214,7 +214,7 @@ std::optional<Graph<>> MGraph::GetUniqueValueImpl(
   return std::nullopt;
 }
 
-void MGraph::Reader::ReadNext(librarian::ReaderContext ctx, int /*idx*/) {
+void MGraph::Reader::ReadNext(librarian::ReaderContext ctx) {
   int u = ctx.ReadInteger();
   ctx.ReadWhitespace(Whitespace::kSpace);
   int v = ctx.ReadInteger();

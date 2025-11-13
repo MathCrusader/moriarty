@@ -96,7 +96,7 @@ TEST(MGraphTest, PartialReadShouldSucceed) {
                                Context().Values());
 
   for (int i = 0; i < 3; i++) {
-    reader.ReadNext(ctx, i);
+    reader.ReadNext(ctx);
     ASSERT_EQ(input.get(), '\n');  // Consume the separator
   }
   EXPECT_EQ(std::move(reader).Finalize(), Graph1());

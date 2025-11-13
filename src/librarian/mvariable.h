@@ -289,15 +289,15 @@ class MVariable : public moriarty_internal::AbstractVariable {
   };
 
   // Wrapper class around an MVariable's ChunkedReader. Expected API is:
-  //   void ReadNext(ReaderContext, int idx);  // Read the next value
-  //   ValueType Finalize() &&;                // Return the read value
+  //   void ReadNext(ReaderContext);  // Read the next value
+  //   ValueType Finalize() &&;       // Return the read value
   template <typename ReaderType>
   class ChunkedReaderWrapper : public moriarty_internal::ChunkedReader {
    public:
     ChunkedReaderWrapper(ReaderType reader, ReaderContext ctx,
                          Ref<moriarty_internal::ValueSet> values)
         : reader_(std::move(reader)), ctx_(std::move(ctx)), values_(values) {}
-    void ReadNext() override { reader_.ReadNext(ctx_, idx_++); }
+    void ReadNext() override { reader_.ReadNext(ctx_); }
     void Finalize() && override {
       values_.get().Set<VariableType>(ctx_.GetVariableName(),
                                       std::move(reader_).Finalize());
@@ -305,7 +305,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
    private:
     ReaderType reader_;
-    int idx_ = 0;
     ReaderContext ctx_;
     Ref<moriarty_internal::ValueSet> values_;
   };

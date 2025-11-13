@@ -417,7 +417,7 @@ TEST(MArrayTest, DirectlyUsingChunkedReaderShouldWork) {
                                Context().Values());
 
   for (int i = 0; i < 6; i++) {
-    reader.ReadNext(ctx, i);
+    reader.ReadNext(ctx);
     ASSERT_EQ(input.get(), '\n');  // Consume the separator
   }
   EXPECT_THAT(std::move(reader).Finalize(), ElementsAre(1, 2, 3, 4, 5, 6));
