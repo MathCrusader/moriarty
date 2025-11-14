@@ -608,8 +608,9 @@ MVariable<V, G>::GetChunkedReader(
         ChunkedReaderWrapper<typename V::chunked_reader_type>>(
         UnderlyingVariableType().CreateChunkedReader(N), ctx, values);
   } else {
-    throw std::runtime_error(
-        std::format("ChunkedReader not implemented for {}", Typename()));
+    throw ConfigurationError(
+        this->Typename(),
+        std::format("Unable to read {} in independent chunks.", Typename()));
   }
 }
 

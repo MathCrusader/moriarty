@@ -35,7 +35,7 @@ namespace moriarty {
 class GenericMoriartyError : public std::logic_error {
  public:
   explicit GenericMoriartyError(std::string message)
-      : std::logic_error(message) {}
+      : std::logic_error(std::move(message)) {}
 };
 
 // ValueNotFound
@@ -114,7 +114,7 @@ class ValueTypeMismatch : public GenericMoriartyError {
   std::string type_;
 };
 
-// ImpossibleToSatisfy()
+// ImpossibleToSatisfy
 //
 // Thrown when a constraint is added to a variable, which makes it impossible
 // for any value to satisfy.
@@ -147,7 +147,7 @@ class ImpossibleToSatisfy : public GenericMoriartyError {
   std::string constraint_;
 };
 
-// InvalidConstraint()
+// InvalidConstraint
 //
 // Thrown when either a constraint is invalid (e.g., the input arguments are
 // invalid) or when a constraint does not make sense for a particular variable
@@ -178,7 +178,7 @@ class InvalidConstraint : public GenericMoriartyError {
   std::string message_;
 };
 
-// GenerationError()
+// GenerationError
 //
 // Thrown when a variable is unable to generate a value.
 class GenerationError : public GenericMoriartyError {
@@ -202,7 +202,7 @@ class GenerationError : public GenericMoriartyError {
   RetryPolicy retryable_;
 };
 
-// IOError()
+// IOError
 //
 // Thrown when the I/O is invalid.
 class IOError : public GenericMoriartyError {
@@ -228,6 +228,27 @@ Context:
  private:
   std::string message_;
   InputCursor cursor_;
+};
+
+// ConfigurationError
+//
+// Thrown when config parameters are passed in that are invalid for the specific
+// context.
+class ConfigurationError : public GenericMoriartyError {
+ public:
+  explicit ConfigurationError(std::string_view context,
+                              std::string_view message)
+      : GenericMoriartyError(
+            std::format("Configuration error in {}: {}", context, message)),
+        context_(context),
+        message_(message) {}
+
+  const std::string& Context() const { return context_; }
+  const std::string& Message() const { return message_; }
+
+ private:
+  std::string context_;
+  std::string message_;
 };
 
 }  // namespace moriarty

@@ -37,6 +37,7 @@
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/util/locked_optional.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
 
@@ -60,6 +61,8 @@ class MTuple : public librarian::MVariable<
                    std::tuple<typename MElementTypes::value_type...>> {
  public:
   using tuple_value_type = std::tuple<typename MElementTypes::value_type...>;
+  class Reader;  // Forward declaration
+  using chunked_reader_type = Reader;
 
   // Create an MTuple from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
@@ -108,10 +111,6 @@ class MTuple : public librarian::MVariable<
    public:
     const std::tuple<MElementTypes...>& Elements() const;
 
-    template <size_t I>
-    const std::tuple_element_t<I, std::tuple<MElementTypes...>>& Element()
-        const;
-
    private:
     friend class MTuple;
     struct Data {  // Must be public since MTuple is a templated class.
@@ -119,6 +118,27 @@ class MTuple : public librarian::MVariable<
     };
     librarian::CowPtr<Data> data_;
   };
+
+  // MTuple::Reader
+  //
+  // An object that can read in an MTuple in chunks. One element at a time.
+  // Whitespace must be handled outside of this.
+  class Reader {
+   public:
+    Reader(int num_chunks, Ref<const CoreConstraints> core_constraints);
+    void ReadNext(librarian::ReaderContext ctx);
+    tuple_value_type Finalize() &&;
+
+   private:
+    std::size_t current_index_ = 0;
+    tuple_value_type values_;
+    Ref<const CoreConstraints> core_constraints_;
+
+    template <std::size_t... Is>
+    void ReadCurrentIndex(librarian::ReaderContext ctx,
+                          std::index_sequence<Is...>);
+  };
+  MTuple::Reader CreateChunkedReader(int num_chunks) const;
 
  private:
   CoreConstraints core_constraints_;
@@ -246,8 +266,8 @@ MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
         [&](int n) { return ctx.RandomInteger(n); });
 
   auto generate_one = [&]<std::size_t I>() {
-    return core_constraints_.template Element<I>().Generate(
-        ctx.ForSubVariable(moriarty_internal::TupleSubVariable<I>()));
+    return std::get<I>(core_constraints_.Elements())
+        .Generate(ctx.ForSubVariable(moriarty_internal::TupleSubVariable<I>()));
   };
 
   return [&]<size_t... I>(std::index_sequence<I...>) {
@@ -260,7 +280,7 @@ void MTuple<T...>::PrintImpl(librarian::PrinterContext ctx,
                              const tuple_value_type& value) const {
   auto print_one = [&]<std::size_t I>() {
     if (I > 0) ctx.PrintWhitespace(separator_.Get());
-    core_constraints_.template Element<I>().Print(ctx, std::get<I>(value));
+    std::get<I>(core_constraints_.Elements()).Print(ctx, std::get<I>(value));
   };
 
   [&]<size_t... I>(std::index_sequence<I...>) {
@@ -271,14 +291,13 @@ void MTuple<T...>::PrintImpl(librarian::PrinterContext ctx,
 template <typename... T>
 MTuple<T...>::tuple_value_type MTuple<T...>::ReadImpl(
     librarian::ReaderContext ctx) const {
-  auto read_one = [&]<std::size_t I>() {
-    if (I > 0) ctx.ReadWhitespace(separator_.Get());
-    return core_constraints_.template Element<I>().Read(ctx);
-  };
+  MTuple<T...>::Reader reader = this->CreateChunkedReader(sizeof...(T));
 
-  return [&]<size_t... I>(std::index_sequence<I...>) {
-    return tuple_value_type { read_one.template operator()<I>()... };
-  }(std::index_sequence_for<T...>{});
+  for (size_t i = 0; i < sizeof...(T); ++i) {
+    if (i > 0) ctx.ReadWhitespace(separator_.Get());
+    reader.ReadNext(ctx);
+  }
+  return std::move(reader).Finalize();
 }
 
 template <typename... T>
@@ -323,10 +342,58 @@ MTuple<MElementTypes...>::CoreConstraints::Elements() const {
 }
 
 template <typename... MElementTypes>
-template <size_t I>
-const std::tuple_element_t<I, std::tuple<MElementTypes...>>&
-MTuple<MElementTypes...>::CoreConstraints::Element() const {
-  return std::get<I>(Elements());
+MTuple<MElementTypes...>::Reader MTuple<MElementTypes...>::CreateChunkedReader(
+    int num_chunks) const {
+  return MTuple<MElementTypes...>::Reader(num_chunks, this->core_constraints_);
+}
+
+template <typename... MElementTypes>
+MTuple<MElementTypes...>::Reader::Reader(
+    int num_chunks, Ref<const CoreConstraints> core_constraints)
+    : core_constraints_(core_constraints) {
+  if (num_chunks != sizeof...(MElementTypes)) {
+    throw ConfigurationError(
+        "MTuple::Reader",
+        std::format(
+            "Asked to read {} elements, but there are {} elements in {}.",
+            num_chunks, sizeof...(MElementTypes),
+            MTuple<MElementTypes...>().Typename()));
+  }
+}
+
+template <typename... MElementTypes>
+void MTuple<MElementTypes...>::Reader::ReadNext(librarian::ReaderContext ctx) {
+  if (current_index_ >= sizeof...(MElementTypes)) {
+    ctx.ThrowIOError(
+        std::format("{}: Attempting to read more elements than exist in tuple.",
+                    MTuple<MElementTypes...>().Typename()));
+  }
+  ReadCurrentIndex(ctx, std::index_sequence_for<MElementTypes...>{});
+  current_index_++;
+}
+
+template <typename... MElementTypes>
+MTuple<MElementTypes...>::tuple_value_type
+MTuple<MElementTypes...>::Reader::Finalize() && {
+  return std::move(values_);
+}
+
+template <typename... MElementTypes>
+template <std::size_t... Is>
+void MTuple<MElementTypes...>::Reader::ReadCurrentIndex(
+    librarian::ReaderContext ctx, std::index_sequence<Is...>) {
+  auto read_element = [&]<std::size_t I>() {
+    if constexpr (I < sizeof...(Is)) {
+      if (current_index_ == I) {
+        std::get<I>(values_) =
+            std::get<I>(core_constraints_.get().Elements()).Read(ctx);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  (... || read_element.template operator()<Is>());
 }
 
 }  // namespace moriarty
