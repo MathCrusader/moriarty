@@ -37,6 +37,14 @@ cc_library(
     name = "graph",
     hdrs = ["graph.h"],
     deps = [
+        ":no_type",
+    ],
+)
+
+cc_library(
+    name = "no_type",
+    hdrs = ["no_type.h"],
+    deps = [
     ],
 )
 

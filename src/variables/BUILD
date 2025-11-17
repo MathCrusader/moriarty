@@ -32,6 +32,7 @@ cc_library(
         ":marray",
         ":mgraph",
         ":minteger",
+        ":mnone",
         ":mreal",
         ":mstring",
         ":mtuple",
@@ -60,10 +61,10 @@ cc_library(
 
 cc_library(
     name = "mgraph",
-    srcs = ["mgraph.cc"],
     hdrs = ["mgraph.h"],
     deps = [
         ":minteger",
+        ":mnone",
         "//src/constraints:base_constraints",
         "//src/constraints:graph_constraints",
         "//src/constraints:size_constraints",
@@ -90,6 +91,17 @@ cc_library(
         "//src/librarian:policies",
         "//src/librarian:size_property",
         "//src/librarian/util:cow_ptr",
+    ],
+)
+
+cc_library(
+    name = "mnone",
+    hdrs = ["mnone.h"],
+    deps = [
+        "//src/contexts:librarian_context",
+        "//src/librarian:errors",
+        "//src/librarian:mvariable",
+        "//src/types:no_type",
     ],
 )
 

@@ -22,13 +22,18 @@
 #include <stdexcept>
 #include <vector>
 
+#include "src/types/no_type.h"
+
 namespace moriarty {
+
+using NoEdgeLabel = NoType;
+using NoNodeLabel = NoType;
 
 // Graph
 //
 // An undirected graph with nodes and edges. Each node and edge can have labels.
 // By default, all labels are default constructed (so 0 for int types).
-template <typename EdgeLabel = int64_t, typename NodeLabel = int64_t>
+template <typename EdgeLabel = NoEdgeLabel, typename NodeLabel = NoNodeLabel>
 class Graph {
  public:
   using NodeIdx = int64_t;  // 0-based index for nodes
