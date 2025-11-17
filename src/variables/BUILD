@@ -202,6 +202,7 @@ cc_test(
     deps = [
         ":mgraph",
         ":minteger",
+        ":mstring",
         "//src/constraints:graph_constraints",
         "//src/librarian/testing:gtest_helpers",
         "//src/types:graph",

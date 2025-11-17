@@ -410,6 +410,7 @@ template <typename V, typename G>
 std::optional<G> MVariable<V, G>::GetUniqueValue(AnalysisContext ctx) const {
   std::optional<G> known = ctx.GetValueIfKnown<V>(ctx.GetVariableName());
   if (known) return known;
+  if (one_of_.GetUniqueValue()) return one_of_.GetUniqueValue();
   return GetUniqueValueImpl(ctx);
 }
 

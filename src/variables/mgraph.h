@@ -23,6 +23,7 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "src/constraints/base_constraints.h"
@@ -39,10 +40,22 @@
 
 namespace moriarty {
 
+using MNoEdgeLabel = MNone;
+using MNoNodeLabel = MNone;
+
 // MGraph
 //
-// Describes constraints placed on an undirected graph.
-template <typename MEdgeLabel = MNone, typename MNodeLabel = MNone>
+// Describes constraints placed on an undirected graph. By default, graphs have
+// no edge or node labels. To add labels, provide MEdgeLabel and MNodeLabel
+// types that are Moriarty variables.
+//
+// Typical "labels" are weights, capacities, colours, names, etc.
+//
+// Use tuples for multi-dimensional labels, e.g., flow networks with capacity
+// and cost. MGraph<MTuple<MInteger, MInteger>> would be a graph where each edge
+// has a capacity and cost.
+template <typename MEdgeLabel = MNoEdgeLabel,
+          typename MNodeLabel = MNoNodeLabel>
 class MGraph
     : public librarian::MVariable<MGraph<MEdgeLabel, MNodeLabel>,
                                   Graph<typename MEdgeLabel::value_type,
@@ -96,6 +109,14 @@ class MGraph
   // The graph is simple (no parallel edges or self-loops)
   MGraph& AddConstraint(SimpleGraph constraint);
 
+  // ---------------------------------------------------------------------------
+  //  Constrain edge/node labels
+
+  // All edge labels in the graph must satisfy this constraint.
+  MGraph& AddConstraint(EdgeLabels<MEdgeLabel> constraint);
+  // All node labels in the graph must satisfy this constraint.
+  MGraph& AddConstraint(NodeLabels<MNodeLabel> constraint);
+
   [[nodiscard]] std::string Typename() const override { return "MGraph"; }
 
   [[nodiscard]] Reader CreateChunkedReader(int num_chunks) const {
@@ -115,6 +136,9 @@ class MGraph
     bool MultiEdgesAllowed() const;
     bool LoopsAllowed() const;
 
+    const std::optional<MEdgeLabel>& EdgeLabelConstraints() const;
+    const std::optional<MNodeLabel>& NodeLabelConstraints() const;
+
    private:
     friend class MGraph;
     struct Data {
@@ -123,6 +147,8 @@ class MGraph
       bool is_connected = false;
       bool multi_edges_allowed = true;
       bool loops_allowed = true;
+      std::optional<MEdgeLabel> edge_label_constraints;
+      std::optional<MNodeLabel> node_label_constraints;
     };
     librarian::CowPtr<Data> data_;
   };
@@ -167,6 +193,10 @@ template <typename MEdgeLabel, typename MNodeLabel>
 template <typename... Constraints>
   requires(ConstraintFor<MGraph<MEdgeLabel, MNodeLabel>, Constraints> && ...)
 MGraph<MEdgeLabel, MNodeLabel>::MGraph(Constraints&&... constraints) {
+  static_assert(MoriartyVariable<MEdgeLabel> && MoriartyVariable<MNodeLabel>,
+                "The T and U used in MGraph<T, U> must be a Moriarty variable. "
+                "For example, "
+                "MGraph<MInteger, MString> or MGraph<MCustomType, MNone>.");
   (this->AddConstraint(std::forward<Constraints>(constraints)), ...);
 }
 
@@ -238,6 +268,26 @@ MGraph<MEdgeLabel, MNodeLabel>& MGraph<MEdgeLabel, MNodeLabel>::AddConstraint(
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
+MGraph<MEdgeLabel, MNodeLabel>& MGraph<MEdgeLabel, MNodeLabel>::AddConstraint(
+    EdgeLabels<MEdgeLabel> constraint) {
+  if (!core_constraints_.EdgeLabelConstraints())
+    core_constraints_.data_.Mutable().edge_label_constraints = MEdgeLabel();
+  core_constraints_.data_.Mutable().edge_label_constraints->MergeFrom(
+      constraint.GetConstraints());
+  return this->InternalAddConstraint(std::move(constraint));
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+MGraph<MEdgeLabel, MNodeLabel>& MGraph<MEdgeLabel, MNodeLabel>::AddConstraint(
+    NodeLabels<MNodeLabel> constraint) {
+  if (!core_constraints_.NodeLabelConstraints())
+    core_constraints_.data_.Mutable().node_label_constraints = MNodeLabel();
+  core_constraints_.data_.Mutable().node_label_constraints->MergeFrom(
+      constraint.GetConstraints());
+  return this->InternalAddConstraint(std::move(constraint));
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
 typename MGraph<MEdgeLabel, MNodeLabel>::graph_type
 MGraph<MEdgeLabel, MNodeLabel>::GenerateImpl(
     librarian::ResolverContext ctx) const {
@@ -285,12 +335,28 @@ MGraph<MEdgeLabel, MNodeLabel>::GenerateImpl(
       std::pair<typename graph_type::NodeIdx, typename graph_type::NodeIdx>>
       seen;
   graph_type G(num_nodes);
+
+  auto add_edge_with_label = [this, &G, &seen, &ctx](int64_t u, int64_t v) {
+    seen.emplace(u, v);
+    seen.emplace(v, u);
+
+    if constexpr (std::is_same_v<MEdgeLabel, MNoEdgeLabel>) {
+      G.AddEdge(u, v);
+    } else {
+      // Generate edge label
+      auto edge_label =
+          core_constraints_.EdgeLabelConstraints()
+              ? core_constraints_.EdgeLabelConstraints()->Generate(
+                    ctx.ForSubVariable("edge_label"))
+              : MEdgeLabel().Generate(ctx.ForSubVariable("edge_label"));
+      G.AddEdge(u, v, edge_label);
+    }
+  };
+
   if (core_constraints_.IsConnected()) {
     for (int64_t i = 1; i < num_nodes; ++i) {
       int64_t v = ctx.RandomInteger(i);
-      seen.emplace(i, v);
-      seen.emplace(v, i);
-      G.AddEdge(i, v);
+      add_edge_with_label(i, v);
     }
   }
 
@@ -300,8 +366,22 @@ MGraph<MEdgeLabel, MNodeLabel>::GenerateImpl(
     if (!core_constraints_.LoopsAllowed() && u == v) continue;
     if (!core_constraints_.MultiEdgesAllowed() && !seen.emplace(u, v).second)
       continue;
-    seen.emplace(v, u);
-    G.AddEdge(u, v);
+    add_edge_with_label(u, v);
+  }
+
+  if constexpr (!std::is_same_v<MNodeLabel, MNoNodeLabel>) {
+    std::vector<typename MNodeLabel::value_type> node_labels;
+    node_labels.reserve(num_nodes);
+    for (int64_t i = 0; i < num_nodes; ++i) {
+      auto node_label =
+          core_constraints_.NodeLabelConstraints()
+              ? core_constraints_.NodeLabelConstraints()->Generate(
+                    ctx.ForSubVariable(std::format("node_label_{}", i)))
+              : MNodeLabel().Generate(
+                    ctx.ForSubVariable(std::format("node_label_{}", i)));
+      node_labels.push_back(node_label);
+    }
+    G.SetNodeLabels(node_labels);
   }
 
   return G;
@@ -367,15 +447,51 @@ MGraph<MEdgeLabel, MNodeLabel>::GetUniqueValueImpl(
           ? core_constraints_.NumEdges()->GetUniqueValue(ctx)
           : std::nullopt;
 
-  if (nodes && edges && *edges == 0) return graph_type(*nodes);
+  if (nodes && *nodes == 0 && edges && *edges == 0) return graph_type(0);
+  if (!nodes || !edges) return std::nullopt;
 
-  if (nodes && *nodes == 1 && edges) {  // Single node with lots of loops
-    graph_type G(*nodes);
-    for (int64_t i = 0; i < *edges; ++i) {
-      G.AddEdge(0, 0);
+  std::optional<typename MNodeLabel::value_type> node_label;
+  if constexpr (!std::is_same_v<MNodeLabel, MNoNodeLabel>) {
+    if (core_constraints_.NodeLabelConstraints()) {
+      node_label =
+          core_constraints_.NodeLabelConstraints()->GetUniqueValue(ctx);
     }
-    return G;
   }
+  if constexpr (!std::is_same_v<MNodeLabel, MNoNodeLabel>) {
+    if (!node_label)
+      return std::nullopt;  // Remaining graphs have at least one node.
+  }
+
+  if (*edges == 0) {  // Several nodes, but no edges
+    if constexpr (std::is_same_v<MNodeLabel, MNoNodeLabel>) {
+      return graph_type(*nodes);
+    } else {
+      graph_type G(*nodes);
+      G.SetNodeLabels(
+          std::vector<typename MNodeLabel::value_type>(*nodes, *node_label));
+      return G;
+    }
+  }
+
+  if (*nodes == 1) {  // Single node with lots of loops
+    if constexpr (std::is_same_v<MEdgeLabel, MNoEdgeLabel>) {
+      graph_type G(*nodes);
+      for (int64_t i = 0; i < *edges; ++i) G.AddEdge(0, 0);
+      return G;
+    } else {
+      // I have edge labels, so they must be unique, too.
+      if (!core_constraints_.EdgeLabelConstraints()) return std::nullopt;
+      auto edge_label =
+          core_constraints_.EdgeLabelConstraints()->GetUniqueValue(ctx);
+      if (!edge_label) return std::nullopt;
+
+      graph_type G(*nodes);
+      G.SetNodeLabels({*node_label});
+      for (int64_t i = 0; i < *edges; ++i) G.AddEdge(0, 0, *edge_label);
+      return G;
+    }
+  }
+
   return std::nullopt;
 }
 
@@ -425,6 +541,18 @@ bool MGraph<MEdgeLabel, MNodeLabel>::CoreConstraints::MultiEdgesAllowed()
 template <typename MEdgeLabel, typename MNodeLabel>
 bool MGraph<MEdgeLabel, MNodeLabel>::CoreConstraints::LoopsAllowed() const {
   return data_->loops_allowed;
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+const std::optional<MEdgeLabel>&
+MGraph<MEdgeLabel, MNodeLabel>::CoreConstraints::EdgeLabelConstraints() const {
+  return data_->edge_label_constraints;
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+const std::optional<MNodeLabel>&
+MGraph<MEdgeLabel, MNodeLabel>::CoreConstraints::NodeLabelConstraints() const {
+  return data_->node_label_constraints;
 }
 
 }  // namespace moriarty

@@ -14,6 +14,8 @@
 
 #include "src/types/graph.h"
 
+#include <string>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -23,6 +25,7 @@ namespace {
 using testing::AllOf;
 using testing::Each;
 using testing::ElementsAre;
+using testing::Eq;
 using testing::IsEmpty;
 using testing::SizeIs;
 
@@ -34,10 +37,11 @@ TEST(GraphTest, ConstructorGivesEmptyGraph) {
 }
 
 TEST(GraphTest, LabelsAreDefaultConstructed) {
-  Graph<int, int> graph(10);
-  EXPECT_THAT(graph.GetNodeLabels(), AllOf(SizeIs(10), Each(0)));
+  Graph<int, std::string> graph(10);
+  EXPECT_THAT(graph.GetNodeLabels(), AllOf(SizeIs(10), Each(Eq(""))));
   graph.AddEdge(2, 3);
-  EXPECT_THAT(graph.GetEdges(), ElementsAre(Graph<int, int>::Edge{2, 3, 0}));
+  EXPECT_THAT(graph.GetEdges(),
+              ElementsAre(Graph<int, std::string>::Edge{2, 3, 0}));
 }
 
 TEST(GraphTest, NodeLabelsCanBeSetAndGot) {
