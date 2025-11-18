@@ -122,24 +122,21 @@ class MArray : public librarian::MVariable<
   // "MArray<MInteger>"). This is mostly used for debugging/error messages.
   [[nodiscard]] std::string Typename() const override;
 
-  // CreateChunkedReader()
+  // MArray::Reader
   //
   // The partial reader reads one element at a time from the input stream,
   // without reading the separators. Call ReadNext() exactly N times, then call
   // Finalize() to get the final value, which will leave this in a
   // moved-from-state.
-  Reader CreateChunkedReader(int N) const {
-    return Reader(N, core_constraints_.Elements(), core_constraints_.Length());
-  }
-
   class Reader {
    public:
-    explicit Reader(int N, Ref<const MElementType> element_constraints,
-                    Ref<const std::optional<MInteger>> length)
-        : element_constraints_(element_constraints), length_(length) {
+    explicit Reader(librarian::ReaderContext ctx, int num_chunks,
+                    Ref<const MArray> variable)
+        : element_constraints_(variable.get().GetCoreConstraints().Elements()),
+          length_(variable.get().GetCoreConstraints().Length()) {
       // TODO: Add safety checks if N is massive?
       // TODO: Ensure `length_` is satisfied?
-      array_.reserve(N);
+      array_.reserve(num_chunks);
     }
 
     void ReadNext(librarian::ReaderContext ctx) {
@@ -175,6 +172,9 @@ class MArray : public librarian::MVariable<
     };
     librarian::CowPtr<Data> data_;
   };
+  [[nodiscard]] CoreConstraints GetCoreConstraints() const {
+    return core_constraints_;
+  }
 
  private:
   CoreConstraints core_constraints_;

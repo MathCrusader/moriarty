@@ -34,6 +34,7 @@
 #include "src/librarian/errors.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/policies.h"
+#include "src/librarian/util/debug_string.h"
 #include "src/types/graph.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mnone.h"
@@ -119,10 +120,6 @@ class MGraph
 
   [[nodiscard]] std::string Typename() const override { return "MGraph"; }
 
-  [[nodiscard]] Reader CreateChunkedReader(int num_chunks) const {
-    return Reader();
-  }
-
   // MGraph::CoreConstraints
   //
   // A base set of constraints for `MGraph` that are used during generation.
@@ -152,9 +149,45 @@ class MGraph
     };
     librarian::CowPtr<Data> data_;
   };
+  [[nodiscard]] CoreConstraints GetCoreConstraints() const {
+    return core_constraints_;
+  }
+
+  class Format {
+   public:
+    enum class Style { kEdgeList, kAdjacencyMatrix, kNonExhaustiveList };
+    Style GetStyle() const { return style_; }
+    Format& SetStyle(Style style);
+
+    enum class NodeStyle { k0Based, k1Based, kNodeLabels, kNonExhaustiveList };
+    NodeStyle GetNodeStyle() const { return node_style_; }
+    Format& SetNodeStyle(NodeStyle node_style);
+
+   private:
+    Style style_ = Style::kEdgeList;
+    NodeStyle node_style_ = NodeStyle::k0Based;
+  };
+  Format& GetFormat() { return format_; }
+  const Format& GetFormat() const { return format_; }
+
+  class Reader {
+   public:
+    explicit Reader(librarian::ReaderContext ctx, int num_chunks,
+                    Ref<const MGraph> variable);
+    void ReadNext(librarian::ReaderContext ctx);
+    graph_type Finalize() &&;
+
+   private:
+    graph_type G_;
+    // std::unordered_map<typename MNodeLabel::value_type,
+    //                    typename graph_type::NodeIdx>
+    //     node_map_;
+    Ref<const MGraph> variable_;
+  };
 
  private:
   CoreConstraints core_constraints_;
+  Format format_;
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
@@ -165,24 +198,6 @@ class MGraph
   std::optional<graph_type> GetUniqueValueImpl(
       librarian::AnalysisContext ctx) const override;
   // ---------------------------------------------------------------------------
-
- public:
-  // Internal-to-Moriarty class. You shouldn't need to use this directly (its
-  // API can and will change without warning).
-  //
-  // Allows the graph to be read in chunks at a time.
-  // For now, this assumes edge list and each node is 0-based.
-  //
-  // In the future, we'll add options for:
-  //  - Adjacency list, adjacency matrix, parent list (in trees), etc.
-  class Reader {
-   public:
-    void ReadNext(librarian::ReaderContext ctx);
-    graph_type Finalize() &&;
-
-   private:
-    std::vector<std::pair<int, int>> edges_;
-  };
 };
 
 // -----------------------------------------------------------------------------
@@ -496,23 +511,52 @@ MGraph<MEdgeLabel, MNodeLabel>::GetUniqueValueImpl(
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
+MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(librarian::ReaderContext ctx,
+                                               int num_chunks,
+                                               Ref<const MGraph> variable)
+    : G_(0), variable_(variable) {
+  const CoreConstraints& constraints = variable_.get().GetCoreConstraints();
+  if (!constraints.NumNodes())
+    ctx.ThrowIOError("Unknown number of nodes before read.");
+  std::optional<int64_t> num_nodes =
+      constraints.NumNodes()->GetUniqueValue(ctx);
+  if (!num_nodes)
+    ctx.ThrowIOError("Cannot determine the number of nodes before read.");
+
+  if (!constraints.NumEdges())
+    ctx.ThrowIOError("Unknown number of edges before read.");
+  std::optional<int64_t> num_edges =
+      constraints.NumEdges()->GetUniqueValue(ctx);
+  if (!num_edges)
+    ctx.ThrowIOError("Cannot determine the number of edges before read.");
+
+  if (*num_edges != num_chunks) {
+    ctx.ThrowIOError("MGraph::Reader expected " +
+                     librarian::DebugString(*num_edges) + " chunks, but got " +
+                     librarian::DebugString(num_chunks) + ".");
+  }
+
+  G_ = graph_type(*num_nodes);
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
 void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNext(
     librarian::ReaderContext ctx) {
   int u = ctx.ReadInteger();
   ctx.ReadWhitespace(Whitespace::kSpace);
   int v = ctx.ReadInteger();
-  if (u < 0 || v < 0) ctx.ThrowIOError("Edge endpoints must be >= 0.");
-  edges_.emplace_back(u, v);
+  if (!(0 <= u && u < G_.NumNodes() && 0 <= v && v < G_.NumNodes())) {
+    ctx.ThrowIOError(std::format(
+        "Invalid edge ({}, {}) for graph with {} nodes.", u, v, G_.NumNodes()));
+  }
+
+  G_.AddEdge(u, v);
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
 typename MGraph<MEdgeLabel, MNodeLabel>::graph_type
 MGraph<MEdgeLabel, MNodeLabel>::Reader::Finalize() && {
-  int max_n = 0;
-  for (const auto& [u, v] : edges_) max_n = std::max({max_n, u, v});
-  graph_type g(max_n + 1);
-  for (const auto& [u, v] : edges_) g.AddEdge(u, v);
-  return g;
+  return std::move(G_);
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>

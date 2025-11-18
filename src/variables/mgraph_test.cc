@@ -93,13 +93,14 @@ TEST(MGraphTest, ReadShouldSucceed) {
 }
 
 TEST(MGraphTest, PartialReadShouldSucceed) {
-  auto reader = MGraph(NumNodes(3), NumEdges(3)).CreateChunkedReader(2);
+  MGraph graph = MGraph(NumNodes(3), NumEdges(3));
 
   Context context;
   std::istringstream input(std::string{Graph1String()});
   InputCursor cursor(input, WhitespaceStrictness::kPrecise);
-  librarian::ReaderContext ctx("A", cursor, Context().Variables(),
-                               Context().Values());
+  librarian::ReaderContext ctx("A", cursor, context.Variables(),
+                               context.Values());
+  auto reader = MGraph<MNoEdgeLabel, MNoNodeLabel>::Reader(ctx, 3, graph);
 
   for (int i = 0; i < 3; i++) {
     reader.ReadNext(ctx);

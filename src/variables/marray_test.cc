@@ -408,13 +408,13 @@ TEST(MArrayTest,
 
 TEST(MArrayTest, DirectlyUsingChunkedReaderShouldWork) {
   MArray<MInteger> arr(Elements<MInteger>(Between(1, 10)), Length(6));
-  MArray<MInteger>::Reader reader = arr.CreateChunkedReader(6);
 
   Context context;
   std::istringstream input("1\n2\n3\n4\n5\n6\n");
   InputCursor cursor(input, WhitespaceStrictness::kPrecise);
   librarian::ReaderContext ctx("A", cursor, Context().Variables(),
                                Context().Values());
+  MArray<MInteger>::Reader reader(ctx, 6, arr);
 
   for (int i = 0; i < 6; i++) {
     reader.ReadNext(ctx);

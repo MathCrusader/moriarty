@@ -111,6 +111,9 @@ class MString : public librarian::MVariable<MString, std::string> {
     };
     librarian::CowPtr<Data> data_;
   };
+  [[nodiscard]] CoreConstraints GetCoreConstraints() const {
+    return core_constraints_;
+  }
 
  private:
   CoreConstraints core_constraints_;

@@ -103,6 +103,9 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
     };
     librarian::CowPtr<Data> data_;
   };
+  [[nodiscard]] CoreConstraints GetCoreConstraints() const {
+    return core_constraints_;
+  }
 
  private:
   CoreConstraints core_constraints_;

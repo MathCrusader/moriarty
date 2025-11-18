@@ -607,7 +607,8 @@ MVariable<V, G>::GetChunkedReader(
     ReaderContext ctx(variable_name, input, variables, values);
     return std::make_unique<
         ChunkedReaderWrapper<typename V::chunked_reader_type>>(
-        UnderlyingVariableType().CreateChunkedReader(N), ctx, values);
+        typename V::chunked_reader_type(ctx, N, UnderlyingVariableType()), ctx,
+        values);
   } else {
     throw ConfigurationError(
         this->Typename(),

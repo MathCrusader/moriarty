@@ -118,6 +118,9 @@ class MTuple : public librarian::MVariable<
     };
     librarian::CowPtr<Data> data_;
   };
+  [[nodiscard]] CoreConstraints GetCoreConstraints() const {
+    return core_constraints_;
+  }
 
   // MTuple::Reader
   //
@@ -125,20 +128,20 @@ class MTuple : public librarian::MVariable<
   // Whitespace must be handled outside of this.
   class Reader {
    public:
-    Reader(int num_chunks, Ref<const CoreConstraints> core_constraints);
+    explicit Reader(librarian::ReaderContext ctx, int num_chunks,
+                    Ref<const MTuple> variable);
     void ReadNext(librarian::ReaderContext ctx);
     tuple_value_type Finalize() &&;
 
    private:
     std::size_t current_index_ = 0;
     tuple_value_type values_;
-    Ref<const CoreConstraints> core_constraints_;
+    Ref<const MTuple> variable_;
 
     template <std::size_t... Is>
     void ReadCurrentIndex(librarian::ReaderContext ctx,
                           std::index_sequence<Is...>);
   };
-  MTuple::Reader CreateChunkedReader(int num_chunks) const;
 
  private:
   CoreConstraints core_constraints_;
@@ -291,7 +294,7 @@ void MTuple<T...>::PrintImpl(librarian::PrinterContext ctx,
 template <typename... T>
 MTuple<T...>::tuple_value_type MTuple<T...>::ReadImpl(
     librarian::ReaderContext ctx) const {
-  MTuple<T...>::Reader reader = this->CreateChunkedReader(sizeof...(T));
+  MTuple<T...>::Reader reader = MTuple<T...>::Reader(ctx, sizeof...(T), *this);
 
   for (size_t i = 0; i < sizeof...(T); ++i) {
     if (i > 0) ctx.ReadWhitespace(separator_.Get());
@@ -342,15 +345,10 @@ MTuple<MElementTypes...>::CoreConstraints::Elements() const {
 }
 
 template <typename... MElementTypes>
-MTuple<MElementTypes...>::Reader MTuple<MElementTypes...>::CreateChunkedReader(
-    int num_chunks) const {
-  return MTuple<MElementTypes...>::Reader(num_chunks, this->core_constraints_);
-}
-
-template <typename... MElementTypes>
-MTuple<MElementTypes...>::Reader::Reader(
-    int num_chunks, Ref<const CoreConstraints> core_constraints)
-    : core_constraints_(core_constraints) {
+MTuple<MElementTypes...>::Reader::Reader(librarian::ReaderContext ctx,
+                                         int num_chunks,
+                                         Ref<const MTuple> variable)
+    : variable_(std::move(variable)) {
   if (num_chunks != sizeof...(MElementTypes)) {
     throw ConfigurationError(
         "MTuple::Reader",
@@ -386,7 +384,8 @@ void MTuple<MElementTypes...>::Reader::ReadCurrentIndex(
     if constexpr (I < sizeof...(Is)) {
       if (current_index_ == I) {
         std::get<I>(values_) =
-            std::get<I>(core_constraints_.get().Elements()).Read(ctx);
+            std::get<I>(variable_.get().GetCoreConstraints().Elements())
+                .Read(ctx);
         return true;
       }
     }

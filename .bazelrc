@@ -20,4 +20,5 @@ build:asan-clang \
   --copt=-g \
   --copt=-fno-omit-frame-pointer
 
-test:asan-clang --test_output=errors
+build:asan --copt=-fsanitize=address,undefined --linkopt=-fsanitize=address,undefined
+test:asan --copt=-fsanitize=address,undefined --linkopt=-fsanitize=address,undefined
