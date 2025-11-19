@@ -45,8 +45,7 @@ namespace {
 
 bool IsEOF(std::istream& is) {
   if (is.eof()) return true;
-  (void)is.peek();
-  return is.eof();
+  return is.peek() == EOF;
 }
 
 std::string ReadableChar(char c) {
@@ -83,7 +82,7 @@ void RegisterNewline(char c, InputCursor& cursor) {
 
 void StripLeadingWhitespace(std::istream& is, InputCursor& cursor) {
   while (is) {
-    char c = is.peek();
+    int c = is.peek();
     if (c == EOF) break;
     if (!std::isspace(c)) break;
     cursor.col_num++;
