@@ -21,10 +21,13 @@
 #include <format>
 #include <optional>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
+#include <variant>
+#include <vector>
 
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/graph_constraints.h"
@@ -32,6 +35,7 @@
 #include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
 #include "src/librarian/errors.h"
+#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/policies.h"
 #include "src/librarian/util/debug_string.h"
@@ -157,11 +161,17 @@ class MGraph
    public:
     enum class Style { kEdgeList, kAdjacencyMatrix, kNonExhaustiveList };
     Style GetStyle() const { return style_; }
-    Format& SetStyle(Style style);
+    Format& SetStyle(Style style) {
+      style_ = style;
+      return *this;
+    }
 
     enum class NodeStyle { k0Based, k1Based, kNodeLabels, kNonExhaustiveList };
     NodeStyle GetNodeStyle() const { return node_style_; }
-    Format& SetNodeStyle(NodeStyle node_style);
+    Format& SetNodeStyle(NodeStyle node_style) {
+      node_style_ = node_style;
+      return *this;
+    }
 
    private:
     Style style_ = Style::kEdgeList;
@@ -179,10 +189,25 @@ class MGraph
 
    private:
     graph_type G_;
-    // std::unordered_map<typename MNodeLabel::value_type,
-    //                    typename graph_type::NodeIdx>
-    //     node_map_;
+    int64_t chunks_read_ = 0;
     Ref<const MGraph> variable_;
+
+    // We need to use indices in std::get<>, since it's possible they are the
+    // same type.
+    static constexpr int IntMatrixIndex = 0;
+    static constexpr int LabelMatrixIndex = 1;
+    using IntMatrix = std::vector<std::vector<int64_t>>;
+    using LabelMatrix =
+        std::vector<std::vector<typename MEdgeLabel::value_type>>;
+    std::variant<IntMatrix, LabelMatrix> adjacency_matrix_;
+
+    graph_type::NodeIdx ReadNodeLabel(librarian::ReaderContext ctx);
+    MEdgeLabel::value_type ReadEdgeLabel(librarian::ReaderContext ctx);
+
+    void ReadNextEdgeList(librarian::ReaderContext ctx);
+    void ReadNextAdjacencyMatrix(librarian::ReaderContext ctx);
+    graph_type FinalizeEdgeList() &&;
+    graph_type FinalizeAdjacencyMatrix() &&;
   };
 
  private:
@@ -203,6 +228,12 @@ class MGraph
 // -----------------------------------------------------------------------------
 //  Implementation details
 // -----------------------------------------------------------------------------
+
+template <typename MEdgeLabel>
+concept HasEdgeLabels = !std::is_same_v<MEdgeLabel, MNoEdgeLabel>;
+
+template <typename MNodeLabel>
+concept HasNodeLabels = !std::is_same_v<MNodeLabel, MNoNodeLabel>;
 
 template <typename MEdgeLabel, typename MNodeLabel>
 template <typename... Constraints>
@@ -355,7 +386,7 @@ MGraph<MEdgeLabel, MNodeLabel>::GenerateImpl(
     seen.emplace(u, v);
     seen.emplace(v, u);
 
-    if constexpr (std::is_same_v<MEdgeLabel, MNoEdgeLabel>) {
+    if constexpr (!HasEdgeLabels<MEdgeLabel>) {
       G.AddEdge(u, v);
     } else {
       // Generate edge label
@@ -384,7 +415,7 @@ MGraph<MEdgeLabel, MNodeLabel>::GenerateImpl(
     add_edge_with_label(u, v);
   }
 
-  if constexpr (!std::is_same_v<MNodeLabel, MNoNodeLabel>) {
+  if constexpr (HasNodeLabels<MNodeLabel>) {
     std::vector<typename MNodeLabel::value_type> node_labels;
     node_labels.reserve(num_nodes);
     for (int64_t i = 0; i < num_nodes; ++i) {
@@ -412,6 +443,15 @@ MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(librarian::ReaderContext ctx) const {
   if (!num_nodes)
     ctx.ThrowIOError("Cannot determine the number of nodes before read.");
 
+  if (GetFormat().GetStyle() == Format::Style::kAdjacencyMatrix) {
+    MGraph::Reader reader(ctx, *num_nodes, *this);
+    for (int64_t i = 0; i < *num_nodes; i++) {
+      reader.ReadNext(ctx);
+      ctx.ReadWhitespace(Whitespace::kNewline);
+    }
+    return std::move(reader).Finalize();
+  }
+
   if (!core_constraints_.NumEdges())
     ctx.ThrowIOError("Unknown number of edges before read.");
   std::optional<int64_t> num_edges =
@@ -419,30 +459,106 @@ MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(librarian::ReaderContext ctx) const {
   if (!num_edges)
     ctx.ThrowIOError("Cannot determine the number of edges before read.");
 
-  graph_type G(*num_nodes);
-  for (int64_t i = 0; i < *num_edges; ++i) {
-    int64_t u = ctx.ReadInteger();  // TODO: Read NodeLabels eventually
-    ctx.ReadWhitespace(Whitespace::kSpace);
-    int64_t v = ctx.ReadInteger();
-    ctx.ReadWhitespace(Whitespace::kNewline);
-    if (u < 0 || v < 0 || u >= *num_nodes || v >= *num_nodes) {
-      ctx.ThrowIOError(std::format(
-          "Invalid edge ({}, {}) for graph with {} nodes.", u, v, *num_nodes));
+  if (GetFormat().GetStyle() == Format::Style::kEdgeList) {
+    MGraph::Reader reader(ctx, *num_edges, *this);
+    for (int64_t i = 0; i < *num_edges; i++) {
+      reader.ReadNext(ctx);
+      ctx.ReadWhitespace(Whitespace::kNewline);
     }
-    G.AddEdge(u, v);
+    return std::move(reader).Finalize();
   }
 
-  return G;
+  ctx.ThrowIOError("Unsupported MGraph format for reading.");
+  return graph_type(0);  // Unreachable
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
 void MGraph<MEdgeLabel, MNodeLabel>::PrintImpl(librarian::PrinterContext ctx,
                                                const graph_type& value) const {
-  for (const auto& [u, v, _] : value.GetEdges()) {
-    ctx.PrintToken(std::to_string(u));
-    ctx.PrintWhitespace(Whitespace::kSpace);
-    ctx.PrintToken(std::to_string(v));
-    ctx.PrintWhitespace(Whitespace::kNewline);
+  if (format_.GetStyle() == MGraph::Format::Style::kEdgeList) {
+    auto node_labels = value.GetNodeLabels();
+    auto print_node = [this, &ctx,
+                       &node_labels](typename graph_type::NodeIdx node) {
+      if (format_.GetNodeStyle() == MGraph::Format::NodeStyle::k0Based) {
+        ctx.PrintToken(std::to_string(node));
+      } else if (format_.GetNodeStyle() == MGraph::Format::NodeStyle::k1Based) {
+        ctx.PrintToken(std::to_string(node + 1));
+      } else {
+        // Node labels
+        if constexpr (HasNodeLabels<MNodeLabel>) {
+          core_constraints_.NodeLabelConstraints()
+              .value_or(MNodeLabel())
+              .Print(ctx, node_labels[node]);
+        } else {
+          // FIXME: This should be an IOError.
+          throw std::runtime_error(
+              "Cannot print node labels when MNodeLabel is MNone.");
+        }
+      }
+    };
+    for (const auto& [u, v, w] : value.GetEdges()) {
+      print_node(u);
+      ctx.PrintWhitespace(Whitespace::kSpace);
+      print_node(v);
+      if constexpr (HasEdgeLabels<MEdgeLabel>) {
+        ctx.PrintWhitespace(Whitespace::kSpace);
+        core_constraints_.EdgeLabelConstraints()
+            .value_or(MEdgeLabel())
+            .Print(ctx, w);
+      }
+      ctx.PrintWhitespace(Whitespace::kNewline);
+    }
+    return;
+  }
+
+  if (format_.GetStyle() == MGraph::Format::Style::kAdjacencyMatrix) {
+    auto adjacency_list = value.GetAdjacencyList();
+    if constexpr (!HasEdgeLabels<MEdgeLabel>) {
+      std::vector<std::vector<int64_t>> matrix(
+          adjacency_list.size(),
+          std::vector<int64_t>(adjacency_list.size(), 0));
+      for (size_t u = 0; u < adjacency_list.size(); ++u) {
+        for (auto [_, v, w] : adjacency_list[u]) {
+          matrix[u][v]++;
+        }
+      }
+      for (size_t u = 0; u < adjacency_list.size(); ++u) {
+        for (size_t v = 0; v < adjacency_list.size(); ++v) {
+          if (v > 0) ctx.PrintWhitespace(Whitespace::kSpace);
+          ctx.PrintToken(std::to_string(matrix[u][v]));
+        }
+        ctx.PrintWhitespace(Whitespace::kNewline);
+      }
+    } else {  // HasEdgeLabels == true
+      std::vector<std::vector<std::optional<typename MEdgeLabel::value_type>>>
+          matrix(value.NumNodes(),
+                 std::vector<std::optional<typename MEdgeLabel::value_type>>(
+                     value.NumNodes()));
+      for (const auto& row : adjacency_list) {
+        for (auto [u, v, w] : row) {
+          if (matrix[u][v].has_value()) {
+            // FIXME: This should be an IOError.
+            throw std::runtime_error(
+                "Cannot print adjacency matrix with multiple edges "
+                "between nodes when edge labels are present.");
+          }
+          matrix[u][v] = w;
+        }
+      }
+      for (size_t u = 0; u < value.NumNodes(); ++u) {
+        for (size_t v = 0; v < value.NumNodes(); ++v) {
+          if (v > 0) ctx.PrintWhitespace(Whitespace::kSpace);
+          if (!matrix[u][v]) {
+            ctx.PrintToken("0");  // FIXME: Better representation of no edge
+          } else {
+            core_constraints_.EdgeLabelConstraints()
+                .value_or(MEdgeLabel())
+                .Print(ctx, *matrix[u][v]);
+          }
+        }
+        ctx.PrintWhitespace(Whitespace::kNewline);
+      }
+    }
   }
 }
 
@@ -466,13 +582,11 @@ MGraph<MEdgeLabel, MNodeLabel>::GetUniqueValueImpl(
   if (!nodes || !edges) return std::nullopt;
 
   std::optional<typename MNodeLabel::value_type> node_label;
-  if constexpr (!std::is_same_v<MNodeLabel, MNoNodeLabel>) {
+  if constexpr (HasNodeLabels<MNodeLabel>) {
     if (core_constraints_.NodeLabelConstraints()) {
       node_label =
           core_constraints_.NodeLabelConstraints()->GetUniqueValue(ctx);
     }
-  }
-  if constexpr (!std::is_same_v<MNodeLabel, MNoNodeLabel>) {
     if (!node_label)
       return std::nullopt;  // Remaining graphs have at least one node.
   }
@@ -489,7 +603,7 @@ MGraph<MEdgeLabel, MNodeLabel>::GetUniqueValueImpl(
   }
 
   if (*nodes == 1) {  // Single node with lots of loops
-    if constexpr (std::is_same_v<MEdgeLabel, MNoEdgeLabel>) {
+    if constexpr (!HasEdgeLabels<MEdgeLabel>) {
       graph_type G(*nodes);
       for (int64_t i = 0; i < *edges; ++i) G.AddEdge(0, 0);
       return G;
@@ -523,34 +637,168 @@ MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(librarian::ReaderContext ctx,
   if (!num_nodes)
     ctx.ThrowIOError("Cannot determine the number of nodes before read.");
 
-  if (!constraints.NumEdges())
-    ctx.ThrowIOError("Unknown number of edges before read.");
-  std::optional<int64_t> num_edges =
-      constraints.NumEdges()->GetUniqueValue(ctx);
-  if (!num_edges)
-    ctx.ThrowIOError("Cannot determine the number of edges before read.");
+  if (variable_.get().GetFormat().GetStyle() ==
+      MGraph::Format::Style::kAdjacencyMatrix) {
+    if constexpr (!HasEdgeLabels<MEdgeLabel>) {
+      adjacency_matrix_.template emplace<IntMatrixIndex>(
+          *num_nodes, std::vector<int64_t>(*num_nodes));
+    } else {
+      adjacency_matrix_.template emplace<LabelMatrixIndex>(
+          *num_nodes, std::vector<typename MEdgeLabel::value_type>(*num_nodes));
+    }
+  }
 
-  if (*num_edges != num_chunks) {
-    ctx.ThrowIOError("MGraph::Reader expected " +
-                     librarian::DebugString(*num_edges) + " chunks, but got " +
-                     librarian::DebugString(num_chunks) + ".");
+  if (variable_.get().GetFormat().GetStyle() ==
+      MGraph::Format::Style::kEdgeList) {
+    if (!constraints.NumEdges())
+      ctx.ThrowIOError("Unknown number of edges before reading edge list.");
+    std::optional<int64_t> num_edges =
+        constraints.NumEdges()->GetUniqueValue(ctx);
+    if (!num_edges)
+      ctx.ThrowIOError(
+          "Cannot determine the number of edges before reading edge list.");
+
+    if (*num_edges != num_chunks) {
+      ctx.ThrowIOError(
+          std::format("MGraph::Reader expected to read {} chunks, but got {}.",
+                      librarian::DebugString(*num_edges),
+                      librarian::DebugString(num_chunks)));
+    }
   }
 
   G_ = graph_type(*num_nodes);
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
-void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNext(
-    librarian::ReaderContext ctx) {
-  int u = ctx.ReadInteger();
-  ctx.ReadWhitespace(Whitespace::kSpace);
-  int v = ctx.ReadInteger();
-  if (!(0 <= u && u < G_.NumNodes() && 0 <= v && v < G_.NumNodes())) {
-    ctx.ThrowIOError(std::format(
-        "Invalid edge ({}, {}) for graph with {} nodes.", u, v, G_.NumNodes()));
+auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
+    librarian::ReaderContext ctx) -> graph_type::NodeIdx {
+  const Format& format = variable_.get().GetFormat();
+
+  if (format.GetNodeStyle() == MGraph::Format::NodeStyle::k0Based) {
+    int64_t node_idx = ctx.ReadInteger();
+    if (!(0 <= node_idx && node_idx < G_.NumNodes())) {
+      ctx.ThrowIOError(std::format(
+          "Invalid (0-based) node index {} for graph with {} nodes.", node_idx,
+          G_.NumNodes()));
+    }
+    return node_idx;
   }
 
-  G_.AddEdge(u, v);
+  if (format.GetNodeStyle() == MGraph::Format::NodeStyle::k1Based) {
+    int64_t node_idx = ctx.ReadInteger() - 1;
+    if (!(0 <= node_idx && node_idx < G_.NumNodes())) {
+      ctx.ThrowIOError(std::format(
+          "Invalid (1-based) node index {} for graph with {} nodes.",
+          node_idx + 1, G_.NumNodes()));
+    }
+    return node_idx;
+  }
+
+  if (format.GetNodeStyle() == MGraph::Format::NodeStyle::kNodeLabels) {
+    if constexpr (!HasNodeLabels<MNodeLabel>) {
+      ctx.ThrowIOError(
+          "MGraph::Reader attempted to read a node label, but node labels "
+          "are not defined for this graph.");
+    }
+    const std::optional<MNodeLabel>& node_label =
+        variable_.get().GetCoreConstraints().NodeLabelConstraints();
+    auto label = node_label ? node_label->Read(ctx) : MNodeLabel().Read(ctx);
+    return G_.GetOrAddNodeIndex(label);
+  }
+
+  ctx.ThrowIOError(
+      "MGraph::Reader does not support NonExhaustiveList node style.");
+  return typename graph_type::NodeIdx();  // To silence compiler warning
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadEdgeLabel(
+    librarian::ReaderContext ctx) -> MEdgeLabel::value_type {
+  if constexpr (!HasEdgeLabels<MEdgeLabel>) {
+    ctx.ThrowIOError(
+        "MGraph::Reader attempted to read an edge label, but edge labels "
+        "are not defined for this graph.");
+  }
+  const std::optional<MEdgeLabel>& edge_label =
+      variable_.get().GetCoreConstraints().EdgeLabelConstraints();
+  return edge_label ? edge_label->Read(ctx) : MEdgeLabel().Read(ctx);
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextEdgeList(
+    librarian::ReaderContext ctx) {
+  int64_t u = ReadNodeLabel(ctx);
+  ctx.ReadWhitespace(Whitespace::kSpace);
+  int64_t v = ReadNodeLabel(ctx);
+
+  if constexpr (!HasEdgeLabels<MEdgeLabel>) {
+    G_.AddEdge(u, v);
+  } else {
+    ctx.ReadWhitespace(Whitespace::kSpace);
+    G_.AddEdge(u, v, ReadEdgeLabel(ctx));
+  }
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
+    librarian::ReaderContext ctx) {
+  int64_t u = chunks_read_++;
+
+  for (typename graph_type::NodeIdx v = 0; v < G_.NumNodes(); ++v) {
+    if (v > 0) ctx.ReadWhitespace(Whitespace::kSpace);
+
+    if constexpr (HasEdgeLabels<MEdgeLabel>) {
+      auto edge_label = ReadEdgeLabel(ctx);
+
+      if (u > v &&
+          std::get<LabelMatrixIndex>(adjacency_matrix_)[v][u] != edge_label) {
+        ctx.ThrowIOError(
+            std::format("Asymmetric adjacency matrix entries at ({}, {}) = "
+                        "{} and ({}, {}) = {}",
+                        u, v, edge_label, v, u,
+                        std::get<LabelMatrixIndex>(adjacency_matrix_)[v][u]));
+      }
+      std::get<LabelMatrixIndex>(adjacency_matrix_)[u][v] = edge_label;
+      if (u <= v) G_.AddEdge(u, v, edge_label);
+    } else {
+      int64_t edge_count = ctx.ReadInteger();
+      if (edge_count < 0) {
+        ctx.ThrowIOError(std::format(
+            "Invalid adjacency matrix entry {} at ({}, {})", edge_count, u, v));
+      }
+      if (u > v &&
+          std::get<IntMatrixIndex>(adjacency_matrix_)[v][u] != edge_count) {
+        ctx.ThrowIOError(
+            std::format("Asymmetric adjacency matrix entries at ({}, {}) = {} "
+                        "and ({}, {}) = {}",
+                        u, v, std::get<IntMatrixIndex>(adjacency_matrix_)[v][u],
+                        v, u, edge_count));
+      }
+      std::get<IntMatrixIndex>(adjacency_matrix_)[u][v] = edge_count;
+      if (u <= v)
+        for (int64_t i = 0; i < edge_count; ++i) G_.AddEdge(u, v);
+    }
+  }
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNext(
+    librarian::ReaderContext ctx) {
+  const Format& format = variable_.get().GetFormat();
+
+  if (format.GetStyle() == MGraph::Format::Style::kEdgeList) {
+    ReadNextEdgeList(ctx);
+    return;
+  }
+
+  // Read one row of adjacency matrix
+  if (format.GetStyle() == MGraph::Format::Style::kAdjacencyMatrix) {
+    ReadNextAdjacencyMatrix(ctx);
+    return;
+  }
+
+  ctx.ThrowIOError(
+      "MGraph::Reader does not support NonExhaustiveList edge style.");
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>

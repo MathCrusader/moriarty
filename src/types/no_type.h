@@ -18,6 +18,7 @@
 #define MORIARTY_SRC_TYPES_NO_TYPE_H_
 
 #include <compare>
+#include <functional>
 
 namespace moriarty {
 
@@ -25,10 +26,18 @@ namespace moriarty {
 //
 // An empty type.
 struct NoType {
-  std::strong_ordering operator<=>(const NoType& other) const = default;
-  bool operator==(const NoType& other) const = default;
+  friend std::strong_ordering operator<=>(const NoType&,
+                                          const NoType&) = default;
+  friend bool operator==(const NoType&, const NoType&) = default;
 };
 
 }  // namespace moriarty
+
+namespace std {
+template <>
+struct hash<moriarty::NoType> {
+  size_t operator()(const moriarty::NoType& nt) const noexcept { return 0; }
+};
+}  // namespace std
 
 #endif  // MORIARTY_SRC_TYPES_NO_TYPE_H_

@@ -15,7 +15,10 @@
 #include "src/variables/mgraph.h"
 
 #include <cstdint>
+#include <filesystem>
+#include <fstream>
 #include <optional>
+#include <sstream>
 #include <string_view>
 
 #include "gmock/gmock.h"
@@ -44,6 +47,7 @@ using testing::AnyOf;
 using testing::Eq;
 using testing::Optional;
 using testing::Truly;
+using testing::UnorderedElementsAre;
 
 Graph<NoEdgeLabel, NoNodeLabel> Graph1() {
   Graph G(3);
@@ -107,6 +111,323 @@ TEST(MGraphTest, PartialReadShouldSucceed) {
     ASSERT_EQ(input.get(), '\n');  // Consume the separator
   }
   EXPECT_EQ(std::move(reader).Finalize(), Graph1());
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+MGraph<MEdgeLabel, MNodeLabel>::value_type ReadMGraphFromFile(
+    const MGraph<MEdgeLabel, MNodeLabel>& graph_variable,
+    const std::filesystem::path& path, Context& context) {
+  SCOPED_TRACE("Reading " + path.string());
+
+  std::ifstream input(path);
+  if (!input.is_open()) {
+    throw std::runtime_error("Could not open " + path.string());
+  }
+  InputCursor cursor(input, WhitespaceStrictness::kPrecise);
+  librarian::ReaderContext ctx("A", cursor, context.Variables(),
+                               context.Values());
+  return graph_variable.Read(ctx);
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+void ReadAndVerifyMGraphFromFile(
+    const MGraph<MEdgeLabel, MNodeLabel>& graph_variable,
+    const std::filesystem::path& path, Context& context) {
+  SCOPED_TRACE("Verifying " + path.string());
+
+  auto value = ReadMGraphFromFile(graph_variable, path, context);
+
+  std::stringstream print_ss;
+  librarian::PrinterContext print_ctx("A", print_ss, context.Variables(),
+                                      context.Values());
+  graph_variable.Print(print_ctx, value);
+
+  // Re-open the file and compare its full contents to what we printed.
+  std::ifstream input2(path, std::ios::binary);
+  if (!input2.is_open()) {
+    FAIL() << "Could not reopen " << path.string();
+  }
+  std::string file_contents((std::istreambuf_iterator<char>(input2)),
+                            std::istreambuf_iterator<char>());
+  ASSERT_EQ(file_contents, print_ss.str());
+}
+
+TEST(MGraphTest, ReadUnweightedAdjMatrixShouldSucceed) {
+  MGraph graph = MGraph(NumNodes(5));
+  graph.GetFormat().SetStyle(MGraph<>::Format::Style::kAdjacencyMatrix);
+
+  Context context;
+  ReadAndVerifyMGraphFromFile(
+      graph, "src/variables/testing/mgraph/matrix_sym_binary_0diag.in",
+      context);
+  ReadAndVerifyMGraphFromFile(
+      graph, "src/variables/testing/mgraph/matrix_sym_binary_1diag.in",
+      context);
+  ReadAndVerifyMGraphFromFile(
+      graph, "src/variables/testing/mgraph/matrix_sym_ints_0diag.in", context);
+  ReadAndVerifyMGraphFromFile(
+      graph, "src/variables/testing/mgraph/matrix_sym_ints_1diag.in", context);
+}
+
+TEST(MGraphTest, ReadWeightedAdjMatrixShouldSucceed) {
+  MGraph graph = MGraph<MInteger>(NumNodes(5));
+  graph.GetFormat().SetStyle(MGraph<MInteger>::Format::Style::kAdjacencyMatrix);
+
+  Context context;
+  ReadAndVerifyMGraphFromFile(
+      graph, "src/variables/testing/mgraph/matrix_sym_binary_0diag.in",
+      context);
+  ReadAndVerifyMGraphFromFile(
+      graph, "src/variables/testing/mgraph/matrix_sym_binary_1diag.in",
+      context);
+  ReadAndVerifyMGraphFromFile(
+      graph, "src/variables/testing/mgraph/matrix_sym_ints_0diag.in", context);
+  ReadAndVerifyMGraphFromFile(
+      graph, "src/variables/testing/mgraph/matrix_sym_ints_1diag.in", context);
+}
+
+TEST(MGraphTest, ReadUnweightedEdgeListShouldSucceed) {
+  Context context;
+  {
+    SCOPED_TRACE("Distinct ints, distinct lines");
+    MGraph graph = MGraph(NumNodes(5), NumEdges(6));
+    graph.GetFormat()
+        .SetStyle(MGraph<>::Format::Style::kEdgeList)
+        .SetNodeStyle(MGraph<>::Format::NodeStyle::k1Based);
+    ReadAndVerifyMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_distinctints_distinctlines.in",
+                                context);
+    auto G = ReadMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_distinctints_distinctlines.in",
+                                context);
+    EXPECT_EQ(G.NumNodes(), 5);
+    EXPECT_EQ(G.NumEdges(), 6);
+    EXPECT_THAT(G.GetEdges(),
+                UnorderedElementsAre(Graph<>::Edge{0, 1, NoType{}},  //
+                                     Graph<>::Edge{1, 3, NoType{}},  //
+                                     Graph<>::Edge{2, 0, NoType{}},  //
+                                     Graph<>::Edge{3, 4, NoType{}},  //
+                                     Graph<>::Edge{4, 0, NoType{}},  //
+                                     Graph<>::Edge{4, 1, NoType{}}));
+  }
+  {
+    SCOPED_TRACE("Duplicate ints, distinct lines");
+    MGraph graph = MGraph(NumNodes(5), NumEdges(6));
+    graph.GetFormat()
+        .SetStyle(MGraph<>::Format::Style::kEdgeList)
+        .SetNodeStyle(MGraph<>::Format::NodeStyle::k1Based);
+    ReadAndVerifyMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_dupints_distinctlines.in",
+                                context);
+    auto G = ReadMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_dupints_distinctlines.in",
+                                context);
+    EXPECT_EQ(G.NumNodes(), 5);
+    EXPECT_EQ(G.NumEdges(), 6);
+    EXPECT_THAT(G.GetEdges(),
+                UnorderedElementsAre(Graph<>::Edge{0, 1, NoType{}},  //
+                                     Graph<>::Edge{1, 3, NoType{}},  //
+                                     Graph<>::Edge{2, 2, NoType{}},  //
+                                     Graph<>::Edge{3, 4, NoType{}},  //
+                                     Graph<>::Edge{4, 4, NoType{}},  //
+                                     Graph<>::Edge{4, 1, NoType{}}));
+  }
+  {
+    SCOPED_TRACE("Distinct ints, duplicate lines");
+    MGraph graph = MGraph(NumNodes(5), NumEdges(8));
+    graph.GetFormat()
+        .SetStyle(MGraph<>::Format::Style::kEdgeList)
+        .SetNodeStyle(MGraph<>::Format::NodeStyle::k1Based);
+    ReadAndVerifyMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_distinctints_duplines.in",
+                                context);
+    auto G = ReadMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_distinctints_duplines.in",
+                                context);
+    EXPECT_EQ(G.NumNodes(), 5);
+    EXPECT_EQ(G.NumEdges(), 8);
+    EXPECT_THAT(G.GetEdges(),
+                UnorderedElementsAre(Graph<>::Edge{0, 1, NoType{}},  //
+                                     Graph<>::Edge{1, 3, NoType{}},  //
+                                     Graph<>::Edge{2, 0, NoType{}},  //
+                                     Graph<>::Edge{3, 4, NoType{}},  //
+                                     Graph<>::Edge{4, 0, NoType{}},  //
+                                     Graph<>::Edge{3, 4, NoType{}},  //
+                                     Graph<>::Edge{2, 0, NoType{}},  //
+                                     Graph<>::Edge{0, 2, NoType{}}));
+  }
+}
+
+TEST(MGraphTest, ReadWeightedEdgeListShouldSucceed) {
+  Context context;
+  {
+    SCOPED_TRACE("Distinct ints, distinct lines");
+    MGraph graph = MGraph<MInteger>(NumNodes(5), NumEdges(6));
+    graph.GetFormat()
+        .SetStyle(MGraph<MInteger>::Format::Style::kEdgeList)
+        .SetNodeStyle(MGraph<MInteger>::Format::NodeStyle::k1Based);
+    ReadAndVerifyMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_trips_1to5_distinctints_distinctlines.in",
+                                context);
+    auto G = ReadMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_trips_1to5_distinctints_distinctlines.in",
+                                context);
+    EXPECT_EQ(G.NumNodes(), 5);
+    EXPECT_EQ(G.NumEdges(), 6);
+    EXPECT_THAT(G.GetEdges(),
+                UnorderedElementsAre(Graph<int64_t>::Edge{0, 1, 1},   //
+                                     Graph<int64_t>::Edge{1, 3, 3},   //
+                                     Graph<int64_t>::Edge{2, 0, -1},  //
+                                     Graph<int64_t>::Edge{3, 4, 0},   //
+                                     Graph<int64_t>::Edge{4, 0, 4},   //
+                                     Graph<int64_t>::Edge{4, 1, 3}));
+  }
+  {
+    SCOPED_TRACE("Duplicate ints, distinct lines");
+    MGraph graph = MGraph<MInteger>(NumNodes(5), NumEdges(6));
+    graph.GetFormat()
+        .SetStyle(MGraph<MInteger>::Format::Style::kEdgeList)
+        .SetNodeStyle(MGraph<MInteger>::Format::NodeStyle::k1Based);
+    ReadAndVerifyMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_trips_1to5_dupints_distinctlines.in",
+                                context);
+    auto G = ReadMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_trips_1to5_dupints_distinctlines.in",
+                                context);
+    EXPECT_EQ(G.NumNodes(), 5);
+    EXPECT_EQ(G.NumEdges(), 6);
+    EXPECT_THAT(G.GetEdges(),
+                UnorderedElementsAre(Graph<int64_t>::Edge{0, 1, -1},  //
+                                     Graph<int64_t>::Edge{1, 3, -4},  //
+                                     Graph<int64_t>::Edge{2, 2, -5},  //
+                                     Graph<int64_t>::Edge{3, 4, 1},   //
+                                     Graph<int64_t>::Edge{4, 4, 0},   //
+                                     Graph<int64_t>::Edge{4, 1, 10}));
+  }
+  {
+    SCOPED_TRACE("Distinct ints, duplicate lines");
+    MGraph graph = MGraph<MInteger>(NumNodes(5), NumEdges(8));
+    graph.GetFormat()
+        .SetStyle(MGraph<MInteger>::Format::Style::kEdgeList)
+        .SetNodeStyle(MGraph<MInteger>::Format::NodeStyle::k1Based);
+    ReadAndVerifyMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_trips_1to5_distinctints_duplines.in",
+                                context);
+    auto G = ReadMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_trips_1to5_distinctints_duplines.in",
+                                context);
+    EXPECT_EQ(G.NumNodes(), 5);
+    EXPECT_EQ(G.NumEdges(), 8);
+    EXPECT_THAT(G.GetEdges(),
+                UnorderedElementsAre(Graph<int64_t>::Edge{0, 1, 0},  //
+                                     Graph<int64_t>::Edge{1, 3, 1},  //
+                                     Graph<int64_t>::Edge{2, 0, 1},  //
+                                     Graph<int64_t>::Edge{3, 4, 4},  //
+                                     Graph<int64_t>::Edge{4, 0, 3},  //
+                                     Graph<int64_t>::Edge{3, 4, 2},  //
+                                     Graph<int64_t>::Edge{2, 0, 1},  //
+                                     Graph<int64_t>::Edge{0, 2, 1}));
+  }
+}
+
+TEST(MGraphTest, ReadEdgeListWithNodeLabelsShouldSucceed) {
+  // The node labels will just be a string. So we can still use the numbers.
+  Context context;
+  {
+    SCOPED_TRACE("Distinct ints, distinct lines");
+    MGraph<MNoEdgeLabel, MString> graph =
+        MGraph<MNoEdgeLabel, MString>(NumNodes(5), NumEdges(6));
+    graph.GetFormat()
+        .SetStyle(MGraph<MNoEdgeLabel, MString>::Format::Style::kEdgeList)
+        .SetNodeStyle(
+            MGraph<MNoEdgeLabel, MString>::Format::NodeStyle::k1Based);
+    ReadAndVerifyMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_distinctints_distinctlines.in",
+                                context);
+    auto G = ReadMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_distinctints_distinctlines.in",
+                                context);
+    EXPECT_EQ(G.NumNodes(), 5);
+    EXPECT_EQ(G.NumEdges(), 6);
+    EXPECT_THAT(G.GetEdges(),
+                UnorderedElementsAre(
+                    Graph<NoEdgeLabel, std::string>::Edge{0, 1, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{1, 3, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{2, 0, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{3, 4, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{4, 0, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{4, 1, NoType{}}));
+  }
+  {
+    SCOPED_TRACE("Duplicate ints, distinct lines");
+    MGraph<MNoEdgeLabel, MString> graph =
+        MGraph<MNoEdgeLabel, MString>(NumNodes(5), NumEdges(6));
+    graph.GetFormat()
+        .SetStyle(MGraph<MNoEdgeLabel, MString>::Format::Style::kEdgeList)
+        .SetNodeStyle(
+            MGraph<MNoEdgeLabel, MString>::Format::NodeStyle::k1Based);
+    ReadAndVerifyMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_dupints_distinctlines.in",
+                                context);
+    auto G = ReadMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_dupints_distinctlines.in",
+                                context);
+    EXPECT_EQ(G.NumNodes(), 5);
+    EXPECT_EQ(G.NumEdges(), 6);
+    EXPECT_THAT(G.GetEdges(),
+                UnorderedElementsAre(
+                    Graph<NoEdgeLabel, std::string>::Edge{0, 1, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{1, 3, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{2, 2, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{3, 4, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{4, 4, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{4, 1, NoType{}}));
+  }
+  {
+    SCOPED_TRACE("Distinct ints, duplicate lines");
+    MGraph<MNoEdgeLabel, MString> graph =
+        MGraph<MNoEdgeLabel, MString>(NumNodes(5), NumEdges(8));
+    graph.GetFormat()
+        .SetStyle(MGraph<MNoEdgeLabel, MString>::Format::Style::kEdgeList)
+        .SetNodeStyle(
+            MGraph<MNoEdgeLabel, MString>::Format::NodeStyle::k1Based);
+    ReadAndVerifyMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_distinctints_duplines.in",
+                                context);
+    auto G = ReadMGraphFromFile(graph,
+                                "src/variables/testing/mgraph/"
+                                "list_pairs_1to5_distinctints_duplines.in",
+                                context);
+    EXPECT_EQ(G.NumNodes(), 5);
+    EXPECT_EQ(G.NumEdges(), 8);
+    EXPECT_THAT(G.GetEdges(),
+                UnorderedElementsAre(
+                    Graph<NoEdgeLabel, std::string>::Edge{0, 1, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{1, 3, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{2, 0, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{3, 4, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{4, 0, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{3, 4, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{2, 0, NoType{}},  //
+                    Graph<NoEdgeLabel, std::string>::Edge{0, 2, NoType{}}));
+  }
 }
 
 TEST(MGraphTest, ReadShouldFailOnInvalidInput) {

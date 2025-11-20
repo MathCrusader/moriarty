@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <format>
 #include <stdexcept>
+#include <unordered_map>
 #include <vector>
 
 #include "src/types/no_type.h"
@@ -55,8 +56,14 @@ class Graph {
   // Returns the number of edges in the graph.
   [[nodiscard]] int64_t NumEdges() const { return edges_.size(); }
 
-  // Sets the labels for all nodes in the graph.
+  // Sets the labels for all nodes in the graph. Assumes you will not call
+  // GetOrAddNodeIndex() after this.
   void SetNodeLabels(const std::vector<NodeLabel>& node_labels);
+
+  // If `node_label` exists in the graph, returns its index. Otherwise, adds it
+  // to the graph and returns the new index. Assumes you will not exceed the
+  // number of nodes specified at construction and never call SetNodeLabels().
+  NodeIdx GetOrAddNodeIndex(const NodeLabel& node_label);
 
   // Returns the labels for all nodes in the graph.
   std::vector<NodeLabel> GetNodeLabels() const;
@@ -80,6 +87,7 @@ class Graph {
  private:
   NodeIdx num_nodes_ = 0;
   std::vector<NodeLabel> node_labels_;
+  std::unordered_map<NodeLabel, NodeIdx> node_label_to_index_;
   std::vector<Edge> edges_;
 };
 
@@ -100,7 +108,8 @@ auto Graph<E, V>::GetAdjacencyList() const
   std::vector<std::vector<Graph::Edge>> adjacency_list(num_nodes_);
   for (const auto& edge : edges_) {
     adjacency_list[edge.u].push_back(edge);
-    adjacency_list[edge.v].push_back({edge.v, edge.u, edge.e});
+    if (edge.u != edge.v)
+      adjacency_list[edge.v].push_back({edge.v, edge.u, edge.e});
   }
   return adjacency_list;
 }
@@ -127,6 +136,20 @@ void Graph<E, V>::SetNodeLabels(const std::vector<V>& node_labels) {
         "number of nodes in the graph.");
   }
   node_labels_ = node_labels;
+}
+
+template <typename E, typename V>
+Graph<E, V>::NodeIdx Graph<E, V>::GetOrAddNodeIndex(const V& node_label) {
+  auto [it, inserted] =
+      node_label_to_index_.try_emplace(node_label, node_labels_.size());
+  if (inserted) {
+    if (node_labels_.size() >= static_cast<size_t>(num_nodes_)) {
+      throw std::out_of_range(
+          "Graph::GetOrAddNodeIndex(): Too many node labels added.");
+    }
+    node_labels_.push_back(node_label);
+  }
+  return it->second;
 }
 
 template <typename E, typename V>

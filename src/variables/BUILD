@@ -199,6 +199,7 @@ cc_test(
 cc_test(
     name = "mgraph_test",
     srcs = ["mgraph_test.cc"],
+    data = glob(["testing/mgraph/*.in"]),
     deps = [
         ":mgraph",
         ":minteger",
