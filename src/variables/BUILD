@@ -61,6 +61,7 @@ cc_library(
 
 cc_library(
     name = "mgraph",
+    srcs = ["mgraph.cc"],
     hdrs = ["mgraph.h"],
     deps = [
         ":minteger",

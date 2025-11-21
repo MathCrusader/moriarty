@@ -48,6 +48,71 @@ namespace moriarty {
 using MNoEdgeLabel = MNone;
 using MNoNodeLabel = MNone;
 
+// MGraphFormat
+//
+// Each graph has two configurable aspects to its format:
+//
+// Overall style:
+//   - Edge list: each edge is listed on its own line.
+//   - Adjacency matrix: the graph is represented as a matrix.
+// Node style:
+//   - 0-based indexing: nodes are numbered from 0 to N-1.
+//   - 1-based indexing: nodes are numbered from 1 to N.
+//   - Node labels: nodes are labelled according to their node labels.
+class MGraphFormat {
+ public:
+  // Sets the format to edge list. Each edge is listed on its own line.
+  // If the graph has no edge labels, each line contains two node values.
+  // If the graph has edge labels, each line contains three items: two node
+  // values and the edge label.
+  //
+  // This is the default.
+  MGraphFormat& EdgeList();
+  // Returns if the format is an edge list. See `EdgeList()`.
+  bool IsEdgeList() const;
+
+  // Sets the format to adjacency matrix. The graph is represented as a matrix.
+  // The entries of the matrix depend on the underlying graph. The matrix must
+  // always be symmetric for undirected graphs.
+  //
+  // Unlabelled graphs:
+  //   an integer representing the number of edges between nodes.
+  // Labelled graphs:
+  //   the label of the edge between nodes, or a special value representing no
+  //   edge (currently "0", but this may be configurable in the future).
+  MGraphFormat& AdjacencyMatrix();
+  // Returns if the format is an adjacency matrix. See `AdjacencyMatrix()`.
+  bool IsAdjacencyMatrix() const;
+
+  // Sets the node style to 0-based indexing. Nodes are numbered from 0 to N-1.
+  //
+  // This is the default.
+  MGraphFormat& ZeroBased();
+  // Returns if the node style is 0-based indexing. See `ZeroBased()`.
+  bool IsZeroBased() const;
+
+  // Sets the node style to 1-based indexing. Nodes are numbered from 1 to N.
+  MGraphFormat& OneBased();
+  // Returns if the node style is 1-based indexing. See `OneBased()`.
+  bool IsOneBased() const;
+
+  // Sets the node style to use node labels. Nodes are labelled according to
+  // their node labels. The second template argument of MGraph<___, MNodeLabel>
+  // indicates the type of the node labels.
+  MGraphFormat& NodeLabelsStyle();
+  // Returns if the node style is node labels. See `NodeLabelsStyle()`.
+  bool IsNodeLabelsStyle() const;
+
+ private:
+  enum class Style { kEdgeList, kAdjacencyMatrix, kNonExhaustiveList };
+  enum class NodeStyle { k0Based, k1Based, kNodeLabels, kNonExhaustiveList };
+
+  Style style_ = Style::kEdgeList;
+  NodeStyle node_style_ = NodeStyle::k0Based;
+  MGraphFormat& SetStyle(Style style);
+  MGraphFormat& SetNodeStyle(NodeStyle node_style);
+};
+
 // MGraph
 //
 // Describes constraints placed on an undirected graph. By default, graphs have
@@ -124,6 +189,16 @@ class MGraph
 
   [[nodiscard]] std::string Typename() const override { return "MGraph"; }
 
+  // Format()
+  //
+  // Returns the I/O format for this graph.
+  [[nodiscard]] MGraphFormat& Format();
+
+  // Format()
+  //
+  // Returns the I/O format for this graph.
+  [[nodiscard]] MGraphFormat Format() const;
+
   // MGraph::CoreConstraints
   //
   // A base set of constraints for `MGraph` that are used during generation.
@@ -131,21 +206,32 @@ class MGraph
   // class or the corresponding `MGraph`.
   class CoreConstraints {
    public:
-    bool NumNodesConstrained() const;
-    const MInteger& NumNodes() const;
+    // Returns all constraints on how many nodes are in the graph.
+    [[nodiscard]] const MInteger& NumNodes() const;
+    // Returns whether the number of nodes has been constrained.
+    [[nodiscard]] bool NumNodesConstrained() const;
 
-    bool NumEdgesConstrained() const;
-    const MInteger& NumEdges() const;
+    // Returns all constraints on how many edges are in the graph.
+    [[nodiscard]] const MInteger& NumEdges() const;
+    // Returns whether the number of edges has been constrained.
+    [[nodiscard]] bool NumEdgesConstrained() const;
 
-    bool EdgeLabelsConstrained() const;
-    const MEdgeLabel& EdgeLabels() const;
+    // Returns all constraints on edge labels in the graph.
+    [[nodiscard]] const MEdgeLabel& EdgeLabels() const;
+    // Returns whether edge labels have been constrained.
+    [[nodiscard]] bool EdgeLabelsConstrained() const;
 
-    bool NodeLabelsConstrained() const;
-    const MNodeLabel& NodeLabels() const;
+    // Returns all constraints on node labels in the graph.
+    [[nodiscard]] const MNodeLabel& NodeLabels() const;
+    // Returns whether node labels have been constrained.
+    [[nodiscard]] bool NodeLabelsConstrained() const;
 
-    bool IsConnected() const;
-    bool MultiEdgesAllowed() const;
-    bool LoopsAllowed() const;
+    // Returns whether the graph is constrained to be connected.
+    [[nodiscard]] bool IsConnected() const;
+    // Returns whether multi-edges are allowed in the graph.
+    [[nodiscard]] bool MultiEdgesAllowed() const;
+    // Returns whether loops are allowed in the graph.
+    [[nodiscard]] bool LoopsAllowed() const;
 
    private:
     friend class MGraph;
@@ -170,33 +256,11 @@ class MGraph
     librarian::CowPtr<Data> data_;
     bool IsSet(Flags flag) const;
   };
-  [[nodiscard]] CoreConstraints GetCoreConstraints() const {
-    return core_constraints_;
-  }
+  [[nodiscard]] CoreConstraints GetCoreConstraints() const;
 
-  class Format {
-   public:
-    enum class Style { kEdgeList, kAdjacencyMatrix, kNonExhaustiveList };
-    Style GetStyle() const { return style_; }
-    Format& SetStyle(Style style) {
-      style_ = style;
-      return *this;
-    }
-
-    enum class NodeStyle { k0Based, k1Based, kNodeLabels, kNonExhaustiveList };
-    NodeStyle GetNodeStyle() const { return node_style_; }
-    Format& SetNodeStyle(NodeStyle node_style) {
-      node_style_ = node_style;
-      return *this;
-    }
-
-   private:
-    Style style_ = Style::kEdgeList;
-    NodeStyle node_style_ = NodeStyle::k0Based;
-  };
-  Format& GetFormat() { return format_; }
-  const Format& GetFormat() const { return format_; }
-
+  // MGraph::Reader
+  //
+  // Reads a graph value from a stream in chunks.
   class Reader {
    public:
     explicit Reader(librarian::ReaderContext ctx, int num_chunks,
@@ -229,7 +293,7 @@ class MGraph
 
  private:
   CoreConstraints core_constraints_;
-  Format format_;
+  MGraphFormat format_;
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
@@ -451,7 +515,7 @@ MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(librarian::ReaderContext ctx) const {
   if (!num_nodes)
     ctx.ThrowIOError("Cannot determine the number of nodes before read.");
 
-  if (GetFormat().GetStyle() == Format::Style::kAdjacencyMatrix) {
+  if (Format().IsAdjacencyMatrix()) {
     MGraph::Reader reader(ctx, *num_nodes, *this);
     for (int64_t i = 0; i < *num_nodes; i++) {
       reader.ReadNext(ctx);
@@ -464,7 +528,7 @@ MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(librarian::ReaderContext ctx) const {
   if (!num_edges)
     ctx.ThrowIOError("Cannot determine the number of edges before read.");
 
-  if (GetFormat().GetStyle() == Format::Style::kEdgeList) {
+  if (Format().IsEdgeList()) {
     MGraph::Reader reader(ctx, *num_edges, *this);
     for (int64_t i = 0; i < *num_edges; i++) {
       reader.ReadNext(ctx);
@@ -480,15 +544,15 @@ MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(librarian::ReaderContext ctx) const {
 template <typename MEdgeLabel, typename MNodeLabel>
 void MGraph<MEdgeLabel, MNodeLabel>::PrintImpl(librarian::PrinterContext ctx,
                                                const graph_type& value) const {
-  if (format_.GetStyle() == MGraph::Format::Style::kEdgeList) {
+  if (format_.IsEdgeList()) {
     auto node_labels = value.GetNodeLabels();
     auto print_node = [this, &ctx,
                        &node_labels](typename graph_type::NodeIdx node) {
-      if (format_.GetNodeStyle() == MGraph::Format::NodeStyle::k0Based) {
+      if (format_.IsZeroBased()) {
         ctx.PrintToken(std::to_string(node));
-      } else if (format_.GetNodeStyle() == MGraph::Format::NodeStyle::k1Based) {
+      } else if (format_.IsOneBased()) {
         ctx.PrintToken(std::to_string(node + 1));
-      } else {
+      } else if (format_.IsNodeLabelsStyle()) {
         // Node labels
         if constexpr (HasNodeLabels<MNodeLabel>) {
           core_constraints_.NodeLabels().Print(ctx, node_labels[node]);
@@ -497,6 +561,8 @@ void MGraph<MEdgeLabel, MNodeLabel>::PrintImpl(librarian::PrinterContext ctx,
           throw std::runtime_error(
               "Cannot print node labels when MNodeLabel is MNone.");
         }
+      } else {
+        throw std::runtime_error("Unreachable code reached.");
       }
     };
     for (const auto& [u, v, w] : value.GetEdges()) {
@@ -512,7 +578,7 @@ void MGraph<MEdgeLabel, MNodeLabel>::PrintImpl(librarian::PrinterContext ctx,
     return;
   }
 
-  if (format_.GetStyle() == MGraph::Format::Style::kAdjacencyMatrix) {
+  if (format_.IsAdjacencyMatrix()) {
     auto adjacency_list = value.GetAdjacencyList();
     if constexpr (!HasEdgeLabels<MEdgeLabel>) {
       std::vector<std::vector<int64_t>> matrix(
@@ -615,6 +681,22 @@ MGraph<MEdgeLabel, MNodeLabel>::GetUniqueValueImpl(
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
+MGraphFormat MGraph<MEdgeLabel, MNodeLabel>::Format() const {
+  return format_;
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+MGraphFormat& MGraph<MEdgeLabel, MNodeLabel>::Format() {
+  return format_;
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+typename MGraph<MEdgeLabel, MNodeLabel>::CoreConstraints
+MGraph<MEdgeLabel, MNodeLabel>::GetCoreConstraints() const {
+  return core_constraints_;
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
 MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(librarian::ReaderContext ctx,
                                                int num_chunks,
                                                Ref<const MGraph> variable)
@@ -624,8 +706,7 @@ MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(librarian::ReaderContext ctx,
   if (!num_nodes)
     ctx.ThrowIOError("Cannot determine the number of nodes before read.");
 
-  if (variable_.get().GetFormat().GetStyle() ==
-      MGraph::Format::Style::kAdjacencyMatrix) {
+  if (variable_.get().Format().IsAdjacencyMatrix()) {
     if constexpr (!HasEdgeLabels<MEdgeLabel>) {
       adjacency_matrix_.template emplace<IntMatrixIndex>(
           *num_nodes, std::vector<int64_t>(*num_nodes));
@@ -635,8 +716,7 @@ MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(librarian::ReaderContext ctx,
     }
   }
 
-  if (variable_.get().GetFormat().GetStyle() ==
-      MGraph::Format::Style::kEdgeList) {
+  if (variable_.get().Format().IsEdgeList()) {
     std::optional<int64_t> num_edges =
         constraints.NumEdges().GetUniqueValue(ctx);
     if (!num_edges)
@@ -657,9 +737,9 @@ MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(librarian::ReaderContext ctx,
 template <typename MEdgeLabel, typename MNodeLabel>
 auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
     librarian::ReaderContext ctx) -> graph_type::NodeIdx {
-  const Format& format = variable_.get().GetFormat();
+  const MGraphFormat& format = variable_.get().Format();
 
-  if (format.GetNodeStyle() == MGraph::Format::NodeStyle::k0Based) {
+  if (format.IsZeroBased()) {
     int64_t node_idx = ctx.ReadInteger();
     if (!(0 <= node_idx && node_idx < G_.NumNodes())) {
       ctx.ThrowIOError(std::format(
@@ -669,7 +749,7 @@ auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
     return node_idx;
   }
 
-  if (format.GetNodeStyle() == MGraph::Format::NodeStyle::k1Based) {
+  if (format.IsOneBased()) {
     int64_t node_idx = ctx.ReadInteger() - 1;
     if (!(0 <= node_idx && node_idx < G_.NumNodes())) {
       ctx.ThrowIOError(std::format(
@@ -679,7 +759,7 @@ auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
     return node_idx;
   }
 
-  if (format.GetNodeStyle() == MGraph::Format::NodeStyle::kNodeLabels) {
+  if (format.IsNodeLabelsStyle()) {
     if constexpr (!HasNodeLabels<MNodeLabel>) {
       ctx.ThrowIOError(
           "MGraph::Reader attempted to read a node label, but node labels "
@@ -769,15 +849,15 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
 template <typename MEdgeLabel, typename MNodeLabel>
 void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNext(
     librarian::ReaderContext ctx) {
-  const Format& format = variable_.get().GetFormat();
+  const MGraphFormat& format = variable_.get().Format();
 
-  if (format.GetStyle() == MGraph::Format::Style::kEdgeList) {
+  if (format.IsEdgeList()) {
     ReadNextEdgeList(ctx);
     return;
   }
 
   // Read one row of adjacency matrix
-  if (format.GetStyle() == MGraph::Format::Style::kAdjacencyMatrix) {
+  if (format.IsAdjacencyMatrix()) {
     ReadNextAdjacencyMatrix(ctx);
     return;
   }
