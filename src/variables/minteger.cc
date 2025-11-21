@@ -84,21 +84,27 @@ MInteger& MInteger::AddConstraint(OneOf<std::string> constraint) {
 }
 
 MInteger& MInteger::AddConstraint(Between constraint) {
-  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kBounds;
+  constraints.bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<Between>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
 }
 
 MInteger& MInteger::AddConstraint(AtMost constraint) {
-  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kBounds;
+  constraints.bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<AtMost>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
 }
 
 MInteger& MInteger::AddConstraint(AtLeast constraint) {
-  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kBounds;
+  constraints.bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<AtLeast>(constraint),
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
@@ -310,5 +316,14 @@ void MInteger::RangeConstraint::ApplyTo(MInteger& other) const {
 }
 
 const Range& MInteger::CoreConstraints::Bounds() const { return data_->bounds; }
+
+bool MInteger::CoreConstraints::BoundsConstrained() const {
+  return IsSet(Flags::kBounds);
+}
+
+bool MInteger::CoreConstraints::IsSet(Flags flag) const {
+  return (data_->touched & static_cast<std::underlying_type_t<Flags>>(flag)) !=
+         0;
+}
 
 }  // namespace moriarty

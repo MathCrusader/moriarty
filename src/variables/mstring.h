@@ -18,8 +18,8 @@
 #ifndef MORIARTY_SRC_VARIABLES_MSTRING_H_
 #define MORIARTY_SRC_VARIABLES_MSTRING_H_
 
-#include <optional>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 #include "src/constraints/base_constraints.h"
@@ -96,20 +96,35 @@ class MString : public librarian::MVariable<MString, std::string> {
   // call to this class or the corresponding `MString`.
   class CoreConstraints {
    public:
-    const std::optional<MInteger>& Length() const;
+    bool LengthConstrained() const;
+    const MInteger& Length() const;
+
+    bool AlphabetConstrained() const;
     const librarian::OneOfHandler<char>& Alphabet() const;
-    bool DistinctCharacters() const;
+
+    bool SimplePatternsConstrained() const;
     std::span<const moriarty_internal::SimplePattern> SimplePatterns() const;
+
+    bool DistinctCharacters() const;
 
    private:
     friend class MString;
+    enum Flags : uint32_t {
+      kLength = 1 << 0,
+      kAlphabet = 1 << 1,
+      kSimplePattern = 1 << 2,
+
+      kDistinctCharacters = 1 << 3,  // Default: false
+    };
     struct Data {
-      std::optional<MInteger> length;
+      std::underlying_type_t<Flags> touched = 0;
+
+      MInteger length;
       librarian::OneOfHandler<char> alphabet;
-      bool distinct_characters = false;
       std::vector<moriarty_internal::SimplePattern> simple_patterns;
     };
     librarian::CowPtr<Data> data_;
+    bool IsSet(Flags flag) const;
   };
   [[nodiscard]] CoreConstraints GetCoreConstraints() const {
     return core_constraints_;

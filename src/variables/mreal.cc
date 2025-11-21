@@ -46,6 +46,8 @@ MReal& MReal::AddConstraint(Exactly<int64_t> constraint) {
 }
 
 MReal& MReal::AddConstraint(Exactly<Real> constraint) {
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kBounds;
   if (!numeric_one_of_.Mutable().ConstrainOptions(constraint.GetValue())) {
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   }
@@ -105,21 +107,27 @@ MReal& MReal::AddConstraint(OneOf<std::string> constraint) {
 }
 
 MReal& MReal::AddConstraint(Between constraint) {
-  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kBounds;
+  constraints.bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<Between>(constraint),
       [constraint](MReal& other) { other.AddConstraint(constraint); }));
 }
 
 MReal& MReal::AddConstraint(AtMost constraint) {
-  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kBounds;
+  constraints.bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<AtMost>(constraint),
       [constraint](MReal& other) { other.AddConstraint(constraint); }));
 }
 
 MReal& MReal::AddConstraint(AtLeast constraint) {
-  core_constraints_.data_.Mutable().bounds.Intersect(constraint.GetRange());
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kBounds;
+  constraints.bounds.Intersect(constraint.GetRange());
   return InternalAddConstraint(RangeConstraint(
       std::make_unique<AtLeast>(constraint),
       [constraint](MReal& other) { other.AddConstraint(constraint); }));

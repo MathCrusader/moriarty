@@ -94,14 +94,20 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
   // class or the corresponding `MInteger`.
   class CoreConstraints {
    public:
+    bool BoundsConstrained() const;
     const Range& Bounds() const;
 
    private:
     friend class MInteger;
+    enum Flags : uint32_t {
+      kBounds = 1 << 0,
+    };
     struct Data {
+      std::underlying_type_t<Flags> touched = 0;
       Range bounds;
     };
     librarian::CowPtr<Data> data_;
+    bool IsSet(Flags flag) const;
   };
   [[nodiscard]] CoreConstraints GetCoreConstraints() const {
     return core_constraints_;

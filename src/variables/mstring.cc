@@ -46,33 +46,36 @@ MString& MString::AddConstraint(OneOf<std::string> constraint) {
 }
 
 MString& MString::AddConstraint(Length constraint) {
-  if (!core_constraints_.Length())
-    core_constraints_.data_.Mutable().length = MInteger();
-  core_constraints_.data_.Mutable().length->MergeFrom(
-      constraint.GetConstraints());
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kLength;
+  constraints.length.MergeFrom(constraint.GetConstraints());
   return InternalAddConstraint(std::move(constraint));
 }
 
 MString& MString::AddConstraint(Alphabet constraint) {
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kAlphabet;
   // We later assume that there are no duplicates in the alphabet.
   std::string options = constraint.GetAlphabet();
   std::sort(options.begin(), options.end());
   auto last = std::unique(options.begin(), options.end());
   options.erase(last, options.end());
 
-  if (!core_constraints_.data_.Mutable().alphabet.ConstrainOptions(options))
+  if (!constraints.alphabet.ConstrainOptions(options))
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   return InternalAddConstraint(std::move(constraint));
 }
 
 MString& MString::AddConstraint(DistinctCharacters constraint) {
-  core_constraints_.data_.Mutable().distinct_characters = true;
+  core_constraints_.data_.Mutable().touched |=
+      CoreConstraints::Flags::kDistinctCharacters;
   return InternalAddConstraint(std::move(constraint));
 }
 
 MString& MString::AddConstraint(SimplePattern constraint) {
-  core_constraints_.data_.Mutable().simple_patterns.push_back(
-      constraint.GetCompiledPattern());
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kSimplePattern;
+  constraints.simple_patterns.push_back(constraint.GetCompiledPattern());
   return InternalAddConstraint(std::move(constraint));
 }
 
@@ -80,8 +83,16 @@ MString& MString::AddConstraint(SizeCategory constraint) {
   return AddConstraint(Length(constraint));
 }
 
-const std::optional<MInteger>& MString::CoreConstraints::Length() const {
+bool MString::CoreConstraints::LengthConstrained() const {
+  return IsSet(Flags::kLength);
+}
+
+const MInteger& MString::CoreConstraints::Length() const {
   return data_->length;
+}
+
+bool MString::CoreConstraints::AlphabetConstrained() const {
+  return IsSet(Flags::kAlphabet);
 }
 
 const librarian::OneOfHandler<char>& MString::CoreConstraints::Alphabet()
@@ -90,7 +101,15 @@ const librarian::OneOfHandler<char>& MString::CoreConstraints::Alphabet()
 }
 
 bool MString::CoreConstraints::DistinctCharacters() const {
-  return data_->distinct_characters;
+  return IsSet(Flags::kDistinctCharacters);
+}
+
+bool MString::CoreConstraints::SimplePatternsConstrained() const {
+  return IsSet(Flags::kSimplePattern);
+}
+
+bool MString::CoreConstraints::IsSet(Flags flag) const {
+  return (data_->touched & flag) != 0;
 }
 
 std::span<const moriarty_internal::SimplePattern>
@@ -100,13 +119,13 @@ MString::CoreConstraints::SimplePatterns() const {
 
 std::vector<MString> MString::ListEdgeCasesImpl(
     librarian::AnalysisContext ctx) const {
-  if (!core_constraints_.data_->length) {
+  if (!core_constraints_.LengthConstrained()) {
     throw std::runtime_error(
         "Attempting to get difficult instances of a string with no "
         "length parameter given.");
   }
   std::vector<MInteger> lengthCases =
-      core_constraints_.Length()->ListEdgeCases(ctx);
+      core_constraints_.Length().ListEdgeCases(ctx);
 
   std::vector<MString> values;
   values.reserve(lengthCases.size());
@@ -123,25 +142,25 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
   if (GetOneOf().HasBeenConstrained())
     return GetOneOf().SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
 
-  if (core_constraints_.SimplePatterns().empty() &&
-      !core_constraints_.Alphabet().HasBeenConstrained()) {
+  if (!core_constraints_.SimplePatternsConstrained() &&
+      !core_constraints_.AlphabetConstrained()) {
     throw GenerationError(
         ctx.GetVariableName(),
         "Need either Alphabet() or SimplePattern() to generate a string",
         RetryPolicy::kAbort);
   }
-  if (core_constraints_.SimplePatterns().empty() &&
-      !core_constraints_.Length()) {
+  if (!core_constraints_.SimplePatternsConstrained() &&
+      !core_constraints_.LengthConstrained()) {
     throw GenerationError(
         ctx.GetVariableName(),
         "Need either Length() or SimplePattern() to generate a string",
         RetryPolicy::kAbort);
   }
 
-  if (!core_constraints_.SimplePatterns().empty())
+  if (core_constraints_.SimplePatternsConstrained())
     return GenerateSimplePattern(ctx);
 
-  MInteger length_local = *core_constraints_.Length();
+  MInteger length_local = core_constraints_.Length();
 
   // Negative string length is impossible.
   length_local.AddConstraint(AtLeast(0));
@@ -159,11 +178,11 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
 
 std::string MString::GenerateSimplePattern(
     librarian::ResolverContext ctx) const {
-  ABSL_CHECK(!core_constraints_.SimplePatterns().empty());
+  ABSL_CHECK(core_constraints_.SimplePatternsConstrained());
 
   std::optional<std::string> maybe_alphabet =
       [&]() -> std::optional<std::string> {
-    if (!core_constraints_.Alphabet().HasBeenConstrained()) return std::nullopt;
+    if (!core_constraints_.AlphabetConstrained()) return std::nullopt;
     std::vector<char> alphabet(core_constraints_.Alphabet().GetOptions());
     return std::string(alphabet.begin(), alphabet.end());
   }();
@@ -189,7 +208,7 @@ std::string MString::GenerateImplWithDistinctCharacters(
     librarian::ResolverContext ctx) const {
   // Creating a copy in case the alphabet changes in the future, we don't want
   // to limit the length forever.
-  MInteger mlength = *core_constraints_.Length();
+  MInteger mlength = core_constraints_.Length();
   // Each char appears at most once.
   mlength.AddConstraint(
       AtMost(core_constraints_.Alphabet().GetOptions().size()));

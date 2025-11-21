@@ -17,6 +17,8 @@
 #ifndef MORIARTY_SRC_VARIABLES_MREAL_H_
 #define MORIARTY_SRC_VARIABLES_MREAL_H_
 
+#include <sys/types.h>
+
 #include <cstdint>
 
 #include "src/constraints/numeric_constraints.h"
@@ -115,14 +117,20 @@ class MReal : public librarian::MVariable<MReal, double> {
   // class or the corresponding `MReal`.
   class CoreConstraints {
    public:
+    bool BoundsConstrained() const;
     const Range& Bounds() const;
 
    private:
     friend class MReal;
+    enum Flags : uint32_t {
+      kBounds = 1 << 0,
+    };
     struct Data {
+      std::underlying_type_t<Flags> touched = 0;
       Range bounds;
     };
     librarian::CowPtr<Data> data_;
+    bool IsSet(Flags flag) const;
   };
   [[nodiscard]] CoreConstraints GetCoreConstraints() const {
     return core_constraints_;

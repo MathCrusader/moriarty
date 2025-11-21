@@ -20,6 +20,7 @@
 
 #include <concepts>
 #include <cstddef>
+#include <cstdint>
 #include <format>
 #include <string>
 #include <tuple>
@@ -109,14 +110,20 @@ class MTuple : public librarian::MVariable<
   // class or the corresponding `MTuple`.
   class CoreConstraints {
    public:
+    bool ElementsConstrained() const;
     const std::tuple<MElementTypes...>& Elements() const;
 
    private:
     friend class MTuple;
+    enum Flags : uint32_t {
+      kElements = 1 << 0,
+    };
     struct Data {  // Must be public since MTuple is a templated class.
+      std::underlying_type_t<Flags> touched = 0;
       std::tuple<MElementTypes...> elements;
     };
     librarian::CowPtr<Data> data_;
+    bool IsSet(Flags flag) const;
   };
   [[nodiscard]] CoreConstraints GetCoreConstraints() const {
     return core_constraints_;
@@ -254,9 +261,10 @@ MTuple<T...>& MTuple<T...>::AddConstraint(Element<I, MElementType> constraint) {
                    typename std::tuple_element_t<I, std::tuple<T...>>>,
       "Element I in the tuple does not match the type passed in the "
       "constraint");
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kElements;
 
-  std::get<I>(core_constraints_.data_.Mutable().elements)
-      .MergeFrom(constraint.GetConstraints());
+  std::get<I>(constraints.elements).MergeFrom(constraint.GetConstraints());
   return this->InternalAddConstraint(
       ElementConstraintWrapper(std::move(constraint)));
 }
@@ -342,6 +350,16 @@ template <typename... MElementTypes>
 const std::tuple<MElementTypes...>&
 MTuple<MElementTypes...>::CoreConstraints::Elements() const {
   return data_->elements;
+}
+
+template <typename... MElementTypes>
+bool MTuple<MElementTypes...>::CoreConstraints::ElementsConstrained() const {
+  return IsSet(Flags::kElements);
+}
+
+template <typename... MElementTypes>
+bool MTuple<MElementTypes...>::CoreConstraints::IsSet(Flags flag) const {
+  return (data_->touched & static_cast<uint32_t>(flag)) != 0;
 }
 
 template <typename... MElementTypes>

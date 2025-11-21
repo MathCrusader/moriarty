@@ -24,9 +24,9 @@
 #include <format>
 #include <functional>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -132,22 +132,21 @@ class MArray : public librarian::MVariable<
    public:
     explicit Reader(librarian::ReaderContext ctx, int num_chunks,
                     Ref<const MArray> variable)
-        : element_constraints_(variable.get().GetCoreConstraints().Elements()),
-          length_(variable.get().GetCoreConstraints().Length()) {
+        : variable_(variable) {
       // TODO: Add safety checks if N is massive?
       // TODO: Ensure `length_` is satisfied?
       array_.reserve(num_chunks);
     }
 
     void ReadNext(librarian::ReaderContext ctx) {
-      array_.push_back(element_constraints_.get().Read(ctx));
+      array_.push_back(
+          variable_.get().GetCoreConstraints().Elements().Read(ctx));
     }
     vector_value_type Finalize() && { return std::move(array_); }
 
    private:
     std::vector<element_value_type> array_;
-    Ref<const MElementType> element_constraints_;
-    Ref<const std::optional<MInteger>> length_;
+    Ref<const MArray> variable_;
   };
 
   // MArray::CoreConstraints
@@ -157,20 +156,37 @@ class MArray : public librarian::MVariable<
   // class or the corresponding `MArray`.
   class CoreConstraints {
    public:
+    bool ElementsConstrained() const;
     const MElementType& Elements() const;
-    const std::optional<MInteger>& Length() const;
+
+    bool LengthConstrained() const;
+    const MInteger& Length() const;
+
+    bool ComparatorConstrained() const;
+    const comparator_type& Comparator() const;
+
     bool DistinctElements() const;
-    const std::optional<comparator_type>& Comparator() const;
 
    private:
     friend class MArray;
+
+    enum Flags : uint32_t {
+      kElements = 1 << 0,
+      kLength = 1 << 1,
+      kComparator = 1 << 2,
+
+      kDistinctElements = 1 << 4,  // Default: false
+    };
+
     struct Data {
+      std::underlying_type_t<Flags> touched = 0;
+
       MElementType elements;
-      std::optional<MInteger> length;
-      bool distinct_elements = false;
-      std::optional<comparator_type> comparator;
+      MInteger length;
+      comparator_type comparator;
     };
     librarian::CowPtr<Data> data_;
+    bool IsSet(Flags flag) const;
   };
   [[nodiscard]] CoreConstraints GetCoreConstraints() const {
     return core_constraints_;
@@ -272,30 +288,33 @@ MArray<T>& MArray<T>::AddConstraint(OneOf<vector_value_type> constraint) {
 
 template <typename T>
 MArray<T>& MArray<T>::AddConstraint(Elements<T> constraint) {
-  core_constraints_.data_.Mutable().elements.MergeFrom(
-      constraint.GetConstraints());
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kElements;
+  constraints.elements.MergeFrom(constraint.GetConstraints());
   return this->InternalAddConstraint(std::move(constraint));
 }
 
 template <typename T>
 MArray<T>& MArray<T>::AddConstraint(Length constraint) {
-  if (!core_constraints_.Length())
-    core_constraints_.data_.Mutable().length = MInteger();
-  core_constraints_.data_.Mutable().length->MergeFrom(
-      constraint.GetConstraints());
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kLength;
+  constraints.length.MergeFrom(constraint.GetConstraints());
   return this->InternalAddConstraint(std::move(constraint));
 }
 
 template <typename T>
 MArray<T>& MArray<T>::AddConstraint(DistinctElements constraint) {
-  core_constraints_.data_.Mutable().distinct_elements = true;
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kDistinctElements;
   return this->InternalAddConstraint(std::move(constraint));
 }
 
 template <typename T>
 template <typename Comp, typename Proj>
 MArray<T>& MArray<T>::AddConstraint(Sorted<T, Comp, Proj> constraint) {
-  core_constraints_.data_.Mutable().comparator = constraint.GetComparator();
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kComparator;
+  constraints.comparator = constraint.GetComparator();
   return this->InternalAddConstraint(std::move(constraint));
 }
 
@@ -325,14 +344,14 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
     return this->GetOneOf().SelectOneOf(
         [&](int n) { return ctx.RandomInteger(n); });
 
-  if (!core_constraints_.Length()) {
+  if (!core_constraints_.LengthConstrained()) {
     throw GenerationError(ctx.GetVariableName(),
                           "Attempting to generate an array with no "
                           "length parameter given.",
                           RetryPolicy::kAbort);
   }
 
-  MInteger length_local = *core_constraints_.Length();
+  MInteger length_local = core_constraints_.Length();
 
   // Ensure that the size is non-negative.
   length_local.AddConstraint(AtLeast(0));
@@ -350,8 +369,8 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
     }
   }
 
-  if (core_constraints_.Comparator())
-    std::sort(res.begin(), res.end(), *core_constraints_.Comparator());
+  if (core_constraints_.ComparatorConstrained())
+    std::sort(res.begin(), res.end(), core_constraints_.Comparator());
 
   return res;
 }
@@ -423,12 +442,8 @@ void MArray<MoriartyElementType>::PrintImpl(
 template <typename MoriartyElementType>
 MArray<MoriartyElementType>::vector_value_type
 MArray<MoriartyElementType>::ReadImpl(librarian::ReaderContext ctx) const {
-  if (!core_constraints_.Length())
-    ctx.ThrowIOError("Unknown length of array before read.");
-
   std::optional<int64_t> length =
-      core_constraints_.Length()->GetUniqueValue(ctx);
-
+      core_constraints_.Length().GetUniqueValue(ctx);
   if (!length)
     ctx.ThrowIOError("Cannot determine the length of array before read.");
 
@@ -445,14 +460,14 @@ template <typename MoriartyElementType>
 std::vector<MArray<MoriartyElementType>>
 MArray<MoriartyElementType>::ListEdgeCasesImpl(
     librarian::AnalysisContext ctx) const {
-  if (!core_constraints_.Length()) {
+  if (!core_constraints_.LengthConstrained()) {
     throw std::runtime_error(
         "Attempting to get difficult instances of an Array with no "
         "length parameter given.");
   }
   std::vector<MArray<MoriartyElementType>> cases;
   std::vector<MInteger> length_cases =
-      core_constraints_.Length()->ListEdgeCases(ctx);
+      core_constraints_.Length().ListEdgeCases(ctx);
 
   cases.reserve(length_cases.size());
   for (const auto& c : length_cases) {
@@ -464,26 +479,47 @@ MArray<MoriartyElementType>::ListEdgeCasesImpl(
 };
 
 template <typename MoriartyElementType>
+bool MArray<MoriartyElementType>::CoreConstraints::ElementsConstrained() const {
+  return IsSet(Flags::kElements);
+}
+
+template <typename MoriartyElementType>
 const MoriartyElementType&
 MArray<MoriartyElementType>::CoreConstraints::Elements() const {
   return data_->elements;
 }
 
 template <typename MoriartyElementType>
-const std::optional<MInteger>&
-MArray<MoriartyElementType>::CoreConstraints::Length() const {
+bool MArray<MoriartyElementType>::CoreConstraints::LengthConstrained() const {
+  return IsSet(Flags::kLength);
+}
+
+template <typename MoriartyElementType>
+const MInteger& MArray<MoriartyElementType>::CoreConstraints::Length() const {
   return data_->length;
 }
 
 template <typename MoriartyElementType>
 bool MArray<MoriartyElementType>::CoreConstraints::DistinctElements() const {
-  return data_->distinct_elements;
+  return IsSet(Flags::kDistinctElements);
 }
 
 template <typename MoriartyElementType>
-const std::optional<typename MArray<MoriartyElementType>::comparator_type>&
+bool MArray<MoriartyElementType>::CoreConstraints::ComparatorConstrained()
+    const {
+  return IsSet(Flags::kComparator);
+}
+
+template <typename MoriartyElementType>
+const typename MArray<MoriartyElementType>::comparator_type&
 MArray<MoriartyElementType>::CoreConstraints::Comparator() const {
   return data_->comparator;
+}
+
+template <typename MoriartyElementType>
+bool MArray<MoriartyElementType>::CoreConstraints::IsSet(Flags flag) const {
+  return (data_->touched & static_cast<std::underlying_type_t<Flags>>(flag)) !=
+         0;
 }
 
 }  // namespace moriarty
