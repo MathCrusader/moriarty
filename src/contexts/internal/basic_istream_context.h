@@ -67,7 +67,7 @@ class BasicIStreamContext {
   //
   // Throws an `IOError` exception with the current cursor position and the
   // provided message.
-  void ThrowIOError(std::string_view message) const;
+  [[noreturn]] void ThrowIOError(std::string_view message) const;
 
   // ReadInteger()
   //

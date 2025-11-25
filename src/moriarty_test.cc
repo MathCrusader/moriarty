@@ -25,6 +25,7 @@
 #include "gtest/gtest.h"
 #include "src/constraints/container_constraints.h"
 #include "src/context.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/testing/gtest_helpers.h"
 #include "src/librarian/testing/mtest_type.h"
@@ -152,12 +153,12 @@ TEST(MoriartyTest, SetNumCasesWorksForValidInput) {
 
 TEST(MoriartyTest, SetNumCasesWithNegativeInputShouldCrash) {
   Moriarty M;
-  EXPECT_THAT(
-      [] { Moriarty().SetNumCases(-1); },
-      ThrowsMessage<std::invalid_argument>("num_cases must be non-negative"));
-  EXPECT_THAT(
-      [] { Moriarty().SetNumCases(-100); },
-      ThrowsMessage<std::invalid_argument>("num_cases must be non-negative"));
+  EXPECT_THAT([] { Moriarty().SetNumCases(-1); },
+              ThrowsMessage<ConfigurationError>(
+                  HasSubstr("num_cases must be non-negative")));
+  EXPECT_THAT([] { Moriarty().SetNumCases(-100); },
+              ThrowsMessage<ConfigurationError>(
+                  HasSubstr("num_cases must be non-negative")));
 }
 
 // TODO(b/182810006): Update seed when seed/name requirements are enabled
@@ -172,9 +173,9 @@ TEST(MoriartyTest, ShouldSeedWithInvalidInputShouldCrash) {
   Moriarty M;
 
   EXPECT_THAT([] { Moriarty().SetSeed(""); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("seed's length")));
+              ThrowsMessage<ConfigurationError>(HasSubstr("seed's length")));
   EXPECT_THAT([] { Moriarty().SetSeed("abcde"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("seed's length")));
+              ThrowsMessage<ConfigurationError>(HasSubstr("seed's length")));
 }
 
 TEST(MoriartyTest, AddVariableWorks) {

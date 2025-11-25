@@ -552,7 +552,6 @@ MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(librarian::ReaderContext ctx) const {
   }
 
   ctx.ThrowIOError("Unsupported MGraph format for reading.");
-  return graph_type(0);  // Unreachable
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
@@ -787,7 +786,6 @@ auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
 
   ctx.ThrowIOError(
       "MGraph::Reader does not support NonExhaustiveList node style.");
-  return typename graph_type::NodeIdx();  // To silence compiler warning
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>

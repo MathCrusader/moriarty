@@ -31,6 +31,7 @@
 #include "src/internal/value_set.h"
 #include "src/internal/variable_name_utils.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/test_case.h"
 
@@ -43,7 +44,8 @@ Moriarty& Moriarty::SetName(std::string_view name) {
 
 Moriarty& Moriarty::SetNumCases(int num_cases) {
   if (num_cases < 0)
-    throw std::invalid_argument("num_cases must be non-negative");
+    throw ConfigurationError("Moriarty::SetNumCases",
+                             "num_cases must be non-negative");
 
   num_cases_ = num_cases;
   return *this;
@@ -51,8 +53,10 @@ Moriarty& Moriarty::SetNumCases(int num_cases) {
 
 Moriarty& Moriarty::SetSeed(std::string_view seed) {
   if (seed.size() < kMinimumSeedLength) {
-    throw std::invalid_argument(std::format(
-        "The seed's length must be at least {}", kMinimumSeedLength));
+    throw ConfigurationError(
+        "Moriarty::SetSeed",
+        std::format("The seed's length must be at least {}",
+                    kMinimumSeedLength));
   }
 
   // Each generator receives a random engine whose seed only differs in the
@@ -65,7 +69,9 @@ Moriarty& Moriarty::SetSeed(std::string_view seed) {
 }
 
 std::span<const int64_t> Moriarty::GetSeedForGenerator(int index) {
-  if (seed_.empty()) throw std::runtime_error("GetSeed called before seed set");
+  if (seed_.empty())
+    throw ConfigurationError("Moriarty::GetSeed",
+                             "Seed not set before generation started.");
 
   seed_.back() = index;
   return seed_;

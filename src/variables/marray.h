@@ -461,7 +461,8 @@ std::vector<MArray<MoriartyElementType>>
 MArray<MoriartyElementType>::ListEdgeCasesImpl(
     librarian::AnalysisContext ctx) const {
   if (!core_constraints_.LengthConstrained()) {
-    throw std::runtime_error(
+    throw ConfigurationError(
+        "MArray::ListEdgeCases",
         "Attempting to get difficult instances of an Array with no "
         "length parameter given.");
   }

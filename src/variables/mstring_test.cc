@@ -361,7 +361,7 @@ TEST(MStringTest, ListEdgeCasesContainsLengthCases) {
 
 TEST(MStringTest, ListEdgeCasesNoLengthFails) {
   EXPECT_THAT([] { (void)GenerateEdgeCases(MString()); },
-              Throws<std::runtime_error>());
+              Throws<ConfigurationError>());
 }
 
 // FIXME: Decide how we want to test ToString.

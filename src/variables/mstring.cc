@@ -120,7 +120,8 @@ MString::CoreConstraints::SimplePatterns() const {
 std::vector<MString> MString::ListEdgeCasesImpl(
     librarian::AnalysisContext ctx) const {
   if (!core_constraints_.LengthConstrained()) {
-    throw std::runtime_error(
+    throw ConfigurationError(
+        "MString::ListEdgeCases",
         "Attempting to get difficult instances of a string with no "
         "length parameter given.");
   }

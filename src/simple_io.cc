@@ -29,6 +29,7 @@
 
 #include "src/constraints/numeric_constraints.h"
 #include "src/context.h"
+#include "src/librarian/errors.h"
 #include "src/test_case.h"
 #include "src/variables/minteger.h"
 
@@ -176,7 +177,8 @@ void PrintLiteralOnlyLines(ExportContext ctx,
       if (line_idx++) ctx.PrintWhitespace(Whitespace::kSpace);
 
       if (std::holds_alternative<std::string>(token))
-        throw std::runtime_error("Cannot have variable in Header/Footer");
+        throw ConfigurationError("SimpleIO",
+                                 "Cannot have variable in Header/Footer");
       ctx.PrintToken(std::string(std::get<StringLiteral>(token)));
     }
     ctx.PrintWhitespace(Whitespace::kNewline);
@@ -247,7 +249,8 @@ void ReadLine(ImportContext ctx, const SimpleIO::Line& line,
   std::vector<std::unique_ptr<moriarty_internal::ChunkedReader>> readers;
   for (const auto& var : line.tokens) {
     if (std::holds_alternative<StringLiteral>(var)) {
-      throw std::runtime_error("Cannot have literal in multiline section");
+      throw ConfigurationError("SimpleIO",
+                               "Cannot have literal in multiline section");
     }
     readers.push_back(ctx.GetChunkedReader(std::get<std::string>(var),
                                            line_count, test_case));
@@ -271,7 +274,7 @@ void ReadLiteralOnlyLine(ImportContext ctx, const SimpleIO::Line& line) {
     if (line_idx++) ctx.ReadWhitespace(Whitespace::kSpace);
 
     if (std::holds_alternative<std::string>(token))
-      throw std::runtime_error("Cannot have variable in Header");
+      throw ConfigurationError("SimpleIO", "Cannot have variable in Header");
     ReadLiteral(ctx, std::get<StringLiteral>(token));
   }
   ctx.ReadWhitespace(Whitespace::kNewline);

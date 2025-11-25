@@ -19,7 +19,6 @@
 #include <cstdint>
 #include <functional>
 #include <sstream>
-#include <stdexcept>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -449,7 +448,7 @@ TEST(MArrayTest, ListEdgeCasesContainsLengthCases) {
 
 TEST(MArrayTest, ListEdgeCasesNoLengthFails) {
   EXPECT_THAT([] { (void)GenerateEdgeCases(MArray<MInteger>()); },
-              Throws<std::runtime_error>());
+              Throws<ConfigurationError>());
 }
 
 TEST(MArrayTest, ExactlyConstraintWorks) {
