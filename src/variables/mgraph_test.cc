@@ -153,8 +153,7 @@ void ReadAndVerifyMGraphFromFile(
 }
 
 TEST(MGraphTest, ReadUnweightedAdjMatrixShouldSucceed) {
-  MGraph graph = MGraph(NumNodes(5));
-  graph.Format().AdjacencyMatrix();
+  MGraph graph(NumNodes(5), MGraphFormat().AdjacencyMatrix());
 
   Context context;
   ReadAndVerifyMGraphFromFile(
@@ -170,8 +169,7 @@ TEST(MGraphTest, ReadUnweightedAdjMatrixShouldSucceed) {
 }
 
 TEST(MGraphTest, ReadWeightedAdjMatrixShouldSucceed) {
-  MGraph graph = MGraph<MInteger>(NumNodes(5));
-  graph.Format().AdjacencyMatrix();
+  MGraph<MInteger> graph(NumNodes(5), MGraphFormat().AdjacencyMatrix());
 
   Context context;
   ReadAndVerifyMGraphFromFile(
@@ -190,8 +188,8 @@ TEST(MGraphTest, ReadUnweightedEdgeListShouldSucceed) {
   Context context;
   {
     SCOPED_TRACE("Distinct ints, distinct lines");
-    MGraph graph = MGraph(NumNodes(5), NumEdges(6));
-    graph.Format().EdgeList().OneBased();
+    MGraph graph(NumNodes(5), NumEdges(6),
+                 MGraphFormat().EdgeList().OneBased());
     ReadAndVerifyMGraphFromFile(graph,
                                 "src/variables/testing/mgraph/"
                                 "list_pairs_1to5_distinctints_distinctlines.in",
@@ -212,8 +210,8 @@ TEST(MGraphTest, ReadUnweightedEdgeListShouldSucceed) {
   }
   {
     SCOPED_TRACE("Duplicate ints, distinct lines");
-    MGraph graph = MGraph(NumNodes(5), NumEdges(6));
-    graph.Format().EdgeList().OneBased();
+    MGraph graph(NumNodes(5), NumEdges(6),
+                 MGraphFormat().EdgeList().OneBased());
     ReadAndVerifyMGraphFromFile(graph,
                                 "src/variables/testing/mgraph/"
                                 "list_pairs_1to5_dupints_distinctlines.in",
@@ -234,8 +232,8 @@ TEST(MGraphTest, ReadUnweightedEdgeListShouldSucceed) {
   }
   {
     SCOPED_TRACE("Distinct ints, duplicate lines");
-    MGraph graph = MGraph(NumNodes(5), NumEdges(8));
-    graph.Format().EdgeList().OneBased();
+    MGraph graph(NumNodes(5), NumEdges(8),
+                 MGraphFormat().EdgeList().OneBased());
     ReadAndVerifyMGraphFromFile(graph,
                                 "src/variables/testing/mgraph/"
                                 "list_pairs_1to5_distinctints_duplines.in",
@@ -262,8 +260,8 @@ TEST(MGraphTest, ReadWeightedEdgeListShouldSucceed) {
   Context context;
   {
     SCOPED_TRACE("Distinct ints, distinct lines");
-    MGraph graph = MGraph<MInteger>(NumNodes(5), NumEdges(6));
-    graph.Format().EdgeList().OneBased();
+    MGraph<MInteger> graph(NumNodes(5), NumEdges(6),
+                           MGraphFormat().EdgeList().OneBased());
     ReadAndVerifyMGraphFromFile(graph,
                                 "src/variables/testing/mgraph/"
                                 "list_trips_1to5_distinctints_distinctlines.in",
@@ -284,8 +282,8 @@ TEST(MGraphTest, ReadWeightedEdgeListShouldSucceed) {
   }
   {
     SCOPED_TRACE("Duplicate ints, distinct lines");
-    MGraph graph = MGraph<MInteger>(NumNodes(5), NumEdges(6));
-    graph.Format().EdgeList().OneBased();
+    MGraph<MInteger> graph(NumNodes(5), NumEdges(6),
+                           MGraphFormat().EdgeList().OneBased());
     ReadAndVerifyMGraphFromFile(graph,
                                 "src/variables/testing/mgraph/"
                                 "list_trips_1to5_dupints_distinctlines.in",
@@ -306,8 +304,8 @@ TEST(MGraphTest, ReadWeightedEdgeListShouldSucceed) {
   }
   {
     SCOPED_TRACE("Distinct ints, duplicate lines");
-    MGraph graph = MGraph<MInteger>(NumNodes(5), NumEdges(8));
-    graph.Format().EdgeList().OneBased();
+    MGraph<MInteger> graph(NumNodes(5), NumEdges(8),
+                           MGraphFormat().EdgeList().OneBased());
     ReadAndVerifyMGraphFromFile(graph,
                                 "src/variables/testing/mgraph/"
                                 "list_trips_1to5_distinctints_duplines.in",
@@ -335,9 +333,8 @@ TEST(MGraphTest, ReadEdgeListWithNodeLabelsShouldSucceed) {
   Context context;
   {
     SCOPED_TRACE("Distinct ints, distinct lines");
-    MGraph<MNoEdgeLabel, MString> graph =
-        MGraph<MNoEdgeLabel, MString>(NumNodes(5), NumEdges(6));
-    graph.Format().EdgeList().OneBased();
+    MGraph<MNoEdgeLabel, MString> graph(NumNodes(5), NumEdges(6),
+                                        MGraphFormat().EdgeList().OneBased());
     ReadAndVerifyMGraphFromFile(graph,
                                 "src/variables/testing/mgraph/"
                                 "list_pairs_1to5_distinctints_distinctlines.in",
@@ -359,9 +356,8 @@ TEST(MGraphTest, ReadEdgeListWithNodeLabelsShouldSucceed) {
   }
   {
     SCOPED_TRACE("Duplicate ints, distinct lines");
-    MGraph<MNoEdgeLabel, MString> graph =
-        MGraph<MNoEdgeLabel, MString>(NumNodes(5), NumEdges(6));
-    graph.Format().EdgeList().OneBased();
+    MGraph<MNoEdgeLabel, MString> graph(NumNodes(5), NumEdges(6),
+                                        MGraphFormat().EdgeList().OneBased());
     ReadAndVerifyMGraphFromFile(graph,
                                 "src/variables/testing/mgraph/"
                                 "list_pairs_1to5_dupints_distinctlines.in",
@@ -383,9 +379,8 @@ TEST(MGraphTest, ReadEdgeListWithNodeLabelsShouldSucceed) {
   }
   {
     SCOPED_TRACE("Distinct ints, duplicate lines");
-    MGraph<MNoEdgeLabel, MString> graph =
-        MGraph<MNoEdgeLabel, MString>(NumNodes(5), NumEdges(8));
-    graph.Format().EdgeList().OneBased();
+    MGraph<MNoEdgeLabel, MString> graph(NumNodes(5), NumEdges(8),
+                                        MGraphFormat().EdgeList().OneBased());
     ReadAndVerifyMGraphFromFile(graph,
                                 "src/variables/testing/mgraph/"
                                 "list_pairs_1to5_distinctints_duplines.in",

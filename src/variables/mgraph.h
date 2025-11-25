@@ -103,6 +103,9 @@ class MGraphFormat {
   // Returns if the node style is node labels. See `NodeLabelsStyle()`.
   bool IsNodeLabelsStyle() const;
 
+  // Take any non-defaults in `other` and apply them to this format.
+  void Merge(const MGraphFormat& other);
+
  private:
   enum class Style { kEdgeList, kAdjacencyMatrix, kNonExhaustiveList };
   enum class NodeStyle { k0Based, k1Based, kNodeLabels, kNonExhaustiveList };
@@ -146,8 +149,14 @@ class MGraph
 
   ~MGraph() override = default;
 
-  using librarian::MVariable<MGraph,
-                             graph_type>::AddConstraint;  // Custom constraints
+  // ---------------------------------------------------------------------------
+  //  Built-in items
+
+  // Returns "MGraph". Used in generic debugging/error messages.
+  [[nodiscard]] std::string Typename() const override { return "MGraph"; }
+
+  // Custom constraints (see `AddCustomConstraint` in MVariable)
+  using librarian::MVariable<MGraph, graph_type>::AddConstraint;
 
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values
@@ -187,15 +196,14 @@ class MGraph
   // All node labels in the graph must satisfy this constraint.
   MGraph& AddConstraint(NodeLabels<MNodeLabel> constraint);
 
-  [[nodiscard]] std::string Typename() const override { return "MGraph"; }
+  // ---------------------------------------------------------------------------
+  //  Constrain the I/O format of the graph
 
-  // Format()
-  //
+  // Change the I/O format of the graph.
+  // Note: I/O constraints behave as overrides instead of merges.
+  MGraph& AddConstraint(MGraphFormat constraint);
   // Returns the I/O format for this graph.
   [[nodiscard]] MGraphFormat& Format();
-
-  // Format()
-  //
   // Returns the I/O format for this graph.
   [[nodiscard]] MGraphFormat Format() const;
 
@@ -275,12 +283,11 @@ class MGraph
 
     // We need to use indices in std::get<>, since it's possible they are the
     // same type.
-    static constexpr int IntMatrixIndex = 0;
-    static constexpr int LabelMatrixIndex = 1;
-    using IntMatrix = std::vector<std::vector<int64_t>>;
-    using LabelMatrix =
-        std::vector<std::vector<typename MEdgeLabel::value_type>>;
-    std::variant<IntMatrix, LabelMatrix> adjacency_matrix_;
+    static constexpr int IMtxIdx = 0;
+    static constexpr int LMtxIdx = 1;
+    using IMtx = std::vector<std::vector<int64_t>>;
+    using LMtx = std::vector<std::vector<typename MEdgeLabel::value_type>>;
+    std::variant<IMtx, LMtx> adjacency_matrix_;
 
     graph_type::NodeIdx ReadNodeLabel(librarian::ReaderContext ctx);
     MEdgeLabel::value_type ReadEdgeLabel(librarian::ReaderContext ctx);
@@ -412,6 +419,13 @@ MGraph<MEdgeLabel, MNodeLabel>& MGraph<MEdgeLabel, MNodeLabel>::AddConstraint(
   constraints.touched |= CoreConstraints::Flags::kNodeLabels;
   constraints.node_label_constraints.MergeFrom(constraint.GetConstraints());
   return this->InternalAddConstraint(std::move(constraint));
+}
+
+template <typename MEdgeLabel, typename MNodeLabel>
+MGraph<MEdgeLabel, MNodeLabel>& MGraph<MEdgeLabel, MNodeLabel>::AddConstraint(
+    MGraphFormat constraint) {
+  Format().Merge(std::move(constraint));
+  return *this;
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
@@ -708,10 +722,10 @@ MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(librarian::ReaderContext ctx,
 
   if (variable_.get().Format().IsAdjacencyMatrix()) {
     if constexpr (!HasEdgeLabels<MEdgeLabel>) {
-      adjacency_matrix_.template emplace<IntMatrixIndex>(
+      adjacency_matrix_.template emplace<IMtxIdx>(
           *num_nodes, std::vector<int64_t>(*num_nodes));
     } else {
-      adjacency_matrix_.template emplace<LabelMatrixIndex>(
+      adjacency_matrix_.template emplace<LMtxIdx>(
           *num_nodes, std::vector<typename MEdgeLabel::value_type>(*num_nodes));
     }
   }
@@ -815,15 +829,14 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
     if constexpr (HasEdgeLabels<MEdgeLabel>) {
       auto edge_label = ReadEdgeLabel(ctx);
 
-      if (u > v &&
-          std::get<LabelMatrixIndex>(adjacency_matrix_)[v][u] != edge_label) {
+      if (u > v && std::get<LMtxIdx>(adjacency_matrix_)[v][u] != edge_label) {
         ctx.ThrowIOError(
             std::format("Asymmetric adjacency matrix entries at ({}, {}) = "
                         "{} and ({}, {}) = {}",
                         u, v, edge_label, v, u,
-                        std::get<LabelMatrixIndex>(adjacency_matrix_)[v][u]));
+                        std::get<LMtxIdx>(adjacency_matrix_)[v][u]));
       }
-      std::get<LabelMatrixIndex>(adjacency_matrix_)[u][v] = edge_label;
+      std::get<LMtxIdx>(adjacency_matrix_)[u][v] = edge_label;
       if (u <= v) G_.AddEdge(u, v, edge_label);
     } else {
       int64_t edge_count = ctx.ReadInteger();
@@ -831,15 +844,14 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
         ctx.ThrowIOError(std::format(
             "Invalid adjacency matrix entry {} at ({}, {})", edge_count, u, v));
       }
-      if (u > v &&
-          std::get<IntMatrixIndex>(adjacency_matrix_)[v][u] != edge_count) {
+      if (u > v && std::get<IMtxIdx>(adjacency_matrix_)[v][u] != edge_count) {
         ctx.ThrowIOError(
             std::format("Asymmetric adjacency matrix entries at ({}, {}) = {} "
                         "and ({}, {}) = {}",
-                        u, v, std::get<IntMatrixIndex>(adjacency_matrix_)[v][u],
-                        v, u, edge_count));
+                        u, v, std::get<IMtxIdx>(adjacency_matrix_)[v][u], v, u,
+                        edge_count));
       }
-      std::get<IntMatrixIndex>(adjacency_matrix_)[u][v] = edge_count;
+      std::get<IMtxIdx>(adjacency_matrix_)[u][v] = edge_count;
       if (u <= v)
         for (int64_t i = 0; i < edge_count; ++i) G_.AddEdge(u, v);
     }

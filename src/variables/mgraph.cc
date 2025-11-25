@@ -62,4 +62,13 @@ MGraphFormat& MGraphFormat::SetNodeStyle(NodeStyle node_style) {
   return *this;
 }
 
+void MGraphFormat::Merge(const MGraphFormat& other) {
+  if (other.style_ != Style::kEdgeList) {
+    style_ = other.style_;
+  }
+  if (other.node_style_ != NodeStyle::k0Based) {
+    node_style_ = other.node_style_;
+  }
+}
+
 }  // namespace moriarty
