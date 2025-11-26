@@ -34,6 +34,14 @@
 
 namespace moriarty {
 
+class MString;
+namespace librarian {
+template <>
+struct MVariableValueTypeTrait<MString> {
+  using type = std::string;
+};
+}  // namespace librarian
+
 // MString
 //
 // Describes constraints placed on an string. The characters in the string must
@@ -43,7 +51,7 @@ namespace moriarty {
 // In order to generate, the length and the alphabet must be constrained (via
 // some combination of the `Length`, `Alphabet`, and `SimplePattern`
 // constraints).
-class MString : public librarian::MVariable<MString, std::string> {
+class MString : public librarian::MVariable<MString> {
  public:
   // Create an MString from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
@@ -55,7 +63,7 @@ class MString : public librarian::MVariable<MString, std::string> {
 
   ~MString() override = default;
 
-  using MVariable<MString, std::string>::AddConstraint;  // Custom constraints
+  using MVariable<MString>::AddConstraint;  // Custom constraints
 
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values

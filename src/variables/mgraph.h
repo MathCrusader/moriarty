@@ -48,6 +48,16 @@ namespace moriarty {
 using MNoEdgeLabel = MNone;
 using MNoNodeLabel = MNone;
 
+template <typename MEdgeLabel, typename MNodeLabel>
+class MGraph;
+namespace librarian {
+template <typename MEdgeLabel, typename MNodeLabel>
+struct MVariableValueTypeTrait<MGraph<MEdgeLabel, MNodeLabel>> {
+  using type =
+      Graph<typename MEdgeLabel::value_type, typename MNodeLabel::value_type>;
+};
+}  // namespace librarian
+
 // MGraphFormat
 //
 // Each graph has two configurable aspects to its format:
@@ -129,10 +139,7 @@ class MGraphFormat {
 // has a capacity and cost.
 template <typename MEdgeLabel = MNoEdgeLabel,
           typename MNodeLabel = MNoNodeLabel>
-class MGraph
-    : public librarian::MVariable<MGraph<MEdgeLabel, MNodeLabel>,
-                                  Graph<typename MEdgeLabel::value_type,
-                                        typename MNodeLabel::value_type>> {
+class MGraph : public librarian::MVariable<MGraph<MEdgeLabel, MNodeLabel>> {
  public:
   using graph_type =
       Graph<typename MEdgeLabel::value_type, typename MNodeLabel::value_type>;
@@ -156,7 +163,7 @@ class MGraph
   [[nodiscard]] std::string Typename() const override { return "MGraph"; }
 
   // Custom constraints (see `AddCustomConstraint` in MVariable)
-  using librarian::MVariable<MGraph, graph_type>::AddConstraint;
+  using librarian::MVariable<MGraph>::AddConstraint;
 
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values

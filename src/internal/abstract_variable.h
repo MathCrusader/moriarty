@@ -58,7 +58,7 @@ class GenerationHandler;  // Forward declaration
 }  // namespace moriarty::moriarty_internal
 
 namespace moriarty::librarian {
-template <typename V, typename G>
+template <typename V>
 class MVariable;  // Forward declaration
 }
 

@@ -26,11 +26,19 @@
 
 namespace moriarty {
 
+class MNone;
+namespace librarian {
+template <>
+struct MVariableValueTypeTrait<MNone> {
+  using type = NoType;
+};
+}  // namespace librarian
+
 // MNone
 //
 // A placeholder variable that represents no value. You may not do anything with
 // it.
-class MNone : public librarian::MVariable<MNone, NoType> {
+class MNone : public librarian::MVariable<MNone> {
  public:
   ~MNone() override = default;
 

@@ -47,6 +47,15 @@
 
 namespace moriarty {
 
+template <typename MElementType>
+class MArray;
+namespace librarian {
+template <typename MElementType>
+struct MVariableValueTypeTrait<MArray<MElementType>> {
+  using type = std::vector<typename MElementType::value_type>;
+};
+}  // namespace librarian
+
 // MArray<>
 //
 // Describes constraints placed on an array. The elements of the array must have
@@ -56,9 +65,7 @@ namespace moriarty {
 // In order to generate, the length of the array must be constrained (via the
 // `Length` constraint).
 template <typename MElementType>
-class MArray : public librarian::MVariable<
-                   MArray<MElementType>,
-                   std::vector<typename MElementType::value_type>> {
+class MArray : public librarian::MVariable<MArray<MElementType>> {
  public:
   using element_value_type = typename MElementType::value_type;
   using vector_value_type = typename std::vector<element_value_type>;
@@ -80,8 +87,7 @@ class MArray : public librarian::MVariable<
 
   ~MArray() override = default;
 
-  using librarian::MVariable<
-      MArray, vector_value_type>::AddConstraint;  // Custom constraints
+  using librarian::MVariable<MArray>::AddConstraint;  // Custom constraints
 
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values

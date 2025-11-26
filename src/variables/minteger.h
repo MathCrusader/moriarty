@@ -37,12 +37,20 @@
 
 namespace moriarty {
 
+class MInteger;
+namespace librarian {
+template <>
+struct MVariableValueTypeTrait<MInteger> {
+  using type = int64_t;
+};
+}  // namespace librarian
+
 // MInteger
 //
 // Describes constraints placed on an integer. We mean a "mathematical" integer,
 // not a "computer science" integer. As such, we intentionally do not have an
 // MVariable for 32-bit integers.
-class MInteger : public librarian::MVariable<MInteger, int64_t> {
+class MInteger : public librarian::MVariable<MInteger> {
  public:
   // Create an MInteger from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
@@ -54,7 +62,7 @@ class MInteger : public librarian::MVariable<MInteger, int64_t> {
 
   ~MInteger() override = default;
 
-  using MVariable<MInteger, int64_t>::AddConstraint;  // Custom constraints
+  using MVariable<MInteger>::AddConstraint;  // Custom constraints
 
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values

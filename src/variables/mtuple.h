@@ -42,6 +42,15 @@
 
 namespace moriarty {
 
+template <typename... MElementTypes>
+class MTuple;
+namespace librarian {
+template <typename... MElementTypes>
+struct MVariableValueTypeTrait<MTuple<MElementTypes...>> {
+  using type = std::tuple<typename MElementTypes::value_type...>;
+};
+}  // namespace librarian
+
 // MTuple<>
 //
 // Describes constraints placed on an ordered tuple of objects. All objects in
@@ -57,9 +66,7 @@ namespace moriarty {
 //          MTuple<MInteger, MString>
 //         >
 template <typename... MElementTypes>
-class MTuple : public librarian::MVariable<
-                   MTuple<MElementTypes...>,
-                   std::tuple<typename MElementTypes::value_type...>> {
+class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
  public:
   using tuple_value_type = std::tuple<typename MElementTypes::value_type...>;
   class Reader;  // Forward declaration
@@ -91,9 +98,7 @@ class MTuple : public librarian::MVariable<
   // debugging/error messages.
   [[nodiscard]] std::string Typename() const override;
 
-  using librarian::MVariable<MTuple,
-                             tuple_value_type>::AddConstraint;  // Custom
-                                                                // constraints
+  using librarian::MVariable<MTuple>::AddConstraint;  // Custom constraints
 
   MTuple& AddConstraint(Exactly<tuple_value_type> constraint);
   MTuple& AddConstraint(OneOf<tuple_value_type> constraint);

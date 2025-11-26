@@ -31,6 +31,18 @@
 #include "src/variables/minteger.h"
 
 namespace moriarty_testing {
+struct TestType;
+class MTestType;
+}  // namespace moriarty_testing
+
+namespace moriarty::librarian {
+template <>
+struct MVariableValueTypeTrait<moriarty_testing::MTestType> {
+  using type = moriarty_testing::TestType;
+};
+}  // namespace moriarty::librarian
+
+namespace moriarty_testing {
 
 // This file contains a fake data type and a fake Moriarty variable. They aren't
 // meant to have interesting behaviours, just enough functionality that tests
@@ -102,7 +114,7 @@ class NumberOfDigits : public moriarty::MConstraint {
 // MTestType [for internal tests only]
 //
 // A bare bones Moriarty variable.
-class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
+class MTestType : public moriarty::librarian::MVariable<MTestType> {
  public:
   // This value is the default value returned from Generate.
   static constexpr int64_t kGeneratedValue = 123456789;
@@ -122,7 +134,7 @@ class MTestType : public moriarty::librarian::MVariable<MTestType, TestType> {
     (AddConstraint(std::forward<Constraints>(constraints)), ...);
   }
 
-  using MVariable<MTestType, TestType>::AddConstraint;  // Custom constraints
+  using MVariable<MTestType>::AddConstraint;  // Custom constraints
   MTestType& AddConstraint(moriarty::Exactly<TestType> constraint);
   MTestType& AddConstraint(moriarty::OneOf<TestType> constraint);
   MTestType& AddConstraint(LastDigit constraint);

@@ -30,13 +30,21 @@
 
 namespace moriarty {
 
+class MReal;
+namespace librarian {
+template <>
+struct MVariableValueTypeTrait<MReal> {
+  using type = double;
+};
+}  // namespace librarian
+
 // MReal
 //
 // Describes constraints placed on a real number.
 //
 // Note: We intentially do not support `long double`, since the precision of
 // `long double` has different precision on various systems.
-class MReal : public librarian::MVariable<MReal, double> {
+class MReal : public librarian::MVariable<MReal> {
  public:
   // Create an MReal from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
@@ -48,7 +56,7 @@ class MReal : public librarian::MVariable<MReal, double> {
 
   ~MReal() override = default;
 
-  using MVariable<MReal, double>::AddConstraint;  // Custom constraints
+  using MVariable<MReal>::AddConstraint;  // Custom constraints
 
   // ---------------------------------------------------------------------------
   //  Constrain the value to a specific set of values

@@ -37,6 +37,30 @@
 
 namespace moriarty {
 namespace librarian {
+
+class MEmptyClass;
+class EmptyClass;
+template <>
+struct MVariableValueTypeTrait<MEmptyClass> {
+  using type = EmptyClass;
+};
+
+class EmptyClass {
+ public:
+  bool operator==(const EmptyClass& other) const { return true; }
+  bool operator<(const EmptyClass& other) const { return false; }
+};
+
+class MEmptyClass : public MVariable<MEmptyClass> {
+ public:
+  std::string Typename() const override { return "MEmptyClass"; }
+
+ private:
+  EmptyClass GenerateImpl(ResolverContext) const override {
+    throw std::runtime_error("Unimplemented: GenerateImpl");
+  }
+};
+
 namespace {
 
 using ::moriarty::moriarty_internal::AbstractVariable;
@@ -433,22 +457,6 @@ TEST(MVariableTest, ListEdgeCasesReturnsMVariablesThatCanBeGenerated) {
   EXPECT_THAT(MTestType().ListEdgeCases(ctx),
               ElementsAre(GeneratedValuesAre(2), GeneratedValuesAre(3)));
 }
-
-class EmptyClass {
- public:
-  bool operator==(const EmptyClass& other) const { return true; }
-  bool operator<(const EmptyClass& other) const { return false; }
-};
-
-class MEmptyClass : public MVariable<MEmptyClass, EmptyClass> {
- public:
-  std::string Typename() const override { return "MEmptyClass"; }
-
- private:
-  EmptyClass GenerateImpl(ResolverContext) const override {
-    throw std::runtime_error("Unimplemented: GenerateImpl");
-  }
-};
 
 TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToRead) {
   EXPECT_THROW({ (void)Read(MEmptyClass(), "1234"); }, std::runtime_error);
