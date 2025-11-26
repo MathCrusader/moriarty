@@ -23,12 +23,13 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 #include "absl/numeric/int128.h"
 
 namespace moriarty::moriarty_internal {
-class ExpressionNode;  // Forward declaring ExpressionNode
+class ExpressionProgram;
 }  // namespace moriarty::moriarty_internal
 
 namespace moriarty {
@@ -50,35 +51,95 @@ class Expression {
   [[nodiscard]] bool operator==(const Expression& other) const;
 
  private:
-  // Note: We are using a shared_ptr here since this type is completely
-  // immutable after construction. It is passed to several functions, but since
-  // it is immutable, the copying is overkill.
-  std::shared_ptr<moriarty_internal::ExpressionNode> expr_;
-  std::string str_;
-  std::vector<std::string> dependencies_;
+  std::shared_ptr<const moriarty_internal::ExpressionProgram> program_;
 };
 
 namespace moriarty_internal {
 
-class ExpressionNode {
+class ExpressionProgram {
  public:
   using LookupFn = std::function<int64_t(std::string_view)>;
-  virtual ~ExpressionNode() = default;
 
-  [[nodiscard]] virtual absl::int128 Evaluate(const LookupFn& fn) const = 0;
+  ExpressionProgram(const ExpressionProgram&) = delete;
+  ExpressionProgram& operator=(const ExpressionProgram&) = delete;
 
-  // These functions are only safe to call during parsing. After that, they are
-  // undefined behaviour.
-  [[nodiscard]] std::string_view ToString() const;
-  void SetString(std::string_view new_prefix);
-  std::vector<std::string> ReleaseDependencies();
-  void AddDependencies(std::vector<std::string>&& dependencies);
+  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const;
+  [[nodiscard]] std::string_view ExpressionString() const;
+  [[nodiscard]] const std::vector<std::string>& Dependencies() const;
+  static std::shared_ptr<const ExpressionProgram> Parse(
+      std::string_view expression);
 
- protected:
-  ExpressionNode(std::string_view str);
+  enum class NodeKind {
+    kInteger,
+    kVariable,
+    kBinaryAdd,
+    kBinarySubtract,
+    kBinaryMultiply,
+    kBinaryDivide,
+    kBinaryModulo,
+    kBinaryExponentiate,
+    kUnaryPlus,
+    kUnaryNegate,
+    kFunction,
+  };
+
+  enum class SingleArgFunction { kAbs };
+
+  enum class MultiArgFunction { kMax, kMin };
+
+  [[nodiscard]] size_t AddIntegerNode(std::string_view span);
+  [[nodiscard]] size_t AddVariableNode(std::string_view span);
+  [[nodiscard]] size_t AddUnaryNode(NodeKind kind, size_t child,
+                                    std::string_view op_span);
+  [[nodiscard]] size_t AddBinaryNode(NodeKind kind, size_t lhs, size_t rhs,
+                                     std::string_view op_span);
+  [[nodiscard]] size_t AddFunctionNode(std::string_view fn_name_span,
+                                       std::vector<size_t> args,
+                                       std::string_view total_span);
+  void Finalize(size_t root_index);
+
+  [[nodiscard]] std::string_view NodeSpan(size_t index) const;
+  void UpdateSpan(size_t index, std::string_view span);
 
  private:
-  std::string_view str_;
+  struct Node {
+    struct IntegerData {
+      absl::int128 value;
+    };
+    struct VariableData {
+      std::string name;
+    };
+    struct BinaryData {
+      size_t lhs;
+      size_t rhs;
+    };
+    struct UnaryData {
+      size_t child;
+    };
+    struct SingleArgFunctionData {
+      SingleArgFunction function;
+      size_t argument;
+    };
+    struct MultiArgFunctionData {
+      MultiArgFunction function;
+      std::vector<size_t> arguments;
+    };
+    using Payload =
+        std::variant<IntegerData, VariableData, BinaryData, UnaryData,
+                     SingleArgFunctionData, MultiArgFunctionData>;
+
+    NodeKind kind;
+    std::string_view span;
+    Payload payload;
+  };
+
+  explicit ExpressionProgram(std::string_view expression);
+
+  absl::int128 EvaluateNode(size_t index, const LookupFn& fn) const;
+
+  std::string expression_;
+  std::vector<Node> nodes_;
+  size_t root_index_;
   std::vector<std::string> dependencies_;
 };
 

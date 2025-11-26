@@ -23,150 +23,20 @@
 #include <format>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <stack>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "absl/numeric/int128.h"
 #include "absl/strings/numbers.h"
 
 namespace moriarty {
 namespace moriarty_internal {
-
-class IntegerLiteralNode : public ExpressionNode {
- public:
-  ~IntegerLiteralNode() override = default;
-  explicit IntegerLiteralNode(std::string_view op_str);
-  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const override;
-
- private:
-  absl::int128 value_;
-};
-
-class VariableLiteralNode : public ExpressionNode {
- public:
-  ~VariableLiteralNode() override = default;
-  explicit VariableLiteralNode(std::string variable, std::string_view op_str);
-  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const override;
-
- private:
-  std::string variable_;
-};
-
-class BinaryAdditionNode : public ExpressionNode {
- public:
-  ~BinaryAdditionNode() override = default;
-  explicit BinaryAdditionNode(std::unique_ptr<ExpressionNode> lhs,
-                              std::unique_ptr<ExpressionNode> rhs,
-                              std::string_view op_str);
-  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const override;
-
- private:
-  std::unique_ptr<ExpressionNode> lhs_;
-  std::unique_ptr<ExpressionNode> rhs_;
-};
-
-class BinarySubtractionNode : public ExpressionNode {
- public:
-  ~BinarySubtractionNode() override = default;
-  explicit BinarySubtractionNode(std::unique_ptr<ExpressionNode> lhs,
-                                 std::unique_ptr<ExpressionNode> rhs,
-                                 std::string_view op_str);
-  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const override;
-
- private:
-  std::unique_ptr<ExpressionNode> lhs_;
-  std::unique_ptr<ExpressionNode> rhs_;
-};
-
-class BinaryMultiplicationNode : public ExpressionNode {
- public:
-  ~BinaryMultiplicationNode() override = default;
-  explicit BinaryMultiplicationNode(std::unique_ptr<ExpressionNode> lhs,
-                                    std::unique_ptr<ExpressionNode> rhs,
-                                    std::string_view op_str);
-  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const override;
-
- private:
-  std::unique_ptr<ExpressionNode> lhs_;
-  std::unique_ptr<ExpressionNode> rhs_;
-};
-
-class BinaryDivisionNode : public ExpressionNode {
- public:
-  ~BinaryDivisionNode() override = default;
-  explicit BinaryDivisionNode(std::unique_ptr<ExpressionNode> lhs,
-                              std::unique_ptr<ExpressionNode> rhs,
-                              std::string_view op_str);
-  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const override;
-
- private:
-  std::unique_ptr<ExpressionNode> lhs_;
-  std::unique_ptr<ExpressionNode> rhs_;
-};
-
-class BinaryModuloNode : public ExpressionNode {
- public:
-  ~BinaryModuloNode() override = default;
-  explicit BinaryModuloNode(std::unique_ptr<ExpressionNode> lhs,
-                            std::unique_ptr<ExpressionNode> rhs,
-                            std::string_view op_str);
-  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const override;
-
- private:
-  std::unique_ptr<ExpressionNode> lhs_;
-  std::unique_ptr<ExpressionNode> rhs_;
-};
-
-class BinaryExponentiationNode : public ExpressionNode {
- public:
-  ~BinaryExponentiationNode() override = default;
-  explicit BinaryExponentiationNode(std::unique_ptr<ExpressionNode> lhs,
-                                    std::unique_ptr<ExpressionNode> rhs,
-                                    std::string_view op_str);
-  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const override;
-
- private:
-  std::unique_ptr<ExpressionNode> lhs_;
-  std::unique_ptr<ExpressionNode> rhs_;
-};
-
-class UnaryPlusNode : public ExpressionNode {
- public:
-  ~UnaryPlusNode() override = default;
-  explicit UnaryPlusNode(std::unique_ptr<ExpressionNode> rhs,
-                         std::string_view op_str);
-  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const override;
-
- private:
-  std::unique_ptr<ExpressionNode> rhs_;
-};
-
-class UnaryNegateNode : public ExpressionNode {
- public:
-  ~UnaryNegateNode() override = default;
-  explicit UnaryNegateNode(std::unique_ptr<ExpressionNode> rhs,
-                           std::string_view op_str);
-  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const override;
-
- private:
-  std::unique_ptr<ExpressionNode> rhs_;
-};
-
-class FunctionNode : public ExpressionNode {
- public:
-  ~FunctionNode() override = default;
-  explicit FunctionNode(std::string_view fn_name_str,
-                        std::vector<std::unique_ptr<ExpressionNode>> arguments,
-                        std::string_view arg_str);
-  [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const override;
-
- private:
-  std::string name_;  // FIXME: Make this a function pointer.
-  std::vector<std::unique_ptr<ExpressionNode>> arguments_;
-};
+namespace {
 
 enum class OperatorT {
   kAdd,
@@ -268,206 +138,219 @@ std::string_view Concat(std::string_view a, std::string_view b,
   return Concat(a, Concat(b, c));
 }
 
-void ExpressionNode::SetString(std::string_view new_value) { str_ = new_value; }
-
-void ExpressionNode::AddDependencies(std::vector<std::string>&& dependencies) {
-  dependencies_.insert(dependencies_.end(), dependencies.begin(),
-                       dependencies.end());
-  std::ranges::sort(dependencies_);
-  auto it = std::unique(dependencies_.begin(), dependencies_.end());
-  dependencies_.erase(it, dependencies_.end());
+std::optional<ExpressionProgram::SingleArgFunction> ParseSingleArgFunction(
+    std::string_view name) {
+  if (name == "abs") return ExpressionProgram::SingleArgFunction::kAbs;
+  return std::nullopt;
 }
 
-std::vector<std::string> ExpressionNode::ReleaseDependencies() {
-  std::vector<std::string> deps = std::move(dependencies_);
-  dependencies_.clear();
-  return deps;
+std::optional<ExpressionProgram::MultiArgFunction> ParseMultiArgFunction(
+    std::string_view name) {
+  if (name == "min") return ExpressionProgram::MultiArgFunction::kMin;
+  if (name == "max") return ExpressionProgram::MultiArgFunction::kMax;
+  return std::nullopt;
 }
 
-std::string_view ExpressionNode::ToString() const { return str_; }
+}  // namespace
 
-ExpressionNode::ExpressionNode(std::string_view str) : str_(str) {}
+ExpressionProgram::ExpressionProgram(std::string_view expression)
+    : expression_(expression) {}
 
-IntegerLiteralNode::IntegerLiteralNode(std::string_view str)
-    : ExpressionNode(str) {
-  if (!absl::SimpleAtoi(str, &value_)) {
+absl::int128 ExpressionProgram::Evaluate(const LookupFn& fn) const {
+  return EvaluateNode(root_index_, fn);
+}
+
+std::string_view ExpressionProgram::ExpressionString() const {
+  return expression_;
+}
+
+const std::vector<std::string>& ExpressionProgram::Dependencies() const {
+  return dependencies_;
+}
+
+size_t ExpressionProgram::AddIntegerNode(std::string_view span) {
+  absl::int128 value;
+  if (!absl::SimpleAtoi(span, &value)) {
     throw std::invalid_argument(
-        std::format("Failed to parse integer: {}", str));
-  }
-  value_ = Validate(value_);
+        std::format("Failed to parse integer: {}", span));
+  };
+  nodes_.push_back({.kind = NodeKind::kInteger,
+                    .span = span,
+                    .payload = Node::IntegerData{.value = Validate(value)}});
+  return nodes_.size() - 1;
 }
 
-absl::int128 IntegerLiteralNode::Evaluate(const LookupFn& fn) const {
-  return value_;
+size_t ExpressionProgram::AddVariableNode(std::string_view span) {
+  nodes_.push_back(
+      {.kind = NodeKind::kVariable,
+       .span = span,
+       .payload = Node::VariableData{.name = std::string(Trim(span))}});
+  return nodes_.size() - 1;
 }
 
-VariableLiteralNode::VariableLiteralNode(std::string variable,
-                                         std::string_view str)
-    : ExpressionNode(str), variable_(std::move(variable)) {
-  AddDependencies({variable_});
+size_t ExpressionProgram::AddUnaryNode(NodeKind kind, size_t child,
+                                       std::string_view op_span) {
+  nodes_.push_back({.kind = kind,
+                    .span = Concat(op_span, NodeSpan(child)),
+                    .payload = Node::UnaryData{child}});
+  return nodes_.size() - 1;
 }
 
-absl::int128 VariableLiteralNode::Evaluate(const LookupFn& fn) const {
-  return fn(variable_);
+size_t ExpressionProgram::AddBinaryNode(NodeKind kind, size_t lhs, size_t rhs,
+                                        std::string_view op_span) {
+  nodes_.push_back({.kind = kind,
+                    .span = Concat(NodeSpan(lhs), op_span, NodeSpan(rhs)),
+                    .payload = Node::BinaryData{lhs, rhs}});
+  return nodes_.size() - 1;
 }
 
-BinaryAdditionNode::BinaryAdditionNode(std::unique_ptr<ExpressionNode> lhs,
-                                       std::unique_ptr<ExpressionNode> rhs,
-                                       std::string_view op_str)
-    : ExpressionNode(Concat(lhs->ToString(), op_str, rhs->ToString())),
-      lhs_(std::move(lhs)),
-      rhs_(std::move(rhs)) {
-  AddDependencies(lhs_->ReleaseDependencies());
-  AddDependencies(rhs_->ReleaseDependencies());
-}
-
-absl::int128 BinaryAdditionNode::Evaluate(const LookupFn& fn) const {
-  return Validate(lhs_->Evaluate(fn) + rhs_->Evaluate(fn));
-}
-
-BinarySubtractionNode::BinarySubtractionNode(
-    std::unique_ptr<ExpressionNode> lhs, std::unique_ptr<ExpressionNode> rhs,
-    std::string_view op_str)
-    : ExpressionNode(Concat(lhs->ToString(), op_str, rhs->ToString())),
-      lhs_(std::move(lhs)),
-      rhs_(std::move(rhs)) {
-  AddDependencies(lhs_->ReleaseDependencies());
-  AddDependencies(rhs_->ReleaseDependencies());
-}
-
-absl::int128 BinarySubtractionNode::Evaluate(const LookupFn& fn) const {
-  return Validate(lhs_->Evaluate(fn) - rhs_->Evaluate(fn));
-}
-
-BinaryMultiplicationNode::BinaryMultiplicationNode(
-    std::unique_ptr<ExpressionNode> lhs, std::unique_ptr<ExpressionNode> rhs,
-    std::string_view op_str)
-    : ExpressionNode(Concat(lhs->ToString(), op_str, rhs->ToString())),
-      lhs_(std::move(lhs)),
-      rhs_(std::move(rhs)) {
-  AddDependencies(lhs_->ReleaseDependencies());
-  AddDependencies(rhs_->ReleaseDependencies());
-}
-
-absl::int128 BinaryMultiplicationNode::Evaluate(const LookupFn& fn) const {
-  return Validate(lhs_->Evaluate(fn) * rhs_->Evaluate(fn));
-}
-
-BinaryDivisionNode::BinaryDivisionNode(std::unique_ptr<ExpressionNode> lhs,
-                                       std::unique_ptr<ExpressionNode> rhs,
-                                       std::string_view op_str)
-    : ExpressionNode(Concat(lhs->ToString(), op_str, rhs->ToString())),
-      lhs_(std::move(lhs)),
-      rhs_(std::move(rhs)) {
-  AddDependencies(lhs_->ReleaseDependencies());
-  AddDependencies(rhs_->ReleaseDependencies());
-}
-
-absl::int128 BinaryDivisionNode::Evaluate(const LookupFn& fn) const {
-  return Divide(lhs_->Evaluate(fn), rhs_->Evaluate(fn));
-}
-
-BinaryModuloNode::BinaryModuloNode(std::unique_ptr<ExpressionNode> lhs,
-                                   std::unique_ptr<ExpressionNode> rhs,
-                                   std::string_view op_str)
-    : ExpressionNode(Concat(lhs->ToString(), op_str, rhs->ToString())),
-      lhs_(std::move(lhs)),
-      rhs_(std::move(rhs)) {
-  AddDependencies(lhs_->ReleaseDependencies());
-  AddDependencies(rhs_->ReleaseDependencies());
-}
-
-absl::int128 BinaryModuloNode::Evaluate(const LookupFn& fn) const {
-  return Mod(lhs_->Evaluate(fn), rhs_->Evaluate(fn));
-}
-
-BinaryExponentiationNode::BinaryExponentiationNode(
-    std::unique_ptr<ExpressionNode> lhs, std::unique_ptr<ExpressionNode> rhs,
-    std::string_view op_str)
-    : ExpressionNode(Concat(lhs->ToString(), op_str, rhs->ToString())),
-      lhs_(std::move(lhs)),
-      rhs_(std::move(rhs)) {
-  AddDependencies(lhs_->ReleaseDependencies());
-  AddDependencies(rhs_->ReleaseDependencies());
-}
-
-absl::int128 BinaryExponentiationNode::Evaluate(const LookupFn& fn) const {
-  return Pow(lhs_->Evaluate(fn), rhs_->Evaluate(fn));
-}
-
-UnaryPlusNode::UnaryPlusNode(std::unique_ptr<ExpressionNode> rhs,
-                             std::string_view op_str)
-    : ExpressionNode(Concat(op_str, rhs->ToString())), rhs_(std::move(rhs)) {
-  AddDependencies(rhs_->ReleaseDependencies());
-}
-
-absl::int128 UnaryPlusNode::Evaluate(const LookupFn& fn) const {
-  return rhs_->Evaluate(fn);
-}
-
-UnaryNegateNode::UnaryNegateNode(std::unique_ptr<ExpressionNode> rhs,
-                                 std::string_view op_str)
-    : ExpressionNode(Concat(op_str, rhs->ToString())), rhs_(std::move(rhs)) {
-  AddDependencies(rhs_->ReleaseDependencies());
-}
-
-absl::int128 UnaryNegateNode::Evaluate(const LookupFn& fn) const {
-  return Validate(-rhs_->Evaluate(fn));
-}
-
-FunctionNode::FunctionNode(
-    std::string_view fn_name_str,
-    std::vector<std::unique_ptr<ExpressionNode>> arguments,
-    std::string_view args_str)
-    : ExpressionNode(args_str), arguments_(std::move(arguments)) {
-  if (fn_name_str.data() != args_str.data())
+size_t ExpressionProgram::AddFunctionNode(std::string_view fn_name_span,
+                                          std::vector<size_t> args,
+                                          std::string_view total_span) {
+  if (fn_name_span.data() != total_span.data())
     throw std::invalid_argument(
         "[Internal error]: function name and arguments mismatch");
-
-  for (const auto& arg : arguments_)
-    AddDependencies(arg->ReleaseDependencies());
-
-  std::string_view x = Trim(fn_name_str);
+  std::string_view x = Trim(fn_name_span);
   if (!x.empty() && x.back() == '(') x.remove_suffix(1);
-  name_ = std::string(Trim(x));
+  std::string_view fn_name = Trim(x);
 
-  if (name_ == "max") return;  // Nothing to validate
-  if (name_ == "min") return;  // Nothing to validate
-  if (name_ == "abs") {
-    if (arguments_.size() != 1) {
+  Node::Payload payload;
+  if (auto single = ParseSingleArgFunction(fn_name)) {
+    if (args.size() != 1) {
       throw std::invalid_argument(
-          std::format("abs() expects exactly one argument, receieved {}",
-                      arguments_.size()));
+          std::format("{}() expects exactly one argument, received {}", fn_name,
+                      args.size()));
     }
-    return;
+    nodes_.push_back({
+        .kind = NodeKind::kFunction,
+        .span = total_span,
+        .payload =
+            Node::SingleArgFunctionData{
+                .function = *single,
+                .argument = args.front(),
+            },
+    });
+  } else if (auto multi = ParseMultiArgFunction(fn_name)) {
+    if (args.empty()) {
+      throw std::invalid_argument(
+          std::format("{}() expects at least one argument", fn_name));
+    }
+    nodes_.push_back({
+        .kind = NodeKind::kFunction,
+        .span = total_span,
+        .payload =
+            Node::MultiArgFunctionData{
+                .function = *multi,
+                .arguments = std::move(args),
+            },
+    });
+  } else {
+    throw std::invalid_argument(std::format("Unknown function: {}", fn_name));
   }
 
-  throw std::invalid_argument(std::format("Unknown function: {}", name_));
+  return nodes_.size() - 1;
 }
 
-absl::int128 FunctionNode::Evaluate(const LookupFn& fn) const {
-  std::vector<absl::int128> evaluated_args;
-  for (const auto& arg : arguments_) {
-    evaluated_args.push_back(arg->Evaluate(fn));
+void ExpressionProgram::Finalize(size_t root_index) {
+  root_index_ = root_index;
+  dependencies_.clear();
+  for (const Node& node : nodes_) {
+    if (node.kind == NodeKind::kVariable) {
+      dependencies_.push_back(std::get<Node::VariableData>(node.payload).name);
+    }
   }
-
-  // Example function implementations
-  if (name_ == "min")
-    return *std::min_element(evaluated_args.begin(), evaluated_args.end());
-
-  if (name_ == "max")
-    return *std::max_element(evaluated_args.begin(), evaluated_args.end());
-
-  if (name_ == "abs") return std::abs(int64_t(evaluated_args[0]));
-
-  throw std::invalid_argument(
-      "[Internal error] Unknown function; the constructor should have caught "
-      "this: " +
-      name_);
+  std::ranges::sort(dependencies_);
+  auto it = std::ranges::unique(dependencies_);
+  dependencies_.erase(std::ranges::begin(it), std::ranges::end(dependencies_));
 }
+
+std::string_view ExpressionProgram::NodeSpan(size_t index) const {
+  return nodes_[index].span;
+}
+
+void ExpressionProgram::UpdateSpan(size_t index, std::string_view span) {
+  nodes_[index].span = span;
+}
+
+absl::int128 ExpressionProgram::EvaluateNode(size_t index,
+                                             const LookupFn& fn) const {
+  const Node& node = nodes_[index];
+  switch (node.kind) {
+    case NodeKind::kInteger: {
+      const auto& data = std::get<Node::IntegerData>(node.payload);
+      return data.value;
+    }
+    case NodeKind::kVariable: {
+      const auto& data = std::get<Node::VariableData>(node.payload);
+      return fn(data.name);
+    }
+    case NodeKind::kBinaryAdd: {
+      const auto& data = std::get<Node::BinaryData>(node.payload);
+      return Validate(EvaluateNode(data.lhs, fn) + EvaluateNode(data.rhs, fn));
+    }
+    case NodeKind::kBinarySubtract: {
+      const auto& data = std::get<Node::BinaryData>(node.payload);
+      return Validate(EvaluateNode(data.lhs, fn) - EvaluateNode(data.rhs, fn));
+    }
+    case NodeKind::kBinaryMultiply: {
+      const auto& data = std::get<Node::BinaryData>(node.payload);
+      return Validate(EvaluateNode(data.lhs, fn) * EvaluateNode(data.rhs, fn));
+    }
+    case NodeKind::kBinaryDivide: {
+      const auto& data = std::get<Node::BinaryData>(node.payload);
+      return Divide(EvaluateNode(data.lhs, fn), EvaluateNode(data.rhs, fn));
+    }
+    case NodeKind::kBinaryModulo: {
+      const auto& data = std::get<Node::BinaryData>(node.payload);
+      return Mod(EvaluateNode(data.lhs, fn), EvaluateNode(data.rhs, fn));
+    }
+    case NodeKind::kBinaryExponentiate: {
+      const auto& data = std::get<Node::BinaryData>(node.payload);
+      return Pow(EvaluateNode(data.lhs, fn), EvaluateNode(data.rhs, fn));
+    }
+    case NodeKind::kUnaryPlus: {
+      const auto& data = std::get<Node::UnaryData>(node.payload);
+      return EvaluateNode(data.child, fn);
+    }
+    case NodeKind::kUnaryNegate: {
+      const auto& data = std::get<Node::UnaryData>(node.payload);
+      return Validate(-EvaluateNode(data.child, fn));
+    }
+    case NodeKind::kFunction: {
+      if (std::holds_alternative<Node::SingleArgFunctionData>(node.payload)) {
+        const auto& data = std::get<Node::SingleArgFunctionData>(node.payload);
+        absl::int128 value = EvaluateNode(data.argument, fn);
+        switch (data.function) {
+          case SingleArgFunction::kAbs:
+            return Validate(value < 0 ? -value : value);
+        }
+      } else if (std::holds_alternative<Node::MultiArgFunctionData>(
+                     node.payload)) {
+        const auto& data = std::get<Node::MultiArgFunctionData>(node.payload);
+        std::vector<absl::int128> evaluated_args;
+        evaluated_args.reserve(data.arguments.size());
+        for (size_t child : data.arguments) {
+          evaluated_args.push_back(EvaluateNode(child, fn));
+        }
+        switch (data.function) {
+          case MultiArgFunction::kMin:
+            return *std::min_element(evaluated_args.begin(),
+                                     evaluated_args.end());
+          case MultiArgFunction::kMax:
+            return *std::max_element(evaluated_args.begin(),
+                                     evaluated_args.end());
+        }
+      }
+      throw std::invalid_argument(
+          "[Internal error] Unknown function; constructor should verify.");
+    }
+  }
+  throw std::runtime_error("[Internal Error] Unknown node kind");
+}
+
+namespace {
 
 // ------------------------------------------------------------------------
-
 struct Operator {
   OperatorT op;
   std::string_view str;
@@ -500,7 +383,8 @@ int Precedence(OperatorT type) {
       return 60;
 
     // Scope operators should have the highest precedence so that everything
-    // inside the scope is evaluated first. Within them, commas < brackets < EOS
+    // inside the scope is evaluated first. Within them, commas < brackets <
+    // EOS
     case OperatorT::kCommaScope:
       return 10010;
 
@@ -533,77 +417,58 @@ std::optional<int> CloseScopePrecedence(TokenT token) {
   }
 }
 
-void NewApplyOperation(Operator op,
-                       std::stack<std::unique_ptr<ExpressionNode>>& operands) {
-  auto binary_op = [&]() -> std::pair<std::unique_ptr<ExpressionNode>,
-                                      std::unique_ptr<ExpressionNode>> {
+void NewApplyOperation(Operator op, ExpressionProgram& program,
+                       std::stack<size_t>& operands) {
+  auto binary_op = [&](ExpressionProgram::NodeKind kind) {
     if (operands.size() < 2) {
       throw std::invalid_argument(
-          "Attempting to do a binary operation, but I don't have 2 operands.");
+          "Attempting to do a binary operation, but I don't have 2 "
+          "operands.");
     }
-    auto rhs = std::move(operands.top());
+    size_t rhs = operands.top();
     operands.pop();
-    auto lhs = std::move(operands.top());
+    size_t lhs = operands.top();
     operands.pop();
-    return {std::move(lhs), std::move(rhs)};
+
+    operands.push(program.AddBinaryNode(kind, lhs, rhs, op.str));
   };
-  auto unary_op = [&]() -> std::unique_ptr<ExpressionNode> {
-    if (operands.size() < 1) {
+  auto unary_op = [&](ExpressionProgram::NodeKind kind) {
+    if (operands.empty()) {
       throw std::invalid_argument(
-          "Attempting to do a unary operation, but I don't have 2 operands.");
+          "Attempting to do a unary operation, but I don't have 2 "
+          "operands.");
     }
-    auto rhs = std::move(operands.top());
+    size_t rhs = operands.top();
     operands.pop();
-    return rhs;
+
+    operands.push(program.AddUnaryNode(kind, rhs, op.str));
   };
 
   switch (op.op) {
-    case OperatorT::kAdd: {
-      auto [lhs, rhs] = binary_op();
-      operands.push(std::make_unique<BinaryAdditionNode>(
-          std::move(lhs), std::move(rhs), op.str));
+    case OperatorT::kAdd:
+      binary_op(ExpressionProgram::NodeKind::kBinaryAdd);
       break;
-    }
-    case OperatorT::kSubtract: {
-      auto [lhs, rhs] = binary_op();
-      operands.push(std::make_unique<BinarySubtractionNode>(
-          std::move(lhs), std::move(rhs), op.str));
+    case OperatorT::kSubtract:
+      binary_op(ExpressionProgram::NodeKind::kBinarySubtract);
       break;
-    }
-    case OperatorT::kMultiply: {
-      auto [lhs, rhs] = binary_op();
-      operands.push(std::make_unique<BinaryMultiplicationNode>(
-          std::move(lhs), std::move(rhs), op.str));
+    case OperatorT::kMultiply:
+      binary_op(ExpressionProgram::NodeKind::kBinaryMultiply);
       break;
-    }
-    case OperatorT::kDivide: {
-      auto [lhs, rhs] = binary_op();
-      operands.push(std::make_unique<BinaryDivisionNode>(
-          std::move(lhs), std::move(rhs), op.str));
+    case OperatorT::kDivide:
+      binary_op(ExpressionProgram::NodeKind::kBinaryDivide);
       break;
-    }
-    case OperatorT::kModulo: {
-      auto [lhs, rhs] = binary_op();
-      operands.push(std::make_unique<BinaryModuloNode>(std::move(lhs),
-                                                       std::move(rhs), op.str));
+    case OperatorT::kModulo:
+      binary_op(ExpressionProgram::NodeKind::kBinaryModulo);
       break;
-    }
-    case OperatorT::kExponentiate: {
-      auto [lhs, rhs] = binary_op();
-      operands.push(std::make_unique<BinaryExponentiationNode>(
-          std::move(lhs), std::move(rhs), op.str));
+    case OperatorT::kExponentiate:
+      binary_op(ExpressionProgram::NodeKind::kBinaryExponentiate);
       break;
-    }
-    case OperatorT::kUnaryPlus: {
-      auto rhs = unary_op();
-      operands.push(std::make_unique<UnaryPlusNode>(std::move(rhs), op.str));
+    case OperatorT::kUnaryPlus:
+      unary_op(ExpressionProgram::NodeKind::kUnaryPlus);
       break;
-    }
-    case OperatorT::kUnaryNegate: {
-      auto rhs = unary_op();
-      operands.push(std::make_unique<UnaryNegateNode>(std::move(rhs), op.str));
+    case OperatorT::kUnaryNegate:
+      unary_op(ExpressionProgram::NodeKind::kUnaryNegate);
       break;
-    }
     default:
       throw std::runtime_error(std::format(
           "[Internal Error] Attempting to apply invalid operator. Minimal "
@@ -613,9 +478,9 @@ void NewApplyOperation(Operator op,
 }
 
 void CollapseScope(std::stack<Operator>& operators,
-                   std::stack<std::unique_ptr<ExpressionNode>>& operands) {
+                   std::stack<size_t>& operands, ExpressionProgram& program) {
   while (!operators.empty() && !IsScopeOperator(operators.top().op)) {
-    NewApplyOperation(operators.top(), operands);
+    NewApplyOperation(operators.top(), program, operands);
     operators.pop();
   }
 }
@@ -629,7 +494,7 @@ std::string ParsingErrorMessage(std::string_view full_expression,
 }
 
 void PushScopeToken(Token token, std::stack<Operator>& operators,
-                    std::stack<std::unique_ptr<ExpressionNode>>& operands) {
+                    std::stack<size_t>& operands, ExpressionProgram& program) {
   auto close_scope_precedence = CloseScopePrecedence(token.kind);
 
   if (!close_scope_precedence) {
@@ -637,7 +502,7 @@ void PushScopeToken(Token token, std::stack<Operator>& operators,
         "[Internal Error] PushScopeToken called without a scope token");
   }
 
-  CollapseScope(operators, operands);
+  CollapseScope(operators, operands, program);
 
   // This means we have an empty string in some substring scope.
   // E.g., "", "()", "max(4,,5)", etc
@@ -649,13 +514,14 @@ void PushScopeToken(Token token, std::stack<Operator>& operators,
     return;
   }
 
-  std::vector<std::unique_ptr<ExpressionNode>> args;
+  std::vector<size_t> args;
   std::string_view arg_str = token.str;
 
   while (!operators.empty() && !operands.empty() &&
          operators.top().op == OperatorT::kCommaScope) {
-    arg_str = Concat(operators.top().str, operands.top()->ToString(), arg_str);
-    args.push_back(std::move(operands.top()));
+    arg_str =
+        Concat(operators.top().str, program.NodeSpan(operands.top()), arg_str);
+    args.push_back(operands.top());
     operands.pop();
     operators.pop();
   }
@@ -673,60 +539,70 @@ void PushScopeToken(Token token, std::stack<Operator>& operators,
     throw std::invalid_argument("No tokens to parse inside (sub)expression");
 
   Operator op = operators.top();
-  arg_str = Concat(op.str, operands.top()->ToString(), arg_str);
-  args.push_back(std::move(operands.top()));
+  arg_str = Concat(op.str, program.NodeSpan(operands.top()), arg_str);
+  args.push_back(operands.top());
   operands.pop();
   operators.pop();
 
   if (op.op == OperatorT::kFunctionStartScope) {
     std::reverse(args.begin(), args.end());
-    operands.push(
-        std::make_unique<FunctionNode>(op.str, std::move(args), arg_str));
+    operands.push(program.AddFunctionNode(op.str, std::move(args), arg_str));
     return;
   }
 
   if (args.size() != 1)
     throw std::invalid_argument(
         std::format("Invalid parentheses: {}", arg_str));
-  args[0]->SetString(arg_str);
-  operands.push(std::move(args[0]));
+  program.UpdateSpan(args[0], arg_str);
+  operands.push(args[0]);
 }
 
 void PushToken(Token token, std::stack<Operator>& operators,
-               std::stack<std::unique_ptr<ExpressionNode>>& operands) {
+               std::stack<size_t>& operands, ExpressionProgram& program) {
   if (auto close = CloseScopePrecedence(token.kind); close.has_value()) {
-    PushScopeToken(token, operators, operands);
+    PushScopeToken(token, operators, operands, program);
     return;
   }
 
   if (token.kind == TokenT::kInteger) {
-    operands.push(std::make_unique<IntegerLiteralNode>(token.str));
+    operands.push(program.AddIntegerNode(token.str));
     return;
   }
 
   if (token.kind == TokenT::kVariable) {
-    operands.push(std::make_unique<VariableLiteralNode>(
-        std::string(Trim(token.str)), token.str));
+    operands.push(program.AddVariableNode(token.str));
     return;
   }
 
   // For tokens and operators that have a 1-to-1 mapping
   auto token_to_operator = [](TokenT kind) {
-    if (kind == TokenT::kAdd) return OperatorT::kAdd;
-    if (kind == TokenT::kSubtract) return OperatorT::kSubtract;
-    if (kind == TokenT::kMultiply) return OperatorT::kMultiply;
-    if (kind == TokenT::kDivide) return OperatorT::kDivide;
-    if (kind == TokenT::kModulo) return OperatorT::kModulo;
-    if (kind == TokenT::kExponentiate) return OperatorT::kExponentiate;
-    if (kind == TokenT::kUnaryPlus) return OperatorT::kUnaryPlus;
-    if (kind == TokenT::kUnaryNegate) return OperatorT::kUnaryNegate;
+    switch (kind) {
+      case TokenT::kAdd:
+        return OperatorT::kAdd;
+      case TokenT::kSubtract:
+        return OperatorT::kSubtract;
+      case TokenT::kMultiply:
+        return OperatorT::kMultiply;
+      case TokenT::kDivide:
+        return OperatorT::kDivide;
+      case TokenT::kModulo:
+        return OperatorT::kModulo;
+      case TokenT::kExponentiate:
+        return OperatorT::kExponentiate;
+      case TokenT::kUnaryPlus:
+        return OperatorT::kUnaryPlus;
+      case TokenT::kUnaryNegate:
+        return OperatorT::kUnaryNegate;
 
-    if (kind == TokenT::kOpenParen) return OperatorT::kOpenParenScope;
-    if (kind == TokenT::kFunctionNameWithParen)
-      return OperatorT::kFunctionStartScope;
+      case TokenT::kOpenParen:
+        return OperatorT::kOpenParenScope;
+      case TokenT::kFunctionNameWithParen:
+        return OperatorT::kFunctionStartScope;
 
-    throw std::runtime_error(
-        "[Internal error] Unknown operator in token_to_operator");
+      default:
+        throw std::runtime_error(
+            "[Internal error] Unknown operator in token_to_operator");
+    }
   };
 
   OperatorT op = token_to_operator(token.kind);
@@ -737,7 +613,7 @@ void PushToken(Token token, std::stack<Operator>& operators,
     while (!operators.empty()) {
       int q = Precedence(operators.top().op);
       if (p < q || (!is_left && p == q)) break;
-      NewApplyOperation(operators.top(), operands);
+      NewApplyOperation(operators.top(), program, operands);
       operators.pop();
     }
   }
@@ -813,12 +689,10 @@ std::pair<TokenT, std::string_view> NewConsumeFirstToken(
 
   // Check for variable ([A-Za-z][A-Za-z0-9_]*)
   if (std::isalpha(current)) {
-    std::string variable_name(1, current);
     auto valid_char = [](char c) {
       return std::isalpha(c) || std::isdigit(c) || c == '_';
     };
     while (!expression.empty() && valid_char(expression.front())) {
-      variable_name += expression.front();
       expression.remove_prefix(1);
     }
     // Check if the next character is a open parenthesis.
@@ -834,20 +708,24 @@ std::pair<TokenT, std::string_view> NewConsumeFirstToken(
   throw std::invalid_argument("[Parse Error] Unknown character in expression");
 }
 
-std::unique_ptr<ExpressionNode> ParseExpression(std::string_view expression) {
-  // Implements the shunting-yard algorithm
-  // TODO(b/208295758): Add support for several features:
-  //  * functions (such as min(x, y), abs(x), clamp(n, lo, hi))
-  //  * comparison operators (<, >, <=, >=)
-  //  * equality operators (==, !=)
-  //  * boolean operators (and, or, xor, not)
-  //  * postfix unary operators (such as n!)
+}  // namespace
+
+// TODO: Add support for several features:
+//  * functions (such as clamp(n, lo, hi), sum(A))
+//  * comparison operators (<, >, <=, >=)
+//  * equality operators (==, !=)
+//  * boolean operators (and, or, xor, not)
+//  * postfix unary operators (such as n!)
+std::shared_ptr<const ExpressionProgram> ExpressionProgram::Parse(
+    std::string_view expression) {
+  std::shared_ptr<ExpressionProgram> program(new ExpressionProgram(expression));
+
+  std::string_view remaining = program->ExpressionString();
+  std::string_view original_expression = remaining;
 
   std::stack<Operator> operators;
-  operators.push({OperatorT::kStartExpressionScope, expression.substr(0, 0)});
-  std::stack<std::unique_ptr<ExpressionNode>> operands;
-
-  std::string_view original_expression = expression;
+  operators.push({OperatorT::kStartExpressionScope, remaining.substr(0, 0)});
+  std::stack<size_t> operands;
 
   auto get_token_str = [&](std::string_view prev_suff,
                            std::string_view curr_suff) -> std::string_view {
@@ -857,57 +735,59 @@ std::unique_ptr<ExpressionNode> ParseExpression(std::string_view expression) {
   TokenT prev = TokenT::kStartOfExpression;
   while (prev != TokenT::kEndOfExpression) {
     try {
-      auto [token_kind, new_suffix] = NewConsumeFirstToken(expression, prev);
-      Token token = {token_kind, get_token_str(expression, new_suffix)};
-      PushToken(token, operators, operands);
-      expression = new_suffix;
+      auto [token_kind, new_suffix] = NewConsumeFirstToken(remaining, prev);
+      Token token = {token_kind, get_token_str(remaining, new_suffix)};
+      PushToken(token, operators, operands, *program);
+      remaining = new_suffix;
       prev = token_kind;
     } catch (std::exception& e) {
       throw std::invalid_argument(
-          ParsingErrorMessage(original_expression, expression, e.what()));
+          ParsingErrorMessage(original_expression, remaining, e.what()));
     }
   }
 
   if (operands.size() != 1 || !operators.empty()) {
     throw std::runtime_error(
-        "[Internal Error] Expression does not parse "
-        "properly, but should have been caught by another exception.");
+        "[Internal Error] Expression does not parse properly, but should "
+        "have been caught by another exception.");
   }
-  if (operands.top()->ToString() != original_expression) {
+  if (program->NodeSpan(operands.top()) != original_expression) {
     throw std::runtime_error(
-        "[Internal Error] Expression ToString() does not return the original "
+        "[Internal Error] Expression span does not match the original "
         "string.");
   }
 
-  return std::move(operands.top());
+  program->Finalize(operands.top());
+  return program;
 }
 
 }  // namespace moriarty_internal
 
 std::vector<std::string> Expression::GetDependencies() const {
-  return dependencies_;
+  return program_->Dependencies();
 }
 
-std::string Expression::ToString() const { return str_; }
+std::string Expression::ToString() const {
+  return std::string(program_->ExpressionString());
+}
 
 int64_t Expression::Evaluate(
     std::function<int64_t(std::string_view)> lookup_variable) const {
-  return static_cast<int64_t>(expr_->Evaluate(lookup_variable));
+  return static_cast<int64_t>(program_->Evaluate(lookup_variable));
 }
 
 int64_t Expression::Evaluate() const {
-  auto tmp = [](std::string_view s) -> int64_t {
+  auto missing = [](std::string_view) -> int64_t {
     throw std::invalid_argument("Variable not found");
   };
-  return static_cast<int64_t>(expr_->Evaluate(tmp));
+  return static_cast<int64_t>(program_->Evaluate(missing));
 }
 
-Expression::Expression(std::string_view str) : str_(str) {
-  expr_ = moriarty_internal::ParseExpression(str_);
-  dependencies_ = expr_->ReleaseDependencies();
+Expression::Expression(std::string_view str) {
+  program_ = moriarty_internal::ExpressionProgram::Parse(str);
 }
 
 bool Expression::operator==(const Expression& other) const {
-  return str_ == other.str_;
+  return program_->ExpressionString() == other.program_->ExpressionString();
 }
 }  // namespace moriarty
