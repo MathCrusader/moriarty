@@ -85,8 +85,12 @@ std::optional<std::string> Moriarty::ValidateTestCases() {
     std::optional<std::string> failure =
         moriarty_internal::AllVariablesSatisfyConstraints(variables_,
                                                           test_case);
-    if (failure.has_value())
-      return std::format("Case {} invalid: {}", case_num, *failure);
+    if (failure.has_value()) {
+      if (assigned_test_cases_.size() == 1) {
+        return *failure;
+      }
+      return std::format("Case {} invalid:\n{}", case_num, *failure);
+    }
     case_num++;
   }
   return std::nullopt;
