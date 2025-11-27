@@ -146,6 +146,7 @@ cc_library(
     srcs = ["view_only_context.cc"],
     hdrs = ["view_only_context.h"],
     deps = [
+        "//src/internal:expressions",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian/util:ref",

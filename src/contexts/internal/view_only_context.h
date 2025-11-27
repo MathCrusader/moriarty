@@ -17,10 +17,12 @@
 #ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_VIEW_ONLY_CONTEXT_H_
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_VIEW_ONLY_CONTEXT_H_
 
+#include <cstdint>
 #include <optional>
 #include <string_view>
 
 #include "src/internal/abstract_variable.h"
+#include "src/internal/expressions.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/util/ref.h"
@@ -77,6 +79,13 @@ class ViewOnlyContext {
   [[nodiscard]] std::optional<typename T::value_type> GetUniqueValue(
       std::string_view variable_name) const;
 
+  // GetUniqueInteger()
+  //
+  // Same as GetUniqueValue(), but only for integer variables. The system does
+  // not necessarily know that this variable is an integer.
+  [[nodiscard]] std::optional<int64_t> GetUniqueInteger(
+      std::string_view variable_name) const;
+
   // ValueIsKnown()
   //
   // Returns true if the value for the variable with the name `variable_name` is
@@ -99,6 +108,11 @@ class ViewOnlyContext {
   // Returns all variables in the context. Prefer to not use this function. It
   // may be deprecated in the future.
   [[nodiscard]] const VariableSet::Map& ListVariables() const;
+
+  // EvaluateExpression()
+  //
+  // Evaluates the given expression in the current context.
+  [[nodiscard]] int64_t EvaluateExpression(const Expression& expr) const;
 
   // UnsafeGetVariables()
   //

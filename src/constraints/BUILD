@@ -95,6 +95,18 @@ cc_library(
 )
 
 cc_library(
+    name = "integer_constraints",
+    srcs = ["integer_constraints.cc"],
+    hdrs = ["integer_constraints.h"],
+    deps = [
+        ":base_constraints",
+        "//src/contexts:librarian_context",
+        "//src/internal:expressions",
+        "//src/librarian/util:debug_string",
+    ],
+)
+
+cc_library(
     name = "io_constraints",
     srcs = ["io_constraints.cc"],
     hdrs = ["io_constraints.h"],
@@ -183,6 +195,17 @@ cc_test(
         ":graph_constraints",
         "//src/librarian/testing:gtest_helpers",
         "//src/types:graph",
+        "//src/variables:minteger",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "integer_constraints_test",
+    srcs = ["integer_constraints_test.cc"],
+    deps = [
+        ":integer_constraints",
+        "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],

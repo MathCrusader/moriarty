@@ -27,6 +27,7 @@
 
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
+#include "src/constraints/integer_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
@@ -88,6 +89,12 @@ class MInteger : public librarian::MVariable<MInteger> {
   MInteger& AddConstraint(AtLeast constraint);
 
   // ---------------------------------------------------------------------------
+  //  Constrain the mod-value of the integer
+
+  // The integer must satisfy `x % mod == remainder`. E.g., Mod(2, 4)
+  MInteger& AddConstraint(Mod constraint);
+
+  // ---------------------------------------------------------------------------
   //  Pseudo-constraints on size
 
   // The integer should be approximately this size.
@@ -105,14 +112,19 @@ class MInteger : public librarian::MVariable<MInteger> {
     bool BoundsConstrained() const;
     const Range& Bounds() const;
 
+    bool ModConstrained() const;
+    Mod::Equation ModConstraints() const;
+
    private:
     friend class MInteger;
     enum Flags : uint32_t {
       kBounds = 1 << 0,
+      kMod = 1 << 1,
     };
     struct Data {
       std::underlying_type_t<Flags> touched = 0;
       Range bounds;
+      Mod::Equation mod = {Expression("0"), Expression("1")};
     };
     librarian::CowPtr<Data> data_;
     bool IsSet(Flags flag) const;

@@ -24,6 +24,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/constraints/base_constraints.h"
+#include "src/constraints/integer_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
@@ -323,6 +324,20 @@ TEST(MIntegerTest, GetUniqueValueWorksWhenUniqueValueKnown) {
   EXPECT_THAT(GetUniqueValue(MInteger(Between(20, "2 * N")),
                              Context().WithValue<MInteger>("N", 10)),
               Optional(20));
+
+  EXPECT_THAT(GetUniqueValue(MInteger(Between(10, 20), Mod(9, 11))),
+              Optional(20));
+  EXPECT_THAT(GetUniqueValue(MInteger(Between(10, 17), Mod(1, 9))),
+              Optional(10));
+  EXPECT_THAT(GetUniqueValue(MInteger(Between(10, 17), Mod(5, 10))),
+              Optional(15));
+
+  EXPECT_THAT(GetUniqueValue(MInteger(Between(10, 17), Mod("N", 10)),
+                             Context().WithValue<MInteger>("N", 4)),
+              Optional(14));
+  EXPECT_THAT(GetUniqueValue(MInteger(Between(-17, -10), Mod("N", 10)),
+                             Context().WithValue<MInteger>("N", 4)),
+              Optional(-16));
 }
 
 TEST(MIntegerTest, GetUniqueValueWithNestedDependenciesShouldWork) {

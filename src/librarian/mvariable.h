@@ -20,6 +20,7 @@
 
 #include <algorithm>
 #include <concepts>
+#include <cstdint>
 #include <exception>
 #include <format>
 #include <functional>
@@ -265,6 +266,10 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::string_view variable_name,
       Ref<const moriarty_internal::VariableSet> variables,
       Ref<moriarty_internal::ValueSet> values) const override;
+  std::optional<int64_t> UniqueInteger(
+      std::string_view variable_name,
+      Ref<const moriarty_internal::VariableSet> variables,
+      Ref<const moriarty_internal::ValueSet> values) const override;
   void ReadValue(std::string_view variable_name, Ref<InputCursor> input,
                  Ref<const moriarty_internal::VariableSet> variables,
                  Ref<moriarty_internal::ValueSet> values) const override;
@@ -595,6 +600,22 @@ void MVariable<V>::AssignUniqueValue(
 
   std::optional<value_type> value = GetUniqueValue(ctx);
   if (value) ctx.SetValue<V>(ctx.GetVariableName(), *value);
+}
+
+template <typename V>
+std::optional<int64_t> MVariable<V>::UniqueInteger(
+    std::string_view variable_name,
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<const moriarty_internal::ValueSet> values) const {
+  if constexpr (std::same_as<value_type, int64_t>) {
+    AnalysisContext ctx(variable_name, variables, values);
+    if (ctx.ValueIsKnown(ctx.GetVariableName())) {
+      return ctx.GetValue<V>(ctx.GetVariableName());
+    }
+
+    return GetUniqueValue(ctx);
+  }
+  return std::nullopt;
 }
 
 template <typename V>

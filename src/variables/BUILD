@@ -81,6 +81,7 @@ cc_library(
     hdrs = ["minteger.h"],
     deps = [
         "//src/constraints:base_constraints",
+        "//src/constraints:integer_constraints",
         "//src/constraints:numeric_constraints",
         "//src/constraints:size_constraints",
         "//src/contexts:librarian_context",

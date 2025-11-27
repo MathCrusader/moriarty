@@ -19,6 +19,7 @@
 #define MORIARTY_SRC_INTERNAL_ABSTRACT_VARIABLE_H_
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -135,6 +136,16 @@ class AbstractVariable {
   virtual void AssignUniqueValue(std::string_view variable_name,
                                  Ref<const VariableSet> variables,
                                  Ref<ValueSet> values) const = 0;
+
+  // UniqueInteger() [pure virtual]
+  //
+  // Determines if there is exactly one integer value that this variable can be
+  // assigned to. If so, returns that value.
+  //
+  // For all non-integer variables, this will always return std::nullopt.
+  virtual std::optional<int64_t> UniqueInteger(
+      std::string_view variable_name, Ref<const VariableSet> variables,
+      Ref<const ValueSet> values) const = 0;
 
   // ReadValue() [pure virtual]
   //

@@ -30,6 +30,7 @@
 
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
+#include "src/constraints/integer_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
@@ -110,6 +111,13 @@ MInteger& MInteger::AddConstraint(AtLeast constraint) {
       [constraint](MInteger& other) { other.AddConstraint(constraint); }));
 }
 
+MInteger& MInteger::AddConstraint(Mod constraint) {
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kMod;
+  constraints.mod = constraint.GetConstraints();
+  return InternalAddConstraint(std::move(constraint));
+}
+
 MInteger& MInteger::AddConstraint(SizeCategory constraint) {
   size_handler_.Mutable().ConstrainSize(constraint.GetCommonSize());
   return InternalAddConstraint(std::move(constraint));
@@ -134,9 +142,28 @@ std::optional<int64_t> MInteger::GetUniqueValueImpl(
   }
 
   std::optional<Range::ExtremeValues<int64_t>> extremes = GetExtremeValues(ctx);
-  if (!extremes || extremes->min != extremes->max) return std::nullopt;
+  if (!extremes) return std::nullopt;
+  if (extremes->min == extremes->max) return extremes->min;
 
-  return extremes->min;
+  if (core_constraints_.ModConstrained()) {
+    const auto& m = core_constraints_.ModConstraints();
+    int64_t mod = ctx.EvaluateExpression(m.modulus);
+    if (mod <= 0) return std::nullopt;
+
+    if (static_cast<uint64_t>(extremes->max) -
+            static_cast<uint64_t>(extremes->min) <
+        static_cast<uint64_t>(mod)) {
+      // There is at most one value in the range that satisfies the mod
+      // constraint.
+      int64_t remainder = ctx.EvaluateExpression(m.remainder) % mod;
+      int64_t candidate =
+          extremes->min + ((remainder - (extremes->min % mod) + mod) % mod);
+      if (extremes->min <= candidate && candidate <= extremes->max) {
+        return candidate;
+      }
+    }
+  }
+  return std::nullopt;
 }
 
 Range::ExtremeValues<int64_t> MInteger::GetExtremeValues(
@@ -168,6 +195,76 @@ std::optional<Range::ExtremeValues<int64_t>> MInteger::GetExtremeValues(
   }
 }
 
+namespace {
+
+Range::ExtremeValues<int64_t> GetExtremesForSize(
+    librarian::ResolverContext ctx,
+    const Range::ExtremeValues<int64_t>& extremes, CommonSize size,
+    const NumericRangeMConstraint::LookupVariableFn& lookup_variable) {
+  if (size == CommonSize::kAny) return extremes;
+
+  // TODO: Make this work for larger ranges.
+  if ((extremes.min <= std::numeric_limits<int64_t>::min() / 2) &&
+      (extremes.max >= std::numeric_limits<int64_t>::max() / 2)) {
+    return extremes;
+  }
+
+  std::optional<Range::ExtremeValues<int64_t>> rng_extremes =
+      librarian::GetRange(size, extremes.max - extremes.min + 1)
+          .IntegerExtremes(lookup_variable);
+
+  // If a special size has been requested, attempt to generate that. If that
+  // fails, generate the full range.
+  return rng_extremes.value_or(extremes);
+}
+
+int64_t HandleModdedGeneration(
+    librarian::ResolverContext ctx,
+    const Range::ExtremeValues<int64_t>& original_extremes,
+    const Range::ExtremeValues<int64_t>& size_adjusted_extremes,
+    const Mod::Equation& m) {
+  int64_t mod = ctx.EvaluateExpression(m.modulus);
+  if (mod <= 0) {
+    throw GenerationError(
+        ctx.GetVariableName(),
+        std::format("Mod value evaluated to non-negative: {}", mod),
+        RetryPolicy::kAbort);
+  }
+  int64_t remainder = ctx.EvaluateExpression(m.remainder) % mod;
+  if (remainder < 0) remainder += mod;
+
+  auto clamp_extremes =
+      [](Range::ExtremeValues<int64_t> extremes, int64_t mod,
+         int64_t remainder) -> std::optional<Range::ExtremeValues<int64_t>> {
+    int64_t first_candidate =
+        extremes.min + ((remainder - (extremes.min % mod) + mod) % mod);
+    if (first_candidate > extremes.max) {
+      return std::nullopt;
+    }
+    int64_t last_candidate =
+        extremes.max - ((extremes.max % mod - remainder + mod) % mod);
+    return Range::ExtremeValues<int64_t>{first_candidate, last_candidate};
+  };
+
+  auto get_extremes = [&]() {
+    auto size_extremes = clamp_extremes(size_adjusted_extremes, mod, remainder);
+    if (size_extremes) return *size_extremes;
+
+    auto orig_extremes = clamp_extremes(original_extremes, mod, remainder);
+    if (orig_extremes) return *orig_extremes;
+
+    throw GenerationError(ctx.GetVariableName(),
+                          "Cannot find a value with the correct mod value",
+                          RetryPolicy::kAbort);
+  };
+
+  auto [mmin, mmax] = get_extremes();
+  int64_t num_candidates = (mmax - mmin) / mod + 1;
+  return mmin + mod * ctx.RandomInteger(num_candidates);
+}
+
+}  // namespace
+
 int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
   Range::ExtremeValues<int64_t> extremes = GetExtremeValues(ctx);
 
@@ -191,35 +288,19 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
     return ctx.RandomElement(options);
   }
 
-  if (size_handler_->GetConstrainedSize() == CommonSize::kAny)
-    return ctx.RandomInteger(extremes.min, extremes.max);
+  auto size_adjusted_extremes =
+      GetExtremesForSize(ctx, extremes, size_handler_->GetConstrainedSize(),
+                         [&](std::string_view var) -> int64_t {
+                           return ctx.GenerateVariable<MInteger>(var);
+                         });
 
-  // TODO(darcybest): Make this work for larger ranges.
-  if ((extremes.min <= std::numeric_limits<int64_t>::min() / 2) &&
-      (extremes.max >= std::numeric_limits<int64_t>::max() / 2)) {
-    return ctx.RandomInteger(extremes.min, extremes.max);
+  if (core_constraints_.ModConstrained()) {
+    return HandleModdedGeneration(ctx, extremes, size_adjusted_extremes,
+                                  core_constraints_.ModConstraints());
   }
 
-  // Note: `max - min + 1` does not overflow because of the check above.
-  Range range = librarian::GetRange(size_handler_->GetConstrainedSize(),
-                                    extremes.max - extremes.min + 1);
-
-  std::optional<Range::ExtremeValues<int64_t>> rng_extremes =
-      range.IntegerExtremes([&](std::string_view var) -> int64_t {
-        return ctx.GenerateVariable<MInteger>(var);
-      });
-
-  // If a special size has been requested, attempt to generate that. If that
-  // fails, generate the full range.
-  if (rng_extremes) {
-    // Offset the values appropriately. These ranges were supposed to be for
-    // [1, N].
-    rng_extremes->min += extremes.min - 1;
-    rng_extremes->max += extremes.min - 1;
-    return ctx.RandomInteger(rng_extremes->min, rng_extremes->max);
-  }
-
-  return ctx.RandomInteger(extremes.min, extremes.max);
+  return ctx.RandomInteger(size_adjusted_extremes.min,
+                           size_adjusted_extremes.max);
 }
 
 int64_t MInteger::ReadImpl(librarian::ReaderContext ctx) const {
@@ -315,10 +396,18 @@ void MInteger::RangeConstraint::ApplyTo(MInteger& other) const {
   apply_to_fn_(other);
 }
 
-const Range& MInteger::CoreConstraints::Bounds() const { return data_->bounds; }
-
 bool MInteger::CoreConstraints::BoundsConstrained() const {
   return IsSet(Flags::kBounds);
+}
+
+const Range& MInteger::CoreConstraints::Bounds() const { return data_->bounds; }
+
+bool MInteger::CoreConstraints::ModConstrained() const {
+  return IsSet(Flags::kMod);
+}
+
+Mod::Equation MInteger::CoreConstraints::ModConstraints() const {
+  return data_->mod;
 }
 
 bool MInteger::CoreConstraints::IsSet(Flags flag) const {
