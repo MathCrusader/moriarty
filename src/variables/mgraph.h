@@ -832,31 +832,33 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
     if (v > 0) ctx.ReadWhitespace(Whitespace::kSpace);
 
     if constexpr (HasEdgeLabels<MEdgeLabel>) {
+      auto& adj = std::get<LMtxIdx>(adjacency_matrix_);
       auto edge_label = ReadEdgeLabel(ctx);
 
-      if (u > v && std::get<LMtxIdx>(adjacency_matrix_)[v][u] != edge_label) {
+      if (u > v && adj[v][u] != edge_label) {
         ctx.ThrowIOError(
             std::format("Asymmetric adjacency matrix entries at ({}, {}) = "
                         "{} and ({}, {}) = {}",
-                        u, v, edge_label, v, u,
-                        std::get<LMtxIdx>(adjacency_matrix_)[v][u]));
+                        u, v, librarian::DebugString(edge_label), v, u,
+                        librarian::DebugString(adj[v][u])));
       }
-      std::get<LMtxIdx>(adjacency_matrix_)[u][v] = edge_label;
+      adj[u][v] = edge_label;
       if (u <= v) G_.AddEdge(u, v, edge_label);
     } else {
+      auto& adj = std::get<IMtxIdx>(adjacency_matrix_);
       int64_t edge_count = ctx.ReadInteger();
       if (edge_count < 0) {
-        ctx.ThrowIOError(std::format(
-            "Invalid adjacency matrix entry {} at ({}, {})", edge_count, u, v));
+        ctx.ThrowIOError(
+            std::format("Number of edges between {} and {} is negative ({})", u,
+                        v, edge_count));
       }
-      if (u > v && std::get<IMtxIdx>(adjacency_matrix_)[v][u] != edge_count) {
+      if (u > v && adj[v][u] != edge_count) {
         ctx.ThrowIOError(
             std::format("Asymmetric adjacency matrix entries at ({}, {}) = {} "
                         "and ({}, {}) = {}",
-                        u, v, std::get<IMtxIdx>(adjacency_matrix_)[v][u], v, u,
-                        edge_count));
+                        u, v, adj[v][u], v, u, edge_count));
       }
-      std::get<IMtxIdx>(adjacency_matrix_)[u][v] = edge_count;
+      adj[u][v] = edge_count;
       if (u <= v)
         for (int64_t i = 0; i < edge_count; ++i) G_.AddEdge(u, v);
     }

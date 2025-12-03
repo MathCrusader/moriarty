@@ -221,10 +221,16 @@ void ReadLiteral(ImportContext ctx, const StringLiteral& literal) {
 
 void ReadToken(ImportContext ctx, const SimpleIOToken& token,
                ConcreteTestCase& test_case) {
-  if (std::holds_alternative<std::string>(token))
-    ctx.ReadVariableTo(std::get<std::string>(token), test_case);
-  else
-    ReadLiteral(ctx, std::get<StringLiteral>(token));
+  try {
+    if (std::holds_alternative<std::string>(token))
+      ctx.ReadVariableTo(std::get<std::string>(token), test_case);
+    else
+      ReadLiteral(ctx, std::get<StringLiteral>(token));
+  } catch (const IOError& e) {
+    throw;
+  } catch (const GenericMoriartyError& e) {
+    ctx.ThrowIOError(e.what());
+  }
 }
 
 void ReadLine(ImportContext ctx, const SimpleIO::Line& line,
