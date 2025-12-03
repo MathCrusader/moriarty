@@ -21,6 +21,7 @@
 #include <cstdint>
 #include <format>
 #include <istream>
+#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -123,6 +124,48 @@ std::string BasicIStreamContext::ReadToken() {
   GetCursor().AddReadItem(token);
   GetCursor().col_num += token.length();
 
+  return token;
+}
+
+std::optional<std::string> BasicIStreamContext::PeekToken() {
+  std::istream& is = GetIStream();
+  InputCursor& cursor = GetCursor();
+
+  std::streampos original_pos = is.tellg();
+  InputCursor original_cursor = cursor;
+
+  auto restore = [&]() {
+    is.clear();  // Clear EOF flag.
+    is.seekg(original_pos);
+    cursor = original_cursor;
+  };
+
+  if (GetWhitespaceStrictness() == WhitespaceStrictness::kFlexible)
+    StripLeadingWhitespace(is, cursor);
+
+  if (IsEOF(is)) {
+    restore();
+    return std::nullopt;
+  }
+
+  if (GetWhitespaceStrictness() == WhitespaceStrictness::kPrecise) {
+    char c = is.peek();
+    if (!std::isprint(c) || std::isspace(c)) {
+      restore();
+      return std::nullopt;
+    }
+  }
+
+  if (!is) {
+    restore();
+    return std::nullopt;
+  }
+
+  // At this point, we are not at EOF and there is no leading whitespace.
+  std::string token;
+  is >> token;
+
+  restore();
   return token;
 }
 

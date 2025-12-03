@@ -18,6 +18,7 @@
 #define MORIARTY_SRC_CONTEXTS_INTERNAL_BASIC_ISTREAM_CONTEXT_H_
 
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include "src/librarian/io_config.h"
@@ -45,6 +46,16 @@ class BasicIStreamContext {
   //
   // End of file will throw an exception.
   [[nodiscard]] std::string ReadToken();
+
+  // PeekToken()
+  //
+  // Peeks at the next token in the input stream without consuming it. If there
+  // is whitespace before the next token:
+  //  * `WhitespaceStrictness::kFlexible`: leading whitespace will be ignored
+  //  * `WhitespaceStrictness::kPrecise` : returns `std::nullopt`
+  //
+  // Returns `std::nullopt` on end of file.
+  [[nodiscard]] std::optional<std::string> PeekToken();
 
   // ReadEof()
   //

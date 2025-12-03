@@ -475,6 +475,30 @@ TEST(BasicIStreamContextTest, ReadRealWithBadPrecisionShouldThrow) {
   EXPECT_THROW({ (void)c.ReadReal(0); }, std::invalid_argument);
 }
 
+TEST(BasicIStreamContextTest, PeekShouldWork) {
+  {
+    std::stringstream ss("  \n\tHello World");
+    auto cr = InputCursor::CreateFlexibleStrictness(ss);
+    BasicIStreamContext c(cr);
+    EXPECT_EQ(c.PeekToken(), "Hello");
+    EXPECT_EQ(c.ReadToken(), "Hello");
+    EXPECT_EQ(c.PeekToken(), "World");
+    EXPECT_EQ(c.ReadToken(), "World");
+    EXPECT_EQ(c.PeekToken(), std::nullopt);
+  }
+  {
+    std::stringstream ss(" Hello");
+    InputCursor cr(ss);
+    BasicIStreamContext c(cr);
+    EXPECT_EQ(c.PeekToken(), std::nullopt);
+    c.ReadWhitespace(Whitespace::kSpace);
+    EXPECT_EQ(c.PeekToken(), "Hello");
+    EXPECT_EQ(c.ReadToken(), "Hello");
+    EXPECT_EQ(c.PeekToken(), std::nullopt);
+    c.ReadEof();
+  }
+}
+
 }  // namespace
 }  // namespace moriarty_internal
 }  // namespace moriarty

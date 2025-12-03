@@ -833,6 +833,10 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
 
     if constexpr (HasEdgeLabels<MEdgeLabel>) {
       auto& adj = std::get<LMtxIdx>(adjacency_matrix_);
+      if (ctx.PeekToken() == "0") {
+        (void)ctx.ReadToken();  // Consume the "0"
+        continue;
+      }
       auto edge_label = ReadEdgeLabel(ctx);
 
       if (u > v && adj[v][u] != edge_label) {
