@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_GENERATORS_COMBINATORIAL_GENERATOR_H_
-#define MORIARTY_SRC_GENERATORS_COMBINATORIAL_GENERATOR_H_
+#ifndef MORIARTY_GENERATORS_COMBINATORIAL_GENERATOR_H_
+#define MORIARTY_GENERATORS_COMBINATORIAL_GENERATOR_H_
 
 // CombinatorialCoverage is a generator that attempts to smartly combine
 // difficult cases from each variable to make a large set of hard test cases.
@@ -40,4 +40,4 @@ std::vector<TestCase> CombinatorialCoverage(GenerateContext ctx);
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_GENERATORS_COMBINATORIAL_GENERATOR_H_
+#endif  // MORIARTY_GENERATORS_COMBINATORIAL_GENERATOR_H_

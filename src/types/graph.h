@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_VARIABLES_GRAPH_H_
-#define MORIARTY_SRC_VARIABLES_GRAPH_H_
+#ifndef MORIARTY_VARIABLES_GRAPH_H_
+#define MORIARTY_VARIABLES_GRAPH_H_
 
 #include <cstdint>
 #include <format>
@@ -170,4 +170,4 @@ std::string Graph<E, V>::DebugString() const {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_VARIABLES_GRAPH_H_
+#endif  // MORIARTY_VARIABLES_GRAPH_H_

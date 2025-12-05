@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_INTERNAL_VALUE_SET_H_
-#define MORIARTY_SRC_INTERNAL_VALUE_SET_H_
+#ifndef MORIARTY_INTERNAL_VALUE_SET_H_
+#define MORIARTY_INTERNAL_VALUE_SET_H_
 
 #include <any>
 #include <functional>
@@ -112,4 +112,4 @@ void ValueSet::Set(std::string_view variable_name, T::value_type value) {
 }  // namespace moriarty_internal
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_INTERNAL_VALUE_SET_H_
+#endif  // MORIARTY_INTERNAL_VALUE_SET_H_

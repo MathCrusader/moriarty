@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_TEST_CASE_H_
-#define MORIARTY_SRC_TEST_CASE_H_
+#ifndef MORIARTY_TEST_CASE_H_
+#define MORIARTY_TEST_CASE_H_
 
 #include <any>
 #include <string_view>
@@ -184,4 +184,4 @@ void UnsafeSetConcreteTestCaseInternals(ConcreteTestCase& test_case,
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_TEST_CASE_H_
+#endif  // MORIARTY_TEST_CASE_H_

@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_VARIABLES_MARRAY_H_
-#define MORIARTY_SRC_VARIABLES_MARRAY_H_
+#ifndef MORIARTY_VARIABLES_MARRAY_H_
+#define MORIARTY_VARIABLES_MARRAY_H_
 
 #include <algorithm>
 #include <concepts>
@@ -529,4 +529,4 @@ bool MArray<MoriartyElementType>::CoreConstraints::IsSet(Flags flag) const {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_VARIABLES_MARRAY_H_
+#endif  // MORIARTY_VARIABLES_MARRAY_H_

@@ -20,8 +20,8 @@
 // New data types can be added by subject matter experts and used by everyone
 // else.
 
-#ifndef MORIARTY_SRC_MORIARTY_H_
-#define MORIARTY_SRC_MORIARTY_H_
+#ifndef MORIARTY_MORIARTY_H_
+#define MORIARTY_MORIARTY_H_
 
 #include <cstdint>
 #include <optional>
@@ -167,4 +167,4 @@ Moriarty& Moriarty::AddVariable(std::string_view name, T variable) {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_MORIARTY_H_
+#endif  // MORIARTY_MORIARTY_H_

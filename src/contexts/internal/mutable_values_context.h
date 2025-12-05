@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_
-#define MORIARTY_SRC_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_
+#ifndef MORIARTY_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_
+#define MORIARTY_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_
 
 #include <string_view>
 
@@ -58,4 +58,4 @@ void MutableValuesContext::SetValue(std::string_view variable_name,
 }  // namespace moriarty_internal
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_
+#endif  // MORIARTY_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_

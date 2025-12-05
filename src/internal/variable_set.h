@@ -16,8 +16,8 @@
 // The base atom Moriarty is a collection of variables, not just a single
 // variable.
 
-#ifndef MORIARTY_SRC_INTERNAL_VARIABLE_SET_H_
-#define MORIARTY_SRC_INTERNAL_VARIABLE_SET_H_
+#ifndef MORIARTY_INTERNAL_VARIABLE_SET_H_
+#define MORIARTY_INTERNAL_VARIABLE_SET_H_
 
 #include <memory>
 #include <string>
@@ -117,4 +117,4 @@ T VariableSet::GetVariable(std::string_view name) const {
 }  // namespace moriarty_internal
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_INTERNAL_VARIABLE_SET_H_
+#endif  // MORIARTY_INTERNAL_VARIABLE_SET_H_

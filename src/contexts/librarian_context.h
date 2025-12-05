@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_CONTEXTS_LIBRARIAN_CONTEXT_H_
-#define MORIARTY_SRC_CONTEXTS_LIBRARIAN_CONTEXT_H_
+#ifndef MORIARTY_CONTEXTS_LIBRARIAN_CONTEXT_H_
+#define MORIARTY_CONTEXTS_LIBRARIAN_CONTEXT_H_
 
 #include <ostream>
 #include <string_view>
@@ -152,4 +152,4 @@ class ResolverContext
 }  // namespace librarian
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_CONTEXTS_LIBRARIAN_CONTEXT_H_
+#endif  // MORIARTY_CONTEXTS_LIBRARIAN_CONTEXT_H_

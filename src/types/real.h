@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_VARIABLES_REAL_H_
-#define MORIARTY_SRC_VARIABLES_REAL_H_
+#ifndef MORIARTY_VARIABLES_REAL_H_
+#define MORIARTY_VARIABLES_REAL_H_
 
 #include <cmath>
 #include <compare>
@@ -242,4 +242,4 @@ bool operator==(const Real& r, std::unsigned_integral auto d) {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_VARIABLES_REAL_H_
+#endif  // MORIARTY_VARIABLES_REAL_H_

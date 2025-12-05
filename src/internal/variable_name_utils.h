@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_INTERNAL_VARIABLE_NAME_UTILS_H_
-#define MORIARTY_SRC_INTERNAL_VARIABLE_NAME_UTILS_H_
+#ifndef MORIARTY_INTERNAL_VARIABLE_NAME_UTILS_H_
+#define MORIARTY_INTERNAL_VARIABLE_NAME_UTILS_H_
 
 #include <optional>
 #include <string>
@@ -85,4 +85,4 @@ std::optional<std::string_view> SubvariableName(std::string_view variable_name);
 }  // namespace moriarty_internal
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_INTERNAL_VARIABLE_NAME_UTILS_H_
+#endif  // MORIARTY_INTERNAL_VARIABLE_NAME_UTILS_H_

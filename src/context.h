@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_CONTEXT_H_
-#define MORIARTY_SRC_CONTEXT_H_
+#ifndef MORIARTY_CONTEXT_H_
+#define MORIARTY_CONTEXT_H_
 
 #include <iostream>
 #include <optional>
@@ -160,4 +160,4 @@ class ConstraintContext : public moriarty_internal::NameContext,
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_CONTEXT_H_
+#endif  // MORIARTY_CONTEXT_H_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_VARIABLES_MGRAPH_H_
-#define MORIARTY_SRC_VARIABLES_MGRAPH_H_
+#ifndef MORIARTY_VARIABLES_MGRAPH_H_
+#define MORIARTY_VARIABLES_MGRAPH_H_
 
 #include <cstdint>
 #include <format>
@@ -965,4 +965,4 @@ bool MGraph<MEdgeLabel, MNodeLabel>::CoreConstraints::IsSet(Flags flag) const {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_VARIABLES_MGRAPH_H_
+#endif  // MORIARTY_VARIABLES_MGRAPH_H_

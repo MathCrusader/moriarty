@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_INTERNAL_COMBINATORIAL_COVERAGE_TEST_UTIL_H_
-#define MORIARTY_SRC_INTERNAL_COMBINATORIAL_COVERAGE_TEST_UTIL_H_
+#ifndef MORIARTY_INTERNAL_COMBINATORIAL_COVERAGE_TEST_UTIL_H_
+#define MORIARTY_INTERNAL_COMBINATORIAL_COVERAGE_TEST_UTIL_H_
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -65,4 +65,4 @@ MATCHER_P(IsStrength2CoveringArray, dimension_sizes,
 }
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_INTERNAL_COMBINATORIAL_COVERAGE_TEST_UTIL_H_
+#endif  // MORIARTY_INTERNAL_COMBINATORIAL_COVERAGE_TEST_UTIL_H_

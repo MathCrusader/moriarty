@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_CONSTRAINTS_INTEGER_CONSTRAINTS_H_
-#define MORIARTY_SRC_CONSTRAINTS_INTEGER_CONSTRAINTS_H_
+#ifndef MORIARTY_CONSTRAINTS_INTEGER_CONSTRAINTS_H_
+#define MORIARTY_CONSTRAINTS_INTEGER_CONSTRAINTS_H_
 
 #include <cstdint>
 #include <string>
@@ -70,4 +70,4 @@ class Mod : public MConstraint {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_CONSTRAINTS_INTEGER_CONSTRAINTS_H_
+#endif  // MORIARTY_CONSTRAINTS_INTEGER_CONSTRAINTS_H_

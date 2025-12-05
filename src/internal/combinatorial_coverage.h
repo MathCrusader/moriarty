@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_INTERNAL_COMBINATORIAL_COVERAGE_H_
-#define MORIARTY_SRC_INTERNAL_COMBINATORIAL_COVERAGE_H_
+#ifndef MORIARTY_INTERNAL_COMBINATORIAL_COVERAGE_H_
+#define MORIARTY_INTERNAL_COMBINATORIAL_COVERAGE_H_
 
 #include <functional>
 #include <vector>
@@ -65,4 +65,4 @@ std::vector<CoveringArrayTestCase> GenerateCoveringArray(
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_INTERNAL_COMBINATORIAL_COVERAGE_H_
+#endif  // MORIARTY_INTERNAL_COMBINATORIAL_COVERAGE_H_

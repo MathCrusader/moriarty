@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_CONTEXTS_INTERNAL_BASIC_RANDOM_CONTEXT_H_
-#define MORIARTY_SRC_CONTEXTS_INTERNAL_BASIC_RANDOM_CONTEXT_H_
+#ifndef MORIARTY_CONTEXTS_INTERNAL_BASIC_RANDOM_CONTEXT_H_
+#define MORIARTY_CONTEXTS_INTERNAL_BASIC_RANDOM_CONTEXT_H_
 
 #include <cstdint>
 #include <format>
@@ -327,4 +327,4 @@ std::vector<T> BasicRandomContext::RandomComposition(T n, int k,
 }  // namespace moriarty_internal
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_CONTEXTS_INTERNAL_BASIC_RANDOM_CONTEXT_H_
+#endif  // MORIARTY_CONTEXTS_INTERNAL_BASIC_RANDOM_CONTEXT_H_

@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_SIMPLE_IO_H_
-#define MORIARTY_SRC_SIMPLE_IO_H_
+#ifndef MORIARTY_SIMPLE_IO_H_
+#define MORIARTY_SIMPLE_IO_H_
 
 #include <concepts>
 #include <optional>
@@ -212,4 +212,4 @@ SimpleIO& SimpleIO::AddFooterLine(Tokens&&... token) {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_SIMPLE_IO_H_
+#endif  // MORIARTY_SIMPLE_IO_H_

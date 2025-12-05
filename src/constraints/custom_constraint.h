@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_VARIABLES_CUSTOM_CONSTRAINT_H_
-#define MORIARTY_SRC_VARIABLES_CUSTOM_CONSTRAINT_H_
+#ifndef MORIARTY_VARIABLES_CUSTOM_CONSTRAINT_H_
+#define MORIARTY_VARIABLES_CUSTOM_CONSTRAINT_H_
 
 #include <format>
 #include <functional>
@@ -117,4 +117,4 @@ std::string CustomConstraint<T>::ToString() const {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_VARIABLES_CUSTOM_CONSTRAINT_H_
+#endif  // MORIARTY_VARIABLES_CUSTOM_CONSTRAINT_H_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_LIBRARIAN_CONSTRAINT_HANDLER_H_
-#define MORIARTY_SRC_LIBRARIAN_CONSTRAINT_HANDLER_H_
+#ifndef MORIARTY_LIBRARIAN_CONSTRAINT_HANDLER_H_
+#define MORIARTY_LIBRARIAN_CONSTRAINT_HANDLER_H_
 
 #include <string>
 #include <utility>
@@ -153,4 +153,4 @@ void ConstraintHandler<VariableType, ValueType>::ApplyAllTo(
 }  // namespace librarian
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_LIBRARIAN_CONSTRAINT_HANDLER_H_
+#endif  // MORIARTY_LIBRARIAN_CONSTRAINT_HANDLER_H_

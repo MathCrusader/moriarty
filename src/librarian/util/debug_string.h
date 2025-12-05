@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_LIBRARIAN_DEBUG_STRING_H_
-#define MORIARTY_SRC_LIBRARIAN_DEBUG_STRING_H_
+#ifndef MORIARTY_LIBRARIAN_DEBUG_STRING_H_
+#define MORIARTY_LIBRARIAN_DEBUG_STRING_H_
 
 #include <concepts>
 #include <string>
@@ -132,4 +132,4 @@ std::string DebugString(const T& x, int max_len, bool include_backticks) {
 }  // namespace librarian
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_LIBRARIAN_DEBUG_STRING_H_
+#endif  // MORIARTY_LIBRARIAN_DEBUG_STRING_H_

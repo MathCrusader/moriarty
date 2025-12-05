@@ -24,8 +24,8 @@
 //
 // The ranges for each of these sizes may overlap with one another.
 
-#ifndef MORIARTY_SRC_LIBRARIAN_SIZE_PROPERTY_H_
-#define MORIARTY_SRC_LIBRARIAN_SIZE_PROPERTY_H_
+#ifndef MORIARTY_LIBRARIAN_SIZE_PROPERTY_H_
+#define MORIARTY_LIBRARIAN_SIZE_PROPERTY_H_
 
 #include <cstdint>
 #include <optional>
@@ -164,4 +164,4 @@ class SizeHandler {
 }  // namespace librarian
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_LIBRARIAN_SIZE_PROPERTY_H_
+#endif  // MORIARTY_LIBRARIAN_SIZE_PROPERTY_H_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
-#define MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
+#ifndef MORIARTY_LIBRARIAN_IO_CONFIG_H_
+#define MORIARTY_LIBRARIAN_IO_CONFIG_H_
 
 #include <deque>
 #include <istream>
@@ -60,4 +60,4 @@ struct InputCursor {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_LIBRARIAN_IO_CONFIG_H_
+#endif  // MORIARTY_LIBRARIAN_IO_CONFIG_H_

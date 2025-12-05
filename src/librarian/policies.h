@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_LIBRARIAN_POLICIES_H_
-#define MORIARTY_SRC_LIBRARIAN_POLICIES_H_
+#ifndef MORIARTY_LIBRARIAN_POLICIES_H_
+#define MORIARTY_LIBRARIAN_POLICIES_H_
 
 namespace moriarty {
 
@@ -47,4 +47,4 @@ enum class RetryPolicy { kRetry, kAbort };
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_LIBRARIAN_POLICIES_H_
+#endif  // MORIARTY_LIBRARIAN_POLICIES_H_

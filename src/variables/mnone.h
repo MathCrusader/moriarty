@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_VARIABLES_MNONE_H_
-#define MORIARTY_SRC_VARIABLES_MNONE_H_
+#ifndef MORIARTY_VARIABLES_MNONE_H_
+#define MORIARTY_VARIABLES_MNONE_H_
 
 #include <string>
 
@@ -68,4 +68,4 @@ class MNone : public librarian::MVariable<MNone> {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_VARIABLES_MNONE_H_
+#endif  // MORIARTY_VARIABLES_MNONE_H_

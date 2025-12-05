@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_LIBRARIAN_MVARIABLE_H_
-#define MORIARTY_SRC_LIBRARIAN_MVARIABLE_H_
+#ifndef MORIARTY_LIBRARIAN_MVARIABLE_H_
+#define MORIARTY_LIBRARIAN_MVARIABLE_H_
 
 #include <algorithm>
 #include <concepts>
@@ -708,4 +708,4 @@ void MVariable<V>::CustomConstraintWrapper::ApplyTo(V& other) const {
 }  // namespace librarian
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_LIBRARIAN_MVARIABLE_H_
+#endif  // MORIARTY_LIBRARIAN_MVARIABLE_H_

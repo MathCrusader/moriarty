@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_INTERNAL_GENERATION_BOOTSTRAP_H_
-#define MORIARTY_SRC_INTERNAL_GENERATION_BOOTSTRAP_H_
+#ifndef MORIARTY_INTERNAL_GENERATION_BOOTSTRAP_H_
+#define MORIARTY_INTERNAL_GENERATION_BOOTSTRAP_H_
 
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
@@ -49,4 +49,4 @@ ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
 }  // namespace moriarty_internal
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_INTERNAL_GENERATION_BOOTSTRAP_H_
+#endif  // MORIARTY_INTERNAL_GENERATION_BOOTSTRAP_H_

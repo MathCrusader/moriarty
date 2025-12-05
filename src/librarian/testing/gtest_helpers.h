@@ -91,8 +91,8 @@
 //    * ThrowsValueNotFound(variable_name)
 //    * ThrowsMVariableTypeMismatch(type_from, type_to)
 
-#ifndef MORIARTY_SRC_LIBRARIAN_TEST_UTILS_H_
-#define MORIARTY_SRC_LIBRARIAN_TEST_UTILS_H_
+#ifndef MORIARTY_LIBRARIAN_TEST_UTILS_H_
+#define MORIARTY_LIBRARIAN_TEST_UTILS_H_
 
 #include <algorithm>
 #include <format>
@@ -888,4 +888,4 @@ MATCHER_P2(
 
 }  // namespace moriarty_testing
 
-#endif  // MORIARTY_SRC_LIBRARIAN_TEST_UTILS_H_
+#endif  // MORIARTY_LIBRARIAN_TEST_UTILS_H_

@@ -1,6 +1,6 @@
 
-#ifndef MORIARTY_SRC_UTIL_STR_HASH_H_
-#define MORIARTY_SRC_UTIL_STR_HASH_H_
+#ifndef MORIARTY_UTIL_STR_HASH_H_
+#define MORIARTY_UTIL_STR_HASH_H_
 
 #include <cstddef>
 #include <string>
@@ -25,4 +25,4 @@ struct StrHash {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_UTIL_STR_HASH_H_
+#endif  // MORIARTY_UTIL_STR_HASH_H_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_LIBRARIAN_CONVERSIONS_H_
-#define MORIARTY_SRC_LIBRARIAN_CONVERSIONS_H_
+#ifndef MORIARTY_LIBRARIAN_CONVERSIONS_H_
+#define MORIARTY_LIBRARIAN_CONVERSIONS_H_
 
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/errors.h"
@@ -50,4 +50,4 @@ const Type& ConvertTo(const moriarty_internal::AbstractVariable& var) {
 }  // namespace librarian
 }  // namespace moriarty
 
-#endif  // MORIARTY_SRC_LIBRARIAN_CONVERSIONS_H_
+#endif  // MORIARTY_LIBRARIAN_CONVERSIONS_H_

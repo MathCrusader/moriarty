@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_SRC_TYPES_NO_TYPE_H_
-#define MORIARTY_SRC_TYPES_NO_TYPE_H_
+#ifndef MORIARTY_TYPES_NO_TYPE_H_
+#define MORIARTY_TYPES_NO_TYPE_H_
 
 #include <compare>
 #include <functional>
@@ -38,4 +38,4 @@ struct hash<moriarty::NoType> {
 };
 }  // namespace std
 
-#endif  // MORIARTY_SRC_TYPES_NO_TYPE_H_
+#endif  // MORIARTY_TYPES_NO_TYPE_H_
