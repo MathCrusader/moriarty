@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_LIBRARIAN_LIB_REF_H_
-#define MORIARTY_LIBRARIAN_LIB_REF_H_
+#ifndef MORIARTY_LIBRARIAN_UTIL_REF_H_
+#define MORIARTY_LIBRARIAN_UTIL_REF_H_
 
 #include <functional>
 
@@ -31,4 +31,4 @@ using Ref = std::reference_wrapper<T>;
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_LIBRARIAN_LIB_REF_H_
+#endif  // MORIARTY_LIBRARIAN_UTIL_REF_H_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_VARIABLES_CONSTRAINTS_GRAPH_CONSTRAINTS_H_
-#define MORIARTY_VARIABLES_CONSTRAINTS_GRAPH_CONSTRAINTS_H_
+#ifndef MORIARTY_CONSTRAINTS_GRAPH_CONSTRAINTS_H_
+#define MORIARTY_CONSTRAINTS_GRAPH_CONSTRAINTS_H_
 
 #include <set>
 #include <utility>
@@ -419,4 +419,4 @@ ConstraintViolation SimpleGraph::CheckValue(
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_VARIABLES_CONSTRAINTS_GRAPH_CONSTRAINTS_H_
+#endif  // MORIARTY_CONSTRAINTS_GRAPH_CONSTRAINTS_H_

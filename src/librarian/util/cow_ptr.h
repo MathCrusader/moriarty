@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_LIBRARIAN_LIB_COW_PTR_H_
-#define MORIARTY_LIBRARIAN_LIB_COW_PTR_H_
+#ifndef MORIARTY_LIBRARIAN_UTIL_COW_PTR_H_
+#define MORIARTY_LIBRARIAN_UTIL_COW_PTR_H_
 
 #include <memory>
 
@@ -89,4 +89,4 @@ void CowPtr<T>::Detach() {
 }  // namespace librarian
 }  // namespace moriarty
 
-#endif  // MORIARTY_LIBRARIAN_LIB_COW_PTR_H_
+#endif  // MORIARTY_LIBRARIAN_UTIL_COW_PTR_H_

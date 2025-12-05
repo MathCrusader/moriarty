@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_TESTING_MTEST_TYPE_H_
-#define MORIARTY_TESTING_MTEST_TYPE_H_
+#ifndef MORIARTY_LIBRARIAN_TESTING_MTEST_TYPE_H_
+#define MORIARTY_LIBRARIAN_TESTING_MTEST_TYPE_H_
 
 #include <stdint.h>
 
@@ -158,4 +158,4 @@ class MTestType : public moriarty::librarian::MVariable<MTestType> {
 
 }  // namespace moriarty_testing
 
-#endif  // MORIARTY_TESTING_MTEST_TYPE_H_
+#endif  // MORIARTY_LIBRARIAN_TESTING_MTEST_TYPE_H_

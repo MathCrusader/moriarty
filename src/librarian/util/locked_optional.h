@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_LIBRARIAN_LOCKED_OPTIONAL_H_
-#define MORIARTY_LIBRARIAN_LOCKED_OPTIONAL_H_
+#ifndef MORIARTY_LIBRARIAN_UTIL_LOCKED_OPTIONAL_H_
+#define MORIARTY_LIBRARIAN_UTIL_LOCKED_OPTIONAL_H_
 
 #include <optional>
 
@@ -55,4 +55,4 @@ class LockedOptional {
 }  // namespace librarian
 }  // namespace moriarty
 
-#endif  // MORIARTY_LIBRARIAN_LOCKED_OPTIONAL_H_
+#endif  // MORIARTY_LIBRARIAN_UTIL_LOCKED_OPTIONAL_H_

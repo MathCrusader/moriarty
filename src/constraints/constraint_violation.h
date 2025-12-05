@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_VARIABLES_CONSTRAINTS_CONSTRAINT_VIOLATION_H_
-#define MORIARTY_VARIABLES_CONSTRAINTS_CONSTRAINT_VIOLATION_H_
+#ifndef MORIARTY_CONSTRAINTS_CONSTRAINT_VIOLATION_H_
+#define MORIARTY_CONSTRAINTS_CONSTRAINT_VIOLATION_H_
 
 #include <optional>
 #include <ostream>
@@ -55,4 +55,4 @@ class ConstraintViolation {
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_VARIABLES_CONSTRAINTS_CONSTRAINT_VIOLATION_H_
+#endif  // MORIARTY_CONSTRAINTS_CONSTRAINT_VIOLATION_H_
