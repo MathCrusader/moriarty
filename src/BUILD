@@ -133,7 +133,6 @@ cc_test(
     deps = [
         ":test_case",
         "//src/internal:generation_bootstrap",
-        "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian/testing:gtest_helpers",

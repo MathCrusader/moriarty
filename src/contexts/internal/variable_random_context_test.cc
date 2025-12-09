@@ -16,7 +16,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/internal/random_engine.h"
 #include "src/librarian/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"
 
@@ -30,8 +29,8 @@ using testing::Le;
 
 TEST(VariableRandomContextTest, RandomUnnamedWithEmptyContextShouldWork) {
   Context context;
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  VariableRandomContext ctx(context.Variables(), context.Values(), engine);
+  VariableRandomContext ctx(context.Variables(), context.Values(),
+                            context.RandomEngine());
   EXPECT_THAT(ctx.Random(MInteger(Between(1, 10))), AllOf(Ge(1), Le(10)));
 }
 
@@ -39,16 +38,16 @@ TEST(VariableRandomContextTest, RandomUnnamedWithContextShouldWork) {
   Context context =
       Context().WithVariable("N", MInteger()).WithValue<MInteger>("N", 1123);
 
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  VariableRandomContext ctx(context.Variables(), context.Values(), engine);
+  VariableRandomContext ctx(context.Variables(), context.Values(),
+                            context.RandomEngine());
   EXPECT_THAT(ctx.Random(MInteger(Between("N", "N+1"))),
               AllOf(Ge(1123), Le(1124)));
 }
 
 TEST(VariableRandomContextTest, RandomNamedVariableWithoutContextShouldWork) {
   Context context = Context().WithVariable("N", MInteger(Between(1, 10)));
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  VariableRandomContext ctx(context.Variables(), context.Values(), engine);
+  VariableRandomContext ctx(context.Variables(), context.Values(),
+                            context.RandomEngine());
   EXPECT_THAT(ctx.RandomValue<MInteger>("N"), AllOf(Ge(1), Le(10)));
 }
 
@@ -58,8 +57,8 @@ TEST(VariableRandomContextTest, RandomNamedVariableWithContextShouldWork) {
                         .WithVariable("X", MInteger(Between("N", "N+1")))
                         .WithValue<MInteger>("N", 1123);
 
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  VariableRandomContext ctx(context.Variables(), context.Values(), engine);
+  VariableRandomContext ctx(context.Variables(), context.Values(),
+                            context.RandomEngine());
   EXPECT_THAT(ctx.RandomValue<MInteger>("X"), AllOf(Ge(1123), Le(1124)));
   EXPECT_EQ(ctx.RandomValue<MInteger>("N"), 1123);
 }
@@ -71,8 +70,8 @@ TEST(VariableRandomContextTest,
                         .WithVariable("X", MInteger(Between("N", "N+100000")))
                         .WithValue<MInteger>("N", 1123);
 
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  VariableRandomContext ctx(context.Variables(), context.Values(), engine);
+  VariableRandomContext ctx(context.Variables(), context.Values(),
+                            context.RandomEngine());
   // Very unlikely to have a false positive...
   EXPECT_EQ(ctx.RandomValue<MInteger>("X", MInteger(AtMost("N"))), 1123);
 }
@@ -81,8 +80,8 @@ TEST(VariableRandomContextTest, MinAndMaxValueShouldWork) {
   {  // No value set
     Context context =
         Context().WithVariable("N", MInteger(Between(1, 1'000'000)));
-    RandomEngine engine({1, 2, 3}, "v0.1");
-    VariableRandomContext ctx(context.Variables(), context.Values(), engine);
+    VariableRandomContext ctx(context.Variables(), context.Values(),
+                              context.RandomEngine());
     EXPECT_EQ(ctx.MinValue<MInteger>("N"), 1);
     EXPECT_EQ(ctx.MaxValue<MInteger>("N"), 1'000'000);
   }
@@ -90,8 +89,8 @@ TEST(VariableRandomContextTest, MinAndMaxValueShouldWork) {
     Context context = Context()
                           .WithVariable("N", MInteger(Between(1, 1'000'000)))
                           .WithValue<MInteger>("N", 1123);
-    RandomEngine engine({1, 2, 3}, "v0.1");
-    VariableRandomContext ctx(context.Variables(), context.Values(), engine);
+    VariableRandomContext ctx(context.Variables(), context.Values(),
+                              context.RandomEngine());
     EXPECT_EQ(ctx.MinValue<MInteger>("N"), 1123);
     EXPECT_EQ(ctx.MaxValue<MInteger>("N"), 1123);
   }

@@ -130,11 +130,10 @@ cc_test(
     size = "small",
     srcs = ["mvariable_test.cc"],
     deps = [
-        ":errors",
         ":mvariable",
+        "//src/contexts:librarian_context",
         "//src/internal:abstract_variable",
         "//src/internal:generation_handler",
-        "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian/testing:gtest_helpers",

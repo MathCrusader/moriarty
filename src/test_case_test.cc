@@ -23,7 +23,6 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/generation_bootstrap.h"
-#include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/testing/gtest_helpers.h"
@@ -34,8 +33,8 @@ namespace moriarty {
 namespace {
 
 using ::moriarty::moriarty_internal::GenerateAllValues;
-using ::moriarty::moriarty_internal::RandomEngine;
 using ::moriarty::moriarty_internal::ValueSet;
+using ::moriarty_testing::Context;
 using ::moriarty_testing::LastDigit;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::NumberOfDigits;
@@ -57,8 +56,8 @@ T::value_type GetValue(const TestCase& test_case, std::string_view name) {
 
 ValueSet AssignAllValues(const TestCase& test_case) {
   auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
-  RandomEngine rng({1, 2, 3}, "v0.1");
-  return GenerateAllValues(variables, values, {rng});
+  Context ctx;
+  return GenerateAllValues(variables, values, {ctx.RandomEngine()});
 }
 
 TEST(TestCaseTest, ConstrainVariableAndGetVariableWorkInGeneralCase) {
@@ -124,7 +123,6 @@ TEST(TestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
     T.ConstrainVariable(second.first, second.second);
     T.ConstrainVariable(third.first, third.second);
 
-    RandomEngine rng({1, 2, 3}, "v0.1");
     ValueSet value_set = AssignAllValues(T);
     return std::tuple<TestType, TestType, TestType>({
         value_set.Get<MTestType>("A"),

@@ -28,7 +28,6 @@
 #include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_handler.h"
-#include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/testing/gtest_helpers.h"
@@ -243,15 +242,15 @@ TEST(MVariableTest, SeparateCallsToGetShouldUseTheSameDependentVariableValue) {
                         .WithVariable("N", MInteger(Between(1, 1000000000)));
 
   moriarty_internal::GenerationHandler generation_handler;
-  moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
   AbstractVariable* var_A = context.Variables().GetAnonymousVariable("A");
-  var_A->AssignValue("A", context.Variables(), context.Values(), engine,
+  var_A->AssignValue("A", context.Variables(), context.Values(),
+                     context.RandomEngine(),
                      generation_handler);  // By assigning A, we assigned N.
 
   AbstractVariable* var_B = context.Variables().GetAnonymousVariable("B");
   var_B->AssignValue(
-      "B", context.Variables(), context.Values(), engine,
+      "B", context.Variables(), context.Values(), context.RandomEngine(),
       generation_handler);  // Should use the already generated N.
   int N = context.Values().Get<MInteger>("N");
 
@@ -531,17 +530,17 @@ TEST(MVariableTest, AssignValueShouldNotOverwriteAlreadySetValue) {
                         .WithVariable("A", MInteger(Between(1, "N")));
 
   moriarty_internal::GenerationHandler generation_handler;
-  moriarty_internal::RandomEngine engine({1, 2, 3}, "v0.1");
 
   AbstractVariable* var_A = context.Variables().GetAnonymousVariable("A");
-  var_A->AssignValue("A", context.Variables(), context.Values(), engine,
+  var_A->AssignValue("A", context.Variables(), context.Values(),
+                     context.RandomEngine(),
                      generation_handler);  // By assigning A, we assigned N.
   int N = context.Values().Get<MInteger>("N");
 
   // Attempt to re-assign N.
   AbstractVariable* var_N = context.Variables().GetAnonymousVariable("N");
-  var_N->AssignValue("N", context.Variables(), context.Values(), engine,
-                     generation_handler);
+  var_N->AssignValue("N", context.Variables(), context.Values(),
+                     context.RandomEngine(), generation_handler);
 
   // Should not have changed.
   EXPECT_EQ(context.Values().Get<MInteger>("N"), N);

@@ -21,7 +21,6 @@
 #include "gtest/gtest.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/internal/generation_handler.h"
-#include "src/internal/random_engine.h"
 #include "src/librarian/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"
 
@@ -38,21 +37,19 @@ using ::testing::Throws;
 TEST(ResolveValuesContextTest, GenerateVariableInHappyPathShouldWork) {
   {  // No extra constraints
     Context context = Context().WithVariable("X", MInteger(Between(1, 1000)));
-    RandomEngine engine({1, 2, 3}, "v0.1");
     GenerationHandler handler;
 
-    ResolveValuesContext ctx(context.Variables(), context.Values(), engine,
-                             handler);
+    ResolveValuesContext ctx(context.Variables(), context.Values(),
+                             context.RandomEngine(), handler);
     int64_t X = ctx.GenerateVariable<MInteger>("X");
     EXPECT_THAT(X, AllOf(Ge(1), Le(1000)));
     EXPECT_EQ(context.Values().Get<MInteger>("X"), X);
   }
   {  // Extra constraints
     Context context = Context().WithVariable("X", MInteger(Between(1, 1000)));
-    RandomEngine engine({1, 2, 3}, "v0.1");
     GenerationHandler handler;
-    ResolveValuesContext ctx(context.Variables(), context.Values(), engine,
-                             handler);
+    ResolveValuesContext ctx(context.Variables(), context.Values(),
+                             context.RandomEngine(), handler);
     int64_t X = ctx.GenerateVariable<MInteger>("X", MInteger(Exactly(42)));
     EXPECT_EQ(X, 42);
     EXPECT_EQ(context.Values().Get<MInteger>("X"), X);
@@ -62,11 +59,10 @@ TEST(ResolveValuesContextTest, GenerateVariableInHappyPathShouldWork) {
     Context context = Context()
                           .WithVariable("X", MInteger(Between(1, 1000)))
                           .WithValue<MInteger>("X", 42);
-    RandomEngine engine({1, 2, 3}, "v0.1");
     GenerationHandler handler;
 
-    ResolveValuesContext ctx(context.Variables(), context.Values(), engine,
-                             handler);
+    ResolveValuesContext ctx(context.Variables(), context.Values(),
+                             context.RandomEngine(), handler);
     EXPECT_EQ(ctx.GenerateVariable<MInteger>("X"), 42);
     EXPECT_EQ(context.Values().Get<MInteger>("X"), 42);
   }
@@ -74,11 +70,10 @@ TEST(ResolveValuesContextTest, GenerateVariableInHappyPathShouldWork) {
     Context context = Context()
                           .WithVariable("X", MInteger(Between(1, 1000)))
                           .WithValue<MInteger>("X", 42);
-    RandomEngine engine({1, 2, 3}, "v0.1");
     GenerationHandler handler;
 
-    ResolveValuesContext ctx(context.Variables(), context.Values(), engine,
-                             handler);
+    ResolveValuesContext ctx(context.Variables(), context.Values(),
+                             context.RandomEngine(), handler);
     int64_t X = ctx.GenerateVariable<MInteger>("X", MInteger(Between(40, 45)));
     EXPECT_EQ(X, 42);
     EXPECT_EQ(context.Values().Get<MInteger>("X"), 42);
@@ -90,11 +85,10 @@ TEST(ResolveValuesContextTest,
   Context context = Context()
                         .WithVariable("X", MInteger(Between(1, 1000)))
                         .WithValue<MInteger>("X", 42);
-  RandomEngine engine({1, 2, 3}, "v0.1");
   GenerationHandler handler;
 
-  ResolveValuesContext ctx(context.Variables(), context.Values(), engine,
-                           handler);
+  ResolveValuesContext ctx(context.Variables(), context.Values(),
+                           context.RandomEngine(), handler);
   EXPECT_THAT(
       [&] { (void)ctx.GenerateVariable<MInteger>("X", MInteger(Exactly(10))); },
       Throws<std::runtime_error>());
@@ -105,11 +99,10 @@ TEST(ResolveValuesContextTest,
   Context context = Context()
                         .WithVariable("X", MInteger(Between("N-1", "N")))
                         .WithVariable("N", MInteger(Between(42, 42)));
-  RandomEngine engine({1, 2, 3}, "v0.1");
   GenerationHandler handler;
 
-  ResolveValuesContext ctx(context.Variables(), context.Values(), engine,
-                           handler);
+  ResolveValuesContext ctx(context.Variables(), context.Values(),
+                           context.RandomEngine(), handler);
   int64_t X = ctx.GenerateVariable<MInteger>("X");
   EXPECT_THAT(X, AllOf(Ge(41), Le(42)));
   EXPECT_EQ(context.Values().Get<MInteger>("X"), X);
@@ -121,11 +114,10 @@ TEST(ResolveValuesContextTest, AssignVariableShouldSetTheValueInContext) {
   Context context = Context()
                         .WithVariable("X", MInteger(Between("N-1", "N")))
                         .WithVariable("N", MInteger(Between(42, 42)));
-  RandomEngine engine({1, 2, 3}, "v0.1");
   GenerationHandler handler;
 
-  ResolveValuesContext ctx(context.Variables(), context.Values(), engine,
-                           handler);
+  ResolveValuesContext ctx(context.Variables(), context.Values(),
+                           context.RandomEngine(), handler);
   ctx.AssignVariable("X");
   EXPECT_THAT(context.Values().Get<MInteger>("X"), AllOf(Ge(41), Le(42)));
   EXPECT_EQ(context.Values().Get<MInteger>("N"), 42);  // Sets another variable

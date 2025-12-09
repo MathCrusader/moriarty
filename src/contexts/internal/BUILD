@@ -178,7 +178,7 @@ cc_test(
     srcs = ["basic_random_context_test.cc"],
     deps = [
         ":basic_random_context",
-        "//src/internal:random_engine",
+        "//src/librarian/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],
 )
@@ -207,11 +207,7 @@ cc_test(
     srcs = ["resolve_values_context_test.cc"],
     deps = [
         ":resolve_values_context",
-        "//src/internal:abstract_variable",
         "//src/internal:generation_handler",
-        "//src/internal:random_engine",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
@@ -248,9 +244,6 @@ cc_test(
     srcs = ["variable_random_context_test.cc"],
     deps = [
         ":variable_random_context",
-        "//src/internal:random_engine",
-        "//src/internal:value_set",
-        "//src/internal:variable_set",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",

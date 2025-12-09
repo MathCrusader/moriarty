@@ -161,6 +161,8 @@ class Context {
     return *this;
   }
 
+  moriarty::moriarty_internal::RandomEngine& RandomEngine() { return rng_; }
+
   const moriarty::moriarty_internal::VariableSet& Variables() const& {
     return variables_;
   }
@@ -180,6 +182,7 @@ class Context {
   }
 
  private:
+  moriarty::moriarty_internal::RandomEngine rng_{{1, 2, 3}, "v0.1"};
   moriarty::moriarty_internal::VariableSet variables_;
   moriarty::moriarty_internal::ValueSet values_;
   moriarty::WhitespaceStrictness whitespace_strictness_ =

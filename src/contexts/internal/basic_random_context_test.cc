@@ -23,12 +23,13 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/internal/random_engine.h"
+#include "src/librarian/testing/gtest_helpers.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
+using ::moriarty_testing::Context;
 using ::testing::AllOf;
 using ::testing::AnyOfArray;
 using ::testing::Each;
@@ -89,8 +90,8 @@ MATCHER_P(IsApproximatelyUniformlyRandom, expected_number_of_buckets, "") {
 //  RandomInteger()
 
 TEST(BasicRandomContextTest, RandomIntegerInTypicalCase) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_EQ(ctx.RandomInteger(314, 314), 314);
   EXPECT_EQ(ctx.RandomInteger(1), 0);
@@ -100,8 +101,8 @@ TEST(BasicRandomContextTest, RandomIntegerInTypicalCase) {
 }
 
 TEST(BasicRandomContextTest, RandomIntegerForInvalidRangesShouldFail) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THROW({ (void)ctx.RandomInteger(5, 3); }, std::invalid_argument);
   EXPECT_THROW({ (void)ctx.RandomInteger(0); }, std::invalid_argument);
@@ -110,8 +111,8 @@ TEST(BasicRandomContextTest, RandomIntegerForInvalidRangesShouldFail) {
 
 TEST(BasicRandomContextTest,
      RandomIntegerGivesApproximatelyTheRightDistribution) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   {  // Double argument:
     std::vector<int> samples;
@@ -131,38 +132,38 @@ TEST(BasicRandomContextTest,
 //  RandomReal()
 
 TEST(BasicRandomContextTest, RandomRealWithRealArgumentsInTypicalCase) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.RandomReal(Real(3, 2), Real(7, 2)), AllOf(Ge(1.5), Le(3.5)));
   EXPECT_EQ(ctx.RandomReal(Real(5), Real(5)), 5.0);
 }
 
 TEST(BasicRandomContextTest, RandomRealWithSingleRealArgumentInTypicalCase) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.RandomReal(Real(5, 2)), AllOf(Ge(0.0), Lt(2.5)));
 }
 
 TEST(BasicRandomContextTest, RandomRealWithDoubleArgumentsInTypicalCase) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.RandomReal(1.5, 3.5), AllOf(Ge(1.5), Le(3.5)));
   EXPECT_EQ(ctx.RandomReal(2.7, 2.7), 2.7);
 }
 
 TEST(BasicRandomContextTest, RandomRealWithSingleDoubleArgumentInTypicalCase) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.RandomReal(2.5), AllOf(Ge(0.0), Lt(2.5)));
 }
 
 TEST(BasicRandomContextTest, RandomRealForInvalidRangesShouldFail) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   // Test Real arguments
   EXPECT_THROW(
@@ -176,8 +177,8 @@ TEST(BasicRandomContextTest, RandomRealForInvalidRangesShouldFail) {
 }
 
 TEST(BasicRandomContextTest, RandomRealGivesApproximatelyUniformDistribution) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   {  // Test Real arguments [0.5, 5.3]
     std::vector<int> buckets(4, 0);
@@ -215,8 +216,8 @@ TEST(BasicRandomContextTest, RandomRealGivesApproximatelyUniformDistribution) {
 }
 
 TEST(BasicRandomContextTest, RandomRealSingleArgumentIsInCorrectRange) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   // Test many samples to ensure they're all in [0, n)
   for (int i = 0; i < 1000; i++) {
@@ -230,8 +231,8 @@ TEST(BasicRandomContextTest, RandomRealSingleArgumentIsInCorrectRange) {
 //  Shuffle()
 
 TEST(BasicRandomContextTest, ShufflingAnEmptyArrayIsSuccessful) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<int> empty;
   ctx.Shuffle(empty);
@@ -239,8 +240,8 @@ TEST(BasicRandomContextTest, ShufflingAnEmptyArrayIsSuccessful) {
 }
 
 TEST(BasicRandomContextTest, ShufflePermutesElements) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   // Shuffle integers
   std::vector<int> int_vals = {1, 22, 333, 4444, 55555};
@@ -254,8 +255,8 @@ TEST(BasicRandomContextTest, ShufflePermutesElements) {
 }
 
 TEST(BasicRandomContextTest, ShuffleGivesApproximatelyTheRightDistribution) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<std::vector<int>> samples;
   std::vector<int> v = {1, 2, 3, 4};
@@ -271,8 +272,8 @@ TEST(BasicRandomContextTest, ShuffleGivesApproximatelyTheRightDistribution) {
 
 TEST(BasicRandomContextTest,
      RandomElementGivesApproximatelyTheRightDistribution) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<int> samples;
   std::vector<int> v = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
@@ -282,16 +283,16 @@ TEST(BasicRandomContextTest,
 }
 
 TEST(BasicRandomContextTest, RandomElementGivesSomeValueFromArray) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<int> v = {123456, 456789, 789123};
   EXPECT_THAT(ctx.RandomElement(v), AnyOfArray(v));
 }
 
 TEST(BasicRandomContextTest, RandomElementFromAnEmptyContainerShouldFail) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<int> empty;
   EXPECT_THROW({ (void)ctx.RandomElement(empty); }, std::invalid_argument);
@@ -302,8 +303,8 @@ TEST(BasicRandomContextTest, RandomElementFromAnEmptyContainerShouldFail) {
 
 TEST(BasicRandomContextTest,
      RandomElementsWithReplacementGivesApproximatelyTheRightDistribution) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<std::vector<int>> samples;
   std::vector<int> v = {1, 2, 3, 4, 5};
@@ -315,8 +316,8 @@ TEST(BasicRandomContextTest,
 
 TEST(BasicRandomContextTest,
      RandomElementsWithoutReplacementGivesApproximatelyTheRightDistribution) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<std::vector<int>> samples;
   std::vector<int> v = {1, 2, 3, 4, 5};
@@ -328,8 +329,8 @@ TEST(BasicRandomContextTest,
 }
 
 TEST(BasicRandomContextTest, RandomElementsGivesSomeValuesFromArray) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<std::string> v = {"123456", "456789", "789123"};
   EXPECT_THAT(ctx.RandomElementsWithReplacement(v, 5), Each(AnyOfArray(v)));
@@ -337,8 +338,8 @@ TEST(BasicRandomContextTest, RandomElementsGivesSomeValuesFromArray) {
 }
 
 TEST(BasicRandomContextTest, RandomElementsObeysDistinctOnlyPolicy) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<int> v = {11, 22, 33, 44};
 
@@ -352,8 +353,8 @@ TEST(BasicRandomContextTest, RandomElementsObeysDistinctOnlyPolicy) {
 
 TEST(BasicRandomContextTest,
      RandomElementsWithReplacementCanContainDuplicates) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<int> v = {11, 22, 33, 44};
 
@@ -363,8 +364,8 @@ TEST(BasicRandomContextTest,
 }
 
 TEST(BasicRandomContextTest, RandomElementsWithNegativeInputShouldFail) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<int> v = {11, 22, 33, 44};
 
@@ -377,8 +378,8 @@ TEST(BasicRandomContextTest, RandomElementsWithNegativeInputShouldFail) {
 }
 
 TEST(BasicRandomContextTest, RandomElementsFromAnEmptyContainerShouldFail) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<std::string> empty;
   EXPECT_THROW(
@@ -391,8 +392,8 @@ TEST(BasicRandomContextTest, RandomElementsFromAnEmptyContainerShouldFail) {
 
 TEST(BasicRandomContextTest,
      RandomElementsFromAnEmptyContainerShouldReturnNothing) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<std::string> empty;
   EXPECT_THAT(ctx.RandomElementsWithReplacement(empty, 0), IsEmpty());
@@ -400,8 +401,8 @@ TEST(BasicRandomContextTest,
 }
 
 TEST(BasicRandomContextTest, RandomElementsAskingForTooManyDistinctShouldFail) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<std::string> v = {"123456", "456789", "789123"};
   EXPECT_THROW(
@@ -413,22 +414,22 @@ TEST(BasicRandomContextTest, RandomElementsAskingForTooManyDistinctShouldFail) {
 //  RandomPermutation()
 
 TEST(BasicRandomContextTest, RandomPermutationOfNegativeSizeShouldFail) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THROW({ (void)ctx.RandomPermutation(-1); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, RandomPermutationOfSizeZeroShouldBeEmpty) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.RandomPermutation(0), IsEmpty());
 }
 
 TEST(BasicRandomContextTest, RandomPermutationGeneratesAPermutation) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.RandomPermutation(5), UnorderedElementsAre(0, 1, 2, 3, 4));
   EXPECT_THAT(ctx.RandomPermutation(5, 10),
@@ -436,8 +437,8 @@ TEST(BasicRandomContextTest, RandomPermutationGeneratesAPermutation) {
 }
 
 TEST(BasicRandomContextTest, RandomPermutationGivesPermutation) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.RandomPermutation(0), IsEmpty());
   EXPECT_THAT(ctx.RandomPermutation(1), UnorderedElementsAre(0));
@@ -447,8 +448,8 @@ TEST(BasicRandomContextTest, RandomPermutationGivesPermutation) {
 
 TEST(BasicRandomContextTest,
      RandomPermutationGivesApproximatelyCorrectDistribution) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<std::vector<int>> samples;
   for (int i = 0; i < 6000; i++) samples.push_back(ctx.RandomPermutation(3));
@@ -461,8 +462,8 @@ TEST(BasicRandomContextTest,
 
 TEST(BasicRandomContextTest,
      DistinctIntegersGivesApproximatelyTheRightDistribution) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<std::vector<int>> samples;
   for (int i = 0; i < 6000; i++) samples.push_back(ctx.DistinctIntegers(8, 2));
@@ -471,31 +472,31 @@ TEST(BasicRandomContextTest,
 }
 
 TEST(BasicRandomContextTest, DistinctIntegersWithNegativeNOrKShouldFail) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THROW({ (void)ctx.DistinctIntegers(-1, 5); }, std::invalid_argument);
   EXPECT_THROW({ (void)ctx.DistinctIntegers(10, -5); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, DistinctIntegersWithKGreaterThanNShouldFail) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THROW({ (void)ctx.DistinctIntegers(5, 10); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, DistinctIntegersWithZeroIsFine) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.DistinctIntegers(0, 0), IsEmpty());
   EXPECT_THAT(ctx.DistinctIntegers(5, 0), IsEmpty());
 }
 
 TEST(BasicRandomContextTest, DistinctIntegersDoesNotGiveDuplicates) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.DistinctIntegers(10, 10),
               UnorderedElementsAre(0, 1, 2, 3, 4, 5, 6, 7, 8, 9));
@@ -505,8 +506,8 @@ TEST(BasicRandomContextTest, DistinctIntegersDoesNotGiveDuplicates) {
 }
 
 TEST(BasicRandomContextTest, DistinctIntegersOffsetWorksAppropriately) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.DistinctIntegers(10000, 100, 1234),
               Each(AllOf(Ge(1234), Le(10000 + 1234))));
@@ -517,8 +518,8 @@ TEST(BasicRandomContextTest, DistinctIntegersOffsetWorksAppropriately) {
 
 TEST(BasicRandomContextTest,
      RandomCompositionGivesApproximatelyCorrectDistribution) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   std::vector<std::vector<int>> samples;
   for (int i = 0; i < 6000; i++) samples.push_back(ctx.RandomComposition(5, 3));
@@ -528,8 +529,8 @@ TEST(BasicRandomContextTest,
 }
 
 TEST(BasicRandomContextTest, RandomCompositionWithNegativeArgumentShouldFail) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THROW({ (void)ctx.RandomComposition(-1, 5); }, std::invalid_argument);
   EXPECT_THROW({ (void)ctx.RandomComposition(10, -5); }, std::invalid_argument);
@@ -538,53 +539,53 @@ TEST(BasicRandomContextTest, RandomCompositionWithNegativeArgumentShouldFail) {
 }
 
 TEST(BasicRandomContextTest, RandomCompositionWithZeroBucketsAndZeroSumIsFine) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.RandomComposition(0, 0, 0), IsEmpty());
 }
 
 TEST(BasicRandomContextTest,
      RandomCompositionWithZeroBucketsAndNonZeroSumFails) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THROW({ (void)ctx.RandomComposition(5, 0); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, RandomCompositionWithTooLargeMinBucketShouldFail) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THROW(
       { (void)ctx.RandomComposition(4, 2, 3); }, std::invalid_argument);
 }
 
 TEST(BasicRandomContextTest, RandomCompositionWithExactMinBucketIsFine) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.RandomComposition(10, 5, 2), ElementsAre(2, 2, 2, 2, 2));
 }
 
 TEST(BasicRandomContextTest, RandomCompositionRespectsMinBucketSize) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.RandomComposition(40, 6, 2), Each(Ge(2)));
 }
 
 TEST(BasicRandomContextTest, RandomCompositionReturnsTheRightNumberOfBuckets) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   EXPECT_THAT(ctx.RandomComposition(40, 6, 2), SizeIs(6));
   EXPECT_THAT(ctx.RandomComposition(400, 3, 0), SizeIs(3));
 }
 
 TEST(BasicRandomContextTest, RandomCompositionHasCorrectTotalSum) {
-  RandomEngine engine({1, 2, 3}, "v0.1");
-  BasicRandomContext ctx(engine);
+  Context test_ctx;
+  BasicRandomContext ctx(test_ctx.RandomEngine());
 
   auto sum = [](const std::vector<int>& v) {
     return std::accumulate(v.begin(), v.end(), 0);
