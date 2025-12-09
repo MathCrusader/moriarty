@@ -24,6 +24,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/constraints/container_constraints.h"
+#include "src/constraints/numeric_constraints.h"
 #include "src/context.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
@@ -291,15 +292,15 @@ TEST(MoriartyTest, GeneralConstraintsSetValueAreConsideredInGenerators) {
         {});
   });
 
-  EXPECT_THROW(
-      {
+  EXPECT_THAT(
+      [&] {
         M.GenerateTestCases(
             [](GenerateContext ctx) -> std::vector<TestCase> {
               return {TestCase().SetValue<MInteger>("N", 1)};
             },
-            {});
+            GenerateOptions{});
       },
-      std::runtime_error);
+      ThrowsMessage<GenerationError>(HasSubstr("N")));
 }
 
 TEST(MoriartyTest, GeneralConstraintsAreConsideredInGenerators) {
@@ -319,6 +320,31 @@ TEST(MoriartyTest, GeneralConstraintsAreConsideredInGenerators) {
 
   // // General says 3 <= R <= 50. Generator says 1 <= R <= 10.
   EXPECT_THAT(result, AllOf(SizeIs(1), Each(AllOf(Ge(3), Le(10)))));
+}
+
+TEST(MoriartyTest, GenerateOnlyGeneratesTheSubsetOfVariablesRequested) {
+  Moriarty M;
+  M.SetSeed("abcde0123456789");
+  M.AddVariable("N", MInteger(Exactly(5)))
+      .AddVariable("M", MInteger(Between(1, 10)));
+
+  EXPECT_NO_THROW({
+    M.GenerateTestCases(
+        [](GenerateContext ctx) -> std::vector<TestCase> {
+          return {TestCase().SetValue<MInteger>("N", 5)};
+        },
+        {.variables_to_generate = {{"N"}}});
+  });
+
+  EXPECT_THAT(
+      [&] {
+        M.GenerateTestCases(
+            [](GenerateContext ctx) -> std::vector<TestCase> {
+              return {TestCase().SetValue<MInteger>("N", 1)};
+            },
+            GenerateOptions{});
+      },
+      ThrowsMessage<GenerationError>(HasSubstr("N")));
 }
 
 TEST(MoriartyTest, ImportAndExportShouldWorkTypicalCase) {

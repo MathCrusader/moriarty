@@ -27,6 +27,7 @@
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"
 
@@ -159,7 +160,7 @@ TEST(GenerationBootstrapTest,
 
   EXPECT_THAT(
       [&] { GenerateAllValues(context.Variables(), context.Values(), {rng}); },
-      ThrowsMessage<std::runtime_error>(HasSubstr("A")));
+      ThrowsMessage<GenerationError>(HasSubstr("A")));
 }
 
 TEST(GenerationBootstrapTest,
@@ -228,6 +229,24 @@ TEST(GenerationBootstrapTest,
 
   ASSERT_THAT(results, SizeIs(5040));
   EXPECT_THAT(results, Each(Eq(results[0])));
+}
+
+TEST(GenerationBootstrapTest, GenerateSubsetOfValuesShouldWork) {
+  RandomEngine rng({1, 2, 3}, "");
+  Context context = Context()
+                        .WithVariable("A", MInteger(Between("B", "3 * B")))
+                        .WithVariable("B", MInteger(AtLeast("2 * C")))
+                        .WithVariable("C", MInteger(Exactly("N")))
+                        .WithValue<MInteger>("N", 53);
+
+  std::array<std::string, 1> vars_to_generate = {"B"};
+  ValueSet values = GenerateAllValues(
+      context.Variables(), context.Values(),
+      {.random_engine = rng, .variables_to_generate = vars_to_generate});
+
+  EXPECT_FALSE(values.Contains("A"));
+  EXPECT_TRUE(values.Contains("B"));
+  EXPECT_TRUE(values.Contains("C"));
 }
 
 }  // namespace

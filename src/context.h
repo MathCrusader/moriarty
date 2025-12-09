@@ -72,6 +72,10 @@ struct GenerateOptions {
   // The seed to be passed to this generator. This will be combined with
   // Moriarty's general seed. If empty, a seed will be auto-generated.
   std::optional<std::string> seed;
+
+  // Only auto-generate values for these variables (and any variables they
+  // depend on). If empty, all variables will be generated.
+  std::vector<std::string> variables_to_generate;
 };
 
 // -----------------------------------------------------------------------------

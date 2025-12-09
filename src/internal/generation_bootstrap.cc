@@ -19,6 +19,7 @@
 #include <functional>
 #include <queue>
 #include <ranges>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -30,6 +31,7 @@
 #include "src/internal/generation_handler.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/errors.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -103,6 +105,12 @@ ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
   GenerationHandler generation_handler;
   std::vector<std::string> order = GetGenerationOrder(variables);
 
+  auto should_generate = [&](std::string_view name) {
+    return options.variables_to_generate.empty() ||
+           std::ranges::find(options.variables_to_generate, name) !=
+               options.variables_to_generate.end();
+  };
+
   // First do a quick assignment of all known values. We process these in
   // reverse order so that everyone that a variable depends on is assigned
   // before them.
@@ -113,6 +121,7 @@ ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
 
   // Now do a deep generation.
   for (std::string_view name : order) {
+    if (!should_generate(name)) continue;
     AbstractVariable* var = variables.GetAnonymousVariable(name);
     var->AssignValue(name, variables, known_values, options.random_engine,
                      generation_handler);
@@ -122,11 +131,10 @@ ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
   // AssignUniqueValues(). Let's check for those now...
   // TODO(darcybest): Determine if there's a better way of doing this...
   for (std::string_view name : order) {
+    if (!should_generate(name)) continue;
     AbstractVariable* var = variables.GetAnonymousVariable(name);
     if (auto reason = var->CheckValue(name, variables, known_values)) {
-      throw std::runtime_error(
-          std::format("Variable {} does not satisfy its constraints: {}", name,
-                      reason.Reason()));
+      throw GenerationError(name, reason.Reason(), RetryPolicy::kAbort);
     }
   }
 

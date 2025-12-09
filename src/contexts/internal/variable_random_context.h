@@ -107,8 +107,9 @@ T::value_type VariableRandomContext::Random(T m) {
   VariableSet variables_copy = variables_.get();
   variables_copy.SetVariable(name, m);
 
-  ValueSet values = GenerateAllValues(std::move(variables_copy), values_.get(),
-                                      {.random_engine = engine_.get()});
+  ValueSet values = GenerateAllValues(
+      std::move(variables_copy), values_.get(),
+      {.random_engine = engine_.get(), .variables_to_generate = {{name}}});
   return values.Get<T>(name);
 }
 

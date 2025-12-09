@@ -133,7 +133,8 @@ void Moriarty::GenerateTestCases(GenerateFn fn, GenerateOptions options) {
           UnsafeExtractTestCaseInternals(test_case);
 
       assigned_test_cases_.push_back(moriarty_internal::GenerateAllValues(
-          variables_, extra_constraints, values, {rng}));
+          variables_, extra_constraints, values,
+          {rng, options.variables_to_generate}));
     }
   }
 }

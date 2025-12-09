@@ -16,6 +16,9 @@
 #ifndef MORIARTY_INTERNAL_GENERATION_BOOTSTRAP_H_
 #define MORIARTY_INTERNAL_GENERATION_BOOTSTRAP_H_
 
+#include <span>
+#include <string>
+
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -24,13 +27,21 @@ namespace moriarty {
 namespace moriarty_internal {
 
 struct GenerationOptions {
+  // The random engine to use for generation.
   RandomEngine& random_engine;
+
+  // Only auto-generate values for these variables (and any variables they
+  // depend on). If empty, all variables will be generated.
+  std::span<const std::string> variables_to_generate;
 };
 
 // GenerateAllValues()
 //
 // Generates and returns a value for each variable in `base_variables`, using
 // `extra_constraints` and `known_values`.
+//
+// All values in `known_values` will appear in the output (even if there is no
+// corresponding variable in `variables`).
 // TODO: Add tests
 ValueSet GenerateAllValues(VariableSet base_variables,
                            const VariableSet& extra_constraints,
