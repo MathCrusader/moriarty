@@ -36,6 +36,31 @@ struct MVariableValueTypeTrait<MReal> {
 };
 }  // namespace librarian
 
+// MRealFormat
+//
+// How to format an MReal when reading/writing.
+class MRealFormat {
+ public:
+  // Sets the number of digits after the decimal place.
+  //
+  // When printing: prints this many digits.
+  //
+  // When reading: if PrecisionStrictness is kPrecise, then Read ensures
+  // there are exactly `num_digits` digits after the decimal point. Otherwise,
+  // this value is ignored.
+  //
+  // Default: 6
+  MRealFormat& Digits(int num_digits);
+  // Returns the number of digits to use when printing this value.
+  int GetDigits() const;
+
+  // Take any non-defaults in `other` and apply them to this format.
+  void Merge(const MRealFormat& other);
+
+ private:
+  int digits_ = 6;
+};
+
 // MReal
 //
 // Describes constraints placed on a real number.
@@ -94,25 +119,13 @@ class MReal : public librarian::MVariable<MReal> {
   // ---------------------------------------------------------------------------
   //  Input/Output style
 
-  // SetIODigits()
-  //
-  // Default: 6. Must be between 1 and 20 (inclusive)
-  //
-  // For Print(): Sets the number of digits to use when printing this value.
-  //
-  // For Read(): If PrecisionStrictness is kPrecise, then Read ensures
-  // there are exactly `num_digits_` digits after the decimal point. Otherwise,
-  // it will accept any number of digits after the decimal point.
-  MReal& SetIODigits(int num_digits);
-
-  struct IODigits {
-    int num_digits;
-  };
-  // The number of digits. This is an IO constraint, so is not treated the same
-  // way as other constraints. See SetIODigits().
-  MReal& AddConstraint(IODigits constraint) {
-    return SetIODigits(constraint.num_digits);
-  }
+  // Change the I/O format of the number.
+  // Note: I/O constraints behave as overrides instead of merges.
+  MReal& AddConstraint(MRealFormat constraint);
+  // Returns the I/O format for this number.
+  [[nodiscard]] MRealFormat& Format();
+  // Returns the I/O format for this number.
+  [[nodiscard]] MRealFormat Format() const;
 
   [[nodiscard]] std::string Typename() const override { return "MReal"; }
 
@@ -146,7 +159,7 @@ class MReal : public librarian::MVariable<MReal> {
   CoreConstraints core_constraints_;
   librarian::CowPtr<librarian::OneOfNumeric> numeric_one_of_;
   librarian::CowPtr<librarian::SizeHandler> size_handler_;
-  int io_digits_ = 6;
+  MRealFormat format_;
 
   class RangeConstraint {
    public:

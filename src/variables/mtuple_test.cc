@@ -22,9 +22,9 @@
 #include "gtest/gtest.h"
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/container_constraints.h"
-#include "src/constraints/io_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/librarian/errors.h"
+#include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"
@@ -44,7 +44,6 @@ using ::testing::AnyOf;
 using ::testing::FieldsAre;
 using ::testing::Ge;
 using ::testing::Le;
-using ::testing::Throws;
 
 TEST(MTupleTest, TypenameIsCorrect) {
   EXPECT_EQ(MTuple(MInteger()).Typename(), "MTuple<MInteger>");
@@ -64,10 +63,12 @@ TEST(MTupleTest, PrintShouldSucceed) {
 }
 
 TEST(MTupleTest, PrintWithProperSeparatorShouldSucceed) {
-  EXPECT_EQ(Print(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
+  EXPECT_EQ(Print(MTuple<MInteger, MInteger, MInteger>(
+                      MTupleFormat().NewlineSeparated()),
                   {1, 22, 333}),
             "1\n22\n333");
-  EXPECT_EQ(Print(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
+  EXPECT_EQ(Print(MTuple<MInteger, MString, MInteger>(
+                      MTupleFormat().WithSeparator(Whitespace::kTab)),
                   {1, "twotwo", 333}),
             "1\ttwotwo\t333");
 }
@@ -80,10 +81,12 @@ TEST(MTupleTest, TypicalReadCaseWorks) {
 }
 
 TEST(MTupleTest, ReadWithProperSeparatorShouldSucceed) {
-  EXPECT_EQ(Read(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
+  EXPECT_EQ(Read(MTuple<MInteger, MInteger, MInteger>(
+                     MTupleFormat().NewlineSeparated()),
                  "1\n22\n333"),
             std::make_tuple(1, 22, 333));
-  EXPECT_EQ(Read(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
+  EXPECT_EQ(Read(MTuple<MInteger, MString, MInteger>(
+                     MTupleFormat().WithSeparator(Whitespace::kTab)),
                  "1\ttwotwo\t333"),
             std::make_tuple(1, "twotwo", 333));
 }
@@ -91,14 +94,14 @@ TEST(MTupleTest, ReadWithProperSeparatorShouldSucceed) {
 TEST(MTupleTest, ReadWithIncorrectSeparatorShouldFail) {
   EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(), "1\t22\t333"),
                IOError);
-  EXPECT_THROW(
-      (void)Read(MTuple<MInteger, MInteger, MInteger>(IOSeparator::Newline()),
-                 "1 22 333"),
-      IOError);
-  EXPECT_THROW(
-      (void)Read(MTuple<MInteger, MString, MInteger>(IOSeparator::Tab()),
-                 "1\ttwotwo 333"),
-      IOError);
+  EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(
+                              MTupleFormat().NewlineSeparated()),
+                          "1 22 333"),
+               IOError);
+  EXPECT_THROW((void)Read(MTuple<MInteger, MString, MInteger>(
+                              MTupleFormat().WithSeparator(Whitespace::kTab)),
+                          "1\ttwotwo 333"),
+               IOError);
 }
 
 TEST(MTupleTest, ReadingTheWrongTypeShouldFail) {
@@ -232,22 +235,6 @@ TEST(MTupleTest, IsSatisfiedWithWorksForInvalid) {
     EXPECT_THAT(constraints, IsNotSatisfiedWith(Type{105, {0, 0}},
                                                 "between"));  // second.both
   }
-}
-
-TEST(MTupleTest, MultipleIOSeparatorsShouldThrow) {
-  // These lambdas are out-of-line because EXPECT_THAT macro doesn't like the
-  // <,>.
-  auto a = []() {
-    return MTuple<MInteger, MInteger>(IOSeparator::Newline(),
-                                      IOSeparator::Tab());
-  };
-  auto b = []() {
-    return MTuple<MInteger, MInteger>(IOSeparator::Newline(),
-                                      IOSeparator::Space());
-  };
-
-  EXPECT_THAT(a, Throws<ImpossibleToSatisfy>());
-  EXPECT_THAT(b, Throws<ImpossibleToSatisfy>());
 }
 
 TEST(MTupleTest, ExactlyAndOneOfShouldGenerateAndValidate) {

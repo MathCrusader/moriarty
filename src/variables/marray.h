@@ -31,7 +31,6 @@
 #include "absl/container/flat_hash_set.h"
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/container_constraints.h"
-#include "src/constraints/io_constraints.h"
 #include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
@@ -39,7 +38,6 @@
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/policies.h"
-#include "src/librarian/util/locked_optional.h"
 #include "src/librarian/util/ref.h"
 #include "src/variables/minteger.h"
 
@@ -53,6 +51,30 @@ struct MVariableValueTypeTrait<MArray<MElementType>> {
   using type = std::vector<typename MElementType::value_type>;
 };
 }  // namespace librarian
+
+// MArrayFormat
+//
+// How to format an MArray when reading/writing.
+class MArrayFormat {
+ public:
+  // Sets the whitespace to be used between elements of the array.
+  //
+  // Default: kSpace
+  MArrayFormat& WithSeparator(Whitespace separator);
+  // Returns if the format is an edge list. See `EdgeList()`.
+  Whitespace GetSeparator() const;
+
+  // Sets the array to be space-separated.
+  MArrayFormat& SpaceSeparated();
+  // Sets the array to be newline-separated.
+  MArrayFormat& NewlineSeparated();
+
+  // Take any non-defaults in `other` and apply them to this format.
+  void Merge(const MArrayFormat& other);
+
+ private:
+  Whitespace separator_ = Whitespace::kSpace;
+};
 
 // MArray<>
 //
@@ -117,8 +139,12 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
   // ---------------------------------------------------------------------------
   //  Constrain the array's I/O
 
-  // The array's elements are separated by this whitespace (default = space)
-  MArray& AddConstraint(IOSeparator constraint);
+  // Change the I/O format of the array.
+  MArray& AddConstraint(MArrayFormat constraint);
+  // Returns the I/O format for this array.
+  [[nodiscard]] MArrayFormat& Format();
+  // Returns the I/O format for this array.
+  [[nodiscard]] MArrayFormat Format() const;
 
   // Typename()
   //
@@ -198,8 +224,7 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
 
  private:
   CoreConstraints core_constraints_;
-  librarian::LockedOptional<Whitespace> separator_ =
-      librarian::LockedOptional<Whitespace>{Whitespace::kSpace};
+  MArrayFormat format_;
 
   // GenerateNDistinctImpl()
   //
@@ -323,12 +348,19 @@ MArray<T>& MArray<T>::AddConstraint(Sorted<T, Comp, Proj> constraint) {
 }
 
 template <typename T>
-MArray<T>& MArray<T>::AddConstraint(IOSeparator constraint) {
-  if (!separator_.Set(constraint.GetSeparator())) {
-    throw ImpossibleToSatisfy(
-        "Attempting to set multiple I/O separators for the same MArray.");
-  }
-  return this->InternalAddConstraint(std::move(constraint));
+MArray<T>& MArray<T>::AddConstraint(MArrayFormat constraint) {
+  Format().Merge(std::move(constraint));
+  return *this;
+}
+
+template <typename T>
+MArrayFormat& MArray<T>::Format() {
+  return format_;
+}
+
+template <typename T>
+MArrayFormat MArray<T>::Format() const {
+  return format_;
 }
 
 template <typename T>
@@ -438,7 +470,7 @@ template <typename MoriartyElementType>
 void MArray<MoriartyElementType>::PrintImpl(
     librarian::PrinterContext ctx, const vector_value_type& value) const {
   for (int i = 0; i < value.size(); i++) {
-    if (i > 0) ctx.PrintWhitespace(separator_.Get());
+    if (i > 0) ctx.PrintWhitespace(Format().GetSeparator());
     core_constraints_.Elements().Print(ctx, value[i]);
   }
 }
@@ -454,7 +486,7 @@ MArray<MoriartyElementType>::ReadImpl(librarian::ReaderContext ctx) const {
   vector_value_type res;
   res.reserve(*length);
   for (int i = 0; i < *length; i++) {
-    if (i > 0) ctx.ReadWhitespace(separator_.Get());
+    if (i > 0) ctx.ReadWhitespace(Format().GetSeparator());
     res.push_back(core_constraints_.Elements().Read(ctx));
   }
   return res;

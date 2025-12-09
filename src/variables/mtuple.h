@@ -29,13 +29,11 @@
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
 #include "src/constraints/container_constraints.h"
-#include "src/constraints/io_constraints.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
-#include "src/librarian/util/locked_optional.h"
 #include "src/librarian/util/ref.h"
 
 namespace moriarty {
@@ -48,6 +46,30 @@ struct MVariableValueTypeTrait<MTuple<MElementTypes...>> {
   using type = std::tuple<typename MElementTypes::value_type...>;
 };
 }  // namespace librarian
+
+// MTupleFormat
+//
+// How to format an MArray when reading/writing.
+class MTupleFormat {
+ public:
+  // Sets the whitespace to be used between elements of the array.
+  //
+  // Default: kSpace
+  MTupleFormat& WithSeparator(Whitespace separator);
+  // Returns if the format is an edge list. See `EdgeList()`.
+  Whitespace GetSeparator() const;
+
+  // Sets the array to be space-separated.
+  MTupleFormat& SpaceSeparated();
+  // Sets the array to be newline-separated.
+  MTupleFormat& NewlineSeparated();
+
+  // Take any non-defaults in `other` and apply them to this format.
+  void Merge(const MTupleFormat& other);
+
+ private:
+  Whitespace separator_ = Whitespace::kSpace;
+};
 
 // MTuple<>
 //
@@ -101,7 +123,9 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
   MTuple& AddConstraint(Exactly<tuple_value_type> constraint);
   MTuple& AddConstraint(OneOf<tuple_value_type> constraint);
 
-  MTuple& AddConstraint(IOSeparator constraint);
+  MTuple& AddConstraint(MTupleFormat constraint);
+  MTupleFormat& Format();
+  MTupleFormat Format() const;
 
   template <size_t I, typename MElementType>
   MTuple& AddConstraint(Element<I, MElementType> constraint);
@@ -155,8 +179,7 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
 
  private:
   CoreConstraints core_constraints_;
-  librarian::LockedOptional<Whitespace> separator_ =
-      librarian::LockedOptional<Whitespace>{Whitespace::kSpace};
+  MTupleFormat format_;
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
@@ -248,12 +271,19 @@ MTuple<T...>& MTuple<T...>::AddConstraint(OneOf<tuple_value_type> constraint) {
 }
 
 template <typename... T>
-MTuple<T...>& MTuple<T...>::AddConstraint(IOSeparator constraint) {
-  if (!separator_.Set(constraint.GetSeparator())) {
-    throw ImpossibleToSatisfy(
-        "Attempting to set multiple I/O separators for the same MTuple.");
-  }
-  return this->InternalAddConstraint(std::move(constraint));
+MTuple<T...>& MTuple<T...>::AddConstraint(MTupleFormat constraint) {
+  Format().Merge(constraint);
+  return *this;
+}
+
+template <typename... T>
+MTupleFormat& MTuple<T...>::Format() {
+  return format_;
+}
+
+template <typename... T>
+MTupleFormat MTuple<T...>::Format() const {
+  return format_;
 }
 
 template <typename... T>
@@ -293,7 +323,7 @@ template <typename... T>
 void MTuple<T...>::PrintImpl(librarian::PrinterContext ctx,
                              const tuple_value_type& value) const {
   auto print_one = [&]<std::size_t I>() {
-    if (I > 0) ctx.PrintWhitespace(separator_.Get());
+    if (I > 0) ctx.PrintWhitespace(Format().GetSeparator());
     std::get<I>(core_constraints_.Elements()).Print(ctx, std::get<I>(value));
   };
 
@@ -308,7 +338,7 @@ MTuple<T...>::tuple_value_type MTuple<T...>::ReadImpl(
   MTuple<T...>::Reader reader = MTuple<T...>::Reader(ctx, sizeof...(T), *this);
 
   for (size_t i = 0; i < sizeof...(T); ++i) {
-    if (i > 0) ctx.ReadWhitespace(separator_.Get());
+    if (i > 0) ctx.ReadWhitespace(Format().GetSeparator());
     reader.ReadNext(ctx);
   }
   return std::move(reader).Finalize();

@@ -133,11 +133,11 @@ MReal& MReal::AddConstraint(AtLeast constraint) {
       [constraint](MReal& other) { other.AddConstraint(constraint); }));
 }
 
-MReal& MReal::SetIODigits(int num_digits) {
-  if (!(1 <= num_digits && num_digits <= 20)) {
+MReal& MReal::AddConstraint(MRealFormat constraint) {
+  if (!(1 <= constraint.GetDigits() && constraint.GetDigits() <= 20)) {
     throw std::invalid_argument("num_digits must be between 1 and 20.");
   }
-  io_digits_ = num_digits;
+  format_ = constraint;
   return *this;
 }
 
@@ -172,12 +172,12 @@ double MReal::GenerateImpl(librarian::ResolverContext ctx) const {
 }
 
 double MReal::ReadImpl(librarian::ReaderContext ctx) const {
-  return ctx.ReadReal(io_digits_);
+  return ctx.ReadReal(Format().GetDigits());
 }
 
 void MReal::PrintImpl(librarian::PrinterContext ctx,
                       const double& value) const {
-  ctx.PrintToken(std::format("{:.{}f}", value, io_digits_));
+  ctx.PrintToken(std::format("{:.{}f}", value, Format().GetDigits()));
 }
 
 std::optional<double> MReal::GetUniqueValueImpl(
@@ -210,6 +210,20 @@ std::optional<double> MReal::GetUniqueValueImpl(
 
   return std::nullopt;
 }
+
+MRealFormat& MReal::Format() { return format_; }
+
+MRealFormat MReal::Format() const { return format_; }
+
+MRealFormat& MRealFormat::Digits(int num_digits) {
+  if (!(1 <= num_digits && num_digits <= 20)) {
+    throw InvalidConstraint("MRealFormat::Digits must be between 1 and 20.");
+  }
+  digits_ = num_digits;
+  return *this;
+}
+
+int MRealFormat::GetDigits() const { return digits_; }
 
 namespace {
 

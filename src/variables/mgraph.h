@@ -15,6 +15,7 @@
 #ifndef MORIARTY_VARIABLES_MGRAPH_H_
 #define MORIARTY_VARIABLES_MGRAPH_H_
 
+#include <concepts>
 #include <cstdint>
 #include <format>
 #include <optional>
@@ -22,7 +23,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -323,10 +323,10 @@ class MGraph : public librarian::MVariable<MGraph<MEdgeLabel, MNodeLabel>> {
 // -----------------------------------------------------------------------------
 
 template <typename MEdgeLabel>
-concept HasEdgeLabels = !std::is_same_v<MEdgeLabel, MNoEdgeLabel>;
+concept HasEdgeLabels = !std::same_as<MEdgeLabel, MNoEdgeLabel>;
 
 template <typename MNodeLabel>
-concept HasNodeLabels = !std::is_same_v<MNodeLabel, MNoNodeLabel>;
+concept HasNodeLabels = !std::same_as<MNodeLabel, MNoNodeLabel>;
 
 template <typename MEdgeLabel, typename MNodeLabel>
 template <typename... Constraints>
@@ -668,7 +668,7 @@ MGraph<MEdgeLabel, MNodeLabel>::GetUniqueValueImpl(
   }
 
   if (*edges == 0) {  // Several nodes, but no edges
-    if constexpr (std::is_same_v<MNodeLabel, MNoNodeLabel>) {
+    if constexpr (!HasNodeLabels<MNodeLabel>) {
       return graph_type(*nodes);
     } else {
       graph_type G(*nodes);

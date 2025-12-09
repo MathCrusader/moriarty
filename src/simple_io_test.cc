@@ -21,7 +21,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/constraints/io_constraints.h"
 #include "src/context.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
@@ -129,8 +128,10 @@ TEST(SimpleIOExporterTest, MultilineSectionShouldWork) {
   Context context =
       Context()
           .WithVariable("N", MInteger())
-          .WithVariable("A", MArray<MInteger>(IOSeparator::Newline()))
-          .WithVariable("B", MArray<MInteger>(IOSeparator::Newline()));
+          .WithVariable("A",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()))
+          .WithVariable("B",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()));
 
   std::vector<ConcreteTestCase> test_cases = {
       ConcreteTestCase()
@@ -303,8 +304,10 @@ TEST(SimpleIOImporterTest, MultilineSectionShouldWork) {
   Context context =
       Context()
           .WithVariable("N", MInteger())
-          .WithVariable("A", MArray<MInteger>(IOSeparator::Newline()))
-          .WithVariable("B", MArray<MInteger>(IOSeparator::Newline()));
+          .WithVariable("A",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()))
+          .WithVariable("B",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()));
 
   std::vector<ConcreteTestCase> test_cases = {
       ConcreteTestCase()

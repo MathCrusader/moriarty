@@ -27,7 +27,6 @@
 #include "gtest/gtest.h"
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/container_constraints.h"
-#include "src/constraints/io_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/string_constraints.h"
 #include "src/contexts/librarian_context.h"
@@ -340,35 +339,33 @@ TEST(MArrayTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
 }
 
 TEST(MArrayTest, WhitespaceSeparatorShouldAffectPrint) {
-  EXPECT_EQ(Print(MArray<MInteger>(IOSeparator::Newline()), {1, 2, 3}),
-            "1\n2\n3");  // Note no newline after
+  EXPECT_EQ(
+      Print(MArray<MInteger>(MArrayFormat().NewlineSeparated()), {1, 2, 3}),
+      "1\n2\n3");  // Note no newline after
 }
 
 TEST(MArrayTest, WhitespaceSeparatorShouldAffectRead) {
-  EXPECT_EQ(Read(MArray<MInteger>(IOSeparator::Newline(), Length(6)),
+  EXPECT_EQ(Read(MArray<MInteger>(MArrayFormat().NewlineSeparated(), Length(6)),
                  "1\n2\n3\n4\n5\n6"),
             (std::vector<int64_t>{1, 2, 3, 4, 5, 6}));
 
-  EXPECT_EQ(Read(MArray<MInteger>(IOSeparator::Tab(), Length(3)), "3\t2\t1"),
+  EXPECT_EQ(Read(MArray<MInteger>(
+                     MArrayFormat().WithSeparator(Whitespace::kTab), Length(3)),
+                 "3\t2\t1"),
             (std::vector<int64_t>{3, 2, 1}));
 
   // Read wrong whitespace between characters.
-  EXPECT_THROW((void)Read(MArray<MInteger>(IOSeparator::Newline(), Length(6)),
-                          "1\n2\n3 4\n5\n6"),
-               IOError);
+  EXPECT_THROW(
+      (void)Read(MArray<MInteger>(MArrayFormat().NewlineSeparated(), Length(6)),
+                 "1\n2\n3 4\n5\n6"),
+      IOError);
 }
 
 TEST(MArrayTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
-  EXPECT_EQ(Read(MArray<MInteger>(IOSeparator::Newline(),
-                                  IOSeparator::Newline(), Length(6)),
+  EXPECT_EQ(Read(MArray<MInteger>(MArrayFormat().NewlineSeparated(),
+                                  MArrayFormat().NewlineSeparated(), Length(6)),
                  "1\n2\n3\n4\n5\n6"),
             (std::vector<int64_t>{1, 2, 3, 4, 5, 6}));
-}
-
-TEST(MArrayTest, WhitespaceSeparatorShouldFailWithTwoSeparators) {
-  EXPECT_THROW(
-      (void)MArray<MInteger>(IOSeparator::Newline(), IOSeparator::Tab()),
-      ImpossibleToSatisfy);
 }
 
 TEST(MArrayTest, ReadShouldBeAbleToDetermineLengthFromAnotherVariable) {

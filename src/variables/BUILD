@@ -41,18 +41,17 @@ cc_library(
 
 cc_library(
     name = "marray",
+    srcs = ["marray.cc"],
     hdrs = ["marray.h"],
     deps = [
         ":minteger",
         "//src/constraints:base_constraints",
         "//src/constraints:container_constraints",
-        "//src/constraints:io_constraints",
         "//src/constraints:size_constraints",
         "//src/contexts:librarian_context",
         "//src/librarian:errors",
         "//src/librarian:mvariable",
         "//src/librarian:policies",
-        "//src/librarian/util:locked_optional",
         "@abseil-cpp//absl/algorithm:container",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@abseil-cpp//absl/strings",
@@ -151,15 +150,13 @@ cc_library(
 
 cc_library(
     name = "mtuple",
+    srcs = ["mtuple.cc"],
     hdrs = ["mtuple.h"],
     deps = [
-        "//src/constraints:io_constraints",
+        "//src/constraints:container_constraints",
         "//src/contexts:librarian_context",
         "//src/librarian:errors",
         "//src/librarian:mvariable",
-        "//src/librarian/util:locked_optional",
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/log:check",
         "@abseil-cpp//absl/strings",
     ],
 )
@@ -174,7 +171,6 @@ cc_test(
         ":mtuple",
         "//src/constraints:base_constraints",
         "//src/constraints:container_constraints",
-        "//src/constraints:io_constraints",
         "//src/constraints:numeric_constraints",
         "//src/librarian:mvariable",
         "//src/librarian/testing:gtest_helpers",
