@@ -147,7 +147,7 @@ class Moriarty {
   // Variables
   moriarty_internal::VariableSet variables_;
 
-  // TestCases
+  // Test Cases
   std::vector<moriarty_internal::ValueSet> assigned_test_cases_;
 
   // Generates the seed for generator_[index]. Negative numbers are reserved

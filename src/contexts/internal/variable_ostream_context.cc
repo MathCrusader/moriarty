@@ -24,12 +24,12 @@ void VariableOStreamContext::PrintVariable(std::string_view variable_name) {
   variable->PrintValue(variable_name, os_, variables_, values_);
 }
 
-void VariableOStreamContext::PrintVariableFrom(
-    std::string_view variable_name, const ConcreteTestCase& test_case) {
+void VariableOStreamContext::PrintVariableFrom(std::string_view variable_name,
+                                               const TestCase& test_case) {
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
 
-  ValueSet values = UnsafeExtractConcreteTestCaseInternals(test_case);
+  ValueSet values = UnsafeExtractTestCaseInternals(test_case);
   variable->PrintValue(variable_name, os_, variables_, values);
 }
 

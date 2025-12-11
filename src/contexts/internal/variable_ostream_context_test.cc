@@ -62,7 +62,7 @@ TEST(VariableOStreamContextTest, PrintVariableFromSimpleCaseShouldWork) {
   Context context = Context().WithVariable("X", MInteger());
   VariableOStreamContext ctx(ss, context.Variables(), context.Values());
 
-  ConcreteTestCase test_case;
+  TestCase test_case;
   test_case.SetValue<MInteger>("X", 10);
 
   ctx.PrintVariableFrom("X", test_case);
@@ -76,7 +76,7 @@ TEST(VariableOStreamContextTest, PrintVariableToWithUnknownVariableShouldFail) {
     Context context;
     VariableOStreamContext ctx(ss, context.Variables(), context.Values());
 
-    ConcreteTestCase test_case;
+    TestCase test_case;
     EXPECT_THAT([&] { ctx.PrintVariableFrom("X", test_case); },
                 ThrowsVariableNotFound("X"));
   }
@@ -85,7 +85,7 @@ TEST(VariableOStreamContextTest, PrintVariableToWithUnknownVariableShouldFail) {
     Context context = Context().WithVariable("X", MInteger());
     VariableOStreamContext ctx(ss, context.Variables(), context.Values());
 
-    ConcreteTestCase test_case;
+    TestCase test_case;
     EXPECT_THAT([&] { ctx.PrintVariableFrom("X", test_case); },
                 ThrowsValueNotFound("X"));
   }
@@ -94,7 +94,7 @@ TEST(VariableOStreamContextTest, PrintVariableToWithUnknownVariableShouldFail) {
     Context context;
     VariableOStreamContext ctx(ss, context.Variables(), context.Values());
 
-    ConcreteTestCase test_case;
+    TestCase test_case;
     test_case.SetValue<MInteger>("X", 10);
     EXPECT_THAT([&] { ctx.PrintVariableFrom("X", test_case); },
                 ThrowsVariableNotFound("X"));

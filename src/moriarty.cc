@@ -95,7 +95,7 @@ std::string FailureToString(
 ValidationResults Moriarty::ValidateTestCases(ValidateOptions options) const {
   ValidationResults res;
   if (assigned_test_cases_.empty()) {
-    res.AddFailure(0, "No TestCases.");
+    res.AddFailure(0, "No Test Cases.");
     return res;
   }
 
@@ -116,20 +116,19 @@ void Moriarty::ImportTestCases(ImportFn fn, ImportOptions options) {
   InputCursor cursor(options.is, options.whitespace_strictness);
   ImportContext ctx(variables_, cursor);
 
-  std::vector<ConcreteTestCase> test_cases = fn(ctx);
-  for (const ConcreteTestCase& test_case : test_cases) {
-    assigned_test_cases_.push_back(
-        UnsafeExtractConcreteTestCaseInternals(test_case));
+  std::vector<TestCase> test_cases = fn(ctx);
+  for (const TestCase& test_case : test_cases) {
+    assigned_test_cases_.push_back(UnsafeExtractTestCaseInternals(test_case));
   }
 }
 
 void Moriarty::ExportTestCases(ExportFn fn, ExportOptions options) const {
   moriarty_internal::ValueSet values;
   ExportContext ctx(options.os, variables_, values);
-  std::vector<ConcreteTestCase> test_cases;
+  std::vector<TestCase> test_cases;
   for (const moriarty_internal::ValueSet& values : assigned_test_cases_) {
-    test_cases.push_back(ConcreteTestCase());
-    UnsafeSetConcreteTestCaseInternals(test_cases.back(), values);
+    test_cases.push_back(TestCase());
+    UnsafeSetTestCaseInternals(test_cases.back(), values);
   }
 
   fn(ctx, test_cases);
@@ -142,9 +141,9 @@ void Moriarty::GenerateTestCases(GenerateFn fn, GenerateOptions options) {
   moriarty_internal::RandomEngine rng(seed_, "v0.1");
   for (int call = 1; call <= options.num_calls; call++) {
     GenerateContext ctx(variables_, values, rng);
-    std::vector<TestCase> test_cases = fn(ctx);
+    std::vector<MTestCase> test_cases = fn(ctx);
 
-    for (const TestCase& test_case : test_cases) {
+    for (const MTestCase& test_case : test_cases) {
       auto [extra_constraints, values] =
           UnsafeExtractTestCaseInternals(test_case);
 

@@ -32,18 +32,20 @@ struct TCInternals {
   moriarty_internal::ValueSet values;
 };
 
-// TestCase
+// MTestCase
 //
-// A collection of variables representing a single test case. If you want to
-// test your system with 5 inputs, there should be 5 `Case`s. See Moriarty and
-// Generator documentation for more information.
-class TestCase {
+// A collection of constraints (and optionally values) representing a single
+// test case. This will be passed to a generator to generate actual values.
+//
+// If you want to just specify actual values and have no generation, use
+// `TestCase`.
+class MTestCase {
  public:
   // SetValue()
   //
   // Sets the variable `variable_name` to be exactly `value`. Example:
   //
-  // TestCase()
+  // MTestCase()
   //    .SetValue<MString>("X", "hello")
   //    .SetValue<MInteger>("Y", 3);
   //
@@ -53,7 +55,7 @@ class TestCase {
   //
   // See `ConstrainVariable()`.
   template <MoriartyVariable T>
-  TestCase& SetValue(std::string_view variable_name, T::value_type value);
+  MTestCase& SetValue(std::string_view variable_name, T::value_type value);
 
   // ConstrainVariable()
   //
@@ -74,12 +76,12 @@ class TestCase {
   //
   // See `SetValue()`.
   template <MoriartyVariable T>
-  TestCase& ConstrainVariable(std::string_view variable_name, T constraints);
+  MTestCase& ConstrainVariable(std::string_view variable_name, T constraints);
 
   // Adds extra constraints to a variable. This version is for when you do not
   // know the exact type of the variable. Prefer to use `ConstrainVariable()`.
   // This function may be removed in the future.
-  TestCase& ConstrainAnonymousVariable(
+  MTestCase& ConstrainAnonymousVariable(
       std::string_view variable_name,
       const moriarty_internal::AbstractVariable& constraints);
 
@@ -88,31 +90,34 @@ class TestCase {
   // the wrong type, this will invoke undefined behaviour. Your program may or
   // may not not crash, and will likely give weird or inconsistent results.
   // Moreover, this function may be removed at any time.
-  TestCase& UnsafeSetAnonymousValue(std::string_view variable_name,
-                                    std::any value);
+  MTestCase& UnsafeSetAnonymousValue(std::string_view variable_name,
+                                     std::any value);
 
  private:
   moriarty_internal::VariableSet variables_;
   moriarty_internal::ValueSet values_;
 
-  friend TCInternals UnsafeExtractTestCaseInternals(const TestCase& test_case);
+  friend TCInternals UnsafeExtractTestCaseInternals(const MTestCase& test_case);
 };
 
-// ConcreteTestCase
+// TestCase
 //
-// Actual values for all variables of interest.
-class ConcreteTestCase {
+// A collection of values representing a single test case.
+//
+// These values will be used as-is. No extra generation will occur. If you want
+// to just specify a subset of variables and have the rest generated, use
+// `MTestCase`.
+class TestCase {
  public:
   // SetValue()
   //
   // Sets the variable `variable_name` to be exactly `value`. Example:
   //
-  // ConcreteTestCase()
+  // TestCase()
   //    .SetValue<MString>("X", "hello")
   //    .SetValue<MInteger>("Y", 3);
   template <MoriartyVariable T>
-  ConcreteTestCase& SetValue(std::string_view variable_name,
-                             T::value_type value);
+  TestCase& SetValue(std::string_view variable_name, T::value_type value);
 
   // GetValue()
   //
@@ -125,8 +130,8 @@ class ConcreteTestCase {
   // the wrong type, this will invoke undefined behaviour. Your program may or
   // may not not crash, and will likely give weird or inconsistent results.
   // Moreover, this function may be removed at any time.
-  ConcreteTestCase& UnsafeSetAnonymousValue(std::string_view variable_name,
-                                            std::any value);
+  TestCase& UnsafeSetAnonymousValue(std::string_view variable_name,
+                                    std::any value);
 
   // This is a dangerous function that should only be used if you know what
   // you're doing. This is sometimes needed to pass a reference to a particular
@@ -136,14 +141,28 @@ class ConcreteTestCase {
  private:
   moriarty_internal::ValueSet values_;
 
-  friend moriarty_internal::ValueSet UnsafeExtractConcreteTestCaseInternals(
-      const ConcreteTestCase& test_case);
-  friend void UnsafeSetConcreteTestCaseInternals(
-      ConcreteTestCase& test_case, moriarty_internal::ValueSet values);
+  friend moriarty_internal::ValueSet UnsafeExtractTestCaseInternals(
+      const TestCase& test_case);
+  friend void UnsafeSetTestCaseInternals(TestCase& test_case,
+                                         moriarty_internal::ValueSet values);
 };
 
 // -----------------------------------------------------------------------------
 //  Template implementation below
+
+template <MoriartyVariable T>
+MTestCase& MTestCase::SetValue(std::string_view variable_name,
+                               T::value_type value) {
+  values_.Set<T>(variable_name, std::move(value));
+  return *this;
+}
+
+template <MoriartyVariable T>
+MTestCase& MTestCase::ConstrainVariable(std::string_view variable_name,
+                                        T constraints) {
+  variables_.AddOrMergeVariable(variable_name, std::move(constraints));
+  return *this;
+}
 
 template <MoriartyVariable T>
 TestCase& TestCase::SetValue(std::string_view variable_name,
@@ -153,21 +172,7 @@ TestCase& TestCase::SetValue(std::string_view variable_name,
 }
 
 template <MoriartyVariable T>
-TestCase& TestCase::ConstrainVariable(std::string_view variable_name,
-                                      T constraints) {
-  variables_.AddOrMergeVariable(variable_name, std::move(constraints));
-  return *this;
-}
-
-template <MoriartyVariable T>
-ConcreteTestCase& ConcreteTestCase::SetValue(std::string_view variable_name,
-                                             T::value_type value) {
-  values_.Set<T>(variable_name, std::move(value));
-  return *this;
-}
-
-template <MoriartyVariable T>
-T::value_type ConcreteTestCase::GetValue(std::string_view variable_name) const {
+T::value_type TestCase::GetValue(std::string_view variable_name) const {
   return values_.Get<T>(variable_name);
 }
 
@@ -176,11 +181,11 @@ T::value_type ConcreteTestCase::GetValue(std::string_view variable_name) const {
 namespace moriarty {
 // Convenience functions for internal use only.
 
-TCInternals UnsafeExtractTestCaseInternals(const TestCase& test_case);
-moriarty_internal::ValueSet UnsafeExtractConcreteTestCaseInternals(
-    const ConcreteTestCase& test_case);
-void UnsafeSetConcreteTestCaseInternals(ConcreteTestCase& test_case,
-                                        moriarty_internal::ValueSet values);
+TCInternals UnsafeExtractTestCaseInternals(const MTestCase& test_case);
+moriarty_internal::ValueSet UnsafeExtractTestCaseInternals(
+    const TestCase& test_case);
+void UnsafeSetTestCaseInternals(TestCase& test_case,
+                                moriarty_internal::ValueSet values);
 
 }  // namespace moriarty
 

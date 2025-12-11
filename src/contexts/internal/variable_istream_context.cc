@@ -18,8 +18,8 @@ VariableIStreamContext::VariableIStreamContext(Ref<InputCursor> input,
     : variables_(variables), values_(values), input_(input) {}
 
 void VariableIStreamContext::ReadVariableTo(std::string_view variable_name,
-                                            ConcreteTestCase& test_case) {
-  ValueSet values = UnsafeExtractConcreteTestCaseInternals(test_case);
+                                            TestCase& test_case) {
+  ValueSet values = UnsafeExtractTestCaseInternals(test_case);
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
   variable->ReadValue(variable_name, input_, variables_, values);
@@ -29,8 +29,7 @@ void VariableIStreamContext::ReadVariableTo(std::string_view variable_name,
 
 std::unique_ptr<moriarty_internal::ChunkedReader>
 VariableIStreamContext::GetChunkedReader(std::string_view variable_name,
-                                         int calls,
-                                         ConcreteTestCase& test_case) const {
+                                         int calls, TestCase& test_case) const {
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
   return variable->GetChunkedReader(variable_name, calls, input_, variables_,

@@ -58,16 +58,14 @@ class VariableIStreamContext {
   // `test_case`.
   //
   // FIXME: The only set values come from `test_case`, not the global values.
-  void ReadVariableTo(std::string_view variable_name,
-                      ConcreteTestCase& test_case);
+  void ReadVariableTo(std::string_view variable_name, TestCase& test_case);
 
   // GetChunkedReader()
   //
   // Returns `variable_name`'s partial reader. This is used to read
   // a variable from the input stream over multiple calls.
   std::unique_ptr<moriarty_internal::ChunkedReader> GetChunkedReader(
-      std::string_view variable_name, int calls,
-      ConcreteTestCase& test_case) const;
+      std::string_view variable_name, int calls, TestCase& test_case) const;
 
  private:
   Ref<const VariableSet> variables_;

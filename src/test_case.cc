@@ -24,10 +24,16 @@
 
 namespace moriarty {
 
-TestCase& TestCase::ConstrainAnonymousVariable(
+MTestCase& MTestCase::ConstrainAnonymousVariable(
     std::string_view variable_name,
     const moriarty_internal::AbstractVariable& constraints) {
   variables_.AddOrMergeVariable(variable_name, constraints);
+  return *this;
+}
+
+MTestCase& MTestCase::UnsafeSetAnonymousValue(std::string_view variable_name,
+                                              std::any value) {
+  values_.UnsafeSet(variable_name, std::move(value));
   return *this;
 }
 
@@ -37,27 +43,19 @@ TestCase& TestCase::UnsafeSetAnonymousValue(std::string_view variable_name,
   return *this;
 }
 
-ConcreteTestCase& ConcreteTestCase::UnsafeSetAnonymousValue(
-    std::string_view variable_name, std::any value) {
-  values_.UnsafeSet(variable_name, std::move(value));
-  return *this;
-}
-
-TCInternals UnsafeExtractTestCaseInternals(const TestCase& test_case) {
+TCInternals UnsafeExtractTestCaseInternals(const MTestCase& test_case) {
   return {test_case.variables_, test_case.values_};
 }
 
-moriarty_internal::ValueSet UnsafeExtractConcreteTestCaseInternals(
-    const ConcreteTestCase& test_case) {
+moriarty_internal::ValueSet UnsafeExtractTestCaseInternals(
+    const TestCase& test_case) {
   return test_case.values_;
 }
 
-moriarty_internal::ValueSet& ConcreteTestCase::UnsafeGetValues() & {
-  return values_;
-}
+moriarty_internal::ValueSet& TestCase::UnsafeGetValues() & { return values_; }
 
-void UnsafeSetConcreteTestCaseInternals(ConcreteTestCase& test_case,
-                                        moriarty_internal::ValueSet values) {
+void UnsafeSetTestCaseInternals(TestCase& test_case,
+                                moriarty_internal::ValueSet values) {
   test_case.values_ = std::move(values);
 }
 

@@ -36,7 +36,7 @@ namespace moriarty {
 
 // Generates test cases using covering arrays based on the difficult instances
 // of the defined variables.
-std::vector<TestCase> CombinatorialCoverage(GenerateContext ctx);
+std::vector<MTestCase> CombinatorialCoverage(GenerateContext ctx);
 
 }  // namespace moriarty
 

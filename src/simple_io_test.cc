@@ -45,10 +45,10 @@ using ::testing::StrEq;
 TEST(SimpleIOExporterTest, ExporterSimpleCaseShouldWork) {
   Context context = Context().WithVariable("N", MInteger());
 
-  std::vector<ConcreteTestCase> test_cases = {
-      ConcreteTestCase().SetValue<MInteger>("N", 10),
-      ConcreteTestCase().SetValue<MInteger>("N", 20),
-      ConcreteTestCase().SetValue<MInteger>("N", 30),
+  std::vector<TestCase> test_cases = {
+      TestCase().SetValue<MInteger>("N", 10),
+      TestCase().SetValue<MInteger>("N", 20),
+      TestCase().SetValue<MInteger>("N", 30),
   };
 
   std::stringstream ss;
@@ -65,18 +65,18 @@ TEST(SimpleIOExporterTest, ExportHeaderAndFooterLinesShouldWork) {
                         .WithVariable("b", MInteger())
                         .WithVariable("c", MInteger());
 
-  std::vector<ConcreteTestCase> test_cases = {ConcreteTestCase()
-                                                  .SetValue<MInteger>("a", 10)
-                                                  .SetValue<MInteger>("b", 20)
-                                                  .SetValue<MInteger>("c", 30),
-                                              ConcreteTestCase()
-                                                  .SetValue<MInteger>("a", 11)
-                                                  .SetValue<MInteger>("b", 21)
-                                                  .SetValue<MInteger>("c", 31),
-                                              ConcreteTestCase()
-                                                  .SetValue<MInteger>("a", 12)
-                                                  .SetValue<MInteger>("b", 22)
-                                                  .SetValue<MInteger>("c", 32)};
+  std::vector<TestCase> test_cases = {TestCase()
+                                          .SetValue<MInteger>("a", 10)
+                                          .SetValue<MInteger>("b", 20)
+                                          .SetValue<MInteger>("c", 30),
+                                      TestCase()
+                                          .SetValue<MInteger>("a", 11)
+                                          .SetValue<MInteger>("b", 21)
+                                          .SetValue<MInteger>("c", 31),
+                                      TestCase()
+                                          .SetValue<MInteger>("a", 12)
+                                          .SetValue<MInteger>("b", 22)
+                                          .SetValue<MInteger>("c", 32)};
 
   std::stringstream ss;
   ExportContext ctx(ss, context.Variables(), context.Values());
@@ -101,14 +101,14 @@ TEST(SimpleIOExporterTest, ExportWithNumberOfTestCasesShouldPrintProperly) {
                         .WithVariable("b", MInteger())
                         .WithVariable("c", MInteger());
 
-  std::vector<ConcreteTestCase> test_cases = {ConcreteTestCase()
-                                                  .SetValue<MInteger>("a", 10)
-                                                  .SetValue<MInteger>("b", 20)
-                                                  .SetValue<MInteger>("c", 30),
-                                              ConcreteTestCase()
-                                                  .SetValue<MInteger>("a", 11)
-                                                  .SetValue<MInteger>("b", 21)
-                                                  .SetValue<MInteger>("c", 31)};
+  std::vector<TestCase> test_cases = {TestCase()
+                                          .SetValue<MInteger>("a", 10)
+                                          .SetValue<MInteger>("b", 20)
+                                          .SetValue<MInteger>("c", 30),
+                                      TestCase()
+                                          .SetValue<MInteger>("a", 11)
+                                          .SetValue<MInteger>("b", 21)
+                                          .SetValue<MInteger>("c", 31)};
 
   std::stringstream ss;
   ExportContext ctx(ss, context.Variables(), context.Values());
@@ -133,8 +133,8 @@ TEST(SimpleIOExporterTest, MultilineSectionShouldWork) {
           .WithVariable("B",
                         MArray<MInteger>(MArrayFormat().NewlineSeparated()));
 
-  std::vector<ConcreteTestCase> test_cases = {
-      ConcreteTestCase()
+  std::vector<TestCase> test_cases = {
+      TestCase()
           .SetValue<MInteger>("N", 3)
           .SetValue<MArray<MInteger>>("A", std::vector<int64_t>{1, 2, 3})
           .SetValue<MArray<MInteger>>("B", std::vector<int64_t>{11, 22, 33}),
@@ -153,12 +153,12 @@ TEST(SimpleIOExporterTest, MultilineSectionShouldWork) {
 //  SimpleIOImporter
 
 MATCHER_P2(IntVariableIs, variable_name, value, "") {
-  ConcreteTestCase tc = arg;
+  TestCase tc = arg;
   return tc.GetValue<MInteger>(variable_name) == value;
 }
 
 MATCHER_P2(ArrayIntVariableIs, variable_name, value, "") {
-  ConcreteTestCase tc = arg;
+  TestCase tc = arg;
   return tc.GetValue<MArray<MInteger>>(variable_name) == value;
 }
 
@@ -309,8 +309,8 @@ TEST(SimpleIOImporterTest, MultilineSectionShouldWork) {
           .WithVariable("B",
                         MArray<MInteger>(MArrayFormat().NewlineSeparated()));
 
-  std::vector<ConcreteTestCase> test_cases = {
-      ConcreteTestCase()
+  std::vector<TestCase> test_cases = {
+      TestCase()
           .SetValue<MInteger>("N", 3)
           .SetValue<MArray<MInteger>>("A", std::vector<int64_t>{1, 2, 3})
           .SetValue<MArray<MInteger>>("B", std::vector<int64_t>{11, 22, 33}),

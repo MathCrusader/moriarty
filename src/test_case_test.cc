@@ -43,51 +43,51 @@ using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsVariableNotFound;
 
 template <typename T>
-T GetVariable(const TestCase& test_case, std::string_view name) {
+T GetVariable(const MTestCase& test_case, std::string_view name) {
   auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
   return variables.GetVariable<T>(name);
 }
 
 template <typename T>
-T::value_type GetValue(const TestCase& test_case, std::string_view name) {
+T::value_type GetValue(const MTestCase& test_case, std::string_view name) {
   auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
   return values.Get<T>(name);
 }
 
-ValueSet AssignAllValues(const TestCase& test_case) {
+ValueSet AssignAllValues(const MTestCase& test_case) {
   auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
   Context ctx;
   return GenerateAllValues(variables, values, {ctx.RandomEngine()});
 }
 
-TEST(TestCaseTest, ConstrainVariableAndGetVariableWorkInGeneralCase) {
-  TestCase T;
+TEST(MTestCaseTest, ConstrainVariableAndGetVariableWorkInGeneralCase) {
+  MTestCase T;
   T.ConstrainVariable("A", MTestType());
   GetVariable<MTestType>(T, "A");  // No crash = good.
 }
 
-TEST(TestCaseTest, SetValueWithSpecificValueAndGetVariableWorkInGeneralCase) {
-  TestCase T;
+TEST(MTestCaseTest, SetValueWithSpecificValueAndGetVariableWorkInGeneralCase) {
+  MTestCase T;
   T.SetValue<MTestType>("A", TestType(123));
   EXPECT_EQ(GetValue<MTestType>(T, "A"), TestType(123));
 }
 
-TEST(TestCaseTest, GetVariableWithWrongTypeShouldFail) {
-  TestCase T;
+TEST(MTestCaseTest, GetVariableWithWrongTypeShouldFail) {
+  MTestCase T;
   T.ConstrainVariable("A", MTestType());
   EXPECT_THAT([&] { GetVariable<MInteger>(T, "A"); },
               ThrowsMVariableTypeMismatch("MTestType", "MInteger"));
 }
 
-TEST(TestCaseTest, GetVariableWithWrongNameShouldNotFind) {
-  TestCase T;
+TEST(MTestCaseTest, GetVariableWithWrongNameShouldNotFind) {
+  MTestCase T;
   T.ConstrainVariable("A", MTestType());
   EXPECT_THAT([&] { GetVariable<MTestType>(T, "xxx"); },
               ThrowsVariableNotFound("xxx"));
 }
 
-TEST(TestCaseTest, AssignAllValuesGivesSomeValueForEachVariable) {
-  TestCase T;
+TEST(MTestCaseTest, AssignAllValuesGivesSomeValueForEachVariable) {
+  MTestCase T;
   T.ConstrainVariable("A", MTestType());
   T.ConstrainVariable("B", MTestType());
 
@@ -98,8 +98,8 @@ TEST(TestCaseTest, AssignAllValuesGivesSomeValueForEachVariable) {
   EXPECT_FALSE(value_set.Contains("C"));
 }
 
-TEST(TestCaseTest, ConstrainAnonymousVariableAndGetVariableWorkInGeneralCase) {
-  TestCase T;
+TEST(MTestCaseTest, ConstrainAnonymousVariableAndGetVariableWorkInGeneralCase) {
+  MTestCase T;
   T.ConstrainAnonymousVariable("A", MTestType());
   T.ConstrainAnonymousVariable("B", MTestType());
 
@@ -110,7 +110,7 @@ TEST(TestCaseTest, ConstrainAnonymousVariableAndGetVariableWorkInGeneralCase) {
   EXPECT_FALSE(value_set.Contains("C"));
 }
 
-TEST(TestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
+TEST(MTestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
   using NameVariablePair = std::pair<std::string, MTestType>;
 
   // Generate the value for A, B, C in some order and return those values in the
@@ -118,7 +118,7 @@ TEST(TestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
   auto gen =
       [](NameVariablePair first, NameVariablePair second,
          NameVariablePair third) -> std::tuple<TestType, TestType, TestType> {
-    TestCase T;
+    MTestCase T;
     T.ConstrainVariable(first.first, first.second);
     T.ConstrainVariable(second.first, second.second);
     T.ConstrainVariable(third.first, third.second);
@@ -145,8 +145,8 @@ TEST(TestCaseTest, AssignAllValuesShouldGiveRepeatableResults) {
   EXPECT_EQ(gen(c, a, b), abc);
 }
 
-TEST(TestCaseTest, AssignAllValuesShouldRespectSpecificValuesSet) {
-  TestCase T;
+TEST(MTestCaseTest, AssignAllValuesShouldRespectSpecificValuesSet) {
+  MTestCase T;
   T.SetValue<MTestType>("A", TestType(789));
   T.SetValue<MTestType>("B", TestType(654));
 

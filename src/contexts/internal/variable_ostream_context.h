@@ -50,7 +50,7 @@ class VariableOStreamContext {
   //
   // Prints the value of `variable_name` from `test_case` to the output stream.
   void PrintVariableFrom(std::string_view variable_name,
-                         const ConcreteTestCase& test_case);
+                         const TestCase& test_case);
 
  protected:
   void UpdateVariableOStream(Ref<std::ostream> os) { os_ = os; }

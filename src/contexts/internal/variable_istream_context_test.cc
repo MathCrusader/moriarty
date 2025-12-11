@@ -137,19 +137,19 @@ TEST(VariableIStreamContextTest, ReadUnnamedVariableShouldRespectWhitespace) {
 
 TEST(VariableIStreamContextTest, ReadVariableToShouldWork) {
   Context context = Context().WithVariable("X", MInteger());
-  ConcreteTestCase test_case;
+  TestCase test_case;
   std::istringstream ss("10");
   InputCursor cr(ss, WhitespaceStrictness::kPrecise);
   VariableIStreamContext ctx(cr, context.Variables(), context.Values());
   ctx.ReadVariableTo("X", test_case);
 
-  ValueSet new_values = UnsafeExtractConcreteTestCaseInternals(test_case);
+  ValueSet new_values = UnsafeExtractTestCaseInternals(test_case);
   EXPECT_EQ(new_values.Get<MInteger>("X"), 10);
 }
 
 TEST(VariableIStreamContextTest, ReadVariableToWithUnknownVariableShouldFail) {
   Context context;
-  ConcreteTestCase test_case;
+  TestCase test_case;
   std::istringstream ss("10");
   InputCursor cr(ss, WhitespaceStrictness::kPrecise);
   VariableIStreamContext ctx(cr, context.Variables(), context.Values());
@@ -168,10 +168,10 @@ TEST(VariableIStreamContextTest,
 
   InputCursor cr(ss, WhitespaceStrictness::kPrecise);
   VariableIStreamContext ctx(cr, context.Variables(), context.Values());
-  ConcreteTestCase test_case;
+  TestCase test_case;
   test_case.SetValue<MInteger>("N", 3);
   ctx.ReadVariableTo("A", test_case);
-  ValueSet new_values = UnsafeExtractConcreteTestCaseInternals(test_case);
+  ValueSet new_values = UnsafeExtractTestCaseInternals(test_case);
   EXPECT_THAT(new_values.Get<MArray<MInteger>>("A"), ElementsAre(11, 22, 33));
 }
 
@@ -181,25 +181,25 @@ TEST(VariableIStreamContextTest, ReadVariableToShouldRespectWhitespace) {
     std::istringstream ss("11 22");
     InputCursor cr(ss, WhitespaceStrictness::kPrecise);
     VariableIStreamContext ctx(cr, context.Variables(), context.Values());
-    ConcreteTestCase test_case;
+    TestCase test_case;
     ctx.ReadVariableTo("A", test_case);
-    ValueSet new_values = UnsafeExtractConcreteTestCaseInternals(test_case);
+    ValueSet new_values = UnsafeExtractTestCaseInternals(test_case);
     EXPECT_THAT(new_values.Get<MArray<MInteger>>("A"), ElementsAre(11, 22));
   }
   {
     std::istringstream ss("11    22");
     InputCursor cr(ss, WhitespaceStrictness::kFlexible);
     VariableIStreamContext ctx(cr, context.Variables(), context.Values());
-    ConcreteTestCase test_case;
+    TestCase test_case;
     ctx.ReadVariableTo("A", test_case);
-    ValueSet new_values = UnsafeExtractConcreteTestCaseInternals(test_case);
+    ValueSet new_values = UnsafeExtractTestCaseInternals(test_case);
     EXPECT_THAT(new_values.Get<MArray<MInteger>>("A"), ElementsAre(11, 22));
   }
   {
     std::istringstream ss("11    22");
     InputCursor cr(ss, WhitespaceStrictness::kPrecise);
     VariableIStreamContext ctx(cr, context.Variables(), context.Values());
-    ConcreteTestCase test_case;
+    TestCase test_case;
     EXPECT_THROW({ ctx.ReadVariableTo("A", test_case); }, IOError);
   }
 }

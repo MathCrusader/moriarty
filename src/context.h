@@ -57,7 +57,7 @@ class GenerateContext : public moriarty_internal::ViewOnlyContext,
 };
 
 // The function signature for a generator.
-using GenerateFn = std::function<std::vector<TestCase>(GenerateContext)>;
+using GenerateFn = std::function<std::vector<MTestCase>(GenerateContext)>;
 
 // Possible future additions:
 //  - Make some generations non-fatal (aka, if they fail, it's okay)
@@ -102,7 +102,7 @@ class ImportContext : public moriarty_internal::ViewOnlyContext,
 };
 
 // The function signature for an importer.
-using ImportFn = std::function<std::vector<ConcreteTestCase>(ImportContext)>;
+using ImportFn = std::function<std::vector<TestCase>(ImportContext)>;
 
 // TODO: Auto-Validate?
 struct ImportOptions {
@@ -135,8 +135,7 @@ class ExportContext : public moriarty_internal::ViewOnlyContext,
 };
 
 // The function signature for an exporter.
-using ExportFn =
-    std::function<void(ExportContext, std::span<const ConcreteTestCase>)>;
+using ExportFn = std::function<void(ExportContext, std::span<const TestCase>)>;
 
 struct ExportOptions {
   // The output stream to write to.

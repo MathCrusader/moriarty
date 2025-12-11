@@ -50,13 +50,13 @@ InitializeCasesInfo InitializeCases(GenerateContext ctx) {
   return info;
 }
 
-std::vector<TestCase> CreateTestCases(
+std::vector<MTestCase> CreateTestCases(
     std::span<const CoveringArrayTestCase> covering_array,
     std::span<const std::vector<VarPtr>> cases,
     std::span<const std::string> variable_names) {
-  std::vector<TestCase> test_cases;
+  std::vector<MTestCase> test_cases;
   for (const CoveringArrayTestCase& x : covering_array) {
-    test_cases.push_back(TestCase());
+    test_cases.push_back(MTestCase());
     for (int i = 0; i < x.test_case.size(); i++) {
       test_cases.back().ConstrainAnonymousVariable(
           variable_names[i], *(cases[i][x.test_case[i]].get()));
@@ -67,7 +67,7 @@ std::vector<TestCase> CreateTestCases(
 
 }  // namespace
 
-std::vector<TestCase> CombinatorialCoverage(GenerateContext ctx) {
+std::vector<MTestCase> CombinatorialCoverage(GenerateContext ctx) {
   InitializeCasesInfo cases_info = InitializeCases(ctx);
   auto rand_f = [&ctx](int n) { return ctx.RandomInteger(n); };
 
