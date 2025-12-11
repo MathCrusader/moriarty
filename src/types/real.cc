@@ -18,7 +18,9 @@ namespace moriarty {
 namespace {
 
 void Reduce(int64_t& num, int64_t& den) {
-  if (den == 0) throw std::invalid_argument("division by zero");
+  if (den == 0) {
+    throw std::invalid_argument("division by zero in Real::Reduce()");
+  }
 
   // abs(INT_MIN) is not representable as a int64_t, so we need to
   // handle it specially to avoid undefined behavior.

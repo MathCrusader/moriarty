@@ -45,6 +45,7 @@ cc_library(
     hdrs = ["base_constraints.h"],
     deps = [
         ":constraint_violation",
+        "//src/librarian:errors",
         "//src/librarian/util:debug_string",
     ],
 )
@@ -157,6 +158,7 @@ cc_test(
     srcs = ["base_constraints_test.cc"],
     deps = [
         ":base_constraints",
+        "//src/librarian:errors",
         "//src/librarian/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],
@@ -227,6 +229,7 @@ cc_test(
     deps = [
         ":numeric_constraints",
         "//src/internal:range",
+        "//src/librarian:errors",
         "//src/librarian/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],

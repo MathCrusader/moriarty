@@ -21,7 +21,6 @@
 #include <cstdint>
 #include <format>
 #include <initializer_list>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -29,6 +28,7 @@
 #include <vector>
 
 #include "src/constraints/constraint_violation.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/util/debug_string.h"
 
 namespace moriarty {
@@ -249,8 +249,8 @@ template <std::integral IntLike>
   requires std::same_as<T, int64_t>
 Exactly<T>::Exactly(IntLike num) : value_(static_cast<int64_t>(num)) {
   if (!std::in_range<int64_t>(num)) {
-    throw std::invalid_argument(
-        std::format("{} does not fit into int64_t in Exactly", num));
+    throw InvalidConstraint("Exactly",
+                            std::format("{} does not fit into int64", num));
   }
 }
 
@@ -312,8 +312,8 @@ OneOf<T>::OneOf(std::vector<IntLike> options) {
   options_.reserve(options.size());
   for (IntLike v : options) {
     if (!std::in_range<int64_t>(v)) {
-      throw std::invalid_argument(
-          std::format("{} does not fit into int64_t in OneOf", v));
+      throw InvalidConstraint("OneOf",
+                              std::format("{} does not fit into int64", v));
     }
     options_.push_back(static_cast<int64_t>(v));
   }
@@ -326,8 +326,8 @@ OneOf<T>::OneOf(std::span<IntLike> options) {
   options_.reserve(options.size());
   for (IntLike v : options) {
     if (!std::in_range<int64_t>(v)) {
-      throw std::invalid_argument(
-          std::format("{} does not fit into int64_t in OneOf", v));
+      throw InvalidConstraint("OneOf",
+                              std::format("{} does not fit into int64", v));
     }
     options_.push_back(static_cast<int64_t>(v));
   }
@@ -340,8 +340,8 @@ OneOf<T>::OneOf(std::initializer_list<IntLike> options) {
   options_.reserve(options.size());
   for (IntLike v : options) {
     if (!std::in_range<int64_t>(v)) {
-      throw std::invalid_argument(
-          std::format("{} does not fit into int64_t in OneOf", v));
+      throw InvalidConstraint("OneOf",
+                              std::format("{} does not fit into int64", v));
     }
     options_.push_back(static_cast<int64_t>(v));
   }

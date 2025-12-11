@@ -153,26 +153,18 @@ class ImpossibleToSatisfy : public GenericMoriartyError {
 // integers).
 class InvalidConstraint : public GenericMoriartyError {
  public:
-  explicit InvalidConstraint(std::string_view variable_name,
+  explicit InvalidConstraint(std::string_view constraint_name,
                              std::string_view message)
-      : GenericMoriartyError(
-            std::format("Invalid constraint for variable `{}`: {}",
-                        variable_name, message)),
-        variable_name_(variable_name),
+      : GenericMoriartyError(std::format("Invalid constraint for `{}`: {}",
+                                         constraint_name, message)),
+        constraint_name_(constraint_name),
         message_(message) {}
 
-  explicit InvalidConstraint(std::string_view message)
-      : GenericMoriartyError(
-            std::format("Invalid constraint input: {}", message)),
-        message_(message) {}
-
-  // Might be empty. In which case, the error is associated with the constraint,
-  // not the variable.
-  const std::string& VariableName() const { return variable_name_; }
+  const std::string& ConstraintName() const { return constraint_name_; }
   const std::string& Message() const { return message_; }
 
  private:
-  std::string variable_name_;
+  std::string constraint_name_;
   std::string message_;
 };
 

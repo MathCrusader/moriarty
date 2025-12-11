@@ -16,11 +16,13 @@
 
 #include <cstdint>
 #include <optional>
+#include <stdexcept>
 #include <string_view>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/internal/range.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/testing/gtest_helpers.h"
 
 namespace moriarty {
@@ -74,7 +76,7 @@ testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
 }
 
 TEST(NumericConstraintsTest, InvalidBetweenShouldThrow) {
-  EXPECT_THAT([] { Between(0, -5); }, Throws<std::invalid_argument>());
+  EXPECT_THAT([] { Between(0, -5); }, Throws<InvalidConstraint>());
 }
 
 TEST(NumericConstraintsTest, InvalidExpressionsShouldThrow) {

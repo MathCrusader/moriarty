@@ -19,13 +19,14 @@
 #include <string_view>
 
 #include "src/constraints/constraint_violation.h"
+#include "src/librarian/errors.h"
 
 namespace moriarty {
 
 Mod::Mod(int64_t remainder, int64_t mod)
     : remainder_(std::to_string(remainder)), modulus_(std::to_string(mod)) {
   if (mod <= 0) {
-    throw std::invalid_argument("Modulus must be positive");
+    throw InvalidConstraint("Mod", "Modulus must be positive");
   }
 }
 
@@ -35,7 +36,7 @@ Mod::Mod(int64_t remainder, std::string_view mod)
 Mod::Mod(std::string_view remainder, int64_t mod)
     : remainder_(remainder), modulus_(std::to_string(mod)) {
   if (mod <= 0) {
-    throw std::invalid_argument("Modulus must be positive");
+    throw InvalidConstraint("Mod", "Modulus must be positive");
   }
 }
 

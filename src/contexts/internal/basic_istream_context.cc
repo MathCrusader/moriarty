@@ -287,7 +287,9 @@ double BasicIStreamContext::ReadReal(int num_digits) {
   if (GetNumericStrictness() == NumericStrictness::kPrecise &&
       num_digits <= 0) {
     throw std::invalid_argument(
-        "num_digits must be greater than 0 when specifying precise mode.");
+        std::format("RandReal({}): num_digits must be greater than 0 when "
+                    "in precise numeric mode.",
+                    num_digits));
   }
   std::string read_token = ReadToken();
 
@@ -296,7 +298,7 @@ double BasicIStreamContext::ReadReal(int num_digits) {
     if (!result.has_value()) {
       ThrowIOError(std::format(
           "Expected a real number with {} digits after the decimal point, "
-          "but got '{}'.",
+          "but got {}.",
           num_digits, librarian::DebugString(read_token)));
     }
     return *result;

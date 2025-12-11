@@ -17,13 +17,13 @@
 #include <cstdint>
 #include <limits>
 #include <set>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <type_traits>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/testing/gtest_helpers.h"
 
 namespace moriarty {
@@ -123,7 +123,7 @@ TEST(BaseConstraintsTest, ExactlyToStringWorks) {
 
 TEST(BaseConstraintsTest, ExactlyWithTooLargeOfIntegersShouldThrow) {
   EXPECT_THAT([=]() { (void)Exactly(std::numeric_limits<uint64_t>::max()); },
-              Throws<std::invalid_argument>());
+              Throws<InvalidConstraint>());
 }
 
 TEST(BaseConstraintsTest, ExactlyCheckValueShouldWork) {
@@ -240,10 +240,10 @@ TEST(BaseConstraintsTest, OneOfToStringWorks) {
 TEST(BaseConstraintsTest, OneOfWithTooLargeOfIntegersShouldThrow) {
   // One is okay, one isn't. (ensuring we test multiple)
   EXPECT_THAT(
-      [=]() {
+      []() {
         (void)OneOf({uint64_t{1}, std::numeric_limits<uint64_t>::max()});
       },
-      Throws<std::invalid_argument>());
+      Throws<InvalidConstraint>());
 }
 
 TEST(BaseConstraintsTest, OneOfCheckValueShouldWork) {

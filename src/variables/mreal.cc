@@ -17,7 +17,6 @@
 #include <cstdint>
 #include <format>
 #include <optional>
-#include <stdexcept>
 
 #include "src/contexts/librarian_context.h"
 #include "src/librarian/errors.h"
@@ -134,9 +133,6 @@ MReal& MReal::AddConstraint(AtLeast constraint) {
 }
 
 MReal& MReal::AddConstraint(MRealFormat constraint) {
-  if (!(1 <= constraint.GetDigits() && constraint.GetDigits() <= 20)) {
-    throw std::invalid_argument("num_digits must be between 1 and 20.");
-  }
   format_ = constraint;
   return *this;
 }
@@ -217,7 +213,10 @@ MRealFormat MReal::Format() const { return format_; }
 
 MRealFormat& MRealFormat::Digits(int num_digits) {
   if (!(1 <= num_digits && num_digits <= 20)) {
-    throw InvalidConstraint("MRealFormat::Digits must be between 1 and 20.");
+    throw InvalidConstraint(
+        "MRealFormat::Digits",
+        std::format("num_digits must be between 1 and 20 (got: {}).",
+                    num_digits));
   }
   digits_ = num_digits;
   return *this;

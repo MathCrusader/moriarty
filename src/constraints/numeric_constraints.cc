@@ -28,6 +28,7 @@
 #include "src/constraints/constraint_violation.h"
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/util/debug_string.h"
 #include "src/types/real.h"
 
@@ -58,8 +59,10 @@ bool CloseEnough(double a, double b) {
 Between::Between(int64_t minimum, int64_t maximum)
     : minimum_(minimum), maximum_(maximum) {
   if (minimum > maximum) {
-    throw std::invalid_argument(
-        "minimum must be less than or equal to maximum in Between()");
+    throw InvalidConstraint(
+        "Between",
+        std::format("minimum ({}) must be less than or equal to maximum ({})",
+                    minimum, maximum));
   }
 }
 
@@ -91,8 +94,10 @@ Between::Between(IntegerExpression minimum, Real maximum)
 Between::Between(Real minimum, int64_t maximum)
     : minimum_(minimum), maximum_(maximum) {
   if (minimum > maximum) {
-    throw std::invalid_argument(
-        "minimum must be less than or equal to maximum in Between()");
+    throw InvalidConstraint(
+        "Between",
+        std::format("minimum ({}) must be less than or equal to maximum ({})",
+                    minimum.ToString(), maximum));
   }
 }
 
