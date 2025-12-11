@@ -146,6 +146,25 @@ struct ExportOptions {
 // -----------------------------------------------------------------------------
 //  Validate
 
+// ValidationResults
+//
+// The results of a validation operation.
+class [[nodiscard]] ValidationResults {
+ public:
+  // Adds a failure for the given test case number with the given reason.
+  void AddFailure(int test_case_num, std::string reason);
+
+  // Returns true if there were no failures.
+  [[nodiscard]] bool IsValid() const;
+
+  // Returns a string describing all failures. If there are no failures, returns
+  // an empty string. (Note: empty string does not necessarily mean valid.)
+  [[nodiscard]] std::string DescribeFailures() const;
+
+ private:
+  std::vector<std::pair<int, std::string>> failures_;
+};
+
 struct ValidateOptions {
   // Which variables to validate. If empty, all variables will be validated.
   std::vector<std::string> variables_to_validate;

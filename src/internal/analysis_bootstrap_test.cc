@@ -14,8 +14,6 @@
 
 #include "src/internal/analysis_bootstrap.h"
 
-#include <optional>
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/constraints/base_constraints.h"
@@ -28,23 +26,19 @@ namespace moriarty_internal {
 namespace {
 
 using ::moriarty_testing::Context;
+using ::moriarty_testing::HasInvalidConstraints;
+using ::moriarty_testing::HasNoInvalidConstraints;
 using ::moriarty_testing::LastDigit;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::TestType;
-using ::moriarty_testing::ThrowsValueNotFound;
-using ::testing::HasSubstr;
-using ::testing::Optional;
 
-TEST(AnalysisBootstrapTest,
-     AllVariablesSatisfyConstraintsSucceedsWithNoVariables) {
+TEST(AnalysisBootstrapTest, CheckValuesSucceedsWithNoVariables) {
   Context context;
-  EXPECT_EQ(
-      AllVariablesSatisfyConstraints(context.Variables(), context.Values(), {}),
-      std::nullopt);
+  EXPECT_THAT(CheckValues(context.Variables(), context.Values(), {}),
+              HasNoInvalidConstraints());
 }
 
-TEST(AnalysisBootstrapTest,
-     AllVariablesSatisfyConstraintsSucceedsInNormalCase) {
+TEST(AnalysisBootstrapTest, CheckValuesSucceedsInNormalCase) {
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
   Context context = Context()
@@ -53,13 +47,11 @@ TEST(AnalysisBootstrapTest,
                         .WithValue<MTestType>("A", options[4])
                         .WithValue<MTestType>("B", options[53]);
 
-  EXPECT_EQ(
-      AllVariablesSatisfyConstraints(context.Variables(), context.Values(), {}),
-      std::nullopt);
+  EXPECT_THAT(CheckValues(context.Variables(), context.Values(), {}),
+              HasNoInvalidConstraints());
 }
 
-TEST(AnalysisBootstrapTest,
-     AllVariablesSatisfyConstraintsFailIfAtLeastOneValueFails) {
+TEST(AnalysisBootstrapTest, CheckValuesFailIfAtLeastOneValueFails) {
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
 
@@ -70,16 +62,13 @@ TEST(AnalysisBootstrapTest,
           .WithValue<MTestType>("A", options[4])
           .WithValue<MTestType>("B", TestType(100000));  // Not in the list!
 
-  EXPECT_THAT(
-      AllVariablesSatisfyConstraints(context.Variables(), context.Values(), {}),
-      Optional(HasSubstr("B")));
-  EXPECT_EQ(AllVariablesSatisfyConstraints(context.Variables(),
-                                           context.Values(), {{"A"}}),
-            std::nullopt);
+  EXPECT_THAT(CheckValues(context.Variables(), context.Values(), {}),
+              HasInvalidConstraints(std::vector{"B"}));
+  EXPECT_THAT(CheckValues(context.Variables(), context.Values(), {{"A"}}),
+              HasNoInvalidConstraints());
 }
 
-TEST(AnalysisBootstrapTest,
-     AllVariablesSatisfyConstraintsFailIfAnyValueIsMissing) {
+TEST(AnalysisBootstrapTest, CheckValuesFailIfAnyValueIsMissing) {
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
   Context context = Context()
@@ -87,18 +76,11 @@ TEST(AnalysisBootstrapTest,
                         .WithVariable("B", MTestType(OneOf(options)))
                         .WithValue<MTestType>("A", options[4]);
 
-  // FIXME: Determine semantics of satisfies constraints when a value is
-  // missing.
-  EXPECT_THAT(
-      [&] {
-        (void)AllVariablesSatisfyConstraints(context.Variables(),
-                                             context.Values(), {});
-      },
-      ThrowsValueNotFound("B"));
+  EXPECT_THAT(CheckValues(context.Variables(), context.Values(), {}),
+              HasInvalidConstraints(std::vector{"B"}));
 }
 
-TEST(AnalysisBootstrapTest,
-     AllVariablesSatisfyConstraintsSucceedsIfThereAreExtraValues) {
+TEST(AnalysisBootstrapTest, CheckValuesSucceedsIfThereAreExtraValues) {
   std::vector<TestType> options;
   for (int i = 0; i < 100; i++) options.push_back(TestType(i));
   Context context = Context()
@@ -108,13 +90,11 @@ TEST(AnalysisBootstrapTest,
                         .WithValue<MTestType>("B", options[40])
                         .WithValue<MTestType>("C", options[50]);
 
-  EXPECT_EQ(
-      AllVariablesSatisfyConstraints(context.Variables(), context.Values(), {}),
-      std::nullopt);
+  EXPECT_THAT(CheckValues(context.Variables(), context.Values(), {}),
+              HasNoInvalidConstraints());
 }
 
-TEST(AnalysisBootstrapTest,
-     AllVariablesSatisfyConstraintsWorksForDependentVariables) {
+TEST(AnalysisBootstrapTest, CheckValuesWorksForDependentVariables) {
   Context context =
       Context()
           .WithVariable("B", MTestType(LastDigit(MInteger(Exactly("N + 1")))))
@@ -122,21 +102,8 @@ TEST(AnalysisBootstrapTest,
           .WithValue<MTestType>("B", 27)
           .WithValue<MInteger>("N", 6);
 
-  EXPECT_EQ(
-      AllVariablesSatisfyConstraints(context.Variables(), context.Values(), {}),
-      std::nullopt);
-}
-
-TEST(AnalysisBootstrapTest,
-     AllVariablesSatisfyConstraintsFailsIfMissingValues) {
-  Context context = Context().WithVariable("A", MTestType());
-
-  EXPECT_THAT(
-      [&] {
-        (void)AllVariablesSatisfyConstraints(context.Variables(),
-                                             context.Values(), {});
-      },
-      ThrowsValueNotFound("A"));
+  EXPECT_THAT(CheckValues(context.Variables(), context.Values(), {}),
+              HasNoInvalidConstraints());
 }
 
 }  // namespace

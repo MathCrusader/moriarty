@@ -145,8 +145,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // CheckValue()
   //
   // Determines if `value` satisfies all constraints on this variable.
-  [[nodiscard]] ConstraintViolation CheckValue(AnalysisContext ctx,
-                                               const value_type& value) const;
+  ConstraintViolation CheckValue(AnalysisContext ctx,
+                                 const value_type& value) const;
 
   // Generate()
   //

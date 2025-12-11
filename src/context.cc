@@ -64,4 +64,23 @@ ConstraintContext::ConstraintContext(std::string_view name,
                                      const ViewOnlyContext& other)
     : NameContext(name), ViewOnlyContext(other) {}
 
+void ValidationResults::AddFailure(int case_num, std::string reason) {
+  failures_.emplace_back(case_num, std::move(reason));
+}
+
+bool ValidationResults::IsValid() const { return failures_.empty(); }
+
+std::string ValidationResults::DescribeFailures() const {
+  if (failures_.empty()) return "";
+
+  std::string result;
+  for (const auto& [case_num, reason] : failures_) {
+    if (case_num != 0)
+      result += std::format("Case #{} invalid:\n{}", case_num, reason);
+    else
+      result += std::format("Invalid test case:\n{}", reason);
+  }
+  return result;
+}
+
 }  // namespace moriarty

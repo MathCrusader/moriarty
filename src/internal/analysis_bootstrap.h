@@ -16,26 +16,26 @@
 #ifndef MORIARTY_INTERNAL_ANALYSIS_BOOTSTRAP_H_
 #define MORIARTY_INTERNAL_ANALYSIS_BOOTSTRAP_H_
 
-#include <optional>
 #include <string>
+#include <vector>
 
+#include "src/constraints/constraint_violation.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-// AllVariablesSatisfyConstraints()
+// CheckValues()
 //
-// Determines if all variable constraints specified here have a corresponding
-// value that satisfies the constraints. If ok, returns nullopt. If not ok,
-// returns a string describing the issue.
+// Returns all variables that do not satisfy their constraints. If all variables
+// satisfy their constraints, returns an empty map.
 //
 // If a variable does not have a value, this will return not ok.
 // If a value does not have a variable, this will return ok.
 //
 // If variables_to_validate is non-empty, only those variables will be checked.
-[[nodiscard]] std::optional<std::string> AllVariablesSatisfyConstraints(
+[[nodiscard]] std::vector<DetailedConstraintViolation> CheckValues(
     const VariableSet& variables, const ValueSet& values,
     std::span<const std::string> variables_to_validate);
 

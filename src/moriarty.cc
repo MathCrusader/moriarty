@@ -17,7 +17,6 @@
 
 #include <cstdint>
 #include <format>
-#include <optional>
 #include <span>
 #include <stdexcept>
 #include <string>
@@ -77,24 +76,40 @@ std::span<const int64_t> Moriarty::GetSeedForGenerator(int index) {
   return seed_;
 }
 
-std::optional<std::string> Moriarty::ValidateTestCases(
-    ValidateOptions options) const {
-  if (assigned_test_cases_.empty()) return "No TestCases.";
+namespace {
 
-  int case_num = 1;
-  for (const moriarty_internal::ValueSet& test_case : assigned_test_cases_) {
-    std::optional<std::string> failure =
-        moriarty_internal::AllVariablesSatisfyConstraints(
-            variables_, test_case, options.variables_to_validate);
-    if (failure.has_value()) {
-      if (assigned_test_cases_.size() == 1) {
-        return *failure;
-      }
-      return std::format("Case {} invalid:\n{}", case_num, *failure);
+std::string FailureToString(
+    const std::vector<DetailedConstraintViolation>& failures) {
+  std::string result;
+
+  for (const auto& [var_name, reason] : failures) {
+    if (!result.empty()) result += "\n";
+    result += std::format(" - Variable `{}` failed constraint: {}\n", var_name,
+                          reason.Reason());
+  }
+  return result;
+}
+
+}  // namespace
+
+ValidationResults Moriarty::ValidateTestCases(ValidateOptions options) const {
+  ValidationResults res;
+  if (assigned_test_cases_.empty()) {
+    res.AddFailure(0, "No TestCases.");
+    return res;
+  }
+
+  for (int case_num = 1; const auto& test_case : assigned_test_cases_) {
+    std::vector<DetailedConstraintViolation> failures =
+        moriarty_internal::CheckValues(variables_, test_case,
+                                       options.variables_to_validate);
+    if (!failures.empty()) {
+      res.AddFailure(assigned_test_cases_.size() == 1 ? 0 : case_num,
+                     FailureToString(failures));
     }
     case_num++;
   }
-  return std::nullopt;
+  return res;
 }
 
 void Moriarty::ImportTestCases(ImportFn fn, ImportOptions options) {

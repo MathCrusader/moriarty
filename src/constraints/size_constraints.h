@@ -68,7 +68,7 @@ class SizeCategory : public MConstraint {
 
   // Determines if the container's elements satisfy all constraints.
   template <typename T>
-  [[nodiscard]] ConstraintViolation CheckValue(const T& value) const {
+  ConstraintViolation CheckValue(const T& value) const {
     // Size is a suggestion, not a strict requirement.
     return ConstraintViolation::None();
   }

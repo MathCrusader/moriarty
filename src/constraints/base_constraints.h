@@ -110,7 +110,7 @@ class Exactly : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Determines if all constraints are satisfied with the given value.
-  [[nodiscard]] ConstraintViolation CheckValue(const T& value) const;
+  ConstraintViolation CheckValue(const T& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -169,7 +169,7 @@ class OneOf : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Determines if all constraints are satisfied with the given value.
-  [[nodiscard]] ConstraintViolation CheckValue(const T& value) const;
+  ConstraintViolation CheckValue(const T& value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;

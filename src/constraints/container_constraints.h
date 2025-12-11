@@ -56,8 +56,8 @@ class Length : public MConstraint {
 
   // Determines if the container has the correct length.
   template <typename Container>
-  [[nodiscard]] ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
-                                               const Container& value) const;
+  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                 const Container& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
@@ -84,7 +84,7 @@ class Elements : public MConstraint {
   [[nodiscard]] MElementType GetConstraints() const;
 
   // Determines if the container's elements satisfy all constraints.
-  [[nodiscard]] ConstraintViolation CheckValue(
+  ConstraintViolation CheckValue(
       librarian::AnalysisContext ctx,
       const std::vector<typename MElementType::value_type>& value) const;
 
@@ -114,9 +114,8 @@ class Element : public MConstraint {
   [[nodiscard]] MElementType GetConstraints() const;
 
   // Determines if an object satisfy all constraints.
-  [[nodiscard]] ConstraintViolation CheckValue(
-      librarian::AnalysisContext ctx,
-      const MElementType::value_type& value) const;
+  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                 const MElementType::value_type& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
@@ -135,8 +134,7 @@ class DistinctElements : public BasicMConstraint {
 
   // Determines if the container's elements satisfy all constraints.
   template <typename T>
-  [[nodiscard]] ConstraintViolation CheckValue(
-      const std::vector<T>& value) const;
+  ConstraintViolation CheckValue(const std::vector<T>& value) const;
 };
 
 // Constraint stating that the elements of a container must be sorted.
@@ -151,7 +149,7 @@ class Sorted : public BasicMConstraint {
       : BasicMConstraint("is sorted"), comp_(comp), proj_(proj) {}
 
   // Determines if the container is sorted.
-  [[nodiscard]] ConstraintViolation CheckValue(
+  ConstraintViolation CheckValue(
       const std::vector<typename MElementType::value_type>& value) const;
 
   // Compares two elements using the provided comparator and projection.

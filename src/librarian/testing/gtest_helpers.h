@@ -85,6 +85,15 @@
 //        Same as GenerateSameValues, except checks that all variables generate
 //        the same values.
 //
+//    * HasInvalidConstraints(variable_names)
+//       Matcher for the result of CheckValues(). Succeeds if the returned
+//       std::vector<DetailedConstraintViolation> contains exactly
+//       the variable names in `variable_names`.
+//
+//    * HasNoInvalidConstraints()
+//       Matcher for the result of CheckValues(). Succeeds if the returned
+//       std::vector<DetailedConstraintViolation> is empty.
+//
 // Exceptions:
 //
 //    * ThrowsVariableNotFound(variable_name)
@@ -887,6 +896,39 @@ MATCHER_P2(
         ::testing::Throws<moriarty::GenerationError>(), function,
         result_listener);
   }
+}
+
+MATCHER(HasNoInvalidConstraints, "all variables should be valid") {
+  if (!arg.empty()) {
+    *result_listener << "expected no invalid variables, but found "
+                     << arg.size() << " invalid variables";
+    return false;
+  }
+  return true;
+}
+
+MATCHER_P(HasInvalidConstraints, invalid_variable_names,
+          "each variable should be invalid") {
+  std::vector<std::string> invalids{invalid_variable_names.begin(),
+                                    invalid_variable_names.end()};
+  for (const auto& name : invalids) {
+    if (std::ranges::find_if(arg, [&name](const auto& violation) {
+          return violation.variable_name == name;
+        }) == arg.end()) {
+      *result_listener << "expected " << name
+                       << " to be invalid, but it wasn't";
+      return false;
+    }
+  }
+
+  for (const auto& [name, _] : arg) {
+    if (std::ranges::find(invalids, name) == invalids.end()) {
+      *result_listener << "did not expect " << name << " to be invalid";
+      return false;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace moriarty_testing

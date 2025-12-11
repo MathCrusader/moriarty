@@ -53,6 +53,13 @@ class ConstraintViolation {
   std::optional<std::string> reason_;
 };
 
+// A detailed constraint violation contains the violation, as well as the
+// variable that violated it.
+struct DetailedConstraintViolation {
+  std::string variable_name;
+  ConstraintViolation violation;
+};
+
 }  // namespace moriarty
 
 #endif  // MORIARTY_CONSTRAINTS_CONSTRAINT_VIOLATION_H_

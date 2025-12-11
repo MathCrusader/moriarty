@@ -38,7 +38,7 @@ class IOSeparator : public MConstraint {
   [[nodiscard]] Whitespace GetSeparator() const;
 
   // IOConstraints are always satisfied
-  [[nodiscard]] ConstraintViolation CheckValue(const auto& value) const {
+  ConstraintViolation CheckValue(const auto& value) const {
     return ConstraintViolation::None();
   }
 

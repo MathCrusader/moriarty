@@ -48,7 +48,7 @@ class NumNodes : public MConstraint {
 
   // Determines if the graph has the correct number of nodes.
   template <typename EdgeLabel, typename NodeLabel>
-  [[nodiscard]] ConstraintViolation CheckValue(
+  ConstraintViolation CheckValue(
       librarian::AnalysisContext ctx,
       const Graph<EdgeLabel, NodeLabel>& value) const;
 
@@ -84,7 +84,7 @@ class NumEdges : public MConstraint {
 
   // Determines if the graph has the correct number of edges.
   template <typename EdgeLabel, typename NodeLabel>
-  [[nodiscard]] ConstraintViolation CheckValue(
+  ConstraintViolation CheckValue(
       librarian::AnalysisContext ctx,
       const Graph<EdgeLabel, NodeLabel>& value) const;
 
@@ -107,7 +107,7 @@ class Connected : public BasicMConstraint {
 
   // Determines if the graph is connected.
   template <typename EdgeLabel, typename NodeLabel>
-  [[nodiscard]] ConstraintViolation CheckValue(
+  ConstraintViolation CheckValue(
       const Graph<EdgeLabel, NodeLabel>& value) const;
 };
 
@@ -123,7 +123,7 @@ class NoParallelEdges : public BasicMConstraint {
 
   // Determines if the graph has any parallel edges.
   template <typename EdgeLabel, typename NodeLabel>
-  [[nodiscard]] ConstraintViolation CheckValue(
+  ConstraintViolation CheckValue(
       const Graph<EdgeLabel, NodeLabel>& value) const;
 };
 
@@ -135,7 +135,7 @@ class Loopless : public BasicMConstraint {
 
   // Determines if the graph has any loops.
   template <typename EdgeLabel, typename NodeLabel>
-  [[nodiscard]] ConstraintViolation CheckValue(
+  ConstraintViolation CheckValue(
       const Graph<EdgeLabel, NodeLabel>& value) const;
 };
 
@@ -146,7 +146,7 @@ class SimpleGraph : public BasicMConstraint {
 
   // Determines if the graph is simple.
   template <typename EdgeLabel, typename NodeLabel>
-  [[nodiscard]] ConstraintViolation CheckValue(
+  ConstraintViolation CheckValue(
       const Graph<EdgeLabel, NodeLabel>& value) const;
 };
 
@@ -166,7 +166,7 @@ class NodeLabels : public MConstraint {
 
   // Determines if the graph's node labels satisfy all constraints.
   template <typename EdgeLabel>
-  [[nodiscard]] ConstraintViolation CheckValue(
+  ConstraintViolation CheckValue(
       librarian::AnalysisContext ctx,
       const Graph<EdgeLabel, typename MLabelType::value_type>& value) const;
 
@@ -196,7 +196,7 @@ class EdgeLabels : public MConstraint {
 
   // Determines if the graph's edge labels satisfy all constraints.
   template <typename NodeLabel>
-  [[nodiscard]] ConstraintViolation CheckValue(
+  ConstraintViolation CheckValue(
       librarian::AnalysisContext ctx,
       const Graph<typename MLabelType::value_type, NodeLabel>& value) const;
 

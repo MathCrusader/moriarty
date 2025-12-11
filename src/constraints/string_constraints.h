@@ -53,7 +53,7 @@ class Alphabet : public MConstraint {
   [[nodiscard]] std::string GetAlphabet() const;
 
   // Determines if the string has the correct characters.
-  [[nodiscard]] ConstraintViolation CheckValue(std::string_view value) const;
+  ConstraintViolation CheckValue(std::string_view value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
@@ -72,7 +72,7 @@ class DistinctCharacters : public BasicMConstraint {
   explicit DistinctCharacters() : BasicMConstraint("has distinct characters") {}
 
   // Determines if the string has no duplicate characters.
-  [[nodiscard]] ConstraintViolation CheckValue(std::string_view value) const;
+  ConstraintViolation CheckValue(std::string_view value) const;
 };
 
 // Constraint stating that the string must match this simple pattern.
@@ -96,8 +96,8 @@ class SimplePattern : public MConstraint {
   [[nodiscard]] moriarty_internal::SimplePattern GetCompiledPattern() const;
 
   // Determines if the string has the correct characters.
-  [[nodiscard]] ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
-                                               std::string_view value) const;
+  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                 std::string_view value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;

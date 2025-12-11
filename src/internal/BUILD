@@ -45,6 +45,7 @@ cc_library(
     deps = [
         ":value_set",
         ":variable_set",
+        "//src/constraints:constraint_violation",
     ],
 )
 

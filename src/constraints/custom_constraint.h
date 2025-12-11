@@ -53,8 +53,8 @@ class CustomConstraint : public MConstraint {
   [[nodiscard]] std::string GetName() const;
 
   // Determines if `value` satisfies the constraint.
-  [[nodiscard]] ConstraintViolation CheckValue(
-      librarian::AnalysisContext ctx, const T::value_type& value) const;
+  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+                                 const T::value_type& value) const;
 
   // Returns a string representation of the constraint.
   [[nodiscard]] std::string ToString() const;

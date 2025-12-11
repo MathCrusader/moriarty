@@ -92,12 +92,12 @@ class Between : public NumericRangeMConstraint {
   [[nodiscard]] std::string ToString() const override;
 
   // Returns true if `[minimum] <= value <= [maximum]`.
-  [[nodiscard]] ConstraintViolation CheckIntegerValue(
-      LookupVariableFn lookup_variable, int64_t value) const override;
+  ConstraintViolation CheckIntegerValue(LookupVariableFn lookup_variable,
+                                        int64_t value) const override;
 
   // Returns true if `[minimum] <= value <= [maximum]`.
-  [[nodiscard]] ConstraintViolation CheckRealValue(
-      LookupVariableFn lookup_variable, double value) const override;
+  ConstraintViolation CheckRealValue(LookupVariableFn lookup_variable,
+                                     double value) const override;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const override;
@@ -136,12 +136,12 @@ class AtMost : public NumericRangeMConstraint {
   [[nodiscard]] std::string ToString() const override;
 
   // Returns true if `value <= [maximum]`.
-  [[nodiscard]] ConstraintViolation CheckIntegerValue(
-      LookupVariableFn lookup_variable, int64_t value) const override;
+  ConstraintViolation CheckIntegerValue(LookupVariableFn lookup_variable,
+                                        int64_t value) const override;
 
   // Returns true if `value <= [maximum]`.
-  [[nodiscard]] ConstraintViolation CheckRealValue(
-      LookupVariableFn lookup_variable, double value) const override;
+  ConstraintViolation CheckRealValue(LookupVariableFn lookup_variable,
+                                     double value) const override;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const override;
@@ -179,12 +179,12 @@ class AtLeast : public NumericRangeMConstraint {
   [[nodiscard]] std::string ToString() const override;
 
   // Returns true if the given value satisfies this constraint.
-  [[nodiscard]] ConstraintViolation CheckIntegerValue(
-      LookupVariableFn lookup_variable, int64_t value) const override;
+  ConstraintViolation CheckIntegerValue(LookupVariableFn lookup_variable,
+                                        int64_t value) const override;
 
   // Returns true if `[minimum] <= value`.
-  [[nodiscard]] ConstraintViolation CheckRealValue(
-      LookupVariableFn lookup_variable, double value) const override;
+  ConstraintViolation CheckRealValue(LookupVariableFn lookup_variable,
+                                     double value) const override;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const override;
@@ -207,10 +207,10 @@ class ExactlyNumeric : public NumericRangeMConstraint {
 
   [[nodiscard]] Range GetRange() const;
   [[nodiscard]] std::string ToString() const override;
-  [[nodiscard]] ConstraintViolation CheckIntegerValue(
-      LookupVariableFn lookup_variable, int64_t value) const override;
-  [[nodiscard]] ConstraintViolation CheckRealValue(
-      LookupVariableFn lookup_variable, double value) const override;
+  ConstraintViolation CheckIntegerValue(LookupVariableFn lookup_variable,
+                                        int64_t value) const override;
+  ConstraintViolation CheckRealValue(LookupVariableFn lookup_variable,
+                                     double value) const override;
   [[nodiscard]] std::vector<std::string> GetDependencies() const override;
 
  private:
@@ -241,10 +241,10 @@ class OneOfNumeric : public NumericRangeMConstraint {
   [[nodiscard]] bool ConstrainOptions(int64_t other);
 
   // Similar to OneOfHandler::HasOption()
-  [[nodiscard]] ConstraintViolation CheckIntegerValue(
-      LookupVariableFn lookup_variable, int64_t value) const override;
-  [[nodiscard]] ConstraintViolation CheckRealValue(
-      LookupVariableFn lookup_variable, double value) const override;
+  ConstraintViolation CheckIntegerValue(LookupVariableFn lookup_variable,
+                                        int64_t value) const override;
+  ConstraintViolation CheckRealValue(LookupVariableFn lookup_variable,
+                                     double value) const override;
 
   [[nodiscard]] std::vector<Real> GetOptions(
       LookupVariableFn lookup_variable) const;

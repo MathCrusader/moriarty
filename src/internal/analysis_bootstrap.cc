@@ -14,30 +14,38 @@
 
 #include "src/internal/analysis_bootstrap.h"
 
-#include <format>
-#include <optional>
 #include <span>
+#include <string>
+#include <vector>
 
+#include "src/constraints/constraint_violation.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 
-std::optional<std::string> AllVariablesSatisfyConstraints(
+std::vector<DetailedConstraintViolation> CheckValues(
     const VariableSet& variables, const ValueSet& values,
     std::span<const std::string> variables_to_validate) {
+  std::vector<DetailedConstraintViolation> violations;
   for (const auto& [name, var] : variables.ListVariables()) {
     if (!variables_to_validate.empty() &&
         std::ranges::find(variables_to_validate, name) ==
             variables_to_validate.end()) {
       continue;
     }
-    if (auto reason = var->CheckValue(name, variables, values))
-      return std::format("Variable {} does not satisfy its constraints: {}",
-                         name, reason.Reason());
+    if (!values.Contains(name)) {
+      violations.push_back(
+          {name, ConstraintViolation(
+                     std::format("No value assigned to variable `{}`", name))});
+      continue;
+    }
+    if (auto reason = var->CheckValue(name, variables, values)) {
+      violations.push_back({name, reason});
+    }
   }
-  return std::nullopt;
+  return violations;
 }
 
 }  // namespace moriarty_internal

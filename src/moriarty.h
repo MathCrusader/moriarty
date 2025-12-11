@@ -24,7 +24,6 @@
 #define MORIARTY_MORIARTY_H_
 
 #include <cstdint>
-#include <optional>
 #include <span>
 #include <string>
 #include <string_view>
@@ -133,10 +132,8 @@ class Moriarty {
   // ValidateTestCases()
   //
   // Checks if all variables in all test cases are valid. If there are
-  // any failures, this will return one of them. If this return std::nullopt,
-  // then the test cases are valid.
-  [[nodiscard]] std::optional<std::string> ValidateTestCases(
-      ValidateOptions options = {}) const;
+  // multiple failures, this will return some subset of them.
+  ValidationResults ValidateTestCases(ValidateOptions options = {}) const;
 
  private:
   // Seed info

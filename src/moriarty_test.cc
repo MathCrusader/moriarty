@@ -49,7 +49,6 @@ using ::testing::ElementsAre;
 using ::testing::Ge;
 using ::testing::HasSubstr;
 using ::testing::Le;
-using ::testing::Optional;
 using ::testing::Pair;
 using ::testing::SizeIs;
 using ::testing::ThrowsMessage;
@@ -427,14 +426,16 @@ TEST(MoriartyTest, ValidateAllTestCasesWorksWhenAllVariablesAreValid) {
   Moriarty M;
   M.AddVariable("X", MInteger(Between(1, 5)));
   M.ImportTestCases([](ImportContext ctx) { return ImportIota(ctx, "X", 5); });
-  EXPECT_EQ(M.ValidateTestCases(), std::nullopt);
+  EXPECT_TRUE(M.ValidateTestCases().IsValid());
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSingleVariableInvalid) {
   Moriarty M;
   M.AddVariable("X", MInteger(Between(1, 3)));
   M.ImportTestCases([](ImportContext ctx) { return ImportIota(ctx, "X", 5); });
-  EXPECT_THAT(M.ValidateTestCases(), Optional(HasSubstr("Case 4")));
+  ValidationResults results = M.ValidateTestCases();
+  EXPECT_FALSE(results.IsValid());
+  EXPECT_THAT(results.DescribeFailures(), HasSubstr("Case #4 invalid"));
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSomeVariableInvalid) {
@@ -443,7 +444,9 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSomeVariableInvalid) {
       .AddVariable("S", MInteger(Between(10, 30)));
   M.ImportTestCases(
       [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); });
-  EXPECT_THAT(M.ValidateTestCases(), Optional(HasSubstr("Case 3")));
+  ValidationResults results = M.ValidateTestCases();
+  EXPECT_FALSE(results.IsValid());
+  EXPECT_THAT(results.DescribeFailures(), HasSubstr("Case #3 invalid"));
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
@@ -452,7 +455,11 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
       .AddVariable("q", MInteger(Between(10, 30)));  // Importer uses S, not q
   M.ImportTestCases(
       [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); });
-  EXPECT_THAT([&] { (void)M.ValidateTestCases(); }, ThrowsValueNotFound("q"));
+
+  ValidationResults results = M.ValidateTestCases();
+  EXPECT_FALSE(results.IsValid());
+  EXPECT_THAT(results.DescribeFailures(),
+              HasSubstr("No value assigned to variable `q`"));
 }
 
 TEST(MoriartyTest, VariableNameValidationShouldWork) {
