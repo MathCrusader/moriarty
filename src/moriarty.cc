@@ -77,14 +77,15 @@ std::span<const int64_t> Moriarty::GetSeedForGenerator(int index) {
   return seed_;
 }
 
-std::optional<std::string> Moriarty::ValidateTestCases() {
+std::optional<std::string> Moriarty::ValidateTestCases(
+    ValidateOptions options) const {
   if (assigned_test_cases_.empty()) return "No TestCases.";
 
   int case_num = 1;
   for (const moriarty_internal::ValueSet& test_case : assigned_test_cases_) {
     std::optional<std::string> failure =
-        moriarty_internal::AllVariablesSatisfyConstraints(variables_,
-                                                          test_case);
+        moriarty_internal::AllVariablesSatisfyConstraints(
+            variables_, test_case, options.variables_to_validate);
     if (failure.has_value()) {
       if (assigned_test_cases_.size() == 1) {
         return *failure;

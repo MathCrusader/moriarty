@@ -135,7 +135,8 @@ class Moriarty {
   // Checks if all variables in all test cases are valid. If there are
   // any failures, this will return one of them. If this return std::nullopt,
   // then the test cases are valid.
-  [[nodiscard]] std::optional<std::string> ValidateTestCases();
+  [[nodiscard]] std::optional<std::string> ValidateTestCases(
+      ValidateOptions options = {}) const;
 
  private:
   // Seed info

@@ -39,7 +39,7 @@ TEST(AnalysisBootstrapTest,
      AllVariablesSatisfyConstraintsSucceedsWithNoVariables) {
   Context context;
   EXPECT_EQ(
-      AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
+      AllVariablesSatisfyConstraints(context.Variables(), context.Values(), {}),
       std::nullopt);
 }
 
@@ -54,7 +54,7 @@ TEST(AnalysisBootstrapTest,
                         .WithValue<MTestType>("B", options[53]);
 
   EXPECT_EQ(
-      AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
+      AllVariablesSatisfyConstraints(context.Variables(), context.Values(), {}),
       std::nullopt);
 }
 
@@ -71,8 +71,11 @@ TEST(AnalysisBootstrapTest,
           .WithValue<MTestType>("B", TestType(100000));  // Not in the list!
 
   EXPECT_THAT(
-      AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
+      AllVariablesSatisfyConstraints(context.Variables(), context.Values(), {}),
       Optional(HasSubstr("B")));
+  EXPECT_EQ(AllVariablesSatisfyConstraints(context.Variables(),
+                                           context.Values(), {{"A"}}),
+            std::nullopt);
 }
 
 TEST(AnalysisBootstrapTest,
@@ -89,7 +92,7 @@ TEST(AnalysisBootstrapTest,
   EXPECT_THAT(
       [&] {
         (void)AllVariablesSatisfyConstraints(context.Variables(),
-                                             context.Values());
+                                             context.Values(), {});
       },
       ThrowsValueNotFound("B"));
 }
@@ -106,7 +109,7 @@ TEST(AnalysisBootstrapTest,
                         .WithValue<MTestType>("C", options[50]);
 
   EXPECT_EQ(
-      AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
+      AllVariablesSatisfyConstraints(context.Variables(), context.Values(), {}),
       std::nullopt);
 }
 
@@ -120,7 +123,7 @@ TEST(AnalysisBootstrapTest,
           .WithValue<MInteger>("N", 6);
 
   EXPECT_EQ(
-      AllVariablesSatisfyConstraints(context.Variables(), context.Values()),
+      AllVariablesSatisfyConstraints(context.Variables(), context.Values(), {}),
       std::nullopt);
 }
 
@@ -131,7 +134,7 @@ TEST(AnalysisBootstrapTest,
   EXPECT_THAT(
       [&] {
         (void)AllVariablesSatisfyConstraints(context.Variables(),
-                                             context.Values());
+                                             context.Values(), {});
       },
       ThrowsValueNotFound("A"));
 }

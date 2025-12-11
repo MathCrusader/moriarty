@@ -33,8 +33,11 @@ namespace moriarty_internal {
 //
 // If a variable does not have a value, this will return not ok.
 // If a value does not have a variable, this will return ok.
+//
+// If variables_to_validate is non-empty, only those variables will be checked.
 [[nodiscard]] std::optional<std::string> AllVariablesSatisfyConstraints(
-    const VariableSet& variables, const ValueSet& values);
+    const VariableSet& variables, const ValueSet& values,
+    std::span<const std::string> variables_to_validate);
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

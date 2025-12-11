@@ -16,6 +16,7 @@
 
 #include <format>
 #include <optional>
+#include <span>
 
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
@@ -24,8 +25,14 @@ namespace moriarty {
 namespace moriarty_internal {
 
 std::optional<std::string> AllVariablesSatisfyConstraints(
-    const VariableSet& variables, const ValueSet& values) {
+    const VariableSet& variables, const ValueSet& values,
+    std::span<const std::string> variables_to_validate) {
   for (const auto& [name, var] : variables.ListVariables()) {
+    if (!variables_to_validate.empty() &&
+        std::ranges::find(variables_to_validate, name) ==
+            variables_to_validate.end()) {
+      continue;
+    }
     if (auto reason = var->CheckValue(name, variables, values))
       return std::format("Variable {} does not satisfy its constraints: {}",
                          name, reason.Reason());

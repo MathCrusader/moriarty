@@ -144,6 +144,14 @@ struct ExportOptions {
 };
 
 // -----------------------------------------------------------------------------
+//  Validate
+
+struct ValidateOptions {
+  // Which variables to validate. If empty, all variables will be validated.
+  std::vector<std::string> variables_to_validate;
+};
+
+// -----------------------------------------------------------------------------
 //  Custom Constraints
 
 // ConstraintContext
