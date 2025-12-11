@@ -29,8 +29,8 @@ void VariableOStreamContext::PrintVariableFrom(std::string_view variable_name,
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
 
-  ValueSet values = UnsafeExtractTestCaseInternals(test_case);
-  variable->PrintValue(variable_name, os_, variables_, values);
+  variable->PrintValue(variable_name, os_, variables_,
+                       test_case.UnsafeGetValues());
 }
 
 }  // namespace moriarty_internal

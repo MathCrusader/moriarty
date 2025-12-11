@@ -143,8 +143,7 @@ TEST(VariableIStreamContextTest, ReadVariableToShouldWork) {
   VariableIStreamContext ctx(cr, context.Variables(), context.Values());
   ctx.ReadVariableTo("X", test_case);
 
-  ValueSet new_values = UnsafeExtractTestCaseInternals(test_case);
-  EXPECT_EQ(new_values.Get<MInteger>("X"), 10);
+  EXPECT_EQ(test_case.UnsafeGetValues().Get<MInteger>("X"), 10);
 }
 
 TEST(VariableIStreamContextTest, ReadVariableToWithUnknownVariableShouldFail) {
@@ -171,8 +170,8 @@ TEST(VariableIStreamContextTest,
   TestCase test_case;
   test_case.SetValue<MInteger>("N", 3);
   ctx.ReadVariableTo("A", test_case);
-  ValueSet new_values = UnsafeExtractTestCaseInternals(test_case);
-  EXPECT_THAT(new_values.Get<MArray<MInteger>>("A"), ElementsAre(11, 22, 33));
+  EXPECT_THAT(test_case.UnsafeGetValues().Get<MArray<MInteger>>("A"),
+              ElementsAre(11, 22, 33));
 }
 
 TEST(VariableIStreamContextTest, ReadVariableToShouldRespectWhitespace) {
@@ -183,8 +182,8 @@ TEST(VariableIStreamContextTest, ReadVariableToShouldRespectWhitespace) {
     VariableIStreamContext ctx(cr, context.Variables(), context.Values());
     TestCase test_case;
     ctx.ReadVariableTo("A", test_case);
-    ValueSet new_values = UnsafeExtractTestCaseInternals(test_case);
-    EXPECT_THAT(new_values.Get<MArray<MInteger>>("A"), ElementsAre(11, 22));
+    EXPECT_THAT(test_case.UnsafeGetValues().Get<MArray<MInteger>>("A"),
+                ElementsAre(11, 22));
   }
   {
     std::istringstream ss("11    22");
@@ -192,8 +191,8 @@ TEST(VariableIStreamContextTest, ReadVariableToShouldRespectWhitespace) {
     VariableIStreamContext ctx(cr, context.Variables(), context.Values());
     TestCase test_case;
     ctx.ReadVariableTo("A", test_case);
-    ValueSet new_values = UnsafeExtractTestCaseInternals(test_case);
-    EXPECT_THAT(new_values.Get<MArray<MInteger>>("A"), ElementsAre(11, 22));
+    EXPECT_THAT(test_case.UnsafeGetValues().Get<MArray<MInteger>>("A"),
+                ElementsAre(11, 22));
   }
   {
     std::istringstream ss("11    22");

@@ -44,20 +44,18 @@ using ::moriarty_testing::ThrowsVariableNotFound;
 
 template <typename T>
 T GetVariable(const MTestCase& test_case, std::string_view name) {
-  auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
-  return variables.GetVariable<T>(name);
+  return test_case.UnsafeGetVariables().GetVariable<T>(name);
 }
 
 template <typename T>
 T::value_type GetValue(const MTestCase& test_case, std::string_view name) {
-  auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
-  return values.Get<T>(name);
+  return test_case.UnsafeGetValues().Get<T>(name);
 }
 
 ValueSet AssignAllValues(const MTestCase& test_case) {
-  auto [variables, values] = UnsafeExtractTestCaseInternals(test_case);
   Context ctx;
-  return GenerateAllValues(variables, values, {ctx.RandomEngine()});
+  return GenerateAllValues(test_case.UnsafeGetVariables(),
+                           test_case.UnsafeGetValues(), {ctx.RandomEngine()});
 }
 
 TEST(MTestCaseTest, ConstrainVariableAndGetVariableWorkInGeneralCase) {

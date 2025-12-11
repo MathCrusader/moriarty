@@ -74,10 +74,9 @@ TEST(CombinatorialCoverage, GenerateShouldCreateCasesFromCoveringArray) {
   std::vector<MTestCase> test_cases = CombinatorialCoverage(ctx);
   std::vector<ValueSet> generated_cases;
   for (const MTestCase& test_case : test_cases) {
-    auto [extra_constraints, values] =
-        UnsafeExtractTestCaseInternals(test_case);
     generated_cases.push_back(moriarty_internal::GenerateAllValues(
-        context.Variables(), extra_constraints, values, {rng}));
+        context.Variables(), test_case.UnsafeGetVariables(),
+        test_case.UnsafeGetValues(), {rng}));
   }
 
   EXPECT_THAT(CasesToCoveringArray(generated_cases),

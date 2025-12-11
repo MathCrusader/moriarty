@@ -26,12 +26,6 @@
 
 namespace moriarty {
 
-// FIXME: Remove after Context refactor
-struct TCInternals {
-  moriarty_internal::VariableSet variables;
-  moriarty_internal::ValueSet values;
-};
-
 // MTestCase
 //
 // A collection of constraints (and optionally values) representing a single
@@ -93,11 +87,21 @@ class MTestCase {
   MTestCase& UnsafeSetAnonymousValue(std::string_view variable_name,
                                      std::any value);
 
+  // This is a dangerous function that should only be used if you know what
+  // you're doing. This is sometimes needed to pass a reference to a particular
+  // context. Do not depend on this function as it may be removed at any point.
+  moriarty_internal::VariableSet& UnsafeGetVariables() &;
+  const moriarty_internal::VariableSet& UnsafeGetVariables() const&;
+
+  // This is a dangerous function that should only be used if you know what
+  // you're doing. This is sometimes needed to pass a reference to a particular
+  // context. Do not depend on this function as it may be removed at any point.
+  moriarty_internal::ValueSet& UnsafeGetValues() &;
+  const moriarty_internal::ValueSet& UnsafeGetValues() const&;
+
  private:
   moriarty_internal::VariableSet variables_;
   moriarty_internal::ValueSet values_;
-
-  friend TCInternals UnsafeExtractTestCaseInternals(const MTestCase& test_case);
 };
 
 // TestCase
@@ -109,6 +113,9 @@ class MTestCase {
 // `MTestCase`.
 class TestCase {
  public:
+  TestCase() = default;
+  explicit TestCase(const moriarty_internal::ValueSet& values);
+
   // SetValue()
   //
   // Sets the variable `variable_name` to be exactly `value`. Example:
@@ -137,14 +144,10 @@ class TestCase {
   // you're doing. This is sometimes needed to pass a reference to a particular
   // context. Do not depend on this function as it may be removed at any point.
   moriarty_internal::ValueSet& UnsafeGetValues() &;
+  const moriarty_internal::ValueSet& UnsafeGetValues() const&;
 
  private:
   moriarty_internal::ValueSet values_;
-
-  friend moriarty_internal::ValueSet UnsafeExtractTestCaseInternals(
-      const TestCase& test_case);
-  friend void UnsafeSetTestCaseInternals(TestCase& test_case,
-                                         moriarty_internal::ValueSet values);
 };
 
 // -----------------------------------------------------------------------------
@@ -175,17 +178,6 @@ template <MoriartyVariable T>
 T::value_type TestCase::GetValue(std::string_view variable_name) const {
   return values_.Get<T>(variable_name);
 }
-
-}  // namespace moriarty
-
-namespace moriarty {
-// Convenience functions for internal use only.
-
-TCInternals UnsafeExtractTestCaseInternals(const MTestCase& test_case);
-moriarty_internal::ValueSet UnsafeExtractTestCaseInternals(
-    const TestCase& test_case);
-void UnsafeSetTestCaseInternals(TestCase& test_case,
-                                moriarty_internal::ValueSet values);
 
 }  // namespace moriarty
 
