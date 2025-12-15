@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "src/constraints/constraint_violation.h"
+#include "src/context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 
@@ -37,7 +38,8 @@ namespace moriarty_internal {
 // If variables_to_validate is non-empty, only those variables will be checked.
 [[nodiscard]] std::vector<DetailedConstraintViolation> CheckValues(
     const VariableSet& variables, const ValueSet& values,
-    std::span<const std::string> variables_to_validate);
+    std::span<const std::string> variables_to_validate,
+    ValidationStyle validation);
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

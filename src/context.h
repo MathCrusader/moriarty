@@ -36,6 +36,15 @@
 
 namespace moriarty {
 
+enum class ValidationStyle {
+  kNone,              // No validation
+  kOnlySetVariables,  // Ensure every variable that has a value set is valid
+  kOnlySetValues,     // Ensure every value that is set is valid
+  kAllVariables,      // Ensure every variable has a value that is valid
+  kEverything,  // Ensure the set of values and variables are identical and
+                // all of them are valid
+};
+
 // -----------------------------------------------------------------------------
 //  Generate
 
@@ -74,8 +83,13 @@ struct GenerateOptions {
   std::optional<std::string> seed;
 
   // Only auto-generate values for these variables (and any variables they
-  // depend on). If empty, all variables will be generated.
+  // depend on). If empty, all variables will be generated.  If this is set,
+  // then only these variables count as "all variables" for the purposes of
+  // ValidationStyle.
   std::vector<std::string> variables_to_generate;
+
+  // After generation is complete, how should we validate the test cases?
+  ValidationStyle validation = ValidationStyle::kAllVariables;
 };
 
 // -----------------------------------------------------------------------------
@@ -104,13 +118,15 @@ class ImportContext : public moriarty_internal::ViewOnlyContext,
 // The function signature for an importer.
 using ImportFn = std::function<std::vector<TestCase>(ImportContext)>;
 
-// TODO: Auto-Validate?
 struct ImportOptions {
   // The input stream to read from.
   Ref<std::istream> is = std::cin;
 
   // How strict the importer should be about whitespace.
   WhitespaceStrictness whitespace_strictness = WhitespaceStrictness::kPrecise;
+
+  // After import is complete, how should we validate the test cases?
+  ValidationStyle validation = ValidationStyle::kAllVariables;
 };
 
 // -----------------------------------------------------------------------------
@@ -165,7 +181,12 @@ class [[nodiscard]] ValidationResults {
 };
 
 struct ValidateOptions {
-  // Which variables to validate. If empty, all variables will be validated.
+  // How should we validate the test cases?
+  ValidationStyle validation = ValidationStyle::kAllVariables;
+
+  // Which variables to validate. If empty, all variables will be validated. If
+  // this is set, then only these variables count as "all variables" for the
+  // purposes of ValidationStyle.
   std::vector<std::string> variables_to_validate;
 };
 

@@ -15,8 +15,10 @@
 #include "src/internal/value_set.h"
 
 #include <any>
+#include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "src/librarian/errors.h"
 
@@ -42,6 +44,13 @@ std::any ValueSet::UnsafeGet(std::string_view variable_name) const {
   auto it = values_.find(variable_name);
   if (it == values_.end()) throw ValueNotFound(variable_name);
   return it->second;
+}
+
+std::vector<std::string> ValueSet::ListValues() const {
+  std::vector<std::string> result;
+  result.reserve(values_.size());
+  for (const auto& [name, _] : values_) result.push_back(name);
+  return result;
 }
 
 }  // namespace moriarty_internal

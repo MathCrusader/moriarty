@@ -328,7 +328,8 @@ TEST(MoriartyTest, GenerateOnlyGeneratesTheSubsetOfVariablesRequested) {
         [](GenerateContext ctx) -> std::vector<MTestCase> {
           return {MTestCase().SetValue<MInteger>("N", 5)};
         },
-        {.variables_to_generate = {{"N"}}});
+        {.variables_to_generate = {{"N"}},
+         .validation = ValidationStyle::kOnlySetValues});
   });
 
   EXPECT_THAT(
@@ -340,6 +341,52 @@ TEST(MoriartyTest, GenerateOnlyGeneratesTheSubsetOfVariablesRequested) {
             GenerateOptions{});
       },
       ThrowsMessage<GenerationError>(HasSubstr("N")));
+}
+
+TEST(MoriartyTest, GenerateTestCasesCrashesOnValidationErrorIfRequested) {
+  Moriarty M;
+  M.SetSeed("abcde0123456789");
+  M.AddVariable("N", MInteger(Exactly(5)))
+      .AddVariable("M", MInteger(Between(1, 10)));
+
+  EXPECT_NO_THROW({
+    M.GenerateTestCases(
+        [](GenerateContext ctx) -> std::vector<MTestCase> {
+          return {MTestCase().SetValue<MInteger>("N", 5)};
+        },
+        {.variables_to_generate = {{"N"}},
+         .validation = ValidationStyle::kOnlySetValues});
+  });
+
+  EXPECT_THAT(
+      [&] {
+        M.GenerateTestCases(
+            [](GenerateContext ctx) -> std::vector<MTestCase> {
+              return {MTestCase().SetValue<MInteger>("N", 5)};
+            },
+            {.validation = ValidationStyle::kAllVariables});
+      },
+      ThrowsMessage<ValidationError>(
+          HasSubstr("No value assigned to variable `M`")));
+
+  EXPECT_NO_THROW({
+    M.GenerateTestCases(
+        [](GenerateContext ctx) -> std::vector<MTestCase> {
+          return {MTestCase().SetValue<MInteger>("N", 5)};
+        },
+        {.validation = ValidationStyle::kOnlySetVariables});
+  });
+
+  EXPECT_THAT(
+      [&] {
+        M.GenerateTestCases(
+            [](GenerateContext ctx) -> std::vector<MTestCase> {
+              return {MTestCase().SetValue<MInteger>("N", 5)};
+            },
+            {.validation = ValidationStyle::kEverything});
+      },
+      ThrowsMessage<ValidationError>(
+          HasSubstr("No value assigned to variable `M`")));
 }
 
 TEST(MoriartyTest, ImportAndExportShouldWorkTypicalCase) {
@@ -428,7 +475,8 @@ TEST(MoriartyTest, ValidateAllTestCasesWorksWhenAllVariablesAreValid) {
 TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSingleVariableInvalid) {
   Moriarty M;
   M.AddVariable("X", MInteger(Between(1, 3)));
-  M.ImportTestCases([](ImportContext ctx) { return ImportIota(ctx, "X", 5); });
+  M.ImportTestCases([](ImportContext ctx) { return ImportIota(ctx, "X", 5); },
+                    ImportOptions{.validation = ValidationStyle::kNone});
   ValidationResults results = M.ValidateTestCases();
   EXPECT_FALSE(results.IsValid());
   EXPECT_THAT(results.DescribeFailures(), HasSubstr("Case #4 invalid"));
@@ -439,18 +487,96 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSomeVariableInvalid) {
   M.AddVariable("R", MInteger(Between(1, 3)))
       .AddVariable("S", MInteger(Between(10, 30)));
   M.ImportTestCases(
-      [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); });
+      [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
+      ImportOptions{.validation = ValidationStyle::kNone});
   ValidationResults results = M.ValidateTestCases();
   EXPECT_FALSE(results.IsValid());
   EXPECT_THAT(results.DescribeFailures(), HasSubstr("Case #3 invalid"));
 }
 
-TEST(MoriartyTest, ValidateAllTestCasesFailsIfAVariableIsMissing) {
+TEST(MoriartyTest, ValidateAllTestCasesHandlesMissingVariableOrValue) {
+  Moriarty M;
+  M.AddVariable("R", MInteger(Between(0, 5)))
+      .AddVariable("q", MInteger(Between(10, 30)));  // Importer uses S, not q
+  M.ImportTestCases(
+      [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
+      {.validation = ValidationStyle::kNone});
+
+  ValidationResults results =
+      M.ValidateTestCases({.validation = ValidationStyle::kAllVariables});
+  EXPECT_FALSE(results.IsValid());
+  EXPECT_THAT(results.DescribeFailures(),
+              HasSubstr("No value assigned to variable `q`"));
+
+  results =
+      M.ValidateTestCases({.validation = ValidationStyle::kOnlySetVariables});
+  EXPECT_TRUE(results.IsValid()) << results.DescribeFailures();
+
+  results =
+      M.ValidateTestCases({.validation = ValidationStyle::kOnlySetValues});
+  EXPECT_FALSE(results.IsValid());
+  EXPECT_THAT(
+      results.DescribeFailures(),
+      HasSubstr("No variable found for `S`, but a value was set for it"));
+
+  results = M.ValidateTestCases({.validation = ValidationStyle::kEverything});
+  EXPECT_FALSE(results.IsValid());
+  EXPECT_THAT(
+      results.DescribeFailures(),
+      AnyOf(HasSubstr("No variable found for S, but a value was set for it"),
+            HasSubstr("No value assigned to variable `q`")));
+}
+
+TEST(MoriartyTest, ImportTestCasesCrashesOnValidationErrorIfRequested) {
+  Moriarty M;
+  M.AddVariable("R", MInteger(Between(0, 5)))
+      .AddVariable("q", MInteger(Between(10, 30)));  // Importer uses S, not q
+
+  EXPECT_THAT(
+      [&] {
+        M.ImportTestCases(
+            [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
+            {.validation = ValidationStyle::kAllVariables});
+      },
+      ThrowsMessage<ValidationError>(
+          HasSubstr("No value assigned to variable `q`")));
+
+  EXPECT_NO_THROW(M.ImportTestCases(
+      [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
+      {.validation = ValidationStyle::kOnlySetVariables}));
+
+  EXPECT_THAT(
+      [&] {
+        M.ImportTestCases(
+            [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
+            {.validation = ValidationStyle::kOnlySetValues});
+      },
+      ThrowsMessage<ValidationError>(
+          HasSubstr("No variable found for `S`, but a value was set for it")));
+}
+
+TEST(MoriartyTest, ImportTestCasesHandlesMissingVariableOrValue) {
+  Moriarty M;
+  M.AddVariable("R", MInteger(Between(0, 5)))
+      .AddVariable("q", MInteger(Between(10, 30)));  // Importer uses S, not q
+
+  EXPECT_THAT(
+      [&] {
+        M.ImportTestCases(
+            [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
+            {.validation = ValidationStyle::kAllVariables});
+      },
+      ThrowsMessage<ValidationError>(
+          HasSubstr("No value assigned to variable `q`")));
+}
+
+TEST(MoriartyTest, ValidateAllTestCasesHandFailsIfAVariableIsMissing) {
   Moriarty M;
   M.AddVariable("R", MInteger(Between(1, 3)))
       .AddVariable("q", MInteger(Between(10, 30)));  // Importer uses S, not q
   M.ImportTestCases(
-      [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); });
+      [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
+      {.validation = ValidationStyle::kNone});
 
   ValidationResults results = M.ValidateTestCases();
   EXPECT_FALSE(results.IsValid());

@@ -30,6 +30,8 @@ namespace {
 using ::moriarty_testing::ThrowsValueNotFound;
 using ::moriarty_testing::ThrowsValueTypeMismatch;
 using ::testing::AnyWith;
+using ::testing::IsEmpty;
+using ::testing::UnorderedElementsAre;
 
 TEST(ValueSetTest, SimpleGetAndSetWorks) {
   ValueSet values;
@@ -141,6 +143,18 @@ TEST(ValueSetTest, ErasingVariableLeavesOthersAlone) {
 
   values.Erase("x");
   EXPECT_TRUE(values.Contains("y"));
+}
+
+TEST(ValueSetTest, ListValuesWorks) {
+  ValueSet values;
+  EXPECT_THAT(values.ListValues(), IsEmpty());
+
+  values.Set<MInteger>("x", 5);
+  EXPECT_THAT(values.ListValues(), UnorderedElementsAre("x"));
+
+  values.Set<MString>("s", "hello");
+  values.Set<MInteger>("y", 10);
+  EXPECT_THAT(values.ListValues(), UnorderedElementsAre("x", "s", "y"));
 }
 
 }  // namespace

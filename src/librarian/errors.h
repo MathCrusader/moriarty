@@ -192,6 +192,24 @@ class GenerationError : public GenericMoriartyError {
   RetryPolicy retryable_;
 };
 
+// ValidationError
+//
+// Thrown when a test case fails validation.
+class ValidationError : public GenericMoriartyError {
+ public:
+  explicit ValidationError(std::string_view context, std::string_view message)
+      : GenericMoriartyError(std::format(
+            "Error while validating a test case in {}: {}", context, message)),
+        context_(context),
+        message_(message) {}
+  const std::string& Context() const { return context_; }
+  const std::string& Message() const { return message_; }
+
+ private:
+  std::string context_;
+  std::string message_;
+};
+
 // IOError
 //
 // Thrown when the I/O is invalid.

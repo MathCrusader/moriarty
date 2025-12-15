@@ -21,6 +21,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <vector>
 
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/errors.h"
@@ -83,6 +84,11 @@ class ValueSet {
   // Deletes the stored value for the variable `variable_name`. If
   // `variable_name` is non-existent, this is a no-op.
   void Erase(std::string_view variable_name);
+
+  // ListValues()
+  //
+  // Returns a list of all variable names stored in this ValueSet.
+  [[nodiscard]] std::vector<std::string> ListValues() const;
 
  private:
   std::unordered_map<std::string, std::any, StrHash, std::equal_to<>> values_;

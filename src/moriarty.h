@@ -31,8 +31,8 @@
 
 #include "src/context.h"
 #include "src/internal/abstract_variable.h"
-#include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/test_case.h"
 
 namespace moriarty {
 
@@ -133,6 +133,9 @@ class Moriarty {
   //
   // Checks if all variables in all test cases are valid. If there are
   // multiple failures, this will return some subset of them.
+  //
+  // You can validate as part of `Import()` and `Generate()`, but this function
+  // allows you to validate at any time with different options.
   ValidationResults ValidateTestCases(ValidateOptions options = {}) const;
 
  private:
@@ -144,11 +147,8 @@ class Moriarty {
   std::string name_;
   int num_cases_ = 0;
 
-  // Variables
   moriarty_internal::VariableSet variables_;
-
-  // Test Cases
-  std::vector<moriarty_internal::ValueSet> assigned_test_cases_;
+  std::vector<TestCase> test_cases_;
 
   // Generates the seed for generator_[index]. Negative numbers are reserved
   // for specialized generators (e.g., min_, max_, random_ generators).
