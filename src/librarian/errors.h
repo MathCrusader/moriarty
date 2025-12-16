@@ -46,6 +46,10 @@ class ValueNotFound : public GenericMoriartyError {
       : GenericMoriartyError(
             std::format("Value for `{}` not found", variable_name)),
         variable_name_(variable_name) {}
+  explicit ValueNotFound(std::string_view variable_name,
+                         std::string_view message)
+      : GenericMoriartyError(std::string(message)),
+        variable_name_(variable_name) {}
 
   const std::string& VariableName() const { return variable_name_; }
 

@@ -21,6 +21,7 @@
 
 #include "src/internal/abstract_variable.h"
 #include "src/internal/expressions.h"
+#include "src/internal/range.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/util/ref.h"
@@ -111,6 +112,13 @@ class ViewOnlyContext {
   //
   // Evaluates the given expression in the current context.
   [[nodiscard]] int64_t EvaluateExpression(const Expression& expr) const;
+
+  // GetRangeEndpoints()
+  //
+  // Returns the minimum and maximum integer values for the given range in the
+  // current context. If the range is impossible, returns std::nullopt.
+  [[nodiscard]] std::optional<Range::ExtremeValues<int64_t>> GetRangeEndpoints(
+      const Range& range) const;
 
   // UnsafeGetVariables()
   //

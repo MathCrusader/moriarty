@@ -5,8 +5,10 @@
 #include <optional>
 
 #include "src/internal/expressions.h"
+#include "src/internal/range.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/util/ref.h"
 
 namespace moriarty {
@@ -48,10 +50,27 @@ int64_t ViewOnlyContext::EvaluateExpression(const Expression& expr) const {
   return expr.Evaluate([&](std::string_view variable_name) {
     auto value = GetUniqueInteger(variable_name);
     if (!value) {
-      throw std::runtime_error(std::format(
-          "Cannot evaluate expression because variable '{}' does not have a "
-          "unique integer value.",
-          variable_name));
+      throw ValueNotFound(
+          variable_name,
+          std::format("Cannot evaluate expression because `{}` does not have a "
+                      "unique integer value.",
+                      variable_name));
+    }
+    return *value;
+  });
+}
+
+std::optional<Range::ExtremeValues<int64_t>> ViewOnlyContext::GetRangeEndpoints(
+    const Range& range) const {
+  return range.IntegerExtremes([&](std::string_view variable_name) {
+    auto value = GetUniqueInteger(variable_name);
+    if (!value) {
+      throw ValueNotFound(
+          variable_name,
+          std::format(
+              "Cannot evaluate range because `{}` does not have a unique "
+              "integer value.",
+              variable_name));
     }
     return *value;
   });

@@ -21,7 +21,6 @@
 #include <format>
 #include <functional>
 #include <limits>
-#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -29,7 +28,6 @@
 #include <vector>
 
 #include "src/constraints/base_constraints.h"
-#include "src/constraints/constraint_violation.h"
 #include "src/constraints/integer_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"
@@ -52,16 +50,14 @@ MInteger& MInteger::AddConstraint(Exactly<int64_t> constraint) {
 }
 
 MInteger& MInteger::AddConstraint(Exactly<std::string> constraint) {
-  if (!numeric_one_of_.Mutable().ConstrainOptions(constraint.GetValue())) {
+  return AddConstraint(librarian::ExactlyNumeric(constraint.GetValue()));
+}
+
+MInteger& MInteger::AddConstraint(librarian::ExactlyNumeric constraint) {
+  if (!numeric_one_of_.Mutable().ConstrainOptions(constraint)) {
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   }
-  auto actual_constraint =
-      std::make_unique<librarian::ExactlyNumeric>(constraint.GetValue());
-  core_constraints_.data_.Mutable().bounds.Intersect(
-      actual_constraint->GetRange());
-  return InternalAddConstraint(RangeConstraint(
-      std::move(actual_constraint),
-      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MInteger& MInteger::AddConstraint(OneOf<int64_t> constraint) {
@@ -74,41 +70,35 @@ MInteger& MInteger::AddConstraint(OneOf<int64_t> constraint) {
 }
 
 MInteger& MInteger::AddConstraint(OneOf<std::string> constraint) {
-  auto actual_constraint =
-      std::make_unique<librarian::OneOfNumeric>(constraint.GetOptions());
-  if (!numeric_one_of_.Mutable().ConstrainOptions(*actual_constraint)) {
+  return AddConstraint(librarian::OneOfNumeric(constraint.GetOptions()));
+}
+
+MInteger& MInteger::AddConstraint(librarian::OneOfNumeric constraint) {
+  if (!numeric_one_of_.Mutable().ConstrainOptions(constraint)) {
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   }
-  return InternalAddConstraint(RangeConstraint(
-      std::move(actual_constraint),
-      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MInteger& MInteger::AddConstraint(Between constraint) {
   auto& constraints = core_constraints_.data_.Mutable();
   constraints.touched |= CoreConstraints::Flags::kBounds;
   constraints.bounds.Intersect(constraint.GetRange());
-  return InternalAddConstraint(RangeConstraint(
-      std::make_unique<Between>(constraint),
-      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MInteger& MInteger::AddConstraint(AtMost constraint) {
   auto& constraints = core_constraints_.data_.Mutable();
   constraints.touched |= CoreConstraints::Flags::kBounds;
   constraints.bounds.Intersect(constraint.GetRange());
-  return InternalAddConstraint(RangeConstraint(
-      std::make_unique<AtMost>(constraint),
-      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MInteger& MInteger::AddConstraint(AtLeast constraint) {
   auto& constraints = core_constraints_.data_.Mutable();
   constraints.touched |= CoreConstraints::Flags::kBounds;
   constraints.bounds.Intersect(constraint.GetRange());
-  return InternalAddConstraint(RangeConstraint(
-      std::make_unique<AtLeast>(constraint),
-      [constraint](MInteger& other) { other.AddConstraint(constraint); }));
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MInteger& MInteger::AddConstraint(Mod constraint) {
@@ -126,12 +116,7 @@ MInteger& MInteger::AddConstraint(SizeCategory constraint) {
 std::optional<int64_t> MInteger::GetUniqueValueImpl(
     librarian::AnalysisContext ctx) const {
   try {
-    if (auto one_of =
-            numeric_one_of_->GetUniqueValue([&](std::string_view var) {
-              auto value = ctx.GetUniqueValue<MInteger>(var);
-              if (!value) throw ValueNotFound(var);
-              return *value;
-            })) {
+    if (auto one_of = numeric_one_of_->GetUniqueValue(ctx)) {
       auto value = one_of->GetValue();
       if (value.denominator != 1) return std::nullopt;
       return value.numerator;
@@ -200,7 +185,7 @@ namespace {
 Range::ExtremeValues<int64_t> GetExtremesForSize(
     librarian::ResolverContext ctx,
     const Range::ExtremeValues<int64_t>& extremes, CommonSize size,
-    const NumericRangeMConstraint::LookupVariableFn& lookup_variable) {
+    const std::function<int64_t(std::string_view)>& lookup_variable) {
   if (size == CommonSize::kAny) return extremes;
 
   // TODO: Make this work for larger ranges.
@@ -270,7 +255,7 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
 
   if (numeric_one_of_->HasBeenConstrained()) {
     std::vector<Real> real_options =
-        numeric_one_of_->GetOptions([&](std::string_view var) {
+        numeric_one_of_->GetOptionsLookup([&](std::string_view var) {
           return ctx.GenerateVariable<MInteger>(var);
         });
     std::vector<int64_t> options;
@@ -359,41 +344,6 @@ std::vector<MInteger> MInteger::ListEdgeCasesImpl(
   }
 
   return instances;
-}
-
-namespace {
-
-NumericRangeMConstraint::LookupVariableFn Wrap(librarian::AnalysisContext ctx) {
-  return [=](std::string_view variable) -> int64_t {
-    auto value = ctx.GetUniqueValue<MInteger>(variable);
-    if (!value) throw ValueNotFound(variable);
-    return *value;
-  };
-}
-
-}  // namespace
-
-MInteger::RangeConstraint::RangeConstraint(
-    std::unique_ptr<NumericRangeMConstraint> constraint,
-    std::function<void(MInteger&)> apply_to_fn)
-    : constraint_(std::move(constraint)),
-      apply_to_fn_(std::move(apply_to_fn)) {};
-
-ConstraintViolation MInteger::RangeConstraint::CheckValue(
-    librarian::AnalysisContext ctx, int64_t value) const {
-  return constraint_->CheckIntegerValue(Wrap(ctx), value);
-}
-
-std::string MInteger::RangeConstraint::ToString() const {
-  return constraint_->ToString();
-}
-
-std::vector<std::string> MInteger::RangeConstraint::GetDependencies() const {
-  return constraint_->GetDependencies();
-}
-
-void MInteger::RangeConstraint::ApplyTo(MInteger& other) const {
-  apply_to_fn_(other);
 }
 
 bool MInteger::CoreConstraints::BoundsConstrained() const {

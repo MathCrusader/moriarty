@@ -17,14 +17,11 @@
 #define MORIARTY_VARIABLES_MINTEGER_H_
 
 #include <cstdint>
-#include <functional>
-#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
 #include "src/constraints/base_constraints.h"
-#include "src/constraints/constraint_violation.h"
 #include "src/constraints/integer_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"
@@ -70,11 +67,15 @@ class MInteger : public librarian::MVariable<MInteger> {
   MInteger& AddConstraint(Exactly<int64_t> constraint);
   // The integer must be exactly this integer expression (e.g., "3 * N + 1").
   MInteger& AddConstraint(Exactly<std::string> constraint);
+  // The integer must be exactly this value.
+  MInteger& AddConstraint(librarian::ExactlyNumeric constraint);
 
   // The integer must be one of these values.
   MInteger& AddConstraint(OneOf<int64_t> constraint);
   // The integer must be one of these integer expressions (e.g., "3 * N + 1").
   MInteger& AddConstraint(OneOf<std::string> constraint);
+  // The integer must be one of these values.
+  MInteger& AddConstraint(librarian::OneOfNumeric constraint);
 
   // ---------------------------------------------------------------------------
   //  Constrain the interval of values that the integer can be in
@@ -145,22 +146,6 @@ class MInteger : public librarian::MVariable<MInteger> {
       librarian::AnalysisContext ctx) const;
   Range::ExtremeValues<int64_t> GetExtremeValues(
       librarian::ResolverContext ctx) const;
-
-  class RangeConstraint {
-   public:
-    explicit RangeConstraint(
-        std::unique_ptr<NumericRangeMConstraint> constraint,
-        std::function<void(MInteger&)> apply_to_fn);
-    ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
-                                   int64_t value) const;
-    std::string ToString() const;
-    std::vector<std::string> GetDependencies() const;
-    void ApplyTo(MInteger& other) const;
-
-   private:
-    std::unique_ptr<NumericRangeMConstraint> constraint_;
-    std::function<void(MInteger&)> apply_to_fn_;  // TODO: consider cow_ptr
-  };
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides

@@ -93,6 +93,8 @@ class MReal : public librarian::MVariable<MReal> {
   MReal& AddConstraint(Exactly<int64_t> constraint);
   // The number must be exactly this integer expression (e.g., "3 * N + 1").
   MReal& AddConstraint(Exactly<std::string> constraint);
+  // The number must be exactly this value.
+  MReal& AddConstraint(librarian::ExactlyNumeric constraint);
 
   // The number must be one of these values.
   MReal& AddConstraint(OneOf<Real> constraint);
@@ -100,6 +102,8 @@ class MReal : public librarian::MVariable<MReal> {
   MReal& AddConstraint(OneOf<int64_t> constraint);
   // The number must be one of these integer expressions (e.g., "3 * N + 1").
   MReal& AddConstraint(OneOf<std::string> constraint);
+  // The number must be one of these values.
+  MReal& AddConstraint(librarian::OneOfNumeric constraint);
 
   // ---------------------------------------------------------------------------
   //  Constrain the interval of values that the number can be in
@@ -160,22 +164,6 @@ class MReal : public librarian::MVariable<MReal> {
   librarian::CowPtr<librarian::OneOfNumeric> numeric_one_of_;
   librarian::CowPtr<librarian::SizeHandler> size_handler_;
   MRealFormat format_;
-
-  class RangeConstraint {
-   public:
-    explicit RangeConstraint(
-        std::unique_ptr<NumericRangeMConstraint> constraint,
-        std::function<void(MReal&)> apply_to_fn);
-    ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
-                                   double value) const;
-    std::string ToString() const;
-    std::vector<std::string> GetDependencies() const;
-    void ApplyTo(MReal& other) const;
-
-   private:
-    std::unique_ptr<NumericRangeMConstraint> constraint_;
-    std::function<void(MReal&)> apply_to_fn_;  // TODO: consider cow_ptr
-  };
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides

@@ -18,6 +18,7 @@
 #include <compare>
 #include <cstdint>
 #include <format>
+#include <functional>
 #include <optional>
 #include <span>
 #include <stdexcept>
@@ -26,6 +27,7 @@
 #include <vector>
 
 #include "src/constraints/constraint_violation.h"
+#include "src/contexts/librarian_context.h"
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
 #include "src/librarian/errors.h"
@@ -121,10 +123,10 @@ std::string Between::ToString() const {
                      NumericToString(maximum_));
 }
 
-ConstraintViolation Between::CheckIntegerValue(LookupVariableFn lookup_variable,
-                                               int64_t value) const {
+ConstraintViolation Between::CheckValue(librarian::AnalysisContext ctx,
+                                        int64_t value) const {
   std::optional<Range::ExtremeValues<int64_t>> extremes =
-      GetRange().IntegerExtremes(lookup_variable);
+      ctx.GetRangeEndpoints(GetRange());
   if (!extremes)
     return ConstraintViolation(
         std::format("is not between {} and {} (impossible)",
@@ -136,22 +138,27 @@ ConstraintViolation Between::CheckIntegerValue(LookupVariableFn lookup_variable,
                                          NumericToString(maximum_), value));
 }
 
+ConstraintViolation Between::CheckValue(librarian::AnalysisContext ctx,
+                                        int value) const {
+  return CheckValue(ctx, static_cast<int64_t>(value));
+}
+
 namespace {
 
-Real GetRealValue(const std::variant<int64_t, Expression, Real>& value,
-                  NumericRangeMConstraint::LookupVariableFn lookup_variable) {
+Real GetRealValue(librarian::AnalysisContext ctx,
+                  const std::variant<int64_t, Expression, Real>& value) {
   if (std::holds_alternative<Real>(value)) return std::get<Real>(value);
   if (std::holds_alternative<int64_t>(value))
     return Real(std::get<int64_t>(value));
-  return Real(std::get<Expression>(value).Evaluate(lookup_variable));
+  return Real(ctx.EvaluateExpression(std::get<Expression>(value)));
 }
 
 }  // namespace
 
-ConstraintViolation Between::CheckRealValue(LookupVariableFn lookup_variable,
-                                            double value) const {
-  Real mini = GetRealValue(minimum_, lookup_variable);
-  Real maxi = GetRealValue(maximum_, lookup_variable);
+ConstraintViolation Between::CheckValue(librarian::AnalysisContext ctx,
+                                        double value) const {
+  Real mini = GetRealValue(ctx, minimum_);
+  Real maxi = GetRealValue(ctx, maximum_);
 
   if (!(mini <= value && value <= maxi)) {
     return ConstraintViolation(std::format("is not between {} and {}",
@@ -185,10 +192,10 @@ std::string AtMost::ToString() const {
   return std::format("is at most {}", NumericToString(maximum_));
 }
 
-ConstraintViolation AtMost::CheckIntegerValue(LookupVariableFn lookup_variable,
-                                              int64_t value) const {
+ConstraintViolation AtMost::CheckValue(librarian::AnalysisContext ctx,
+                                       int64_t value) const {
   std::optional<Range::ExtremeValues<int64_t>> extremes =
-      GetRange().IntegerExtremes(lookup_variable);
+      ctx.GetRangeEndpoints(GetRange());
   if (!extremes)
     return ConstraintViolation(std::format("is not at most {} (impossible)",
                                            NumericToString(maximum_)));
@@ -198,9 +205,14 @@ ConstraintViolation AtMost::CheckIntegerValue(LookupVariableFn lookup_variable,
       std::format("is not at most {}", NumericToString(maximum_)));
 }
 
-ConstraintViolation AtMost::CheckRealValue(LookupVariableFn lookup_variable,
-                                           double value) const {
-  Real maxi = GetRealValue(maximum_, lookup_variable);
+ConstraintViolation AtMost::CheckValue(librarian::AnalysisContext ctx,
+                                       int value) const {
+  return CheckValue(ctx, static_cast<int64_t>(value));
+}
+
+ConstraintViolation AtMost::CheckValue(librarian::AnalysisContext ctx,
+                                       double value) const {
+  Real maxi = GetRealValue(ctx, maximum_);
 
   if (value > maxi) {
     return ConstraintViolation(
@@ -240,10 +252,10 @@ std::string AtLeast::ToString() const {
   return std::format("is at least {}", NumericToString(minimum_));
 }
 
-ConstraintViolation AtLeast::CheckIntegerValue(LookupVariableFn lookup_variable,
-                                               int64_t value) const {
+ConstraintViolation AtLeast::CheckValue(librarian::AnalysisContext ctx,
+                                        int64_t value) const {
   std::optional<Range::ExtremeValues<int64_t>> extremes =
-      GetRange().IntegerExtremes(lookup_variable);
+      ctx.GetRangeEndpoints(GetRange());
   if (!extremes)
     return ConstraintViolation(std::format("is not at least {} (impossible)",
                                            NumericToString(minimum_)));
@@ -253,9 +265,14 @@ ConstraintViolation AtLeast::CheckIntegerValue(LookupVariableFn lookup_variable,
       std::format("is not at least {}", NumericToString(minimum_)));
 }
 
-ConstraintViolation AtLeast::CheckRealValue(LookupVariableFn lookup_variable,
-                                            double value) const {
-  Real mini = GetRealValue(minimum_, lookup_variable);
+ConstraintViolation AtLeast::CheckValue(librarian::AnalysisContext ctx,
+                                        int value) const {
+  return CheckValue(ctx, static_cast<int64_t>(value));
+}
+
+ConstraintViolation AtLeast::CheckValue(librarian::AnalysisContext ctx,
+                                        double value) const {
+  Real mini = GetRealValue(ctx, minimum_);
 
   if (value < mini) {
     return ConstraintViolation(
@@ -289,14 +306,18 @@ Range ExactlyNumeric::GetRange() const {
   return r;
 }
 
+std::variant<int64_t, Expression, Real> ExactlyNumeric::GetValue() const {
+  return value_;
+}
+
 std::string ExactlyNumeric::ToString() const {
   return std::format("is exactly {}", NumericToString(value_));
 }
 
-ConstraintViolation ExactlyNumeric::CheckIntegerValue(
-    LookupVariableFn lookup_variable, int64_t value) const {
+ConstraintViolation ExactlyNumeric::CheckValue(librarian::AnalysisContext ctx,
+                                               int64_t value) const {
   if (std::holds_alternative<Expression>(value_)) {
-    int64_t expected = std::get<Expression>(value_).Evaluate(lookup_variable);
+    int64_t expected = ctx.EvaluateExpression(std::get<Expression>(value_));
     if (expected == value) return ConstraintViolation::None();
     return ConstraintViolation(
         std::format("is not exactly {} (got {})",
@@ -320,10 +341,15 @@ ConstraintViolation ExactlyNumeric::CheckIntegerValue(
       "ExactlyNumeric::CheckIntegerValue: unexpected value type");
 }
 
-ConstraintViolation ExactlyNumeric::CheckRealValue(
-    LookupVariableFn lookup_variable, double value) const {
+ConstraintViolation ExactlyNumeric::CheckValue(librarian::AnalysisContext ctx,
+                                               int value) const {
+  return CheckValue(ctx, static_cast<int64_t>(value));
+}
+
+ConstraintViolation ExactlyNumeric::CheckValue(librarian::AnalysisContext ctx,
+                                               double value) const {
   if (std::holds_alternative<Expression>(value_)) {
-    int64_t expected = std::get<Expression>(value_).Evaluate(lookup_variable);
+    int64_t expected = ctx.EvaluateExpression(std::get<Expression>(value_));
     if (CloseEnough(expected, value)) return ConstraintViolation::None();
     return ConstraintViolation(
         std::format("is not exactly {} (got {})",
@@ -422,6 +448,33 @@ bool OneOfNumeric::ConstrainOptions(const OneOfNumeric& other) {
   return true;
 }
 
+bool OneOfNumeric::ConstrainOptions(
+    std::span<const IntegerExpression> options) {
+  return ConstrainOptions(OneOfNumeric(options));
+}
+
+bool OneOfNumeric::ConstrainOptions(std::span<const Real> options) {
+  return ConstrainOptions(OneOfNumeric(options));
+}
+
+bool OneOfNumeric::ConstrainOptions(std::span<const int64_t> options) {
+  return ConstrainOptions(OneOfNumeric(options));
+}
+
+bool OneOfNumeric::ConstrainOptions(const ExactlyNumeric& other) {
+  auto val = other.GetValue();
+  if (std ::holds_alternative<int64_t>(val)) {
+    return ConstrainOptions(std::get<int64_t>(val));
+  } else if (std::holds_alternative<Real>(val)) {
+    return ConstrainOptions(std::get<Real>(val));
+  } else if (std::holds_alternative<Expression>(val)) {
+    return ConstrainOptions(std::get<Expression>(val).ToString());
+  }
+
+  throw std::logic_error(
+      "OneOfNumeric::ConstrainOptions: unexpected value type");
+}
+
 namespace {
 
 template <typename T>
@@ -462,7 +515,39 @@ std::string OptionString(const std::vector<std::vector<Expression>>& exprs,
 }  // namespace
 
 std::vector<Real> OneOfNumeric::GetOptions(
-    LookupVariableFn lookup_variable) const {
+    librarian::AnalysisContext ctx) const {
+  std::optional<std::vector<Real>> valid_options;
+  if (numeric_options_.HasBeenConstrained()) {
+    valid_options = numeric_options_.GetOptions();
+    std::sort(valid_options->begin(), valid_options->end());
+    valid_options->erase(
+        std::unique(valid_options->begin(), valid_options->end()),
+        valid_options->end());
+  }
+
+  for (const std::vector<Expression>& oneof_list : expr_options_) {
+    std::vector<Real> expr_options;
+    for (const Expression& expr : oneof_list)
+      expr_options.push_back(Real(ctx.EvaluateExpression(expr)));
+    std::sort(expr_options.begin(), expr_options.end());
+    expr_options.erase(std::unique(expr_options.begin(), expr_options.end()),
+                       expr_options.end());
+    if (!valid_options) {
+      valid_options = std::move(expr_options);
+    } else {
+      valid_options->erase(
+          std::set_intersection(valid_options->begin(), valid_options->end(),
+                                expr_options.begin(), expr_options.end(),
+                                valid_options->begin()),
+          valid_options->end());
+    }
+  }
+
+  return valid_options.value_or(std::vector<Real>());
+}
+
+std::vector<Real> OneOfNumeric::GetOptionsLookup(
+    std::function<int64_t(std::string_view)> lookup_variable) const {
   std::optional<std::vector<Real>> valid_options;
   if (numeric_options_.HasBeenConstrained()) {
     valid_options = numeric_options_.GetOptions();
@@ -497,8 +582,8 @@ std::string OneOfNumeric::ToString() const {
   return std::format("is {}", OptionString(expr_options_, numeric_options_));
 }
 
-ConstraintViolation OneOfNumeric::CheckIntegerValue(
-    LookupVariableFn lookup_variable, int64_t value) const {
+ConstraintViolation OneOfNumeric::CheckValue(librarian::AnalysisContext ctx,
+                                             int64_t value) const {
   if (numeric_options_.HasBeenConstrained()) {
     if (!numeric_options_.HasOption(Real(value))) {
       return ConstraintViolation(
@@ -510,7 +595,7 @@ ConstraintViolation OneOfNumeric::CheckIntegerValue(
   for (const std::vector<Expression>& option_list : expr_options_) {
     auto it = std::find_if(option_list.begin(), option_list.end(),
                            [&](const Expression& expr) {
-                             return expr.Evaluate(lookup_variable) == value;
+                             return ctx.EvaluateExpression(expr) == value;
                            });
     if (it == option_list.end()) {
       return ConstraintViolation(
@@ -521,8 +606,13 @@ ConstraintViolation OneOfNumeric::CheckIntegerValue(
   return ConstraintViolation::None();
 }
 
-ConstraintViolation OneOfNumeric::CheckRealValue(
-    LookupVariableFn lookup_variable, double value) const {
+ConstraintViolation OneOfNumeric::CheckValue(librarian::AnalysisContext ctx,
+                                             int value) const {
+  return CheckValue(ctx, static_cast<int64_t>(value));
+}
+
+ConstraintViolation OneOfNumeric::CheckValue(librarian::AnalysisContext ctx,
+                                             double value) const {
   if (numeric_options_.HasBeenConstrained() &&
       std::find_if(numeric_options_.GetOptions().begin(),
                    numeric_options_.GetOptions().end(),
@@ -536,7 +626,7 @@ ConstraintViolation OneOfNumeric::CheckRealValue(
   for (const std::vector<Expression>& option_list : expr_options_) {
     auto it = std::find_if(
         option_list.begin(), option_list.end(), [&](const Expression& expr) {
-          return CloseEnough(expr.Evaluate(lookup_variable), value);
+          return CloseEnough(ctx.EvaluateExpression(expr), value);
         });
     if (it == option_list.end()) {
       return ConstraintViolation(
@@ -555,10 +645,11 @@ bool OneOfNumeric::HasBeenConstrained() const {
   return numeric_options_.HasBeenConstrained() || !expr_options_.empty();
 }
 
-std::optional<Real> OneOfNumeric::GetUniqueValue(LookupVariableFn fn) const {
+std::optional<Real> OneOfNumeric::GetUniqueValue(
+    librarian::AnalysisContext ctx) const {
   // TODO: We can optimize this by checking if we have a single option and early
   // exit.
-  auto options = GetOptions(fn);
+  auto options = GetOptions(ctx);
   if (options.size() != 1) return std::nullopt;
   return options.front();
 }

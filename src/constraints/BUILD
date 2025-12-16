@@ -123,6 +123,7 @@ cc_library(
     hdrs = ["numeric_constraints.h"],
     deps = [
         ":base_constraints",
+        "//src/contexts:librarian_context",
         "//src/internal:range",
         "//src/librarian:errors",
         "//src/librarian:one_of_handler",
@@ -231,6 +232,7 @@ cc_test(
         "//src/internal:range",
         "//src/librarian:errors",
         "//src/librarian/testing:gtest_helpers",
+        "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
 )

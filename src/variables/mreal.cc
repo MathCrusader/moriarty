@@ -18,6 +18,7 @@
 #include <format>
 #include <optional>
 
+#include "src/constraints/numeric_constraints.h"
 #include "src/contexts/librarian_context.h"
 #include "src/librarian/errors.h"
 #include "src/types/real.h"
@@ -27,109 +28,92 @@ namespace moriarty {
 
 MReal& MReal::AddConstraint(Exactly<double> constraint) {
   double value = constraint.GetValue();
-  core_constraints_.data_.Mutable().bounds.AtLeast(value).AtMost(value);
+  if (!numeric_one_of_.Mutable().ConstrainOptions(value)) {
+    throw ImpossibleToSatisfy(ToString(), constraint.ToString());
+  }
+
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kBounds;
+  constraints.bounds.AtLeast(value).AtMost(value);
   return InternalAddExactlyConstraint(std::move(constraint));
 }
 
 MReal& MReal::AddConstraint(Exactly<int64_t> constraint) {
-  if (!numeric_one_of_.Mutable().ConstrainOptions(constraint.GetValue())) {
+  int64_t value = constraint.GetValue();
+  if (!numeric_one_of_.Mutable().ConstrainOptions(value)) {
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   }
-  auto actual_constraint =
-      std::make_unique<librarian::ExactlyNumeric>(constraint.GetValue());
-  core_constraints_.data_.Mutable().bounds.Intersect(
-      actual_constraint->GetRange());
-  return InternalAddConstraint(RangeConstraint(
-      std::move(actual_constraint),
-      [constraint](MReal& other) { other.AddConstraint(constraint); }));
+
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kBounds;
+  constraints.bounds.AtLeast(value).AtMost(value);
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MReal& MReal::AddConstraint(Exactly<Real> constraint) {
-  auto& constraints = core_constraints_.data_.Mutable();
-  constraints.touched |= CoreConstraints::Flags::kBounds;
-  if (!numeric_one_of_.Mutable().ConstrainOptions(constraint.GetValue())) {
+  Real value = constraint.GetValue();
+  if (!numeric_one_of_.Mutable().ConstrainOptions(value)) {
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   }
-  auto actual_constraint =
-      std::make_unique<librarian::ExactlyNumeric>(constraint.GetValue());
-  core_constraints_.data_.Mutable().bounds.Intersect(
-      actual_constraint->GetRange());
-  return InternalAddConstraint(RangeConstraint(
-      std::move(actual_constraint),
-      [constraint](MReal& other) { other.AddConstraint(constraint); }));
+
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kBounds;
+  constraints.bounds.AtLeast(value).AtMost(value);
+  return AddConstraint(librarian::ExactlyNumeric(value));
 }
 
 MReal& MReal::AddConstraint(Exactly<std::string> constraint) {
-  if (!numeric_one_of_.Mutable().ConstrainOptions(constraint.GetValue())) {
+  return AddConstraint(librarian::ExactlyNumeric(constraint.GetValue()));
+}
+
+MReal& MReal::AddConstraint(librarian::ExactlyNumeric constraint) {
+  if (!numeric_one_of_.Mutable().ConstrainOptions(constraint)) {
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   }
-  auto actual_constraint =
-      std::make_unique<librarian::ExactlyNumeric>(constraint.GetValue());
-  core_constraints_.data_.Mutable().bounds.Intersect(
-      actual_constraint->GetRange());
-  return InternalAddConstraint(RangeConstraint(
-      std::move(actual_constraint),
-      [constraint](MReal& other) { other.AddConstraint(constraint); }));
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MReal& MReal::AddConstraint(OneOf<int64_t> constraint) {
-  auto actual_constraint =
-      std::make_unique<librarian::OneOfNumeric>(constraint.GetOptions());
-  if (!numeric_one_of_.Mutable().ConstrainOptions(*actual_constraint)) {
+  if (!numeric_one_of_.Mutable().ConstrainOptions(constraint.GetOptions())) {
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   }
-  return InternalAddConstraint(RangeConstraint(
-      std::move(actual_constraint),
-      [constraint](MReal& other) { other.AddConstraint(constraint); }));
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MReal& MReal::AddConstraint(OneOf<Real> constraint) {
-  auto actual_constraint =
-      std::make_unique<librarian::OneOfNumeric>(constraint.GetOptions());
-  if (!numeric_one_of_.Mutable().ConstrainOptions(*actual_constraint)) {
-    throw ImpossibleToSatisfy(ToString(), constraint.ToString());
-  }
-  return InternalAddConstraint(RangeConstraint(
-      std::move(actual_constraint),
-      [constraint](MReal& other) { other.AddConstraint(constraint); }));
+  return AddConstraint(librarian::OneOfNumeric(constraint.GetOptions()));
 }
 
 MReal& MReal::AddConstraint(OneOf<std::string> constraint) {
-  auto actual_constraint =
-      std::make_unique<librarian::OneOfNumeric>(constraint.GetOptions());
-  if (!numeric_one_of_.Mutable().ConstrainOptions(*actual_constraint)) {
+  return AddConstraint(librarian::OneOfNumeric(constraint.GetOptions()));
+}
+
+MReal& MReal::AddConstraint(librarian::OneOfNumeric constraint) {
+  if (!numeric_one_of_.Mutable().ConstrainOptions(constraint)) {
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
   }
-  return InternalAddConstraint(RangeConstraint(
-      std::move(actual_constraint),
-      [constraint](MReal& other) { other.AddConstraint(constraint); }));
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MReal& MReal::AddConstraint(Between constraint) {
   auto& constraints = core_constraints_.data_.Mutable();
   constraints.touched |= CoreConstraints::Flags::kBounds;
   constraints.bounds.Intersect(constraint.GetRange());
-  return InternalAddConstraint(RangeConstraint(
-      std::make_unique<Between>(constraint),
-      [constraint](MReal& other) { other.AddConstraint(constraint); }));
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MReal& MReal::AddConstraint(AtMost constraint) {
   auto& constraints = core_constraints_.data_.Mutable();
   constraints.touched |= CoreConstraints::Flags::kBounds;
   constraints.bounds.Intersect(constraint.GetRange());
-  return InternalAddConstraint(RangeConstraint(
-      std::make_unique<AtMost>(constraint),
-      [constraint](MReal& other) { other.AddConstraint(constraint); }));
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MReal& MReal::AddConstraint(AtLeast constraint) {
   auto& constraints = core_constraints_.data_.Mutable();
   constraints.touched |= CoreConstraints::Flags::kBounds;
   constraints.bounds.Intersect(constraint.GetRange());
-  return InternalAddConstraint(RangeConstraint(
-      std::make_unique<AtLeast>(constraint),
-      [constraint](MReal& other) { other.AddConstraint(constraint); }));
+  return InternalAddConstraint(std::move(constraint));
 }
 
 MReal& MReal::AddConstraint(MRealFormat constraint) {
@@ -145,8 +129,8 @@ double MReal::GenerateImpl(librarian::ResolverContext ctx) const {
   }
   if (numeric_one_of_->HasBeenConstrained()) {
     return ctx
-        .RandomElement(
-            numeric_one_of_->GetOptions([&](std::string_view var) -> int64_t {
+        .RandomElement(numeric_one_of_->GetOptionsLookup(
+            [&](std::string_view var) -> int64_t {
               return ctx.GenerateVariable<MInteger>(var);
             }))
         .GetApproxValue();
@@ -181,12 +165,7 @@ std::optional<double> MReal::GetUniqueValueImpl(
   if (auto dbl_one_of = GetOneOf().GetUniqueValue()) return *dbl_one_of;
 
   try {
-    if (auto numeric_one_of =
-            numeric_one_of_->GetUniqueValue([&](std::string_view var) {
-              auto value = ctx.GetUniqueValue<MInteger>(var);
-              if (!value) throw ValueNotFound(var);
-              return *value;
-            })) {
+    if (auto numeric_one_of = numeric_one_of_->GetUniqueValue(ctx)) {
       return numeric_one_of->GetApproxValue();
     }
 
@@ -223,40 +202,5 @@ MRealFormat& MRealFormat::Digits(int num_digits) {
 }
 
 int MRealFormat::GetDigits() const { return digits_; }
-
-namespace {
-
-NumericRangeMConstraint::LookupVariableFn Wrap(librarian::AnalysisContext ctx) {
-  return [=](std::string_view variable) -> int64_t {
-    auto value = ctx.GetUniqueValue<MInteger>(variable);
-    if (!value) throw ValueNotFound(variable);
-    return *value;
-  };
-}
-
-}  // namespace
-
-MReal::RangeConstraint::RangeConstraint(
-    std::unique_ptr<NumericRangeMConstraint> constraint,
-    std::function<void(MReal&)> apply_to_fn)
-    : constraint_(std::move(constraint)),
-      apply_to_fn_(std::move(apply_to_fn)) {};
-
-ConstraintViolation MReal::RangeConstraint::CheckValue(
-    librarian::AnalysisContext ctx, double value) const {
-  return constraint_->CheckRealValue(Wrap(ctx), value);
-}
-
-std::string MReal::RangeConstraint::ToString() const {
-  return constraint_->ToString();
-}
-
-std::vector<std::string> MReal::RangeConstraint::GetDependencies() const {
-  return constraint_->GetDependencies();
-}
-
-void MReal::RangeConstraint::ApplyTo(MReal& other) const {
-  apply_to_fn_(other);
-}
 
 }  // namespace moriarty
