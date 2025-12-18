@@ -40,9 +40,9 @@ using ::testing::ElementsAre;
 using ::testing::StrEq;
 
 // -----------------------------------------------------------------------------
-//  SimpleIOExporter
+//  SimpleIOWriter
 
-TEST(SimpleIOExporterTest, ExporterSimpleCaseShouldWork) {
+TEST(SimpleIOWriterTest, WriterSimpleCaseShouldWork) {
   Context context = Context().WithVariable("N", MInteger());
 
   std::vector<TestCase> test_cases = {
@@ -52,14 +52,14 @@ TEST(SimpleIOExporterTest, ExporterSimpleCaseShouldWork) {
   };
 
   std::stringstream ss;
-  ExportContext ctx(ss, context.Variables(), context.Values());
-  ExportFn exporter = SimpleIO().AddLine("N").Exporter();
+  WriteContext ctx(ss, context.Variables(), context.Values());
+  WriterFn writer = SimpleIO().AddLine("N").Writer();
 
-  exporter(ctx, test_cases);
+  writer(ctx, test_cases);
   EXPECT_THAT(ss.str(), StrEq("10\n20\n30\n"));
 }
 
-TEST(SimpleIOExporterTest, ExportHeaderAndFooterLinesShouldWork) {
+TEST(SimpleIOWriterTest, WriteHeaderAndFooterLinesShouldWork) {
   Context context = Context()
                         .WithVariable("a", MInteger())
                         .WithVariable("b", MInteger())
@@ -79,14 +79,14 @@ TEST(SimpleIOExporterTest, ExportHeaderAndFooterLinesShouldWork) {
                                           .SetValue<MInteger>("c", 32)};
 
   std::stringstream ss;
-  ExportContext ctx(ss, context.Variables(), context.Values());
-  ExportFn exporter = SimpleIO()
-                          .AddHeaderLine(StringLiteral("start"))
-                          .AddLine(StringLiteral("line"), "a", "b", "c")
-                          .AddFooterLine(StringLiteral("end"))
-                          .Exporter();
+  WriteContext ctx(ss, context.Variables(), context.Values());
+  WriterFn writer = SimpleIO()
+                        .AddHeaderLine(StringLiteral("start"))
+                        .AddLine(StringLiteral("line"), "a", "b", "c")
+                        .AddFooterLine(StringLiteral("end"))
+                        .Writer();
 
-  exporter(ctx, test_cases);
+  writer(ctx, test_cases);
   EXPECT_THAT(ss.str(), StrEq(R"(start
 line 10 20 30
 line 11 21 31
@@ -95,7 +95,7 @@ end
 )"));
 }
 
-TEST(SimpleIOExporterTest, ExportWithNumberOfTestCasesShouldPrintProperly) {
+TEST(SimpleIOWriterTest, WriteWithNumberOfTestCasesShouldPrintProperly) {
   Context context = Context()
                         .WithVariable("a", MInteger())
                         .WithVariable("b", MInteger())
@@ -111,20 +111,20 @@ TEST(SimpleIOExporterTest, ExportWithNumberOfTestCasesShouldPrintProperly) {
                                           .SetValue<MInteger>("c", 31)};
 
   std::stringstream ss;
-  ExportContext ctx(ss, context.Variables(), context.Values());
-  ExportFn exporter = SimpleIO()
-                          .WithNumberOfTestCasesInHeader()
-                          .AddLine("a", "b", "c")
-                          .Exporter();
+  WriteContext ctx(ss, context.Variables(), context.Values());
+  WriterFn writer = SimpleIO()
+                        .WithNumberOfTestCasesInHeader()
+                        .AddLine("a", "b", "c")
+                        .Writer();
 
-  exporter(ctx, test_cases);
+  writer(ctx, test_cases);
   EXPECT_THAT(ss.str(), StrEq(R"(2
 10 20 30
 11 21 31
 )"));
 }
 
-TEST(SimpleIOExporterTest, MultilineSectionShouldWork) {
+TEST(SimpleIOWriterTest, MultilineSectionShouldWork) {
   Context context =
       Context()
           .WithVariable("N", MInteger())
@@ -141,16 +141,16 @@ TEST(SimpleIOExporterTest, MultilineSectionShouldWork) {
   };
 
   std::stringstream ss;
-  ExportContext ctx(ss, context.Variables(), context.Values());
-  ExportFn exporter =
-      SimpleIO().AddMultilineSection("(N - 1) + 1", "A", "B").Exporter();
+  WriteContext ctx(ss, context.Variables(), context.Values());
+  WriterFn writer =
+      SimpleIO().AddMultilineSection("(N - 1) + 1", "A", "B").Writer();
 
-  exporter(ctx, test_cases);
+  writer(ctx, test_cases);
   EXPECT_THAT(ss.str(), StrEq("1 11\n2 22\n3 33\n"));
 }
 
 // -----------------------------------------------------------------------------
-//  SimpleIOImporter
+//  SimpleIOReader
 
 MATCHER_P2(IntVariableIs, variable_name, value, "") {
   TestCase tc = arg;
@@ -162,25 +162,25 @@ MATCHER_P2(ArrayIntVariableIs, variable_name, value, "") {
   return tc.GetValue<MArray<MInteger>>(variable_name) == value;
 }
 
-TEST(SimpleIOImporterTest, ImportInBasicCaseShouldWork) {
+TEST(SimpleIOReaderTest, ReadInBasicCaseShouldWork) {
   Context context =
       Context().WithVariable("R", MInteger()).WithVariable("S", MInteger());
 
   std::stringstream ss("1 11\n2 22\n3 33\n4 44\n");
-  ImportFn importer = SimpleIO().AddLine("R", "S").Importer(4);
+  ReaderFn reader = SimpleIO().AddLine("R", "S").Reader(4);
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
-  ImportContext ctx(context.Variables(), cursor);
+  ReadContext ctx(context.Variables(), cursor);
 
   EXPECT_THAT(
-      importer(ctx),
+      reader(ctx),
       ElementsAre(AllOf(IntVariableIs("R", 1), IntVariableIs("S", 11)),
                   AllOf(IntVariableIs("R", 2), IntVariableIs("S", 22)),
                   AllOf(IntVariableIs("R", 3), IntVariableIs("S", 33)),
                   AllOf(IntVariableIs("R", 4), IntVariableIs("S", 44))));
 }
 
-TEST(SimpleIOImporterTest, ExportHeaderAndFooterLinesShouldWork) {
+TEST(SimpleIOReaderTest, WriteHeaderAndFooterLinesShouldWork) {
   Context context =
       Context().WithVariable("R", MInteger()).WithVariable("S", MInteger());
 
@@ -195,112 +195,110 @@ TEST(SimpleIOImporterTest, ExportHeaderAndFooterLinesShouldWork) {
 44
 end
 )");
-  ImportFn importer = SimpleIO()
-                          .AddHeaderLine(StringLiteral("hello"))
-                          .AddLine("R", StringLiteral("XX"))
-                          .AddLine("S")
-                          .AddFooterLine(StringLiteral("end"))
-                          .Importer(4);
+  ReaderFn reader = SimpleIO()
+                        .AddHeaderLine(StringLiteral("hello"))
+                        .AddLine("R", StringLiteral("XX"))
+                        .AddLine("S")
+                        .AddFooterLine(StringLiteral("end"))
+                        .Reader(4);
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
-  ImportContext ctx(context.Variables(), cursor);
+  ReadContext ctx(context.Variables(), cursor);
 
   EXPECT_THAT(
-      importer(ctx),
+      reader(ctx),
       ElementsAre(AllOf(IntVariableIs("R", 1), IntVariableIs("S", 11)),
                   AllOf(IntVariableIs("R", 2), IntVariableIs("S", 22)),
                   AllOf(IntVariableIs("R", 3), IntVariableIs("S", 33)),
                   AllOf(IntVariableIs("R", 4), IntVariableIs("S", 44))));
 }
 
-TEST(SimpleIOImporterTest, ImportWrongTokenFails) {
+TEST(SimpleIOReaderTest, ReadWrongTokenFails) {
   std::stringstream ss("these are wrong words");
-  ImportFn importer =
-      SimpleIO()
-          .AddLine(StringLiteral("these"), StringLiteral("are"),
-                   StringLiteral("right"), StringLiteral("words"))
-          .Importer();
+  ReaderFn reader = SimpleIO()
+                        .AddLine(StringLiteral("these"), StringLiteral("are"),
+                                 StringLiteral("right"), StringLiteral("words"))
+                        .Reader();
 
   Context context;
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
-  ImportContext ctx(context.Variables(), cursor);
-  EXPECT_THROW({ importer(ctx); }, IOError);
+  ReadContext ctx(context.Variables(), cursor);
+  EXPECT_THROW({ reader(ctx); }, IOError);
 }
 
-TEST(SimpleIOImporterTest, ImportWrongWhitespaceFails) {
+TEST(SimpleIOReaderTest, ReadWrongWhitespaceFails) {
   Context context =
       Context().WithVariable("R", MInteger()).WithVariable("S", MInteger());
 
   std::stringstream ss("1\t11\n");
-  ImportFn importer = SimpleIO().AddLine("R", "S").Importer();
+  ReaderFn reader = SimpleIO().AddLine("R", "S").Reader();
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
-  ImportContext ctx(context.Variables(), cursor);
-  EXPECT_THROW({ importer(ctx); }, IOError);
+  ReadContext ctx(context.Variables(), cursor);
+  EXPECT_THROW({ reader(ctx); }, IOError);
 }
 
-TEST(SimpleIOImporterTest, ImportWithNumberOfTestCasesInHeaderShouldWork) {
+TEST(SimpleIOReaderTest, ReadWithNumberOfTestCasesInHeaderShouldWork) {
   Context context =
       Context().WithVariable("R", MInteger()).WithVariable("S", MInteger());
 
   std::stringstream ss("4\n1 11\n2 22\n3 33\n4 44\n");
-  ImportFn importer =
-      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
+  ReaderFn reader =
+      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Reader();
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
-  ImportContext ctx(context.Variables(), cursor);
+  ReadContext ctx(context.Variables(), cursor);
 
   EXPECT_THAT(
-      importer(ctx),
+      reader(ctx),
       ElementsAre(AllOf(IntVariableIs("R", 1), IntVariableIs("S", 11)),
                   AllOf(IntVariableIs("R", 2), IntVariableIs("S", 22)),
                   AllOf(IntVariableIs("R", 3), IntVariableIs("S", 33)),
                   AllOf(IntVariableIs("R", 4), IntVariableIs("S", 44))));
 }
 
-TEST(SimpleIOImporterTest,
-     ImportWithNumberOfTestCasesInHeaderFailsOnTooHighNumberOfCases) {
+TEST(SimpleIOReaderTest,
+     ReadWithNumberOfTestCasesInHeaderFailsOnTooHighNumberOfCases) {
   Context context =
       Context().WithVariable("R", MInteger()).WithVariable("S", MInteger());
 
   std::stringstream ss("6\n1 11\n2 22\n3 33\n4 44\n");
-  ImportFn importer =
-      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
+  ReaderFn reader =
+      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Reader();
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
-  ImportContext ctx(context.Variables(), cursor);
-  EXPECT_THROW({ importer(ctx); }, IOError);
+  ReadContext ctx(context.Variables(), cursor);
+  EXPECT_THROW({ reader(ctx); }, IOError);
 }
 
-TEST(SimpleIOImporterTest,
-     ImportWithNumberOfTestCasesInHeaderFailsOnNegativeNumberOfCases) {
+TEST(SimpleIOReaderTest,
+     ReadWithNumberOfTestCasesInHeaderFailsOnNegativeNumberOfCases) {
   Context context =
       Context().WithVariable("R", MInteger()).WithVariable("S", MInteger());
 
   std::stringstream ss("-44\n1 11\n2 22\n3 33\n4 44\n");
-  ImportFn importer =
-      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
+  ReaderFn reader =
+      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Reader();
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
-  ImportContext ctx(context.Variables(), cursor);
-  EXPECT_THROW({ importer(ctx); }, IOError);
+  ReadContext ctx(context.Variables(), cursor);
+  EXPECT_THROW({ reader(ctx); }, IOError);
 }
 
-TEST(SimpleIOImporterTest,
-     ImportWithNumberOfTestCasesInHeaderFailsOnNonInteger) {
+TEST(SimpleIOReaderTest, ReadWithNumberOfTestCasesInHeaderFailsOnNonInteger) {
   Context context =
       Context().WithVariable("R", MInteger()).WithVariable("S", MInteger());
 
   std::stringstream ss("hello\n1 11\n2 22\n3 33\n4 44\n");
-  ImportFn importer =
-      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Importer();
+  ReaderFn reader =
+      SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Reader();
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
-  ImportContext ctx(context.Variables(), cursor);
-  EXPECT_THROW({ importer(ctx); }, IOError);
+  ReadContext ctx(context.Variables(), cursor);
+  EXPECT_THROW({ reader(ctx); }, IOError);
 }
 
-TEST(SimpleIOImporterTest, MultilineSectionShouldWork) {
+TEST(SimpleIOReaderTest, MultilineSectionShouldWork) {
   Context context =
       Context()
           .WithVariable("N", MInteger())
@@ -319,13 +317,13 @@ TEST(SimpleIOImporterTest, MultilineSectionShouldWork) {
   std::stringstream ss("3\n1 11\n2 22\n3 33\n");
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
-  ImportContext ctx(context.Variables(), cursor);
-  ImportFn importer = SimpleIO()
-                          .AddLine("N")
-                          .AddMultilineSection("(N - 1) + 1", "A", "B")
-                          .Importer();
+  ReadContext ctx(context.Variables(), cursor);
+  ReaderFn reader = SimpleIO()
+                        .AddLine("N")
+                        .AddMultilineSection("(N - 1) + 1", "A", "B")
+                        .Reader();
 
-  EXPECT_THAT(importer(ctx),
+  EXPECT_THAT(reader(ctx),
               ElementsAre(AllOf(
                   IntVariableIs("N", 3),
                   ArrayIntVariableIs("A", std::vector<int64_t>{1, 2, 3}),

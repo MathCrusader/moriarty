@@ -93,18 +93,18 @@ struct GenerateOptions {
 };
 
 // -----------------------------------------------------------------------------
-//  Import
+//  Readers
 
-// ImportContext
+// ReadContext
 //
-// All context that Importers have access to.
-class ImportContext : public moriarty_internal::ViewOnlyContext,
-                      public moriarty_internal::BasicIStreamContext,
-                      public moriarty_internal::VariableIStreamContext {
+// All context that Readers have access to.
+class ReadContext : public moriarty_internal::ViewOnlyContext,
+                    public moriarty_internal::BasicIStreamContext,
+                    public moriarty_internal::VariableIStreamContext {
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
-  ImportContext(Ref<const moriarty_internal::VariableSet> variables,
-                Ref<InputCursor> input);
+  ReadContext(Ref<const moriarty_internal::VariableSet> variables,
+              Ref<InputCursor> input);
 
   // *****************************************************
   // ** See parent classes for all available functions. **
@@ -115,45 +115,45 @@ class ImportContext : public moriarty_internal::ViewOnlyContext,
   moriarty_internal::ValueSet values_;
 };
 
-// The function signature for an importer.
-using ImportFn = std::function<std::vector<TestCase>(ImportContext)>;
+// The function signature for a reader.
+using ReaderFn = std::function<std::vector<TestCase>(ReadContext)>;
 
-struct ImportOptions {
+struct ReadOptions {
   // The input stream to read from.
   Ref<std::istream> is = std::cin;
 
-  // How strict the importer should be about whitespace.
+  // How strict the reader should be about whitespace.
   WhitespaceStrictness whitespace_strictness = WhitespaceStrictness::kPrecise;
 
-  // After import is complete, how should we validate the test cases?
+  // After reading is complete, how should we validate the test cases?
   ValidationStyle validation = ValidationStyle::kAllVariables;
 };
 
 // -----------------------------------------------------------------------------
-//  Export
+//  Writers
 
-// ExportContext
+// WriteContext
 //
-// All context that Exporters have access to.
-class ExportContext : public moriarty_internal::ViewOnlyContext,
-                      public moriarty_internal::BasicOStreamContext,
-                      public moriarty_internal::VariableOStreamContext {
+// All context that Writers have access to.
+class WriteContext : public moriarty_internal::ViewOnlyContext,
+                     public moriarty_internal::BasicOStreamContext,
+                     public moriarty_internal::VariableOStreamContext {
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
-  ExportContext(Ref<std::ostream> os,
-                Ref<const moriarty_internal::VariableSet> variables,
-                Ref<const moriarty_internal::ValueSet> values);
-  ExportContext(ExportContext ctx, Ref<std::ostream> os);
+  WriteContext(Ref<std::ostream> os,
+               Ref<const moriarty_internal::VariableSet> variables,
+               Ref<const moriarty_internal::ValueSet> values);
+  WriteContext(WriteContext ctx, Ref<std::ostream> os);
 
   // *****************************************************
   // ** See parent classes for all available functions. **
   // *****************************************************
 };
 
-// The function signature for an exporter.
-using ExportFn = std::function<void(ExportContext, std::span<const TestCase>)>;
+// The function signature for a writer.
+using WriterFn = std::function<void(WriteContext, std::span<const TestCase>)>;
 
-struct ExportOptions {
+struct WriteOptions {
   // The output stream to write to.
   Ref<std::ostream> os = std::cout;
 };

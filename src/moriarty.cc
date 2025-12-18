@@ -115,25 +115,24 @@ ValidationResults Moriarty::ValidateTestCases(ValidateOptions options) const {
   return res;
 }
 
-void Moriarty::ImportTestCases(ImportFn fn, ImportOptions options) {
+void Moriarty::ReadTestCases(ReaderFn fn, ReadOptions options) {
   InputCursor cursor(options.is, options.whitespace_strictness);
-  ImportContext ctx(variables_, cursor);
+  ReadContext ctx(variables_, cursor);
 
-  std::vector<TestCase> imported_cases = fn(ctx);
-  test_cases_.insert(test_cases_.end(), imported_cases.begin(),
-                     imported_cases.end());
+  std::vector<TestCase> test_cases = fn(ctx);
+  test_cases_.insert(test_cases_.end(), test_cases.begin(), test_cases.end());
 
   ValidationResults results =
       ValidateTestCases(ValidateOptions{.validation = options.validation});
   if (!results.IsValid()) {
-    throw ValidationError("Moriarty::ImportTestCases",
+    throw ValidationError("Moriarty::ReadTestCases",
                           results.DescribeFailures());
   }
 }
 
-void Moriarty::ExportTestCases(ExportFn fn, ExportOptions options) const {
+void Moriarty::WriteTestCases(WriterFn fn, WriteOptions options) const {
   moriarty_internal::ValueSet values;
-  ExportContext ctx(options.os, variables_, values);
+  WriteContext ctx(options.os, variables_, values);
   fn(ctx, test_cases_);
 }
 

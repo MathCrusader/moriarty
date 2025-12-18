@@ -36,9 +36,9 @@
 namespace moriarty {
 
 namespace {
-std::vector<TestCase> ReadTestCases(ImportContext ctx, SimpleIO simple_io,
+std::vector<TestCase> ReadTestCases(ReadContext ctx, SimpleIO simple_io,
                                     int number_of_test_cases);
-void PrintTestCases(ExportContext ctx, SimpleIO simple_io,
+void PrintTestCases(WriteContext ctx, SimpleIO simple_io,
                     std::span<const TestCase> test_cases);
 }  // namespace
 
@@ -84,14 +84,14 @@ bool SimpleIO::HasNumberOfTestCasesInHeader() const {
   return has_number_of_test_cases_in_header_;
 }
 
-ExportFn SimpleIO::Exporter() const {
-  return [*this](ExportContext ctx, std::span<const TestCase> test_cases) {
+WriterFn SimpleIO::Writer() const {
+  return [*this](WriteContext ctx, std::span<const TestCase> test_cases) {
     return PrintTestCases(ctx, *this, test_cases);
   };
 }
 
-ImportFn SimpleIO::Importer(int number_of_test_cases) const {
-  return [=, *this](ImportContext ctx) {
+ReaderFn SimpleIO::Reader(int number_of_test_cases) const {
+  return [=, *this](ReadContext ctx) {
     return ReadTestCases(ctx, *this, number_of_test_cases);
   };
 }
@@ -99,9 +99,9 @@ ImportFn SimpleIO::Importer(int number_of_test_cases) const {
 namespace {
 
 // -----------------------------------------------------------------------------
-//  SimpleIOExporter
+//  SimpleIOWriter
 
-void PrintToken(ExportContext ctx, const SimpleIOToken& token,
+void PrintToken(WriteContext ctx, const SimpleIOToken& token,
                 const TestCase& test_case) {
   if (std::holds_alternative<std::string>(token))
     ctx.PrintVariableFrom(std::get<std::string>(token), test_case);
@@ -110,7 +110,7 @@ void PrintToken(ExportContext ctx, const SimpleIOToken& token,
 }
 
 // TODO: Clean up this function. It is pretty messy.
-void PrintLine(ExportContext ctx, const SimpleIO::Line& line,
+void PrintLine(WriteContext ctx, const SimpleIO::Line& line,
                const TestCase& test_case) {
   if (!line.num_lines) {
     for (int line_idx = 0; const SimpleIOToken& token : line.tokens) {
@@ -133,7 +133,7 @@ void PrintLine(ExportContext ctx, const SimpleIO::Line& line,
   for (int var_idx = -1; const SimpleIOToken& token : line.tokens) {
     var_idx++;
     std::stringstream ss;
-    PrintToken(ExportContext(ctx, ss), token, test_case);
+    PrintToken(WriteContext(ctx, ss), token, test_case);
     std::string lines = ss.str();
     if (lines.empty() || lines.back() != '\n') lines += '\n';
     int newlines = std::count(lines.begin(), lines.end(), '\n');
@@ -163,12 +163,12 @@ void PrintLine(ExportContext ctx, const SimpleIO::Line& line,
   }
 }
 
-void PrintLines(ExportContext ctx, std::span<const SimpleIO::Line> lines,
+void PrintLines(WriteContext ctx, std::span<const SimpleIO::Line> lines,
                 const TestCase& test_case) {
   for (const SimpleIO::Line& line : lines) PrintLine(ctx, line, test_case);
 }
 
-void PrintLiteralOnlyLines(ExportContext ctx,
+void PrintLiteralOnlyLines(WriteContext ctx,
                            std::span<const SimpleIO::Line> lines) {
   for (const SimpleIO::Line& line : lines) {
     for (int line_idx = 0; const SimpleIOToken& token : line.tokens) {
@@ -183,7 +183,7 @@ void PrintLiteralOnlyLines(ExportContext ctx,
   }
 }
 
-void PrintTestCases(ExportContext ctx, SimpleIO simple_io,
+void PrintTestCases(WriteContext ctx, SimpleIO simple_io,
                     std::span<const TestCase> test_cases) {
   if (simple_io.HasNumberOfTestCasesInHeader()) {
     ctx.PrintToken(std::to_string(test_cases.size()));
@@ -199,16 +199,16 @@ void PrintTestCases(ExportContext ctx, SimpleIO simple_io,
 }
 
 // -----------------------------------------------------------------------------
-//  SimpleIOImporter
+//  SimpleIOReader
 
 // TODO: ReadVariable(MInteger(AtLeast(0)));
-int64_t ReadNumTestCases(ImportContext ctx) {
+int64_t ReadNumTestCases(ReadContext ctx) {
   int64_t num_cases = ctx.ReadVariable(MInteger(AtLeast(0)), "num_cases");
   ctx.ReadWhitespace(Whitespace::kNewline);
   return num_cases;
 }
 
-void ReadLiteral(ImportContext ctx, const StringLiteral& literal) {
+void ReadLiteral(ReadContext ctx, const StringLiteral& literal) {
   std::string read_token = ctx.ReadToken();
   std::string expected = std::string(literal);
   if (read_token != expected) {
@@ -217,7 +217,7 @@ void ReadLiteral(ImportContext ctx, const StringLiteral& literal) {
   }
 }
 
-void ReadToken(ImportContext ctx, const SimpleIOToken& token,
+void ReadToken(ReadContext ctx, const SimpleIOToken& token,
                TestCase& test_case) {
   try {
     if (std::holds_alternative<std::string>(token))
@@ -231,7 +231,7 @@ void ReadToken(ImportContext ctx, const SimpleIOToken& token,
   }
 }
 
-void ReadLine(ImportContext ctx, const SimpleIO::Line& line,
+void ReadLine(ReadContext ctx, const SimpleIO::Line& line,
               TestCase& test_case) {
   if (!line.num_lines) {
     for (int line_idx = 0; const SimpleIOToken& token : line.tokens) {
@@ -273,7 +273,7 @@ void ReadLine(ImportContext ctx, const SimpleIO::Line& line,
   }
 }
 
-void ReadLiteralOnlyLine(ImportContext ctx, const SimpleIO::Line& line) {
+void ReadLiteralOnlyLine(ReadContext ctx, const SimpleIO::Line& line) {
   for (int line_idx = 0; const SimpleIOToken& token : line.tokens) {
     if (line_idx++) ctx.ReadWhitespace(Whitespace::kSpace);
 
@@ -284,17 +284,17 @@ void ReadLiteralOnlyLine(ImportContext ctx, const SimpleIO::Line& line) {
   ctx.ReadWhitespace(Whitespace::kNewline);
 }
 
-void ReadLiteralOnlyLines(ImportContext ctx,
+void ReadLiteralOnlyLines(ReadContext ctx,
                           std::span<const SimpleIO::Line> lines) {
   for (const SimpleIO::Line& line : lines) ReadLiteralOnlyLine(ctx, line);
 }
 
-void ReadLines(ImportContext ctx, std::span<const SimpleIO::Line> lines,
+void ReadLines(ReadContext ctx, std::span<const SimpleIO::Line> lines,
                TestCase& test_case) {
   for (const SimpleIO::Line& line : lines) ReadLine(ctx, line, test_case);
 }
 
-std::vector<TestCase> ReadTestCases(ImportContext ctx, SimpleIO simple_io,
+std::vector<TestCase> ReadTestCases(ReadContext ctx, SimpleIO simple_io,
                                     int number_of_test_casese) {
   int64_t num_cases = simple_io.HasNumberOfTestCasesInHeader()
                           ? ReadNumTestCases(ctx)

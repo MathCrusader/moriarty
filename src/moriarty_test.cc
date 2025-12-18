@@ -54,11 +54,11 @@ using ::testing::SizeIs;
 using ::testing::ThrowsMessage;
 
 // -----------------------------------------------------------------------------
-//  Import / Export / Generate Helpers
+//  Read / Write / Generate Helpers
 // -----------------------------------------------------------------------------
 
 // [ {X = 1}, {X = 2}, ..., {X = n} ]
-std::vector<TestCase> ImportIota(ImportContext ctx, std::string varX, int n) {
+std::vector<TestCase> ReadIota(ReadContext ctx, std::string varX, int n) {
   std::vector<TestCase> cases;
   for (int i = 1; i <= n; i++) {
     cases.push_back(TestCase().SetValue<MInteger>(varX, i));
@@ -67,8 +67,8 @@ std::vector<TestCase> ImportIota(ImportContext ctx, std::string varX, int n) {
 }
 
 // [ {R=1, S=11}, {R=2, S=22}, {R=3, S=33}, ..., {R=n,S=11*n} ]
-std::vector<TestCase> ImportTwoIota(ImportContext ctx, std::string varR,
-                                    std::string varS, int n) {
+std::vector<TestCase> ReadTwoIota(ReadContext ctx, std::string varR,
+                                  std::string varS, int n) {
   std::vector<TestCase> cases;
   for (int i = 1; i <= n; i++) {
     cases.push_back(TestCase().SetValue<MInteger>(varR, i).SetValue<MInteger>(
@@ -78,7 +78,7 @@ std::vector<TestCase> ImportTwoIota(ImportContext ctx, std::string varR,
 }
 
 // [ {A = read()}, {A = read()}, ..., {A = read()} ]
-std::vector<TestCase> ReadSingleInteger(ImportContext ctx, std::string varA,
+std::vector<TestCase> ReadSingleInteger(ReadContext ctx, std::string varA,
                                         Whitespace separator, int n) {
   std::vector<TestCase> cases;
   for (int i = 0; i < n; i++) {
@@ -90,8 +90,8 @@ std::vector<TestCase> ReadSingleInteger(ImportContext ctx, std::string varA,
   return cases;
 }
 
-std::vector<int64_t> ExportSingleIntegerToVector(
-    ExportContext ctx, std::string variable, std::span<const TestCase> cases) {
+std::vector<int64_t> WriteSingleIntegerToVector(
+    WriteContext ctx, std::string variable, std::span<const TestCase> cases) {
   std::vector<int64_t> values;
   for (const TestCase& c : cases) {
     values.push_back(c.GetValue<MInteger>(variable));
@@ -99,8 +99,8 @@ std::vector<int64_t> ExportSingleIntegerToVector(
   return values;
 }
 
-std::vector<std::pair<int64_t, int64_t>> ExportTwoIntegersToVector(
-    ExportContext ctx, std::string varR, std::string varS,
+std::vector<std::pair<int64_t, int64_t>> WriteTwoIntegersToVector(
+    WriteContext ctx, std::string varR, std::string varS,
     std::span<const TestCase> cases) {
   std::vector<std::pair<int64_t, int64_t>> values;
   for (const TestCase& c : cases) {
@@ -109,8 +109,8 @@ std::vector<std::pair<int64_t, int64_t>> ExportTwoIntegersToVector(
   return values;
 }
 
-std::vector<std::pair<std::string, std::string>> ExportTwoStringsToVector(
-    ExportContext ctx, std::string varR, std::string varS,
+std::vector<std::pair<std::string, std::string>> WriteTwoStringsToVector(
+    WriteContext ctx, std::string varR, std::string varS,
     std::span<const TestCase> cases) {
   std::vector<std::pair<std::string, std::string>> values;
   for (const TestCase& c : cases) {
@@ -119,7 +119,7 @@ std::vector<std::pair<std::string, std::string>> ExportTwoStringsToVector(
   return values;
 }
 
-void PrintSingleVariable(ExportContext ctx, std::string varX,
+void WriteSingleVariable(WriteContext ctx, std::string varX,
                          std::span<const TestCase> cases) {
   for (const TestCase& c : cases) {
     ctx.PrintVariableFrom(varX, c);
@@ -191,7 +191,7 @@ TEST(MoriartyDeathTest, AddTwoVariablesWithTheSameNameShouldCrash) {
 }
 
 TEST(MoriartyTest,
-     ExportAllTestCasesShouldExportProperlyWithASingleGeneratorMultipleTimes) {
+     WriteTestCasesShouldWriteProperlyWithASingleGeneratorMultipleTimes) {
   Moriarty M;
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(
@@ -201,15 +201,15 @@ TEST(MoriartyTest,
       {.num_calls = 3});
 
   std::vector<int64_t> result;
-  M.ExportTestCases(
-      [&result](ExportContext ctx, std::span<const TestCase> cases) {
-        result = ExportSingleIntegerToVector(ctx, "N", cases);
+  M.WriteTestCases(
+      [&result](WriteContext ctx, std::span<const TestCase> cases) {
+        result = WriteSingleIntegerToVector(ctx, "N", cases);
       });
   EXPECT_THAT(result, ElementsAre(0, 0, 0));
 }
 
 TEST(MoriartyTest,
-     ExportAllTestCasesShouldExportCasesProperlyWithMultipleGenerators) {
+     WriteTestCasesShouldWriteCasesProperlyWithMultipleGenerators) {
   Moriarty M;
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 11));
@@ -217,58 +217,55 @@ TEST(MoriartyTest,
   M.GenerateTestCases(GenerateTwoVariables("R", 3, "S", 33));
 
   std::vector<std::pair<int64_t, int64_t>> result;
-  M.ExportTestCases(
-      [&result](ExportContext ctx, std::span<const TestCase> cases) {
-        result = ExportTwoIntegersToVector(ctx, "R", "S", cases);
+  M.WriteTestCases(
+      [&result](WriteContext ctx, std::span<const TestCase> cases) {
+        result = WriteTwoIntegersToVector(ctx, "R", "S", cases);
       });
   EXPECT_THAT(result, ElementsAre(Pair(1, 11), Pair(2, 22), Pair(3, 33)));
 }
 
-TEST(
-    MoriartyTest,
-    ExportAllTestCasesShouldExportProperlyWithMultipleGeneratorsMultipleTimes) {
+TEST(MoriartyTest,
+     WriteTestCasesShouldWriteProperlyWithMultipleGeneratorsMultipleTimes) {
   Moriarty M;
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 11), {.num_calls = 2});
   M.GenerateTestCases(GenerateTwoVariables("R", 2, "S", 22), {.num_calls = 3});
 
   std::vector<std::pair<int64_t, int64_t>> result;
-  M.ExportTestCases(
-      [&result](ExportContext ctx, std::span<const TestCase> cases) {
-        result = ExportTwoIntegersToVector(ctx, "R", "S", cases);
+  M.WriteTestCases(
+      [&result](WriteContext ctx, std::span<const TestCase> cases) {
+        result = WriteTwoIntegersToVector(ctx, "R", "S", cases);
       });
   EXPECT_THAT(result, ElementsAre(Pair(1, 11), Pair(1, 11), Pair(2, 22),
                                   Pair(2, 22), Pair(2, 22)));
 }
 
-TEST(MoriartyTest, ExportAskingForNonExistentVariableShouldThrow) {
+TEST(MoriartyTest, WriteAskingForNonExistentVariableShouldThrow) {
   Moriarty M;
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 11));
 
-  // Exporter requests N, but only R and S are set...
+  // Writer requests N, but only R and S are set...
   EXPECT_THAT(
       [&] {
-        M.ExportTestCases(
-            [](ExportContext ctx, std::span<const TestCase> cases) {
-              ExportSingleIntegerToVector(ctx, "N", cases);
-            });
+        M.WriteTestCases([](WriteContext ctx, std::span<const TestCase> cases) {
+          WriteSingleIntegerToVector(ctx, "N", cases);
+        });
       },
       ThrowsValueNotFound("N"));
 }
 
-TEST(MoriartyTest, ExportAskingForVariableOfTheWrongTypeShouldCrash) {
+TEST(MoriartyTest, WriteAskingForVariableOfTheWrongTypeShouldCrash) {
   Moriarty M;
   M.SetSeed("abcde0123456789");
   M.GenerateTestCases(GenerateTwoVariables("R", 1, "S", 2));
 
-  // Exporter requests for MString, but R and S are MIntegers.
+  // Writer requests for MString, but R and S are MIntegers.
   EXPECT_THAT(
       [&] {
-        M.ExportTestCases(
-            [](ExportContext ctx, std::span<const TestCase> cases) {
-              ExportTwoStringsToVector(ctx, "R", "S", cases);
-            });
+        M.WriteTestCases([](WriteContext ctx, std::span<const TestCase> cases) {
+          WriteTwoStringsToVector(ctx, "R", "S", cases);
+        });
       },
       AnyOf(ThrowsValueTypeMismatch("R", "MString"),
             ThrowsValueTypeMismatch("S", "MString")));
@@ -308,9 +305,9 @@ TEST(MoriartyTest, GeneralConstraintsAreConsideredInGenerators) {
   });
 
   std::vector<int64_t> result;
-  M.ExportTestCases(
-      [&result](ExportContext ctx, std::span<const TestCase> cases) {
-        result = ExportSingleIntegerToVector(ctx, "R", cases);
+  M.WriteTestCases(
+      [&result](WriteContext ctx, std::span<const TestCase> cases) {
+        result = WriteSingleIntegerToVector(ctx, "R", cases);
       });
 
   // // General says 3 <= R <= 50. Generator says 1 <= R <= 10.
@@ -389,61 +386,60 @@ TEST(MoriartyTest, GenerateTestCasesCrashesOnValidationErrorIfRequested) {
           HasSubstr("No value assigned to variable `M`")));
 }
 
-TEST(MoriartyTest, ImportAndExportShouldWorkTypicalCase) {
+TEST(MoriartyTest, ReadAndWriteShouldWorkTypicalCase) {
   {  // Single variable
     Moriarty M;
-    M.ImportTestCases(
-        [](ImportContext ctx) { return ImportIota(ctx, "X", 5); });
+    M.ReadTestCases([](ReadContext ctx) { return ReadIota(ctx, "X", 5); });
 
     std::vector<int64_t> result;
-    M.ExportTestCases(
-        [&result](ExportContext ctx, std::span<const TestCase> cases) {
-          result = ExportSingleIntegerToVector(ctx, "X", cases);
+    M.WriteTestCases(
+        [&result](WriteContext ctx, std::span<const TestCase> cases) {
+          result = WriteSingleIntegerToVector(ctx, "X", cases);
         });
     EXPECT_THAT(result, ElementsAre(1, 2, 3, 4, 5));
   }
   {  // Multiple variables
     Moriarty M;
-    M.ImportTestCases(
-        [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 3); });
+    M.ReadTestCases(
+        [](ReadContext ctx) { return ReadTwoIota(ctx, "R", "S", 3); });
 
     std::vector<std::pair<int64_t, int64_t>> result;
-    M.ExportTestCases(
-        [&result](ExportContext ctx, std::span<const TestCase> cases) {
-          result = ExportTwoIntegersToVector(ctx, "R", "S", cases);
+    M.WriteTestCases(
+        [&result](WriteContext ctx, std::span<const TestCase> cases) {
+          result = WriteTwoIntegersToVector(ctx, "R", "S", cases);
         });
     EXPECT_THAT(result, ElementsAre(Pair(1, 11), Pair(2, 22), Pair(3, 33)));
   }
 }
 
-TEST(MoriartyTest, ImportAndExportWithIOStreamsShouldWork) {
+TEST(MoriartyTest, ReadAndWriteWithIOStreamsShouldWork) {
   std::stringstream ss_in("1 2 3 4 5 6");
   Moriarty M;
   M.AddVariable("A", MInteger());
-  M.ImportTestCases(
-      [](ImportContext ctx) {
+  M.ReadTestCases(
+      [](ReadContext ctx) {
         return ReadSingleInteger(ctx, "A", Whitespace::kSpace, 6);
       },
-      ImportOptions{.is = ss_in});
+      ReadOptions{.is = ss_in});
 
   std::stringstream ss_out;
-  M.ExportTestCases(
-      [](ExportContext ctx, std::span<const TestCase> cases) {
-        PrintSingleVariable(ctx, "A", cases);
+  M.WriteTestCases(
+      [](WriteContext ctx, std::span<const TestCase> cases) {
+        WriteSingleVariable(ctx, "A", cases);
       },
       {.os = ss_out});
   EXPECT_EQ(ss_out.str(), "1\n2\n3\n4\n5\n6\n");
 }
 
-TEST(MoriartyTest, ImportSingleArrayShouldWork) {
+TEST(MoriartyTest, ReadSingleArrayShouldWork) {
   std::string expected = "6\n1 2 3 4 5 6\n";
   std::stringstream ss_in(expected);
   Moriarty M;
   M.AddVariable("N", MInteger());
   M.AddVariable(
       "A", MArray<MInteger>(Elements<MInteger>(Between(1, 10)), Length("N")));
-  M.ImportTestCases(
-      [](ImportContext ctx) -> std::vector<TestCase> {
+  M.ReadTestCases(
+      [](ReadContext ctx) -> std::vector<TestCase> {
         TestCase C = {};
         ctx.ReadVariableTo("N", C);
         ctx.ReadWhitespace(Whitespace::kNewline);
@@ -451,11 +447,11 @@ TEST(MoriartyTest, ImportSingleArrayShouldWork) {
         ctx.ReadWhitespace(Whitespace::kNewline);
         return {C};
       },
-      ImportOptions{.is = ss_in});
+      ReadOptions{.is = ss_in});
 
   std::stringstream ss_out;
-  M.ExportTestCases(
-      [](ExportContext ctx, std::span<const TestCase> cases) {
+  M.WriteTestCases(
+      [](WriteContext ctx, std::span<const TestCase> cases) {
         ctx.PrintVariableFrom("N", cases[0]);
         ctx.PrintWhitespace(Whitespace::kNewline);
         ctx.PrintVariableFrom("A", cases[0]);
@@ -468,15 +464,15 @@ TEST(MoriartyTest, ImportSingleArrayShouldWork) {
 TEST(MoriartyTest, ValidateAllTestCasesWorksWhenAllVariablesAreValid) {
   Moriarty M;
   M.AddVariable("X", MInteger(Between(1, 5)));
-  M.ImportTestCases([](ImportContext ctx) { return ImportIota(ctx, "X", 5); });
+  M.ReadTestCases([](ReadContext ctx) { return ReadIota(ctx, "X", 5); });
   EXPECT_TRUE(M.ValidateTestCases().IsValid());
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSingleVariableInvalid) {
   Moriarty M;
   M.AddVariable("X", MInteger(Between(1, 3)));
-  M.ImportTestCases([](ImportContext ctx) { return ImportIota(ctx, "X", 5); },
-                    ImportOptions{.validation = ValidationStyle::kNone});
+  M.ReadTestCases([](ReadContext ctx) { return ReadIota(ctx, "X", 5); },
+                  ReadOptions{.validation = ValidationStyle::kNone});
   ValidationResults results = M.ValidateTestCases();
   EXPECT_FALSE(results.IsValid());
   EXPECT_THAT(results.DescribeFailures(), HasSubstr("Case #4 invalid"));
@@ -486,9 +482,8 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSomeVariableInvalid) {
   Moriarty M;
   M.AddVariable("R", MInteger(Between(1, 3)))
       .AddVariable("S", MInteger(Between(10, 30)));
-  M.ImportTestCases(
-      [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
-      ImportOptions{.validation = ValidationStyle::kNone});
+  M.ReadTestCases([](ReadContext ctx) { return ReadTwoIota(ctx, "R", "S", 4); },
+                  ReadOptions{.validation = ValidationStyle::kNone});
   ValidationResults results = M.ValidateTestCases();
   EXPECT_FALSE(results.IsValid());
   EXPECT_THAT(results.DescribeFailures(), HasSubstr("Case #3 invalid"));
@@ -497,10 +492,9 @@ TEST(MoriartyTest, ValidateAllTestCasesFailsWhenSomeVariableInvalid) {
 TEST(MoriartyTest, ValidateAllTestCasesHandlesMissingVariableOrValue) {
   Moriarty M;
   M.AddVariable("R", MInteger(Between(0, 5)))
-      .AddVariable("q", MInteger(Between(10, 30)));  // Importer uses S, not q
-  M.ImportTestCases(
-      [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
-      {.validation = ValidationStyle::kNone});
+      .AddVariable("q", MInteger(Between(10, 30)));  // Reader uses S, not q
+  M.ReadTestCases([](ReadContext ctx) { return ReadTwoIota(ctx, "R", "S", 4); },
+                  {.validation = ValidationStyle::kNone});
 
   ValidationResults results =
       M.ValidateTestCases({.validation = ValidationStyle::kAllVariables});
@@ -527,43 +521,43 @@ TEST(MoriartyTest, ValidateAllTestCasesHandlesMissingVariableOrValue) {
             HasSubstr("No value assigned to variable `q`")));
 }
 
-TEST(MoriartyTest, ImportTestCasesCrashesOnValidationErrorIfRequested) {
+TEST(MoriartyTest, ReadTestCasesCrashesOnValidationErrorIfRequested) {
   Moriarty M;
   M.AddVariable("R", MInteger(Between(0, 5)))
-      .AddVariable("q", MInteger(Between(10, 30)));  // Importer uses S, not q
+      .AddVariable("q", MInteger(Between(10, 30)));  // Reader uses S, not q
 
   EXPECT_THAT(
       [&] {
-        M.ImportTestCases(
-            [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
+        M.ReadTestCases(
+            [](ReadContext ctx) { return ReadTwoIota(ctx, "R", "S", 4); },
             {.validation = ValidationStyle::kAllVariables});
       },
       ThrowsMessage<ValidationError>(
           HasSubstr("No value assigned to variable `q`")));
 
-  EXPECT_NO_THROW(M.ImportTestCases(
-      [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
+  EXPECT_NO_THROW(M.ReadTestCases(
+      [](ReadContext ctx) { return ReadTwoIota(ctx, "R", "S", 4); },
       {.validation = ValidationStyle::kOnlySetVariables}));
 
   EXPECT_THAT(
       [&] {
-        M.ImportTestCases(
-            [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
+        M.ReadTestCases(
+            [](ReadContext ctx) { return ReadTwoIota(ctx, "R", "S", 4); },
             {.validation = ValidationStyle::kOnlySetValues});
       },
       ThrowsMessage<ValidationError>(
           HasSubstr("No variable found for `S`, but a value was set for it")));
 }
 
-TEST(MoriartyTest, ImportTestCasesHandlesMissingVariableOrValue) {
+TEST(MoriartyTest, ReadTestCasesHandlesMissingVariableOrValue) {
   Moriarty M;
   M.AddVariable("R", MInteger(Between(0, 5)))
-      .AddVariable("q", MInteger(Between(10, 30)));  // Importer uses S, not q
+      .AddVariable("q", MInteger(Between(10, 30)));  // Reader uses S, not q
 
   EXPECT_THAT(
       [&] {
-        M.ImportTestCases(
-            [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
+        M.ReadTestCases(
+            [](ReadContext ctx) { return ReadTwoIota(ctx, "R", "S", 4); },
             {.validation = ValidationStyle::kAllVariables});
       },
       ThrowsMessage<ValidationError>(
@@ -573,10 +567,9 @@ TEST(MoriartyTest, ImportTestCasesHandlesMissingVariableOrValue) {
 TEST(MoriartyTest, ValidateAllTestCasesHandFailsIfAVariableIsMissing) {
   Moriarty M;
   M.AddVariable("R", MInteger(Between(1, 3)))
-      .AddVariable("q", MInteger(Between(10, 30)));  // Importer uses S, not q
-  M.ImportTestCases(
-      [](ImportContext ctx) { return ImportTwoIota(ctx, "R", "S", 4); },
-      {.validation = ValidationStyle::kNone});
+      .AddVariable("q", MInteger(Between(10, 30)));  // Reader uses S, not q
+  M.ReadTestCases([](ReadContext ctx) { return ReadTwoIota(ctx, "R", "S", 4); },
+                  {.validation = ValidationStyle::kNone});
 
   ValidationResults results = M.ValidateTestCases();
   EXPECT_FALSE(results.IsValid());

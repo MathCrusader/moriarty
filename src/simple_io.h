@@ -56,7 +56,7 @@ using SimpleIOToken = std::variant<std::string, StringLiteral>;
 //
 // For many situations, we just simply need the test cases to be read/write from
 // a stream in a predictable way. `SimpleIO` works on tokens and lines. Each
-// line is a sequence of tokens. The corresponding `Importer()` and `Exporter()`
+// line is a sequence of tokens. The corresponding `Reader()` and `Writer()`
 // will decide how the tokens are separated on each line.
 class SimpleIO {
  public:
@@ -136,17 +136,17 @@ class SimpleIO {
   // of test cases.
   SimpleIO& WithNumberOfTestCasesInHeader();
 
-  // Exporter()
+  // Writer()
   //
-  // Creates a SimpleIOExporter from the configuration provided by this class.
-  // This can be passed into `Moriarty::ExportTestCases()`.
-  [[nodiscard]] ExportFn Exporter() const;
+  // Creates a SimpleIOWriter from the configuration provided by this class.
+  // This can be passed into `Moriarty::WriteTestCases()`.
+  [[nodiscard]] WriterFn Writer() const;
 
-  // Importer()
+  // Reader()
   //
-  // Creates a SimpleIOImporter from the configuration provided by this class.
-  // This can be passed into `Moriarty::ImportTestCases()`.
-  [[nodiscard]] ImportFn Importer(int number_of_test_cases = 1) const;
+  // Creates a SimpleIOReader from the configuration provided by this class.
+  // This can be passed into `Moriarty::ReadTestCases()`.
+  [[nodiscard]] ReaderFn Reader(int number_of_test_cases = 1) const;
 
   // Access the lines
   struct Line {

@@ -39,7 +39,7 @@ namespace moriarty {
 // Moriarty
 //
 // This is the central class of the Moriarty suite. Variables should be declared
-// through this class. Then Importers, Generators, and Exporters will use those
+// through this class. Then Readers, Generators, and Writers will use those
 // variables.
 //
 // Example usage:
@@ -52,7 +52,7 @@ namespace moriarty {
 //     .AddVariable("S", MString(Alphabet("abc"), Length("N")));
 //   M.GenerateTestCases(FancyGenerator);
 //   M.GenerateTestCases(SmallCaseGenerator(), {.call_n_times = 5});
-//   M.ExportTestCase(FancyPrinter);
+//   M.WriteTestCases(FancyPrinter);
 class Moriarty {
  public:
   // SetName() [required]
@@ -117,24 +117,24 @@ class Moriarty {
   // called once.
   void GenerateTestCases(GenerateFn fn, GenerateOptions options = {});
 
-  // ImportTestCases()
+  // ReadTestCases()
   //
-  // Imports test cases using the provided importer. The importer will be called
+  // Reads test cases using the provided reader. The reader will be called
   // once.
-  void ImportTestCases(ImportFn fn, ImportOptions options = {});
+  void ReadTestCases(ReaderFn fn, ReadOptions options = {});
 
-  // ExportTestCases()
+  // WriteTestCases()
   //
-  // Exports test cases using the provided exporter. The exporter will be called
+  // Writes test cases using the provided writer. The writer will be called
   // once.
-  void ExportTestCases(ExportFn fn, ExportOptions options = {}) const;
+  void WriteTestCases(WriterFn fn, WriteOptions options = {}) const;
 
   // ValidateTestCases()
   //
   // Checks if all variables in all test cases are valid. If there are
   // multiple failures, this will return some subset of them.
   //
-  // You can validate as part of `Import()` and `Generate()`, but this function
+  // You can validate as part of `R()` and `Generate()`, but this function
   // allows you to validate at any time with different options.
   ValidationResults ValidateTestCases(ValidateOptions options = {}) const;
 

@@ -34,20 +34,20 @@ GenerateContext::GenerateContext(
       BasicRandomContext(rng),
       VariableRandomContext(variables, values, rng) {}
 
-ImportContext::ImportContext(
-    Ref<const moriarty_internal::VariableSet> variables, Ref<InputCursor> input)
+ReadContext::ReadContext(Ref<const moriarty_internal::VariableSet> variables,
+                         Ref<InputCursor> input)
     : ViewOnlyContext(variables, values_),
       BasicIStreamContext(input),
       VariableIStreamContext(input, variables, values_) {}
 
-ExportContext::ExportContext(
-    Ref<std::ostream> os, Ref<const moriarty_internal::VariableSet> variables,
-    Ref<const moriarty_internal::ValueSet> values)
+WriteContext::WriteContext(Ref<std::ostream> os,
+                           Ref<const moriarty_internal::VariableSet> variables,
+                           Ref<const moriarty_internal::ValueSet> values)
     : ViewOnlyContext(variables, values),
       BasicOStreamContext(os),
       VariableOStreamContext(os, variables, values) {}
 
-ExportContext::ExportContext(ExportContext ctx, Ref<std::ostream> os)
+WriteContext::WriteContext(WriteContext ctx, Ref<std::ostream> os)
     : ViewOnlyContext(ctx),
       BasicOStreamContext(os),
       VariableOStreamContext(ctx) {
