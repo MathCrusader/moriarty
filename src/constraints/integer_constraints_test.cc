@@ -23,7 +23,7 @@
 namespace moriarty {
 namespace {
 
-using ::moriarty::librarian::AnalysisContext;
+using ::moriarty::librarian::AnalyzeVariableContext;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::HasConstraintViolation;
 using ::moriarty_testing::HasNoConstraintViolation;
@@ -34,7 +34,7 @@ using ::testing::UnorderedElementsAre;
 TEST(IntegerConstraintsTest, ModCheckValue) {
   auto context = Context().WithValue<MInteger>("X", 7);
 
-  AnalysisContext ctx("N", context.Variables(), context.Values());
+  AnalyzeVariableContext ctx("N", context.Variables(), context.Values());
 
   EXPECT_THAT(Mod(1, 10).CheckValue(ctx, 11), HasNoConstraintViolation());
   EXPECT_THAT(Mod(0, 10).CheckValue(ctx, 110), HasNoConstraintViolation());

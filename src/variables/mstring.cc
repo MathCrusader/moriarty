@@ -118,7 +118,7 @@ MString::CoreConstraints::SimplePatterns() const {
 }
 
 std::vector<MString> MString::ListEdgeCasesImpl(
-    librarian::AnalysisContext ctx) const {
+    librarian::AnalyzeVariableContext ctx) const {
   if (!core_constraints_.LengthConstrained()) {
     throw ConfigurationError(
         "MString::ListEdgeCases",
@@ -139,7 +139,8 @@ std::vector<MString> MString::ListEdgeCasesImpl(
   return values;
 }
 
-std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
+std::string MString::GenerateImpl(
+    librarian::GenerateVariableContext ctx) const {
   if (GetOneOf().HasBeenConstrained())
     return GetOneOf().SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
 
@@ -178,7 +179,7 @@ std::string MString::GenerateImpl(librarian::ResolverContext ctx) const {
 }
 
 std::string MString::GenerateSimplePattern(
-    librarian::ResolverContext ctx) const {
+    librarian::GenerateVariableContext ctx) const {
   ABSL_CHECK(core_constraints_.SimplePatternsConstrained());
 
   std::optional<std::string> maybe_alphabet =
@@ -206,7 +207,7 @@ std::string MString::GenerateSimplePattern(
 }
 
 std::string MString::GenerateImplWithDistinctCharacters(
-    librarian::ResolverContext ctx) const {
+    librarian::GenerateVariableContext ctx) const {
   // Creating a copy in case the alphabet changes in the future, we don't want
   // to limit the length forever.
   MInteger mlength = core_constraints_.Length();
@@ -221,13 +222,13 @@ std::string MString::GenerateImplWithDistinctCharacters(
   return std::string(ret.begin(), ret.end());
 }
 
-std::string MString::ReadImpl(librarian::ReaderContext ctx) const {
+std::string MString::ReadImpl(librarian::ReadVariableContext ctx) const {
   return ctx.ReadToken();
 }
 
-void MString::PrintImpl(librarian::PrinterContext ctx,
+void MString::WriteImpl(librarian::WriteVariableContext ctx,
                         const std::string& value) const {
-  ctx.PrintToken(value);
+  ctx.WriteToken(value);
 }
 
 }  // namespace moriarty

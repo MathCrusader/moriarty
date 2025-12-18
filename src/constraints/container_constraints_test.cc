@@ -56,7 +56,7 @@ TEST(ContainerConstraintsTest, LengthToStringWorks) {
 TEST(ContainerConstraintsTest, LengthUnsatisfiedReasonWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  librarian::AnalysisContext ctx("N", variables, values);
+  librarian::AnalyzeVariableContext ctx("N", variables, values);
 
   EXPECT_EQ(Length(Between(1, 10))
                 .CheckValue(ctx, std::string("this string is long"))
@@ -70,7 +70,7 @@ TEST(ContainerConstraintsTest, LengthUnsatisfiedReasonWorks) {
 TEST(ContainerConstraintsTest, LengthIsSatisfiedWithWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  librarian::AnalysisContext ctx("N", variables, values);
+  librarian::AnalyzeVariableContext ctx("N", variables, values);
 
   EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::string("123456")),
               HasNoConstraintViolation());
@@ -107,7 +107,7 @@ TEST(ContainerConstraintsTest, ElementsToStringWorks) {
 TEST(ContainerConstraintsTest, ElementsUnsatisfiedReasonWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  librarian::AnalysisContext ctx("N", variables, values);
+  librarian::AnalyzeVariableContext ctx("N", variables, values);
 
   EXPECT_EQ(
       Elements<MInteger>(Between(1, 10)).CheckValue(ctx, {-1, 2, 3}).Reason(),
@@ -124,7 +124,7 @@ TEST(ContainerConstraintsTest, ElementsIsSatisfiedWithWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   values.Set<MInteger>("X", 10);
-  librarian::AnalysisContext ctx("N", variables, values);
+  librarian::AnalyzeVariableContext ctx("N", variables, values);
 
   {
     EXPECT_THAT(Elements<MString>(Length(Between(1, 10)))
@@ -181,7 +181,7 @@ TEST(ContainerConstraintsTest, ElementToStringWorks) {
 TEST(ContainerConstraintsTest, ElementUnsatisfiedReasonWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  librarian::AnalysisContext ctx("N", variables, values);
+  librarian::AnalyzeVariableContext ctx("N", variables, values);
 
   EXPECT_EQ((Element<0, MInteger>(Between(1, 10)).CheckValue(ctx, -1).Reason()),
             "tuple index 0 (which is `-1`) is not between 1 and 10");
@@ -197,7 +197,7 @@ TEST(ContainerConstraintsTest, ElementIsSatisfiedWithWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   values.Set<MInteger>("X", 10);
-  librarian::AnalysisContext ctx("N", variables, values);
+  librarian::AnalyzeVariableContext ctx("N", variables, values);
 
   {
     EXPECT_THAT(

@@ -40,8 +40,8 @@ namespace {
 using moriarty_testing::Context;
 using moriarty_testing::GeneratedValuesAre;
 using moriarty_testing::GenerateThrowsGenerationError;
-using moriarty_testing::Print;
 using moriarty_testing::Read;
+using moriarty_testing::Write;
 using testing::AllOf;
 using testing::AnyOf;
 using testing::Eq;
@@ -84,10 +84,10 @@ TEST(MGraphTest, TypenameIsCorrect) {
   EXPECT_EQ(MGraph().Typename(), "MGraph");
 }
 
-TEST(MGraphTest, PrintShouldSucceed) {
-  EXPECT_EQ(Print(MGraph(), Graph1()), Graph1String());
-  EXPECT_EQ(Print(MGraph(), Graph2()), Graph2String());
-  EXPECT_EQ(Print(MGraph(), Graph<NoEdgeLabel, NoNodeLabel>(0)), "");
+TEST(MGraphTest, WriteShouldSucceed) {
+  EXPECT_EQ(Write(MGraph(), Graph1()), Graph1String());
+  EXPECT_EQ(Write(MGraph(), Graph2()), Graph2String());
+  EXPECT_EQ(Write(MGraph(), Graph<NoEdgeLabel, NoNodeLabel>(0)), "");
 }
 
 TEST(MGraphTest, ReadShouldSucceed) {
@@ -102,8 +102,8 @@ TEST(MGraphTest, PartialReadShouldSucceed) {
   Context context;
   std::istringstream input(std::string{Graph1String()});
   InputCursor cursor(input, WhitespaceStrictness::kPrecise);
-  librarian::ReaderContext ctx("A", cursor, context.Variables(),
-                               context.Values());
+  librarian::ReadVariableContext ctx("A", cursor, context.Variables(),
+                                     context.Values());
   auto reader = MGraph<MNoEdgeLabel, MNoNodeLabel>::Reader(ctx, 3, graph);
 
   for (int i = 0; i < 3; i++) {
@@ -124,8 +124,8 @@ MGraph<MEdgeLabel, MNodeLabel>::value_type ReadMGraphFromFile(
     throw std::runtime_error("Could not open " + path.string());
   }
   InputCursor cursor(input, WhitespaceStrictness::kPrecise);
-  librarian::ReaderContext ctx("A", cursor, context.Variables(),
-                               context.Values());
+  librarian::ReadVariableContext ctx("A", cursor, context.Variables(),
+                                     context.Values());
   return graph_variable.Read(ctx);
 }
 
@@ -137,19 +137,19 @@ void ReadAndVerifyMGraphFromFile(
 
   auto value = ReadMGraphFromFile(graph_variable, path, context);
 
-  std::stringstream print_ss;
-  librarian::PrinterContext print_ctx("A", print_ss, context.Variables(),
-                                      context.Values());
-  graph_variable.Print(print_ctx, value);
+  std::stringstream write_ss;
+  librarian::WriteVariableContext write_ctx("A", write_ss, context.Variables(),
+                                            context.Values());
+  graph_variable.Write(write_ctx, value);
 
-  // Re-open the file and compare its full contents to what we printed.
+  // Re-open the file and compare its full contents to what we written.
   std::ifstream input2(path, std::ios::binary);
   if (!input2.is_open()) {
     FAIL() << "Could not reopen " << path.string();
   }
   std::string file_contents((std::istreambuf_iterator<char>(input2)),
                             std::istreambuf_iterator<char>());
-  ASSERT_EQ(file_contents, print_ss.str());
+  ASSERT_EQ(file_contents, write_ss.str());
 }
 
 TEST(MGraphTest, ReadUnweightedAdjMatrixShouldSucceed) {
@@ -448,7 +448,7 @@ TEST(MGraphTest, GenerateShouldFailOnMissingConstraints) {
 TEST(MGraphTest, GetUniqueValueShouldSucceed) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  librarian::AnalysisContext ctx("MGraph", variables, values);
+  librarian::AnalyzeVariableContext ctx("MGraph", variables, values);
 
   EXPECT_THAT(MGraph(NumNodes(0), NumEdges(0)).GetUniqueValue(ctx),
               Optional(Graph(0)));
@@ -504,7 +504,7 @@ TEST(MGraphTest, ExactlyAndOneOfConstraintsShouldWork) {
 TEST(MGraphTest, NodeLabelsAndEdgeLabelsCheckValue) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  librarian::AnalysisContext ctx("MGraphTest", variables, values);
+  librarian::AnalyzeVariableContext ctx("MGraphTest", variables, values);
 
   Graph<int64_t, int64_t> G(2);
   G.SetNodeLabels({10, 20});

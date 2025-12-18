@@ -138,25 +138,25 @@ class MInteger : public librarian::MVariable<MInteger> {
   librarian::CowPtr<librarian::SizeHandler> size_handler_;
 
   // Computes and returns the minimum and maximum of `bounds_`. Throws if the
-  // range is empty. The `ResolverContext` version may generate other dependent
-  // variables if needed along the way, but the `AnalysisContext` version won't.
-  // std::nullopt means that the bounds cannot be determined without generating
-  // some values.
+  // range is empty. The `GenerateVariableContext` version may generate other
+  // dependent variables if needed along the way, but the
+  // `AnalyzeVariableContext` version won't. std::nullopt means that the bounds
+  // cannot be determined without generating some values.
   std::optional<Range::ExtremeValues<int64_t>> GetExtremeValues(
-      librarian::AnalysisContext ctx) const;
+      librarian::AnalyzeVariableContext ctx) const;
   Range::ExtremeValues<int64_t> GetExtremeValues(
-      librarian::ResolverContext ctx) const;
+      librarian::GenerateVariableContext ctx) const;
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
-  int64_t GenerateImpl(librarian::ResolverContext ctx) const override;
-  int64_t ReadImpl(librarian::ReaderContext ctx) const override;
-  void PrintImpl(librarian::PrinterContext ctx,
+  int64_t GenerateImpl(librarian::GenerateVariableContext ctx) const override;
+  int64_t ReadImpl(librarian::ReadVariableContext ctx) const override;
+  void WriteImpl(librarian::WriteVariableContext ctx,
                  const int64_t& value) const override;
   std::vector<MInteger> ListEdgeCasesImpl(
-      librarian::AnalysisContext ctx) const override;
+      librarian::AnalyzeVariableContext ctx) const override;
   std::optional<int64_t> GetUniqueValueImpl(
-      librarian::AnalysisContext ctx) const override;
+      librarian::AnalyzeVariableContext ctx) const override;
   // ---------------------------------------------------------------------------
 };
 

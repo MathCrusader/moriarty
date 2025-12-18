@@ -37,8 +37,8 @@ using ::moriarty_testing::GeneratedValuesAre;
 using ::moriarty_testing::GenerateSameValues;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
-using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
+using ::moriarty_testing::Write;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::FieldsAre;
@@ -54,20 +54,20 @@ TEST(MTupleTest, TypenameIsCorrect) {
   EXPECT_EQ(MTuple(MInteger(), MTuple(MInteger(), MInteger())).Typename(),
             "MTuple<MInteger, MTuple<MInteger, MInteger>>");
 }
-TEST(MTupleTest, PrintShouldSucceed) {
-  EXPECT_EQ(Print(MTuple(MInteger(), MInteger()), {1, 2}), "1 2");
+TEST(MTupleTest, WriteShouldSucceed) {
+  EXPECT_EQ(Write(MTuple(MInteger(), MInteger()), {1, 2}), "1 2");
   EXPECT_EQ(
-      Print(MTuple(MInteger(), MInteger(), MTuple(MInteger(), MInteger())),
+      Write(MTuple(MInteger(), MInteger(), MTuple(MInteger(), MInteger())),
             {1, 2, {5, 6}}),
       "1 2 5 6");
 }
 
-TEST(MTupleTest, PrintWithProperSeparatorShouldSucceed) {
-  EXPECT_EQ(Print(MTuple<MInteger, MInteger, MInteger>(
+TEST(MTupleTest, WriteWithProperSeparatorShouldSucceed) {
+  EXPECT_EQ(Write(MTuple<MInteger, MInteger, MInteger>(
                       MTupleFormat().NewlineSeparated()),
                   {1, 22, 333}),
             "1\n22\n333");
-  EXPECT_EQ(Print(MTuple<MInteger, MString, MInteger>(
+  EXPECT_EQ(Write(MTuple<MInteger, MString, MInteger>(
                       MTupleFormat().WithSeparator(Whitespace::kTab)),
                   {1, "twotwo", 333}),
             "1\ttwotwo\t333");

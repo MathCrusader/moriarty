@@ -47,21 +47,21 @@ class MNone : public librarian::MVariable<MNone> {
  private:
   // ---------------------------------------------------------------------------
   //  MVariable overrides
-  NoType GenerateImpl(librarian::ResolverContext ctx) const override {
+  NoType GenerateImpl(librarian::GenerateVariableContext ctx) const override {
     throw ConfigurationError(
         "MNone::Generate",
         "MNone variable cannot be generated as it represents no value.");
   }
-  NoType ReadImpl(librarian::ReaderContext ctx) const override {
+  NoType ReadImpl(librarian::ReadVariableContext ctx) const override {
     throw ConfigurationError(
         "MNone::Read",
         "MNone variable cannot be read as it represents no value.");
   }
-  void PrintImpl(librarian::PrinterContext ctx,
+  void WriteImpl(librarian::WriteVariableContext ctx,
                  const NoType& value) const override {
     throw ConfigurationError(
-        "MNone::Print",
-        "MNone variable cannot be printed as it represents no value.");
+        "MNone::Write",
+        "MNone variable cannot be written as it represents no value.");
   }
   // ---------------------------------------------------------------------------
 };

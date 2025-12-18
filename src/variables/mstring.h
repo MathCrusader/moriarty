@@ -139,18 +139,20 @@ class MString : public librarian::MVariable<MString> {
  private:
   CoreConstraints core_constraints_;
 
-  std::string GenerateSimplePattern(librarian::ResolverContext ctx) const;
+  std::string GenerateSimplePattern(
+      librarian::GenerateVariableContext ctx) const;
   std::string GenerateImplWithDistinctCharacters(
-      librarian::ResolverContext ctx) const;
+      librarian::GenerateVariableContext ctx) const;
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
-  std::string GenerateImpl(librarian::ResolverContext ctx) const override;
-  std::string ReadImpl(librarian::ReaderContext ctx) const override;
-  void PrintImpl(librarian::PrinterContext ctx,
+  std::string GenerateImpl(
+      librarian::GenerateVariableContext ctx) const override;
+  std::string ReadImpl(librarian::ReadVariableContext ctx) const override;
+  void WriteImpl(librarian::WriteVariableContext ctx,
                  const std::string& value) const override;
   std::vector<MString> ListEdgeCasesImpl(
-      librarian::AnalysisContext ctx) const override;
+      librarian::AnalyzeVariableContext ctx) const override;
   // ---------------------------------------------------------------------------
 };
 

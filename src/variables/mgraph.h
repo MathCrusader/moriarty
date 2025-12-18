@@ -276,9 +276,9 @@ class MGraph : public librarian::MVariable<MGraph<MEdgeLabel, MNodeLabel>> {
   // Reads a graph value from a stream in chunks.
   class Reader {
    public:
-    explicit Reader(librarian::ReaderContext ctx, int num_chunks,
+    explicit Reader(librarian::ReadVariableContext ctx, int num_chunks,
                     Ref<const MGraph> variable);
-    void ReadNext(librarian::ReaderContext ctx);
+    void ReadNext(librarian::ReadVariableContext ctx);
     graph_type Finalize() &&;
 
    private:
@@ -294,11 +294,11 @@ class MGraph : public librarian::MVariable<MGraph<MEdgeLabel, MNodeLabel>> {
     using LMtx = std::vector<std::vector<typename MEdgeLabel::value_type>>;
     std::variant<IMtx, LMtx> adjacency_matrix_;
 
-    graph_type::NodeIdx ReadNodeLabel(librarian::ReaderContext ctx);
-    MEdgeLabel::value_type ReadEdgeLabel(librarian::ReaderContext ctx);
+    graph_type::NodeIdx ReadNodeLabel(librarian::ReadVariableContext ctx);
+    MEdgeLabel::value_type ReadEdgeLabel(librarian::ReadVariableContext ctx);
 
-    void ReadNextEdgeList(librarian::ReaderContext ctx);
-    void ReadNextAdjacencyMatrix(librarian::ReaderContext ctx);
+    void ReadNextEdgeList(librarian::ReadVariableContext ctx);
+    void ReadNextAdjacencyMatrix(librarian::ReadVariableContext ctx);
     graph_type FinalizeEdgeList() &&;
     graph_type FinalizeAdjacencyMatrix() &&;
   };
@@ -309,12 +309,13 @@ class MGraph : public librarian::MVariable<MGraph<MEdgeLabel, MNodeLabel>> {
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
-  graph_type GenerateImpl(librarian::ResolverContext ctx) const override;
-  graph_type ReadImpl(librarian::ReaderContext ctx) const override;
-  void PrintImpl(librarian::PrinterContext ctx,
+  graph_type GenerateImpl(
+      librarian::GenerateVariableContext ctx) const override;
+  graph_type ReadImpl(librarian::ReadVariableContext ctx) const override;
+  void WriteImpl(librarian::WriteVariableContext ctx,
                  const graph_type& value) const override;
   std::optional<graph_type> GetUniqueValueImpl(
-      librarian::AnalysisContext ctx) const override;
+      librarian::AnalyzeVariableContext ctx) const override;
   // ---------------------------------------------------------------------------
 };
 
@@ -436,7 +437,7 @@ MGraph<MEdgeLabel, MNodeLabel>& MGraph<MEdgeLabel, MNodeLabel>::AddConstraint(
 template <typename MEdgeLabel, typename MNodeLabel>
 typename MGraph<MEdgeLabel, MNodeLabel>::graph_type
 MGraph<MEdgeLabel, MNodeLabel>::GenerateImpl(
-    librarian::ResolverContext ctx) const {
+    librarian::GenerateVariableContext ctx) const {
   if (this->GetOneOf().HasBeenConstrained())
     return this->GetOneOf().SelectOneOf(
         [&](int n) { return ctx.RandomInteger(n); });
@@ -528,7 +529,8 @@ MGraph<MEdgeLabel, MNodeLabel>::GenerateImpl(
 
 template <typename MEdgeLabel, typename MNodeLabel>
 typename MGraph<MEdgeLabel, MNodeLabel>::graph_type
-MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(librarian::ReaderContext ctx) const {
+MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(
+    librarian::ReadVariableContext ctx) const {
   std::optional<int64_t> num_nodes =
       core_constraints_.NumNodes().GetUniqueValue(ctx);
   if (!num_nodes)
@@ -560,38 +562,38 @@ MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(librarian::ReaderContext ctx) const {
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
-void MGraph<MEdgeLabel, MNodeLabel>::PrintImpl(librarian::PrinterContext ctx,
-                                               const graph_type& value) const {
+void MGraph<MEdgeLabel, MNodeLabel>::WriteImpl(
+    librarian::WriteVariableContext ctx, const graph_type& value) const {
   if (format_.IsEdgeList()) {
     auto node_labels = value.GetNodeLabels();
-    auto print_node = [this, &ctx,
+    auto write_node = [this, &ctx,
                        &node_labels](typename graph_type::NodeIdx node) {
       if (format_.IsZeroBased()) {
-        ctx.PrintToken(std::to_string(node));
+        ctx.WriteToken(std::to_string(node));
       } else if (format_.IsOneBased()) {
-        ctx.PrintToken(std::to_string(node + 1));
+        ctx.WriteToken(std::to_string(node + 1));
       } else if (format_.IsNodeLabelsStyle()) {
         // Node labels
         if constexpr (HasNodeLabels<MNodeLabel>) {
-          core_constraints_.NodeLabels().Print(ctx, node_labels[node]);
+          core_constraints_.NodeLabels().Write(ctx, node_labels[node]);
         } else {
           // FIXME: This should be an IOError.
           throw std::runtime_error(
-              "Cannot print node labels when MNodeLabel is MNone.");
+              "Cannot write node labels when MNodeLabel is MNone.");
         }
       } else {
         throw std::runtime_error("Unreachable code reached.");
       }
     };
     for (const auto& [u, v, w] : value.GetEdges()) {
-      print_node(u);
-      ctx.PrintWhitespace(Whitespace::kSpace);
-      print_node(v);
+      write_node(u);
+      ctx.WriteWhitespace(Whitespace::kSpace);
+      write_node(v);
       if constexpr (HasEdgeLabels<MEdgeLabel>) {
-        ctx.PrintWhitespace(Whitespace::kSpace);
-        core_constraints_.EdgeLabels().Print(ctx, w);
+        ctx.WriteWhitespace(Whitespace::kSpace);
+        core_constraints_.EdgeLabels().Write(ctx, w);
       }
-      ctx.PrintWhitespace(Whitespace::kNewline);
+      ctx.WriteWhitespace(Whitespace::kNewline);
     }
     return;
   }
@@ -609,10 +611,10 @@ void MGraph<MEdgeLabel, MNodeLabel>::PrintImpl(librarian::PrinterContext ctx,
       }
       for (size_t u = 0; u < adjacency_list.size(); ++u) {
         for (size_t v = 0; v < adjacency_list.size(); ++v) {
-          if (v > 0) ctx.PrintWhitespace(Whitespace::kSpace);
-          ctx.PrintToken(std::to_string(matrix[u][v]));
+          if (v > 0) ctx.WriteWhitespace(Whitespace::kSpace);
+          ctx.WriteToken(std::to_string(matrix[u][v]));
         }
-        ctx.PrintWhitespace(Whitespace::kNewline);
+        ctx.WriteWhitespace(Whitespace::kNewline);
       }
     } else {  // HasEdgeLabels == true
       std::vector<std::vector<std::optional<typename MEdgeLabel::value_type>>>
@@ -624,7 +626,7 @@ void MGraph<MEdgeLabel, MNodeLabel>::PrintImpl(librarian::PrinterContext ctx,
           if (matrix[u][v].has_value()) {
             // FIXME: This should be an IOError.
             throw std::runtime_error(
-                "Cannot print adjacency matrix with multiple edges "
+                "Cannot write adjacency matrix with multiple edges "
                 "between nodes when edge labels are present.");
           }
           matrix[u][v] = w;
@@ -632,14 +634,14 @@ void MGraph<MEdgeLabel, MNodeLabel>::PrintImpl(librarian::PrinterContext ctx,
       }
       for (size_t u = 0; u < value.NumNodes(); ++u) {
         for (size_t v = 0; v < value.NumNodes(); ++v) {
-          if (v > 0) ctx.PrintWhitespace(Whitespace::kSpace);
+          if (v > 0) ctx.WriteWhitespace(Whitespace::kSpace);
           if (!matrix[u][v]) {
-            ctx.PrintToken("0");  // FIXME: Better representation of no edge
+            ctx.WriteToken("0");  // FIXME: Better representation of no edge
           } else {
-            core_constraints_.EdgeLabels().Print(ctx, *matrix[u][v]);
+            core_constraints_.EdgeLabels().Write(ctx, *matrix[u][v]);
           }
         }
-        ctx.PrintWhitespace(Whitespace::kNewline);
+        ctx.WriteWhitespace(Whitespace::kNewline);
       }
     }
   }
@@ -648,7 +650,7 @@ void MGraph<MEdgeLabel, MNodeLabel>::PrintImpl(librarian::PrinterContext ctx,
 template <typename MEdgeLabel, typename MNodeLabel>
 std::optional<typename MGraph<MEdgeLabel, MNodeLabel>::graph_type>
 MGraph<MEdgeLabel, MNodeLabel>::GetUniqueValueImpl(
-    librarian::AnalysisContext ctx) const {
+    librarian::AnalyzeVariableContext ctx) const {
   auto option = this->GetOneOf().GetUniqueValue();
   if (option) return *option;
 
@@ -715,9 +717,9 @@ MGraph<MEdgeLabel, MNodeLabel>::GetCoreConstraints() const {
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
-MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(librarian::ReaderContext ctx,
-                                               int num_chunks,
-                                               Ref<const MGraph> variable)
+MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(
+    librarian::ReadVariableContext ctx, int num_chunks,
+    Ref<const MGraph> variable)
     : G_(0), variable_(variable) {
   const CoreConstraints& constraints = variable_.get().GetCoreConstraints();
   std::optional<int64_t> num_nodes = constraints.NumNodes().GetUniqueValue(ctx);
@@ -754,7 +756,7 @@ MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(librarian::ReaderContext ctx,
 
 template <typename MEdgeLabel, typename MNodeLabel>
 auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
-    librarian::ReaderContext ctx) -> graph_type::NodeIdx {
+    librarian::ReadVariableContext ctx) -> graph_type::NodeIdx {
   const MGraphFormat& format = variable_.get().Format();
 
   if (format.IsZeroBased()) {
@@ -795,7 +797,7 @@ auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
 
 template <typename MEdgeLabel, typename MNodeLabel>
 auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadEdgeLabel(
-    librarian::ReaderContext ctx) -> MEdgeLabel::value_type {
+    librarian::ReadVariableContext ctx) -> MEdgeLabel::value_type {
   if constexpr (!HasEdgeLabels<MEdgeLabel>) {
     ctx.ThrowIOError(
         "MGraph::Reader attempted to read an edge label, but edge labels "
@@ -808,7 +810,7 @@ auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadEdgeLabel(
 
 template <typename MEdgeLabel, typename MNodeLabel>
 void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextEdgeList(
-    librarian::ReaderContext ctx) {
+    librarian::ReadVariableContext ctx) {
   int64_t u = ReadNodeLabel(ctx);
   ctx.ReadWhitespace(Whitespace::kSpace);
   int64_t v = ReadNodeLabel(ctx);
@@ -823,7 +825,7 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextEdgeList(
 
 template <typename MEdgeLabel, typename MNodeLabel>
 void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
-    librarian::ReaderContext ctx) {
+    librarian::ReadVariableContext ctx) {
   int64_t u = chunks_read_++;
 
   for (typename graph_type::NodeIdx v = 0; v < G_.NumNodes(); ++v) {
@@ -869,7 +871,7 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
 
 template <typename MEdgeLabel, typename MNodeLabel>
 void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNext(
-    librarian::ReaderContext ctx) {
+    librarian::ReadVariableContext ctx) {
   const MGraphFormat& format = variable_.get().Format();
 
   if (format.IsEdgeList()) {

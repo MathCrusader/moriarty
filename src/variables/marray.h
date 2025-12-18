@@ -160,7 +160,7 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
   // moved-from-state.
   class Reader {
    public:
-    explicit Reader(librarian::ReaderContext ctx, int num_chunks,
+    explicit Reader(librarian::ReadVariableContext ctx, int num_chunks,
                     Ref<const MArray> variable)
         : variable_(variable) {
       // TODO: Add safety checks if N is massive?
@@ -168,7 +168,7 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
       array_.reserve(num_chunks);
     }
 
-    void ReadNext(librarian::ReaderContext ctx) {
+    void ReadNext(librarian::ReadVariableContext ctx) {
       array_.push_back(
           variable_.get().GetCoreConstraints().Elements().Read(ctx));
     }
@@ -229,8 +229,8 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
   // GenerateNDistinctImpl()
   //
   // Same as GenerateImpl(), but guarantees that all elements are distinct.
-  vector_value_type GenerateNDistinctImpl(librarian::ResolverContext ctx,
-                                          int n) const;
+  vector_value_type GenerateNDistinctImpl(
+      librarian::GenerateVariableContext ctx, int n) const;
 
   // GenerateUnseenElement()
   //
@@ -238,7 +238,7 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
   // number of times `Generate()` may be called. This function updates
   // `remaining_retries`.
   element_value_type GenerateUnseenElement(
-      librarian::ResolverContext ctx,
+      librarian::GenerateVariableContext ctx,
       const absl::flat_hash_set<element_value_type>& seen,
       int& remaining_retries, int index) const;
 
@@ -251,12 +251,13 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
-  vector_value_type GenerateImpl(librarian::ResolverContext ctx) const override;
-  vector_value_type ReadImpl(librarian::ReaderContext ctx) const override;
-  void PrintImpl(librarian::PrinterContext ctx,
+  vector_value_type GenerateImpl(
+      librarian::GenerateVariableContext ctx) const override;
+  vector_value_type ReadImpl(librarian::ReadVariableContext ctx) const override;
+  void WriteImpl(librarian::WriteVariableContext ctx,
                  const vector_value_type& value) const override;
   std::vector<MArray<MElementType>> ListEdgeCasesImpl(
-      librarian::AnalysisContext ctx) const override;
+      librarian::AnalyzeVariableContext ctx) const override;
   // ---------------------------------------------------------------------------
 };
 
@@ -374,8 +375,8 @@ std::string MArray<T>::Typename() const {
 }
 
 template <typename MElementType>
-auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
-    -> vector_value_type {
+auto MArray<MElementType>::GenerateImpl(
+    librarian::GenerateVariableContext ctx) const -> vector_value_type {
   if (this->GetOneOf().HasBeenConstrained())
     return this->GetOneOf().SelectOneOf(
         [&](int n) { return ctx.RandomInteger(n); });
@@ -412,9 +413,8 @@ auto MArray<MElementType>::GenerateImpl(librarian::ResolverContext ctx) const
 }
 
 template <typename MElementType>
-auto MArray<MElementType>::GenerateNDistinctImpl(librarian::ResolverContext ctx,
-                                                 int n) const
-    -> vector_value_type {
+auto MArray<MElementType>::GenerateNDistinctImpl(
+    librarian::GenerateVariableContext ctx, int n) const -> vector_value_type {
   vector_value_type res;
   res.reserve(n);
 
@@ -433,7 +433,7 @@ auto MArray<MElementType>::GenerateNDistinctImpl(librarian::ResolverContext ctx,
 
 template <typename MElementType>
 auto MArray<MElementType>::GenerateUnseenElement(
-    librarian::ResolverContext ctx,
+    librarian::GenerateVariableContext ctx,
     const absl::flat_hash_set<element_value_type>& seen, int& remaining_retries,
     int index) const -> element_value_type {
   for (; remaining_retries > 0; remaining_retries--) {
@@ -467,17 +467,18 @@ int MArray<MElementType>::GetNumberOfRetriesForDistinctElements(int n) {
 }
 
 template <typename MoriartyElementType>
-void MArray<MoriartyElementType>::PrintImpl(
-    librarian::PrinterContext ctx, const vector_value_type& value) const {
+void MArray<MoriartyElementType>::WriteImpl(
+    librarian::WriteVariableContext ctx, const vector_value_type& value) const {
   for (int i = 0; i < value.size(); i++) {
-    if (i > 0) ctx.PrintWhitespace(Format().GetSeparator());
-    core_constraints_.Elements().Print(ctx, value[i]);
+    if (i > 0) ctx.WriteWhitespace(Format().GetSeparator());
+    core_constraints_.Elements().Write(ctx, value[i]);
   }
 }
 
 template <typename MoriartyElementType>
 MArray<MoriartyElementType>::vector_value_type
-MArray<MoriartyElementType>::ReadImpl(librarian::ReaderContext ctx) const {
+MArray<MoriartyElementType>::ReadImpl(
+    librarian::ReadVariableContext ctx) const {
   std::optional<int64_t> length =
       core_constraints_.Length().GetUniqueValue(ctx);
   if (!length)
@@ -495,7 +496,7 @@ MArray<MoriartyElementType>::ReadImpl(librarian::ReaderContext ctx) const {
 template <typename MoriartyElementType>
 std::vector<MArray<MoriartyElementType>>
 MArray<MoriartyElementType>::ListEdgeCasesImpl(
-    librarian::AnalysisContext ctx) const {
+    librarian::AnalyzeVariableContext ctx) const {
   if (!core_constraints_.LengthConstrained()) {
     throw ConfigurationError(
         "MArray::ListEdgeCases",

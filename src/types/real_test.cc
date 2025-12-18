@@ -24,7 +24,7 @@
 
 namespace moriarty {
 
-// Printing for nicer output in tests.
+// Writeing for nicer output in tests.
 std::ostream& operator<<(std::ostream& os, moriarty::Real r) {
   return os << r.ToString();
 }

@@ -52,8 +52,8 @@
 //        Reads a value using constraints from an MVariable `x` from the
 //        input stream (or string) and returns that value.
 //
-//    * Print(x, value, [optional] context)
-//        Prints `value` using constraints from an MVariable `x` to a string and
+//    * Write(x, value, [optional] context)
+//        Writes `value` using constraints from an MVariable `x` to a string and
 //        returns that string.
 //
 //
@@ -276,12 +276,12 @@ template <moriarty::MoriartyVariable T>
 [[nodiscard]] T::value_type Read(T variable, std::string_view read_from,
                                  Context context = {});
 
-// Print() [For tests only]
+// Write() [For tests only]
 //
-// Prints `value` using constraints from an MVariable `x` to a string and
+// Writes `value` using constraints from an MVariable `x` to a string and
 // returns that string.
 template <moriarty::MoriartyVariable T>
-[[nodiscard]] std::string Print(T variable, typename T::value_type value,
+[[nodiscard]] std::string Write(T variable, typename T::value_type value,
                                 Context context = {});
 
 // GenerateSameValues() [for use with GoogleTest]
@@ -487,8 +487,8 @@ std::optional<typename T::value_type> GetUniqueValue(T variable,
   std::string var_name = std::format("GetUniqueValue({})", variable.Typename());
   context.WithVariable(var_name, variable);
 
-  moriarty::librarian::AnalysisContext ctx(var_name, context.Variables(),
-                                           context.Values());
+  moriarty::librarian::AnalyzeVariableContext ctx(var_name, context.Variables(),
+                                                  context.Values());
   return ctx.GetUniqueValue<T>(var_name);
 }
 
@@ -513,8 +513,8 @@ T::value_type Read(T variable, std::string_view read_from, Context context) {
 }
 
 template <moriarty::MoriartyVariable T>
-std::string Print(T variable, typename T::value_type value, Context context) {
-  std::string var_name = std::format("Print({})", variable.Typename());
+std::string Write(T variable, typename T::value_type value, Context context) {
+  std::string var_name = std::format("Write({})", variable.Typename());
   context.WithVariable(var_name, variable);
   context.WithValue<T>(var_name, value);
 
@@ -522,7 +522,7 @@ std::string Print(T variable, typename T::value_type value, Context context) {
 
   moriarty::moriarty_internal::AbstractVariable* var =
       context.Variables().GetAnonymousVariable(var_name);
-  var->PrintValue(var_name, ss, context.Variables(), context.Values());
+  var->WriteValue(var_name, ss, context.Variables(), context.Values());
   return ss.str();
 }
 
@@ -567,7 +567,7 @@ template <moriarty::MoriartyVariable T>
 std::vector<typename T::value_type> GenerateEdgeCases(T variable) {
   moriarty::moriarty_internal::VariableSet variables;
   moriarty::moriarty_internal::ValueSet values;
-  moriarty::librarian::AnalysisContext ctx("test", variables, values);
+  moriarty::librarian::AnalyzeVariableContext ctx("test", variables, values);
   std::vector<T> instances = variable.ListEdgeCases(ctx);
 
   std::vector<typename T::value_type> tricky_values;
@@ -596,8 +596,8 @@ MATCHER_P2(IsSatisfiedWith, value, context, "") {
   Context context_copy = context;
 
   std::string var_name = std::format("{}::IsSatisfiedWith", arg.Typename());
-  moriarty::librarian::AnalysisContext ctx(var_name, context_copy.Variables(),
-                                           context_copy.Values());
+  moriarty::librarian::AnalyzeVariableContext ctx(
+      var_name, context_copy.Variables(), context_copy.Values());
 
   if (auto reason = arg.CheckValue(ctx, ValueType(value))) {
     *result_listener << "value does not satisfy constraints: "
@@ -635,8 +635,8 @@ MATCHER_P3(IsNotSatisfiedWith, value, expected_reason, context, "") {
   Context context_copy = context;
 
   std::string var_name = std::format("{}::IsNotSatisfiedWith", arg.Typename());
-  moriarty::librarian::AnalysisContext ctx(var_name, context_copy.Variables(),
-                                           context_copy.Values());
+  moriarty::librarian::AnalyzeVariableContext ctx(
+      var_name, context_copy.Variables(), context_copy.Values());
 
   if (auto actual_reason = arg.CheckValue(ctx, ValueType(value))) {
     if (!testing::Value(actual_reason.Reason(),

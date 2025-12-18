@@ -96,7 +96,7 @@ class SimplePattern : public MConstraint {
   [[nodiscard]] moriarty_internal::SimplePattern GetCompiledPattern() const;
 
   // Determines if the string has the correct characters.
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  std::string_view value) const;
 
   // Returns a string representation of this constraint.

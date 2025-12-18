@@ -106,8 +106,8 @@ moriarty_internal::SimplePattern SimplePattern::GetCompiledPattern() const {
   return pattern_;
 }
 
-ConstraintViolation SimplePattern::CheckValue(librarian::AnalysisContext ctx,
-                                              std::string_view value) const {
+ConstraintViolation SimplePattern::CheckValue(
+    librarian::AnalyzeVariableContext ctx, std::string_view value) const {
   auto lookup = [&](std::string_view var) -> int64_t {
     return ctx.GetValue<MInteger>(var);
   };

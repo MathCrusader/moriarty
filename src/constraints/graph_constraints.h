@@ -49,7 +49,7 @@ class NumNodes : public MConstraint {
   // Determines if the graph has the correct number of nodes.
   template <typename EdgeLabel, typename NodeLabel>
   ConstraintViolation CheckValue(
-      librarian::AnalysisContext ctx,
+      librarian::AnalyzeVariableContext ctx,
       const Graph<EdgeLabel, NodeLabel>& value) const;
 
   // Returns a string representation of this constraint.
@@ -85,7 +85,7 @@ class NumEdges : public MConstraint {
   // Determines if the graph has the correct number of edges.
   template <typename EdgeLabel, typename NodeLabel>
   ConstraintViolation CheckValue(
-      librarian::AnalysisContext ctx,
+      librarian::AnalyzeVariableContext ctx,
       const Graph<EdgeLabel, NodeLabel>& value) const;
 
   // Returns a string representation of this constraint.
@@ -167,7 +167,7 @@ class NodeLabels : public MConstraint {
   // Determines if the graph's node labels satisfy all constraints.
   template <typename EdgeLabel>
   ConstraintViolation CheckValue(
-      librarian::AnalysisContext ctx,
+      librarian::AnalyzeVariableContext ctx,
       const Graph<EdgeLabel, typename MLabelType::value_type>& value) const;
 
   // Returns a string representation of this constraint.
@@ -197,7 +197,7 @@ class EdgeLabels : public MConstraint {
   // Determines if the graph's edge labels satisfy all constraints.
   template <typename NodeLabel>
   ConstraintViolation CheckValue(
-      librarian::AnalysisContext ctx,
+      librarian::AnalyzeVariableContext ctx,
       const Graph<typename MLabelType::value_type, NodeLabel>& value) const;
 
   // Returns a string representation of this constraint.
@@ -241,7 +241,7 @@ MLabelType NodeLabels<MLabelType>::GetConstraints() const {
 template <typename MLabelType>
 template <typename EdgeLabel>
 ConstraintViolation NodeLabels<MLabelType>::CheckValue(
-    librarian::AnalysisContext ctx,
+    librarian::AnalyzeVariableContext ctx,
     const Graph<EdgeLabel, typename MLabelType::value_type>& value) const {
   int idx = -1;
   for (const auto& label : value.GetNodeLabels()) {
@@ -281,7 +281,7 @@ MLabelType EdgeLabels<MLabelType>::GetConstraints() const {
 template <typename MLabelType>
 template <typename NodeLabel>
 ConstraintViolation EdgeLabels<MLabelType>::CheckValue(
-    librarian::AnalysisContext ctx,
+    librarian::AnalyzeVariableContext ctx,
     const Graph<typename MLabelType::value_type, NodeLabel>& value) const {
   int idx = -1;
   for (const auto& edge : value.GetEdges()) {
@@ -308,7 +308,7 @@ std::vector<std::string> EdgeLabels<MLabelType>::GetDependencies() const {
 // ====== NumNodes ======
 template <typename EdgeLabel, typename NodeLabel>
 ConstraintViolation NumNodes::CheckValue(
-    librarian::AnalysisContext ctx,
+    librarian::AnalyzeVariableContext ctx,
     const Graph<EdgeLabel, NodeLabel>& value) const {
   auto check =
       num_nodes_.CheckValue(ctx, static_cast<int64_t>(value.NumNodes()));
@@ -320,7 +320,7 @@ ConstraintViolation NumNodes::CheckValue(
 // ====== NumEdges ======
 template <typename EdgeLabel, typename NodeLabel>
 ConstraintViolation NumEdges::CheckValue(
-    librarian::AnalysisContext ctx,
+    librarian::AnalyzeVariableContext ctx,
     const Graph<EdgeLabel, NodeLabel>& value) const {
   auto check =
       num_edges_.CheckValue(ctx, static_cast<int64_t>(value.NumEdges()));

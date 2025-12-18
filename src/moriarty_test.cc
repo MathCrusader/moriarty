@@ -122,8 +122,8 @@ std::vector<std::pair<std::string, std::string>> WriteTwoStringsToVector(
 void WriteSingleVariable(WriteContext ctx, std::string varX,
                          std::span<const TestCase> cases) {
   for (const TestCase& c : cases) {
-    ctx.PrintVariableFrom(varX, c);
-    ctx.PrintWhitespace(Whitespace::kNewline);
+    ctx.WriteVariableFrom(varX, c);
+    ctx.WriteWhitespace(Whitespace::kNewline);
   }
 }
 
@@ -452,10 +452,10 @@ TEST(MoriartyTest, ReadSingleArrayShouldWork) {
   std::stringstream ss_out;
   M.WriteTestCases(
       [](WriteContext ctx, std::span<const TestCase> cases) {
-        ctx.PrintVariableFrom("N", cases[0]);
-        ctx.PrintWhitespace(Whitespace::kNewline);
-        ctx.PrintVariableFrom("A", cases[0]);
-        ctx.PrintWhitespace(Whitespace::kNewline);
+        ctx.WriteVariableFrom("N", cases[0]);
+        ctx.WriteWhitespace(Whitespace::kNewline);
+        ctx.WriteVariableFrom("A", cases[0]);
+        ctx.WriteWhitespace(Whitespace::kNewline);
       },
       {.os = ss_out});
   EXPECT_EQ(ss_out.str(), expected);

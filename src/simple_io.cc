@@ -38,7 +38,7 @@ namespace moriarty {
 namespace {
 std::vector<TestCase> ReadTestCases(ReadContext ctx, SimpleIO simple_io,
                                     int number_of_test_cases);
-void PrintTestCases(WriteContext ctx, SimpleIO simple_io,
+void WriteTestCases(WriteContext ctx, SimpleIO simple_io,
                     std::span<const TestCase> test_cases);
 }  // namespace
 
@@ -86,7 +86,7 @@ bool SimpleIO::HasNumberOfTestCasesInHeader() const {
 
 WriterFn SimpleIO::Writer() const {
   return [*this](WriteContext ctx, std::span<const TestCase> test_cases) {
-    return PrintTestCases(ctx, *this, test_cases);
+    return WriteTestCases(ctx, *this, test_cases);
   };
 }
 
@@ -101,23 +101,23 @@ namespace {
 // -----------------------------------------------------------------------------
 //  SimpleIOWriter
 
-void PrintToken(WriteContext ctx, const SimpleIOToken& token,
+void WriteToken(WriteContext ctx, const SimpleIOToken& token,
                 const TestCase& test_case) {
   if (std::holds_alternative<std::string>(token))
-    ctx.PrintVariableFrom(std::get<std::string>(token), test_case);
+    ctx.WriteVariableFrom(std::get<std::string>(token), test_case);
   else
-    ctx.PrintToken(std::string(std::get<StringLiteral>(token)));
+    ctx.WriteToken(std::string(std::get<StringLiteral>(token)));
 }
 
 // TODO: Clean up this function. It is pretty messy.
-void PrintLine(WriteContext ctx, const SimpleIO::Line& line,
+void WriteLine(WriteContext ctx, const SimpleIO::Line& line,
                const TestCase& test_case) {
   if (!line.num_lines) {
     for (int line_idx = 0; const SimpleIOToken& token : line.tokens) {
-      if (line_idx++) ctx.PrintWhitespace(Whitespace::kSpace);
-      PrintToken(ctx, token, test_case);
+      if (line_idx++) ctx.WriteWhitespace(Whitespace::kSpace);
+      WriteToken(ctx, token, test_case);
     }
-    ctx.PrintWhitespace(Whitespace::kNewline);
+    ctx.WriteWhitespace(Whitespace::kNewline);
     return;
   }
 
@@ -133,13 +133,13 @@ void PrintLine(WriteContext ctx, const SimpleIO::Line& line,
   for (int var_idx = -1; const SimpleIOToken& token : line.tokens) {
     var_idx++;
     std::stringstream ss;
-    PrintToken(WriteContext(ctx, ss), token, test_case);
+    WriteToken(WriteContext(ctx, ss), token, test_case);
     std::string lines = ss.str();
     if (lines.empty() || lines.back() != '\n') lines += '\n';
     int newlines = std::count(lines.begin(), lines.end(), '\n');
     if (newlines != line_count) {
       throw std::runtime_error(std::format(
-          "Expected {} lines in printout of variable {}, but got {}",
+          "Expected {} lines in writeout of variable {}, but got {}",
           line_count, std::get<std::string>(token), newlines));
     }
 
@@ -152,50 +152,50 @@ void PrintLine(WriteContext ctx, const SimpleIO::Line& line,
       }
     } catch (const std::exception& e) {
       throw std::runtime_error(std::format(
-          "Error printing line {} of variable {} (missing '\\n'?): {}",
+          "Error writeing line {} of variable {} (missing '\\n'?): {}",
           line_num, std::get<std::string>(token), e.what()));
     }
   }
 
   for (std::string_view line : output) {
-    ctx.PrintToken(line);
-    ctx.PrintWhitespace(Whitespace::kNewline);
+    ctx.WriteToken(line);
+    ctx.WriteWhitespace(Whitespace::kNewline);
   }
 }
 
-void PrintLines(WriteContext ctx, std::span<const SimpleIO::Line> lines,
+void WriteLines(WriteContext ctx, std::span<const SimpleIO::Line> lines,
                 const TestCase& test_case) {
-  for (const SimpleIO::Line& line : lines) PrintLine(ctx, line, test_case);
+  for (const SimpleIO::Line& line : lines) WriteLine(ctx, line, test_case);
 }
 
-void PrintLiteralOnlyLines(WriteContext ctx,
+void WriteLiteralOnlyLines(WriteContext ctx,
                            std::span<const SimpleIO::Line> lines) {
   for (const SimpleIO::Line& line : lines) {
     for (int line_idx = 0; const SimpleIOToken& token : line.tokens) {
-      if (line_idx++) ctx.PrintWhitespace(Whitespace::kSpace);
+      if (line_idx++) ctx.WriteWhitespace(Whitespace::kSpace);
 
       if (std::holds_alternative<std::string>(token))
         throw ConfigurationError("SimpleIO",
                                  "Cannot have variable in Header/Footer");
-      ctx.PrintToken(std::string(std::get<StringLiteral>(token)));
+      ctx.WriteToken(std::string(std::get<StringLiteral>(token)));
     }
-    ctx.PrintWhitespace(Whitespace::kNewline);
+    ctx.WriteWhitespace(Whitespace::kNewline);
   }
 }
 
-void PrintTestCases(WriteContext ctx, SimpleIO simple_io,
+void WriteTestCases(WriteContext ctx, SimpleIO simple_io,
                     std::span<const TestCase> test_cases) {
   if (simple_io.HasNumberOfTestCasesInHeader()) {
-    ctx.PrintToken(std::to_string(test_cases.size()));
-    ctx.PrintWhitespace(Whitespace::kNewline);
+    ctx.WriteToken(std::to_string(test_cases.size()));
+    ctx.WriteWhitespace(Whitespace::kNewline);
   }
-  PrintLiteralOnlyLines(ctx, simple_io.LinesInHeader());
+  WriteLiteralOnlyLines(ctx, simple_io.LinesInHeader());
 
   for (const TestCase& test_case : test_cases) {
-    PrintLines(ctx, simple_io.LinesPerTestCase(), test_case);
+    WriteLines(ctx, simple_io.LinesPerTestCase(), test_case);
   }
 
-  PrintLiteralOnlyLines(ctx, simple_io.LinesInFooter());
+  WriteLiteralOnlyLines(ctx, simple_io.LinesInFooter());
 }
 
 // -----------------------------------------------------------------------------

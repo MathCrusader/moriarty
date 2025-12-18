@@ -123,7 +123,7 @@ std::string Between::ToString() const {
                      NumericToString(maximum_));
 }
 
-ConstraintViolation Between::CheckValue(librarian::AnalysisContext ctx,
+ConstraintViolation Between::CheckValue(librarian::AnalyzeVariableContext ctx,
                                         int64_t value) const {
   std::optional<Range::ExtremeValues<int64_t>> extremes =
       ctx.GetRangeEndpoints(GetRange());
@@ -138,14 +138,14 @@ ConstraintViolation Between::CheckValue(librarian::AnalysisContext ctx,
                                          NumericToString(maximum_), value));
 }
 
-ConstraintViolation Between::CheckValue(librarian::AnalysisContext ctx,
+ConstraintViolation Between::CheckValue(librarian::AnalyzeVariableContext ctx,
                                         int value) const {
   return CheckValue(ctx, static_cast<int64_t>(value));
 }
 
 namespace {
 
-Real GetRealValue(librarian::AnalysisContext ctx,
+Real GetRealValue(librarian::AnalyzeVariableContext ctx,
                   const std::variant<int64_t, Expression, Real>& value) {
   if (std::holds_alternative<Real>(value)) return std::get<Real>(value);
   if (std::holds_alternative<int64_t>(value))
@@ -155,7 +155,7 @@ Real GetRealValue(librarian::AnalysisContext ctx,
 
 }  // namespace
 
-ConstraintViolation Between::CheckValue(librarian::AnalysisContext ctx,
+ConstraintViolation Between::CheckValue(librarian::AnalyzeVariableContext ctx,
                                         double value) const {
   Real mini = GetRealValue(ctx, minimum_);
   Real maxi = GetRealValue(ctx, maximum_);
@@ -192,7 +192,7 @@ std::string AtMost::ToString() const {
   return std::format("is at most {}", NumericToString(maximum_));
 }
 
-ConstraintViolation AtMost::CheckValue(librarian::AnalysisContext ctx,
+ConstraintViolation AtMost::CheckValue(librarian::AnalyzeVariableContext ctx,
                                        int64_t value) const {
   std::optional<Range::ExtremeValues<int64_t>> extremes =
       ctx.GetRangeEndpoints(GetRange());
@@ -205,12 +205,12 @@ ConstraintViolation AtMost::CheckValue(librarian::AnalysisContext ctx,
       std::format("is not at most {}", NumericToString(maximum_)));
 }
 
-ConstraintViolation AtMost::CheckValue(librarian::AnalysisContext ctx,
+ConstraintViolation AtMost::CheckValue(librarian::AnalyzeVariableContext ctx,
                                        int value) const {
   return CheckValue(ctx, static_cast<int64_t>(value));
 }
 
-ConstraintViolation AtMost::CheckValue(librarian::AnalysisContext ctx,
+ConstraintViolation AtMost::CheckValue(librarian::AnalyzeVariableContext ctx,
                                        double value) const {
   Real maxi = GetRealValue(ctx, maximum_);
 
@@ -252,7 +252,7 @@ std::string AtLeast::ToString() const {
   return std::format("is at least {}", NumericToString(minimum_));
 }
 
-ConstraintViolation AtLeast::CheckValue(librarian::AnalysisContext ctx,
+ConstraintViolation AtLeast::CheckValue(librarian::AnalyzeVariableContext ctx,
                                         int64_t value) const {
   std::optional<Range::ExtremeValues<int64_t>> extremes =
       ctx.GetRangeEndpoints(GetRange());
@@ -265,12 +265,12 @@ ConstraintViolation AtLeast::CheckValue(librarian::AnalysisContext ctx,
       std::format("is not at least {}", NumericToString(minimum_)));
 }
 
-ConstraintViolation AtLeast::CheckValue(librarian::AnalysisContext ctx,
+ConstraintViolation AtLeast::CheckValue(librarian::AnalyzeVariableContext ctx,
                                         int value) const {
   return CheckValue(ctx, static_cast<int64_t>(value));
 }
 
-ConstraintViolation AtLeast::CheckValue(librarian::AnalysisContext ctx,
+ConstraintViolation AtLeast::CheckValue(librarian::AnalyzeVariableContext ctx,
                                         double value) const {
   Real mini = GetRealValue(ctx, minimum_);
 
@@ -314,8 +314,8 @@ std::string ExactlyNumeric::ToString() const {
   return std::format("is exactly {}", NumericToString(value_));
 }
 
-ConstraintViolation ExactlyNumeric::CheckValue(librarian::AnalysisContext ctx,
-                                               int64_t value) const {
+ConstraintViolation ExactlyNumeric::CheckValue(
+    librarian::AnalyzeVariableContext ctx, int64_t value) const {
   if (std::holds_alternative<Expression>(value_)) {
     int64_t expected = ctx.EvaluateExpression(std::get<Expression>(value_));
     if (expected == value) return ConstraintViolation::None();
@@ -341,13 +341,13 @@ ConstraintViolation ExactlyNumeric::CheckValue(librarian::AnalysisContext ctx,
       "ExactlyNumeric::CheckIntegerValue: unexpected value type");
 }
 
-ConstraintViolation ExactlyNumeric::CheckValue(librarian::AnalysisContext ctx,
-                                               int value) const {
+ConstraintViolation ExactlyNumeric::CheckValue(
+    librarian::AnalyzeVariableContext ctx, int value) const {
   return CheckValue(ctx, static_cast<int64_t>(value));
 }
 
-ConstraintViolation ExactlyNumeric::CheckValue(librarian::AnalysisContext ctx,
-                                               double value) const {
+ConstraintViolation ExactlyNumeric::CheckValue(
+    librarian::AnalyzeVariableContext ctx, double value) const {
   if (std::holds_alternative<Expression>(value_)) {
     int64_t expected = ctx.EvaluateExpression(std::get<Expression>(value_));
     if (CloseEnough(expected, value)) return ConstraintViolation::None();
@@ -515,7 +515,7 @@ std::string OptionString(const std::vector<std::vector<Expression>>& exprs,
 }  // namespace
 
 std::vector<Real> OneOfNumeric::GetOptions(
-    librarian::AnalysisContext ctx) const {
+    librarian::AnalyzeVariableContext ctx) const {
   std::optional<std::vector<Real>> valid_options;
   if (numeric_options_.HasBeenConstrained()) {
     valid_options = numeric_options_.GetOptions();
@@ -582,8 +582,8 @@ std::string OneOfNumeric::ToString() const {
   return std::format("is {}", OptionString(expr_options_, numeric_options_));
 }
 
-ConstraintViolation OneOfNumeric::CheckValue(librarian::AnalysisContext ctx,
-                                             int64_t value) const {
+ConstraintViolation OneOfNumeric::CheckValue(
+    librarian::AnalyzeVariableContext ctx, int64_t value) const {
   if (numeric_options_.HasBeenConstrained()) {
     if (!numeric_options_.HasOption(Real(value))) {
       return ConstraintViolation(
@@ -606,13 +606,13 @@ ConstraintViolation OneOfNumeric::CheckValue(librarian::AnalysisContext ctx,
   return ConstraintViolation::None();
 }
 
-ConstraintViolation OneOfNumeric::CheckValue(librarian::AnalysisContext ctx,
-                                             int value) const {
+ConstraintViolation OneOfNumeric::CheckValue(
+    librarian::AnalyzeVariableContext ctx, int value) const {
   return CheckValue(ctx, static_cast<int64_t>(value));
 }
 
-ConstraintViolation OneOfNumeric::CheckValue(librarian::AnalysisContext ctx,
-                                             double value) const {
+ConstraintViolation OneOfNumeric::CheckValue(
+    librarian::AnalyzeVariableContext ctx, double value) const {
   if (numeric_options_.HasBeenConstrained() &&
       std::find_if(numeric_options_.GetOptions().begin(),
                    numeric_options_.GetOptions().end(),
@@ -646,7 +646,7 @@ bool OneOfNumeric::HasBeenConstrained() const {
 }
 
 std::optional<Real> OneOfNumeric::GetUniqueValue(
-    librarian::AnalysisContext ctx) const {
+    librarian::AnalyzeVariableContext ctx) const {
   // TODO: We can optimize this by checking if we have a single option and early
   // exit.
   auto options = GetOptions(ctx);

@@ -55,7 +55,7 @@ class MEmptyClass : public MVariable<MEmptyClass> {
   std::string Typename() const override { return "MEmptyClass"; }
 
  private:
-  EmptyClass GenerateImpl(ResolverContext) const override {
+  EmptyClass GenerateImpl(GenerateVariableContext) const override {
     throw std::runtime_error("Unimplemented: GenerateImpl");
   }
 };
@@ -76,13 +76,13 @@ using ::moriarty_testing::IsSatisfiedWith;
 using ::moriarty_testing::LastDigit;
 using ::moriarty_testing::MTestType;
 using ::moriarty_testing::NumberOfDigits;
-using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::moriarty_testing::TestType;
 using ::moriarty_testing::ThrowsImpossibleToSatisfy;
 using ::moriarty_testing::ThrowsMVariableTypeMismatch;
 using ::moriarty_testing::ThrowsValueNotFound;
 using ::moriarty_testing::ThrowsVariableNotFound;
+using ::moriarty_testing::Write;
 using ::testing::_;
 using ::testing::AllOf;
 using ::testing::AnyOf;
@@ -105,9 +105,9 @@ TEST(MVariableTest, MoriartyVariableConceptShouldWork) {
   static_assert(!MoriartyVariable<MissingBoolean>);
 }
 
-TEST(MVariableTest, PrintShouldSucceed) {
-  EXPECT_EQ(Print(MTestType(), -1), "-1");
-  EXPECT_EQ(Print(MTestType(), 153), "153");
+TEST(MVariableTest, WriteShouldSucceed) {
+  EXPECT_EQ(Write(MTestType(), -1), "-1");
+  EXPECT_EQ(Write(MTestType(), 153), "153");
 }
 
 TEST(MVariableTest, GenerateShouldProduceAValue) {
@@ -296,8 +296,8 @@ TEST(MVariableTest, IsSatisfiedWithWorksForValid) {
 TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
   {  // No value or variable known
     Context context;
-    librarian::AnalysisContext ctx("test", context.Variables(),
-                                   context.Values());
+    librarian::AnalyzeVariableContext ctx("test", context.Variables(),
+                                          context.Values());
 
     EXPECT_THAT(
         [&] {
@@ -308,8 +308,8 @@ TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
   }
   {  // Variable known, but no value known.
     Context context = Context().WithVariable("t", MInteger());
-    librarian::AnalysisContext ctx("test", context.Variables(),
-                                   context.Values());
+    librarian::AnalyzeVariableContext ctx("test", context.Variables(),
+                                          context.Values());
 
     EXPECT_THAT(
         [&] {
@@ -394,12 +394,12 @@ TEST(MVariableTest, IsSatisfiedWithShouldCheckMultipleCustomConstraints) {
   EXPECT_THAT(var, IsNotSatisfiedWith(6, "Prime"));
 }
 
-bool SameAsA(AnalysisContext ctx, const TestType& value) {
+bool SameAsA(AnalyzeVariableContext ctx, const TestType& value) {
   TestType A = ctx.GetValue<MTestType>("A");
   return A.value == value;
 }
 
-bool SameAsL(AnalysisContext ctx, const TestType& value) {
+bool SameAsL(AnalyzeVariableContext ctx, const TestType& value) {
   TestType L = ctx.GetValue<MTestType>("L");
   return L.value == value;
 }
@@ -452,7 +452,7 @@ TEST(MVariableTest,
 TEST(MVariableTest, ListEdgeCasesReturnsMVariablesThatCanBeGenerated) {
   VariableSet variables;
   ValueSet values;
-  AnalysisContext ctx("test", variables, values);
+  AnalyzeVariableContext ctx("test", variables, values);
   EXPECT_THAT(MTestType().ListEdgeCases(ctx),
               ElementsAre(GeneratedValuesAre(2), GeneratedValuesAre(3)));
 }
@@ -461,9 +461,9 @@ TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToRead) {
   EXPECT_THROW({ (void)Read(MEmptyClass(), "1234"); }, std::runtime_error);
 }
 
-TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToPrint) {
+TEST(MVariableTest, MVariableShouldByDefaultNotBeAbleToWrite) {
   EXPECT_THROW(
-      { (void)Print(MEmptyClass(), EmptyClass()); }, std::runtime_error);
+      { (void)Write(MEmptyClass(), EmptyClass()); }, std::runtime_error);
 }
 
 TEST(MVariableTest, ReadValueShouldBeSuccessfulInNormalState) {
@@ -474,11 +474,11 @@ TEST(MVariableTest, FailedReadShouldFail) {
   EXPECT_THROW({ (void)Read(MTestType(), "bad"); }, std::runtime_error);
 }
 
-TEST(MVariableTest, PrintValueShouldBeSuccessfulInNormalState) {
-  EXPECT_EQ(Print(MTestType(), TestType(1234)), "1234");
+TEST(MVariableTest, WriteValueShouldBeSuccessfulInNormalState) {
+  EXPECT_EQ(Write(MTestType(), TestType(1234)), "1234");
 }
 
-TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {
+TEST(MVariableTest, WriteValueShouldWriteTheAssignedValue) {
   Context context = Context()
                         .WithVariable("x", MTestType())
                         .WithValue<MTestType>("x", TestType(12345));
@@ -486,7 +486,7 @@ TEST(MVariableTest, PrintValueShouldPrintTheAssignedValue) {
   std::stringstream ss;
 
   AbstractVariable* var = context.Variables().GetAnonymousVariable("x");
-  var->PrintValue("x", ss, context.Variables(), context.Values());
+  var->WriteValue("x", ss, context.Variables(), context.Values());
   EXPECT_EQ(ss.str(), "12345");
 }
 

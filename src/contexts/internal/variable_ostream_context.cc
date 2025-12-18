@@ -17,19 +17,19 @@ VariableOStreamContext::VariableOStreamContext(Ref<std::ostream> os,
                                                Ref<const ValueSet> values)
     : variables_(variables), values_(values), os_(os) {}
 
-void VariableOStreamContext::PrintVariable(std::string_view variable_name) {
+void VariableOStreamContext::WriteVariable(std::string_view variable_name) {
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
 
-  variable->PrintValue(variable_name, os_, variables_, values_);
+  variable->WriteValue(variable_name, os_, variables_, values_);
 }
 
-void VariableOStreamContext::PrintVariableFrom(std::string_view variable_name,
+void VariableOStreamContext::WriteVariableFrom(std::string_view variable_name,
                                                const TestCase& test_case) {
   const AbstractVariable* variable =
       variables_.get().GetAnonymousVariable(variable_name);
 
-  variable->PrintValue(variable_name, os_, variables_,
+  variable->WriteValue(variable_name, os_, variables_,
                        test_case.UnsafeGetValues());
 }
 

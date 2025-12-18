@@ -43,7 +43,7 @@ class MRealFormat {
  public:
   // Sets the number of digits after the decimal place.
   //
-  // When printing: prints this many digits.
+  // When writing: writes this many digits.
   //
   // When reading: if PrecisionStrictness is kPrecise, then Read ensures
   // there are exactly `num_digits` digits after the decimal point. Otherwise,
@@ -51,7 +51,7 @@ class MRealFormat {
   //
   // Default: 6
   MRealFormat& Digits(int num_digits);
-  // Returns the number of digits to use when printing this value.
+  // Returns the number of digits to use when writing this value.
   int GetDigits() const;
 
   // Take any non-defaults in `other` and apply them to this format.
@@ -167,12 +167,12 @@ class MReal : public librarian::MVariable<MReal> {
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
-  double GenerateImpl(librarian::ResolverContext ctx) const override;
-  double ReadImpl(librarian::ReaderContext ctx) const override;
-  void PrintImpl(librarian::PrinterContext ctx,
+  double GenerateImpl(librarian::GenerateVariableContext ctx) const override;
+  double ReadImpl(librarian::ReadVariableContext ctx) const override;
+  void WriteImpl(librarian::WriteVariableContext ctx,
                  const double& value) const override;
   std::optional<double> GetUniqueValueImpl(
-      librarian::AnalysisContext ctx) const override;
+      librarian::AnalyzeVariableContext ctx) const override;
   // ---------------------------------------------------------------------------
 };
 

@@ -56,7 +56,7 @@ class ConstraintHandler {
   // CheckValue()
   //
   // Determines if all constraints are satisfied with the given value.
-  ConstraintViolation CheckValue(AnalysisContext ctx,
+  ConstraintViolation CheckValue(AnalyzeVariableContext ctx,
                                  const ValueType& value) const;
 
   // ToString()
@@ -73,7 +73,8 @@ class ConstraintHandler {
   class ConstraintHusk {
    public:
     virtual ~ConstraintHusk() = default;
-    virtual auto CheckValue(AnalysisContext ctx, const ValueType& value) const
+    virtual auto CheckValue(AnalyzeVariableContext ctx,
+                            const ValueType& value) const
         -> ConstraintViolation = 0;
     virtual auto ToString() const -> std::string = 0;
     virtual auto ApplyTo(VariableType& other) const -> void = 0;
@@ -85,7 +86,7 @@ class ConstraintHandler {
     ~ConstraintWrapper() override = default;
     explicit ConstraintWrapper(U constraint)
         : constraint_(std::move(constraint)) {}
-    auto CheckValue(AnalysisContext ctx, const ValueType& value) const
+    auto CheckValue(AnalyzeVariableContext ctx, const ValueType& value) const
         -> ConstraintViolation override {
       if constexpr (ConstraintHasSimplifiedCheckValueFn<U, ValueType>) {
         return constraint_.CheckValue(value);
@@ -126,7 +127,7 @@ void ConstraintHandler<VariableType, ValueType>::AddConstraint(U constraint) {
 
 template <typename VariableType, typename ValueType>
 ConstraintViolation ConstraintHandler<VariableType, ValueType>::CheckValue(
-    AnalysisContext ctx, const ValueType& value) const {
+    AnalyzeVariableContext ctx, const ValueType& value) const {
   for (const auto& constraint : constraints_) {
     if (auto check = constraint->CheckValue(ctx, value)) return check;
   }

@@ -114,7 +114,7 @@ MInteger& MInteger::AddConstraint(SizeCategory constraint) {
 }
 
 std::optional<int64_t> MInteger::GetUniqueValueImpl(
-    librarian::AnalysisContext ctx) const {
+    librarian::AnalyzeVariableContext ctx) const {
   try {
     if (auto one_of = numeric_one_of_->GetUniqueValue(ctx)) {
       auto value = one_of->GetValue();
@@ -152,7 +152,7 @@ std::optional<int64_t> MInteger::GetUniqueValueImpl(
 }
 
 Range::ExtremeValues<int64_t> MInteger::GetExtremeValues(
-    librarian::ResolverContext ctx) const {
+    librarian::GenerateVariableContext ctx) const {
   std::optional<Range::ExtremeValues<int64_t>> extremes =
       core_constraints_.Bounds().IntegerExtremes([&](std::string_view var) {
         return ctx.GenerateVariable<MInteger>(var);
@@ -166,7 +166,7 @@ Range::ExtremeValues<int64_t> MInteger::GetExtremeValues(
 }
 
 std::optional<Range::ExtremeValues<int64_t>> MInteger::GetExtremeValues(
-    librarian::AnalysisContext ctx) const {
+    librarian::AnalyzeVariableContext ctx) const {
   try {
     std::optional<Range::ExtremeValues<int64_t>> extremes =
         core_constraints_.Bounds().IntegerExtremes([&](std::string_view var) {
@@ -183,7 +183,7 @@ std::optional<Range::ExtremeValues<int64_t>> MInteger::GetExtremeValues(
 namespace {
 
 Range::ExtremeValues<int64_t> GetExtremesForSize(
-    librarian::ResolverContext ctx,
+    librarian::GenerateVariableContext ctx,
     const Range::ExtremeValues<int64_t>& extremes, CommonSize size,
     const std::function<int64_t(std::string_view)>& lookup_variable) {
   if (size == CommonSize::kAny) return extremes;
@@ -204,7 +204,7 @@ Range::ExtremeValues<int64_t> GetExtremesForSize(
 }
 
 int64_t HandleModdedGeneration(
-    librarian::ResolverContext ctx,
+    librarian::GenerateVariableContext ctx,
     const Range::ExtremeValues<int64_t>& original_extremes,
     const Range::ExtremeValues<int64_t>& size_adjusted_extremes,
     const Mod::Equation& m) {
@@ -250,7 +250,7 @@ int64_t HandleModdedGeneration(
 
 }  // namespace
 
-int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
+int64_t MInteger::GenerateImpl(librarian::GenerateVariableContext ctx) const {
   Range::ExtremeValues<int64_t> extremes = GetExtremeValues(ctx);
 
   if (numeric_one_of_->HasBeenConstrained()) {
@@ -288,17 +288,17 @@ int64_t MInteger::GenerateImpl(librarian::ResolverContext ctx) const {
                            size_adjusted_extremes.max);
 }
 
-int64_t MInteger::ReadImpl(librarian::ReaderContext ctx) const {
+int64_t MInteger::ReadImpl(librarian::ReadVariableContext ctx) const {
   return ctx.ReadInteger();
 }
 
-void MInteger::PrintImpl(librarian::PrinterContext ctx,
+void MInteger::WriteImpl(librarian::WriteVariableContext ctx,
                          const int64_t& value) const {
-  ctx.PrintToken(std::to_string(value));
+  ctx.WriteToken(std::to_string(value));
 }
 
 std::vector<MInteger> MInteger::ListEdgeCasesImpl(
-    librarian::AnalysisContext ctx) const {
+    librarian::AnalyzeVariableContext ctx) const {
   std::optional<Range::ExtremeValues<int64_t>> extremes = GetExtremeValues(ctx);
 
   int64_t min = extremes ? extremes->min : std::numeric_limits<int64_t>::min();

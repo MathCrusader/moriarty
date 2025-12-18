@@ -23,27 +23,27 @@ namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
-TEST(BasicOStreamContextTest, PrintWhitespaceShouldPrintTheCorrectWhitespace) {
+TEST(BasicOStreamContextTest, WriteWhitespaceShouldWriteTheCorrectWhitespace) {
   std::stringstream ss;
   BasicOStreamContext c(ss);
-  c.PrintWhitespace(Whitespace::kSpace);
+  c.WriteWhitespace(Whitespace::kSpace);
   EXPECT_EQ(ss.str(), " ");
-  c.PrintWhitespace(Whitespace::kNewline);
+  c.WriteWhitespace(Whitespace::kNewline);
   EXPECT_EQ(ss.str(), " \n");
-  c.PrintWhitespace(Whitespace::kTab);
+  c.WriteWhitespace(Whitespace::kTab);
   EXPECT_EQ(ss.str(), " \n\t");
 }
 
-TEST(BasicOStreamContextTest, PrintTokenShouldPrintProperly) {
+TEST(BasicOStreamContextTest, WriteTokenShouldWriteProperly) {
   std::stringstream ss;
   BasicOStreamContext c(ss);
-  c.PrintToken("Hello!");
+  c.WriteToken("Hello!");
   EXPECT_EQ(ss.str(), "Hello!");
-  c.PrintToken("bye");
+  c.WriteToken("bye");
   EXPECT_EQ(ss.str(), "Hello!bye");
 }
 
-TEST(BasicOStreamContextTest, PrintingToABadStreamShouldThrow) {
+TEST(BasicOStreamContextTest, WriteingToABadStreamShouldThrow) {
   // Error in stream before construction
   std::stringstream ss1;
   ss1.setstate(std::ios_base::failbit);

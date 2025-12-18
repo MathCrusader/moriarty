@@ -52,7 +52,7 @@ namespace moriarty {
 //     .AddVariable("S", MString(Alphabet("abc"), Length("N")));
 //   M.GenerateTestCases(FancyGenerator);
 //   M.GenerateTestCases(SmallCaseGenerator(), {.call_n_times = 5});
-//   M.WriteTestCases(FancyPrinter);
+//   M.WriteTestCases(FancyWriter);
 class Moriarty {
  public:
   // SetName() [required]

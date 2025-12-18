@@ -133,7 +133,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // least X, larger than the average of the elements in A, etc).
   VariableType& AddCustomConstraint(
       std::string_view name, std::vector<std::string> dependencies,
-      std::function<bool(librarian::AnalysisContext, const value_type&)>
+      std::function<bool(librarian::AnalyzeVariableContext, const value_type&)>
           checker);
 
   // AddConstraint()
@@ -145,13 +145,13 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // CheckValue()
   //
   // Determines if `value` satisfies all constraints on this variable.
-  ConstraintViolation CheckValue(AnalysisContext ctx,
+  ConstraintViolation CheckValue(AnalyzeVariableContext ctx,
                                  const value_type& value) const;
 
   // Generate()
   //
   // Returns a random value that satisfies all constraints on this variable.
-  [[nodiscard]] value_type Generate(ResolverContext ctx) const;
+  [[nodiscard]] value_type Generate(GenerateVariableContext ctx) const;
 
   // GetUniqueValue()
   //
@@ -161,19 +161,19 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // `std::nullopt`. Returning `std::nullopt` does not guarantee there is
   // not a unique value.
   [[nodiscard]] std::optional<value_type> GetUniqueValue(
-      AnalysisContext ctx) const;
+      AnalyzeVariableContext ctx) const;
 
-  // Print()
+  // Write()
   //
-  // Prints `value` into `ctx` using any formatting provided to this
+  // Writes `value` into `ctx` using any formatting provided to this
   // variable (as I/O constraints).
-  void Print(PrinterContext ctx, const value_type& value) const;
+  void Write(WriteVariableContext ctx, const value_type& value) const;
 
   // Read()
   //
   // Reads a value from `ctx` using any formatting provided to this variable
   // (as I/O constraints).
-  [[nodiscard]] value_type Read(ReaderContext ctx) const;
+  [[nodiscard]] value_type Read(ReadVariableContext ctx) const;
 
   // ListEdgeCases()
   //
@@ -181,7 +181,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // examples of this type of cases include common pitfalls for your data type
   // (edge cases, queries of death, etc).
   [[nodiscard]] std::vector<VariableType> ListEdgeCases(
-      AnalysisContext ctx) const;
+      AnalyzeVariableContext ctx) const;
 
   // GetDependencies()
   //
@@ -200,13 +200,14 @@ class MVariable : public moriarty_internal::AbstractVariable {
  protected:
   // ---------------------------------------------------------------------------
   //  Virtual extension points
-  virtual value_type GenerateImpl(ResolverContext ctx) const = 0;
+  virtual value_type GenerateImpl(GenerateVariableContext ctx) const = 0;
   virtual std::optional<value_type> GetUniqueValueImpl(
-      AnalysisContext ctx) const;
-  virtual value_type ReadImpl(ReaderContext ctx) const;
-  virtual void PrintImpl(PrinterContext ctx, const value_type& value) const;
+      AnalyzeVariableContext ctx) const;
+  virtual value_type ReadImpl(ReadVariableContext ctx) const;
+  virtual void WriteImpl(WriteVariableContext ctx,
+                         const value_type& value) const;
   virtual std::vector<VariableType> ListEdgeCasesImpl(
-      AnalysisContext ctx) const;
+      AnalyzeVariableContext ctx) const;
   // ---------------------------------------------------------------------------
 
   // InternalAddConstraint() [For Librarians]
@@ -248,7 +249,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Helper function that casts *this to `VariableType`.
   [[nodiscard]] VariableType& UnderlyingVariableType();
   [[nodiscard]] const VariableType& UnderlyingVariableType() const;
-  [[nodiscard]] value_type GenerateOnce(ResolverContext ctx) const;
+  [[nodiscard]] value_type GenerateOnce(GenerateVariableContext ctx) const;
 
   // ---------------------------------------------------------------------------
   //  AbstractVariable overrides
@@ -275,7 +276,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
       std::string_view variable_name, int N, Ref<InputCursor> input,
       Ref<const moriarty_internal::VariableSet> variables,
       Ref<moriarty_internal::ValueSet> values) const override;
-  void PrintValue(std::string_view variable_name, Ref<std::ostream> os,
+  void WriteValue(std::string_view variable_name, Ref<std::ostream> os,
                   Ref<const moriarty_internal::VariableSet> variables,
                   Ref<const moriarty_internal::ValueSet> values) const override;
   ConstraintViolation CheckValue(
@@ -291,7 +292,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   class CustomConstraintWrapper {
    public:
     explicit CustomConstraintWrapper(CustomConstraint<VariableType> constraint);
-    ConstraintViolation CheckValue(AnalysisContext ctx,
+    ConstraintViolation CheckValue(AnalyzeVariableContext ctx,
                                    const value_type& value) const;
     std::string ToString() const;
     std::vector<std::string> GetDependencies() const;
@@ -302,12 +303,12 @@ class MVariable : public moriarty_internal::AbstractVariable {
   };
 
   // Wrapper class around an MVariable's ChunkedReader. Expected API is:
-  //   void ReadNext(ReaderContext);  // Read the next value
+  //   void ReadNext(ReadVariableContext);  // Read the next value
   //   value_type Finalize() &&;       // Return the read value
   template <typename ReaderType>
   class ChunkedReaderWrapper : public moriarty_internal::ChunkedReader {
    public:
-    ChunkedReaderWrapper(ReaderType reader, ReaderContext ctx,
+    ChunkedReaderWrapper(ReaderType reader, ReadVariableContext ctx,
                          Ref<moriarty_internal::ValueSet> values)
         : reader_(std::move(reader)), ctx_(std::move(ctx)), values_(values) {}
     void ReadNext() override { reader_.ReadNext(ctx_); }
@@ -318,7 +319,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
    private:
     ReaderType reader_;
-    ReaderContext ctx_;
+    ReadVariableContext ctx_;
     Ref<moriarty_internal::ValueSet> values_;
   };
 };
@@ -360,7 +361,7 @@ V& MVariable<V>::AddCustomConstraint(
 template <typename V>
 V& MVariable<V>::AddCustomConstraint(
     std::string_view name, std::vector<std::string> dependencies,
-    std::function<bool(librarian::AnalysisContext, const value_type&)>
+    std::function<bool(librarian::AnalyzeVariableContext, const value_type&)>
         checker) {
   return AddConstraint(
       CustomConstraint<V>(name, std::move(dependencies), std::move(checker)));
@@ -372,13 +373,13 @@ V& MVariable<V>::AddConstraint(CustomConstraint<V> constraint) {
 }
 
 template <typename V>
-ConstraintViolation MVariable<V>::CheckValue(AnalysisContext ctx,
+ConstraintViolation MVariable<V>::CheckValue(AnalyzeVariableContext ctx,
                                              const value_type& value) const {
   return constraints_.CheckValue(ctx, value);
 }
 
 template <typename V>
-auto MVariable<V>::Generate(ResolverContext ctx) const -> value_type {
+auto MVariable<V>::Generate(GenerateVariableContext ctx) const -> value_type {
   std::string name = ctx.GetVariableName();
 
   if (auto value = ctx.GetValueIfKnown<V>(name); value.has_value())
@@ -417,7 +418,7 @@ auto MVariable<V>::Generate(ResolverContext ctx) const -> value_type {
 }
 
 template <typename V>
-auto MVariable<V>::GetUniqueValue(AnalysisContext ctx) const
+auto MVariable<V>::GetUniqueValue(AnalyzeVariableContext ctx) const
     -> std::optional<value_type> {
   std::optional<value_type> known =
       ctx.GetValueIfKnown<V>(ctx.GetVariableName());
@@ -427,12 +428,13 @@ auto MVariable<V>::GetUniqueValue(AnalysisContext ctx) const
 }
 
 template <typename V>
-void MVariable<V>::Print(PrinterContext ctx, const value_type& value) const {
-  PrintImpl(ctx, value);
+void MVariable<V>::Write(WriteVariableContext ctx,
+                         const value_type& value) const {
+  WriteImpl(ctx, value);
 }
 
 template <typename V>
-auto MVariable<V>::Read(ReaderContext ctx) const -> value_type {
+auto MVariable<V>::Read(ReadVariableContext ctx) const -> value_type {
   value_type value = ReadImpl(ctx);
   if (auto reason = CheckValue(ctx, value)) {
     ctx.ThrowIOError(std::format("Read value does not satisfy constraints: {}",
@@ -442,7 +444,8 @@ auto MVariable<V>::Read(ReaderContext ctx) const -> value_type {
 }
 
 template <typename V>
-auto MVariable<V>::ListEdgeCases(AnalysisContext ctx) const -> std::vector<V> {
+auto MVariable<V>::ListEdgeCases(AnalyzeVariableContext ctx) const
+    -> std::vector<V> {
   std::vector<V> instances = ListEdgeCasesImpl(ctx);
   for (V& instance : instances) {
     // TODO(hivini): When merging with a fixed value variable that has the same
@@ -474,25 +477,26 @@ std::ostream& operator<<(std::ostream& os, const VariableType& var) {
 //  Protected functions' implementations
 
 template <typename V>
-auto MVariable<V>::ReadImpl(ReaderContext ctx) const -> value_type {
+auto MVariable<V>::ReadImpl(ReadVariableContext ctx) const -> value_type {
   throw std::runtime_error(
       std::format("Read() not implemented for {}", Typename()));
 }
 
 template <typename V>
-void MVariable<V>::PrintImpl(PrinterContext ctx,
+void MVariable<V>::WriteImpl(WriteVariableContext ctx,
                              const value_type& value) const {
   throw std::runtime_error(
-      std::format("Print() not implemented for {}", Typename()));
+      std::format("Write() not implemented for {}", Typename()));
 }
 
 template <typename V>
-std::vector<V> MVariable<V>::ListEdgeCasesImpl(AnalysisContext ctx) const {
+std::vector<V> MVariable<V>::ListEdgeCasesImpl(
+    AnalyzeVariableContext ctx) const {
   return std::vector<V>();  // By default, return an empty list.
 }
 
 template <typename V>
-auto MVariable<V>::GetUniqueValueImpl(AnalysisContext ctx) const
+auto MVariable<V>::GetUniqueValueImpl(AnalyzeVariableContext ctx) const
     -> std::optional<value_type> {
   return std::nullopt;  // By default, return no unique value.
 }
@@ -558,7 +562,7 @@ std::unique_ptr<moriarty_internal::AbstractVariable> MVariable<V>::Clone()
 
 template <typename V>
 typename MVariable<V>::value_type MVariable<V>::GenerateOnce(
-    ResolverContext ctx) const {
+    GenerateVariableContext ctx) const {
   value_type potential_value = GenerateImpl(ctx);
 
   // Some dependent variables may not have been generate, but are required to
@@ -582,7 +586,8 @@ void MVariable<V>::AssignValue(
     Ref<moriarty_internal::ValueSet> values,
     Ref<moriarty_internal::RandomEngine> engine,
     Ref<moriarty_internal::GenerationHandler> handler) const {
-  ResolverContext ctx(variable_name, variables, values, engine, handler);
+  GenerateVariableContext ctx(variable_name, variables, values, engine,
+                              handler);
 
   if (ctx.ValueIsKnown(ctx.GetVariableName())) return;
   ctx.SetValue<V>(ctx.GetVariableName(), Generate(ctx));
@@ -593,7 +598,7 @@ void MVariable<V>::AssignUniqueValue(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<moriarty_internal::ValueSet> values) const {
-  AssignmentContext ctx(variable_name, variables, values);
+  AssignVariableContext ctx(variable_name, variables, values);
   if (ctx.ValueIsKnown(ctx.GetVariableName())) return;
 
   std::optional<value_type> value = GetUniqueValue(ctx);
@@ -606,7 +611,7 @@ std::optional<int64_t> MVariable<V>::UniqueInteger(
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values) const {
   if constexpr (std::same_as<value_type, int64_t>) {
-    AnalysisContext ctx(variable_name, variables, values);
+    AnalyzeVariableContext ctx(variable_name, variables, values);
     if (ctx.ValueIsKnown(ctx.GetVariableName())) {
       return ctx.GetValue<V>(ctx.GetVariableName());
     }
@@ -621,7 +626,7 @@ void MVariable<V>::ReadValue(
     std::string_view variable_name, Ref<InputCursor> input,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<moriarty_internal::ValueSet> values) const {
-  ReaderContext ctx(variable_name, input, variables, values);
+  ReadVariableContext ctx(variable_name, input, variables, values);
   values.get().Set<V>(ctx.GetVariableName(), Read(ctx));
 }
 
@@ -632,7 +637,7 @@ MVariable<V>::GetChunkedReader(
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<moriarty_internal::ValueSet> values) const {
   if constexpr (requires { typename V::chunked_reader_type; }) {
-    ReaderContext ctx(variable_name, input, variables, values);
+    ReadVariableContext ctx(variable_name, input, variables, values);
     return std::make_unique<
         ChunkedReaderWrapper<typename V::chunked_reader_type>>(
         typename V::chunked_reader_type(ctx, N, UnderlyingVariableType()), ctx,
@@ -645,12 +650,12 @@ MVariable<V>::GetChunkedReader(
 }
 
 template <typename V>
-void MVariable<V>::PrintValue(
+void MVariable<V>::WriteValue(
     std::string_view variable_name, Ref<std::ostream> os,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values) const {
-  PrinterContext ctx(variable_name, os, variables, values);
-  Print(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
+  WriteVariableContext ctx(variable_name, os, variables, values);
+  Write(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
 
 template <typename V>
@@ -658,7 +663,7 @@ ConstraintViolation MVariable<V>::CheckValue(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values) const {
-  AnalysisContext ctx(variable_name, variables, values);
+  AnalyzeVariableContext ctx(variable_name, variables, values);
   return CheckValue(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
 
@@ -668,7 +673,7 @@ MVariable<V>::ListAnonymousEdgeCases(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values) const {
-  AnalysisContext ctx(variable_name, variables, values);
+  AnalyzeVariableContext ctx(variable_name, variables, values);
   std::vector<V> instances = ListEdgeCases(ctx);
   std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>> new_vec;
   new_vec.reserve(instances.size());
@@ -685,7 +690,7 @@ MVariable<V>::CustomConstraintWrapper::CustomConstraintWrapper(
 
 template <typename V>
 ConstraintViolation MVariable<V>::CustomConstraintWrapper::CheckValue(
-    AnalysisContext ctx, const value_type& value) const {
+    AnalyzeVariableContext ctx, const value_type& value) const {
   return constraint_.CheckValue(ctx, value);
 }
 

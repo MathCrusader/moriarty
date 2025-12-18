@@ -52,7 +52,7 @@ std::string Mod::ToString() const {
                      remainder_.ToString());
 }
 
-ConstraintViolation Mod::CheckValue(librarian::AnalysisContext ctx,
+ConstraintViolation Mod::CheckValue(librarian::AnalyzeVariableContext ctx,
                                     int64_t value) const {
   int64_t M = ctx.EvaluateExpression(modulus_);
   if (M <= 0) {

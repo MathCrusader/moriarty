@@ -37,9 +37,9 @@ using ::moriarty_testing::GenerateSameValues;
 using ::moriarty_testing::GenerateThrowsGenerationError;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
-using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::moriarty_testing::ThrowsImpossibleToSatisfy;
+using ::moriarty_testing::Write;
 using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::Ge;
@@ -54,10 +54,10 @@ TEST(MStringTest, TypenameIsCorrect) {
   EXPECT_EQ(MString().Typename(), "MString");
 }
 
-TEST(MStringTest, PrintShouldSucceed) {
-  EXPECT_EQ(Print(MString(), "value!"), "value!");
-  EXPECT_EQ(Print(MString(), ""), "");
-  EXPECT_EQ(Print(MString(), "multiple tokens"), "multiple tokens");
+TEST(MStringTest, WriteShouldSucceed) {
+  EXPECT_EQ(Write(MString(), "value!"), "value!");
+  EXPECT_EQ(Write(MString(), ""), "");
+  EXPECT_EQ(Write(MString(), "multiple tokens"), "multiple tokens");
 }
 
 TEST(MStringTest, SingleTokenReadShouldSucceed) {

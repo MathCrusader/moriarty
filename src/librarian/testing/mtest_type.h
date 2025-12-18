@@ -70,7 +70,8 @@ class LastDigit : public moriarty::MConstraint {
   }
 
   moriarty::ConstraintViolation CheckValue(
-      moriarty::librarian::AnalysisContext ctx, const TestType& value) const {
+      moriarty::librarian::AnalyzeVariableContext ctx,
+      const TestType& value) const {
     auto check = digit_.CheckValue(ctx, value.value % 10);
     if (check.IsOk()) return moriarty::ConstraintViolation::None();
     return moriarty::ConstraintViolation(
@@ -94,7 +95,8 @@ class NumberOfDigits : public moriarty::MConstraint {
   }
 
   moriarty::ConstraintViolation CheckValue(
-      moriarty::librarian::AnalysisContext ctx, const TestType& value) const {
+      moriarty::librarian::AnalyzeVariableContext ctx,
+      const TestType& value) const {
     auto check =
         num_digits_.CheckValue(ctx, std::to_string(value.value).size());
     if (check.IsOk()) return moriarty::ConstraintViolation::None();
@@ -146,14 +148,15 @@ class MTestType : public moriarty::librarian::MVariable<MTestType> {
 
   // Always returns 123456789, but maybe slightly modified.
   TestType GenerateImpl(
-      moriarty::librarian::ResolverContext ctx) const override;
+      moriarty::librarian::GenerateVariableContext ctx) const override;
   std::optional<TestType> GetUniqueValueImpl(
-      moriarty::librarian::AnalysisContext ctx) const override;
-  TestType ReadImpl(moriarty::librarian::ReaderContext ctx) const override;
-  void PrintImpl(moriarty::librarian::PrinterContext ctx,
+      moriarty::librarian::AnalyzeVariableContext ctx) const override;
+  TestType ReadImpl(
+      moriarty::librarian::ReadVariableContext ctx) const override;
+  void WriteImpl(moriarty::librarian::WriteVariableContext ctx,
                  const TestType& value) const override;
   std::vector<MTestType> ListEdgeCasesImpl(
-      moriarty::librarian::AnalysisContext ctx) const override;
+      moriarty::librarian::AnalyzeVariableContext ctx) const override;
 };
 
 }  // namespace moriarty_testing

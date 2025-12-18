@@ -43,10 +43,10 @@ using ::moriarty_testing::GenerateThrowsGenerationError;
 using ::moriarty_testing::GetUniqueValue;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
-using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::moriarty_testing::ThrowsImpossibleToSatisfy;
 using ::moriarty_testing::ThrowsVariableNotFound;
+using ::moriarty_testing::Write;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Ge;
@@ -57,34 +57,34 @@ using ::testing::ThrowsMessage;
 
 TEST(MRealTest, TypenameIsCorrect) { EXPECT_EQ(MReal().Typename(), "MReal"); }
 
-TEST(MRealTest, PrintShouldSucceed) {
-  EXPECT_EQ(Print(MReal(), -1), "-1.000000");
-  EXPECT_EQ(Print(MReal(), 0), "0.000000");
-  EXPECT_EQ(Print(MReal(), 1), "1.000000");
-  EXPECT_EQ(Print(MReal(), 1.23456789), "1.234568");
-  EXPECT_EQ(Print(MReal(), -11.23456789), "-11.234568");
+TEST(MRealTest, WriteShouldSucceed) {
+  EXPECT_EQ(Write(MReal(), -1), "-1.000000");
+  EXPECT_EQ(Write(MReal(), 0), "0.000000");
+  EXPECT_EQ(Write(MReal(), 1), "1.000000");
+  EXPECT_EQ(Write(MReal(), 1.23456789), "1.234568");
+  EXPECT_EQ(Write(MReal(), -11.23456789), "-11.234568");
 
   // Check that the precision is correct.
-  EXPECT_EQ(Print(MReal(MRealFormat().Digits(1)), 1.23456789), "1.2");
-  EXPECT_EQ(Print(MReal(MRealFormat().Digits(2)), -1.23456789), "-1.23");
-  EXPECT_EQ(Print(MReal(MRealFormat().Digits(3)), 21.23456789), "21.235");
-  EXPECT_EQ(Print(MReal(MRealFormat().Digits(4)), -1.23456789), "-1.2346");
-  EXPECT_EQ(Print(MReal(MRealFormat().Digits(5)), -1.23456789), "-1.23457");
-  EXPECT_EQ(Print(MReal(MRealFormat().Digits(6)), 21.23456789), "21.234568");
-  EXPECT_EQ(Print(MReal(MRealFormat().Digits(7)), -1.23456789), "-1.2345679");
-  EXPECT_EQ(Print(MReal(MRealFormat().Digits(8)), 1.23456789), "1.23456789");
-  EXPECT_EQ(Print(MReal(MRealFormat().Digits(9)), -1.23456789), "-1.234567890");
-  EXPECT_EQ(Print(MReal(MRealFormat().Digits(10)), 1.23456789), "1.2345678900");
-  EXPECT_EQ(Print(MReal(MRealFormat().Digits(11)), -1.23456789),
+  EXPECT_EQ(Write(MReal(MRealFormat().Digits(1)), 1.23456789), "1.2");
+  EXPECT_EQ(Write(MReal(MRealFormat().Digits(2)), -1.23456789), "-1.23");
+  EXPECT_EQ(Write(MReal(MRealFormat().Digits(3)), 21.23456789), "21.235");
+  EXPECT_EQ(Write(MReal(MRealFormat().Digits(4)), -1.23456789), "-1.2346");
+  EXPECT_EQ(Write(MReal(MRealFormat().Digits(5)), -1.23456789), "-1.23457");
+  EXPECT_EQ(Write(MReal(MRealFormat().Digits(6)), 21.23456789), "21.234568");
+  EXPECT_EQ(Write(MReal(MRealFormat().Digits(7)), -1.23456789), "-1.2345679");
+  EXPECT_EQ(Write(MReal(MRealFormat().Digits(8)), 1.23456789), "1.23456789");
+  EXPECT_EQ(Write(MReal(MRealFormat().Digits(9)), -1.23456789), "-1.234567890");
+  EXPECT_EQ(Write(MReal(MRealFormat().Digits(10)), 1.23456789), "1.2345678900");
+  EXPECT_EQ(Write(MReal(MRealFormat().Digits(11)), -1.23456789),
             "-1.23456789000");
 
-  EXPECT_THAT([]() { (void)Print(MReal(MRealFormat().Digits(0)), 1.23456789); },
+  EXPECT_THAT([]() { (void)Write(MReal(MRealFormat().Digits(0)), 1.23456789); },
               ThrowsMessage<InvalidConstraint>(HasSubstr("between 1 and 20")));
   EXPECT_THAT(
-      []() { (void)Print(MReal(MRealFormat().Digits(21)), 1.23456789); },
+      []() { (void)Write(MReal(MRealFormat().Digits(21)), 1.23456789); },
       ThrowsMessage<InvalidConstraint>(HasSubstr("between 1 and 20")));
   EXPECT_THAT(
-      []() { (void)Print(MReal(MRealFormat().Digits(-2)), 1.23456789); },
+      []() { (void)Write(MReal(MRealFormat().Digits(-2)), 1.23456789); },
       ThrowsMessage<InvalidConstraint>(HasSubstr("between 1 and 20")));
 }
 
@@ -239,7 +239,7 @@ TEST(MRealTest, IsSatisfiedWithWithExpressionsShouldWorkForBadData) {
 
   moriarty_internal::ValueSet values;
   moriarty_internal::VariableSet variables;
-  librarian::AnalysisContext ctx("_", variables, values);
+  librarian::AnalyzeVariableContext ctx("_", variables, values);
   // Could be VariableNotFound as well (impl detail)
   EXPECT_THAT([&] { (void)MReal(Between(1, "3 * N + 1")).CheckValue(ctx, 2); },
               ThrowsVariableNotFound("N"));

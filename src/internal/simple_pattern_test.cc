@@ -34,17 +34,17 @@
 namespace moriarty {
 namespace moriarty_internal {
 
-// Some PrintTo's for nicer debugging experience.
-void PrintTo(PatternNode::SubpatternType type, std::ostream* os) {
+// Some WriteTo's for nicer debugging experience.
+void WriteTo(PatternNode::SubpatternType type, std::ostream* os) {
   *os << (type == PatternNode::SubpatternType::kAnyOf ? "AnyOf" : "AllOf");
 }
 
-void PrintTo(const PatternNode& node, std::ostream* os, int depth = 0) {
+void WriteTo(const PatternNode& node, std::ostream* os, int depth = 0) {
   *os << std::string(depth, ' ') << node.pattern << " ";
-  PrintTo(node.subpattern_type, os);
+  WriteTo(node.subpattern_type, os);
   *os << "\n";
   for (const PatternNode& subpattern : node.subpatterns)
-    PrintTo(subpattern, os, depth + 1);
+    WriteTo(subpattern, os, depth + 1);
 }
 
 namespace {

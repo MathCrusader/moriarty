@@ -51,7 +51,7 @@ MTestType& MTestType::AddConstraint(NumberOfDigits constraint) {
 }
 
 std::optional<TestType> MTestType::GetUniqueValueImpl(
-    moriarty::librarian::AnalysisContext ctx) const {
+    moriarty::librarian::AnalyzeVariableContext ctx) const {
   if (GetOneOf().HasBeenConstrained()) return GetOneOf().GetUniqueValue();
   if (!last_digit_ || !last_digit_->GetUniqueValue(ctx)) return std::nullopt;
   if (!num_digits_ || !num_digits_->GetUniqueValue(ctx) != 1)
@@ -59,7 +59,8 @@ std::optional<TestType> MTestType::GetUniqueValueImpl(
   return last_digit_->GetUniqueValue(ctx);  // A single digit number.
 }
 
-TestType MTestType::ReadImpl(moriarty::librarian::ReaderContext ctx) const {
+TestType MTestType::ReadImpl(
+    moriarty::librarian::ReadVariableContext ctx) const {
   std::string token = ctx.ReadToken();
   std::stringstream is(token);
 
@@ -68,14 +69,14 @@ TestType MTestType::ReadImpl(moriarty::librarian::ReaderContext ctx) const {
   return value;
 }
 
-void MTestType::PrintImpl(moriarty::librarian::PrinterContext ctx,
+void MTestType::WriteImpl(moriarty::librarian::WriteVariableContext ctx,
                           const TestType& value) const {
-  ctx.PrintToken(std::to_string(value));
+  ctx.WriteToken(std::to_string(value));
 }
 
 // By default, return 123456789, but maybe slightly modified.
 TestType MTestType::GenerateImpl(
-    moriarty::librarian::ResolverContext ctx) const {
+    moriarty::librarian::GenerateVariableContext ctx) const {
   if (GetOneOf().HasBeenConstrained())
     return GetOneOf().SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
   [[maybe_unused]] int x = 0;
@@ -94,7 +95,7 @@ TestType MTestType::GenerateImpl(
 }
 
 std::vector<MTestType> MTestType::ListEdgeCasesImpl(
-    moriarty::librarian::AnalysisContext ctx) const {
+    moriarty::librarian::AnalyzeVariableContext ctx) const {
   return std::vector<MTestType>({MTestType(moriarty::Exactly<TestType>(2)),
                                  MTestType(moriarty::Exactly<TestType>(3))});
 }

@@ -24,7 +24,7 @@
 
 namespace moriarty {
 
-// Print `CoveringArrayTestCase`s nicely for tests.
+// Write `CoveringArrayTestCase`s nicely for tests.
 std::ostream& operator<<(std::ostream& os, const CoveringArrayTestCase& tc) {
   os << "[";
   for (int i = 0; i < tc.test_case.size(); i++) {

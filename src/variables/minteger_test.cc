@@ -46,10 +46,10 @@ using ::moriarty_testing::GenerateThrowsGenerationError;
 using ::moriarty_testing::GetUniqueValue;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
-using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::moriarty_testing::ThrowsImpossibleToSatisfy;
 using ::moriarty_testing::ThrowsVariableNotFound;
+using ::moriarty_testing::Write;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Eq;
@@ -66,10 +66,10 @@ TEST(MIntegerTest, TypenameIsCorrect) {
   EXPECT_EQ(MInteger().Typename(), "MInteger");
 }
 
-TEST(MIntegerTest, PrintShouldSucceed) {
-  EXPECT_EQ(Print(MInteger(), -1), "-1");
-  EXPECT_EQ(Print(MInteger(), 0), "0");
-  EXPECT_EQ(Print(MInteger(), 1), "1");
+TEST(MIntegerTest, WriteShouldSucceed) {
+  EXPECT_EQ(Write(MInteger(), -1), "-1");
+  EXPECT_EQ(Write(MInteger(), 0), "0");
+  EXPECT_EQ(Write(MInteger(), 1), "1");
 }
 
 TEST(MIntegerTest, ValidReadShouldSucceed) {
@@ -234,7 +234,7 @@ TEST(MIntegerTest, IsSatisfiedWithWithExpressionsShouldWorkForBadData) {
 
   moriarty_internal::ValueSet values;
   moriarty_internal::VariableSet variables;
-  librarian::AnalysisContext ctx("_", variables, values);
+  librarian::AnalyzeVariableContext ctx("_", variables, values);
   // Could be VariableNotFound as well (impl detail)
   EXPECT_THAT(
       [&] { (void)MInteger(Between(1, "3 * N + 1")).CheckValue(ctx, 2); },

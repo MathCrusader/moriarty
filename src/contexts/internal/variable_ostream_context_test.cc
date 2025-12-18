@@ -27,37 +27,37 @@ using ::moriarty_testing::Context;
 using ::moriarty_testing::ThrowsValueNotFound;
 using ::moriarty_testing::ThrowsVariableNotFound;
 
-TEST(VariableOStreamContextTest, PrintNamedVariableSimpleCaseShouldWork) {
+TEST(VariableOStreamContextTest, WriteNamedVariableSimpleCaseShouldWork) {
   std::ostringstream ss;
   Context context =
       Context().WithVariable("X", MInteger()).WithValue<MInteger>("X", 10);
   VariableOStreamContext ctx(ss, context.Variables(), context.Values());
 
-  ctx.PrintVariable("X");
+  ctx.WriteVariable("X");
 
   EXPECT_EQ(ss.str(), "10");
 }
 
 TEST(VariableOStreamContextTest,
-     PrintNamedVariableWithUnknownVariableShouldFail) {
+     WriteNamedVariableWithUnknownVariableShouldFail) {
   std::ostringstream ss;
   Context context;
   VariableOStreamContext ctx(ss, context.Variables(), context.Values());
 
-  EXPECT_THAT([&] { ctx.PrintVariable("X"); }, ThrowsVariableNotFound("X"));
+  EXPECT_THAT([&] { ctx.WriteVariable("X"); }, ThrowsVariableNotFound("X"));
 }
 
-TEST(VariableOStreamContextTest, PrintUnnamedVariableSimpleCaseShouldWork) {
+TEST(VariableOStreamContextTest, WriteUnnamedVariableSimpleCaseShouldWork) {
   std::ostringstream ss;
   Context context;
   VariableOStreamContext ctx(ss, context.Variables(), context.Values());
 
-  ctx.PrintVariable(MInteger(), 10);
+  ctx.WriteVariable(MInteger(), 10);
 
   EXPECT_EQ(ss.str(), "10");
 }
 
-TEST(VariableOStreamContextTest, PrintVariableFromSimpleCaseShouldWork) {
+TEST(VariableOStreamContextTest, WriteVariableFromSimpleCaseShouldWork) {
   std::ostringstream ss;
   Context context = Context().WithVariable("X", MInteger());
   VariableOStreamContext ctx(ss, context.Variables(), context.Values());
@@ -65,19 +65,19 @@ TEST(VariableOStreamContextTest, PrintVariableFromSimpleCaseShouldWork) {
   TestCase test_case;
   test_case.SetValue<MInteger>("X", 10);
 
-  ctx.PrintVariableFrom("X", test_case);
+  ctx.WriteVariableFrom("X", test_case);
 
   EXPECT_EQ(ss.str(), "10");
 }
 
-TEST(VariableOStreamContextTest, PrintVariableToWithUnknownVariableShouldFail) {
+TEST(VariableOStreamContextTest, WriteVariableToWithUnknownVariableShouldFail) {
   {  // No variable or value
     std::ostringstream ss;
     Context context;
     VariableOStreamContext ctx(ss, context.Variables(), context.Values());
 
     TestCase test_case;
-    EXPECT_THAT([&] { ctx.PrintVariableFrom("X", test_case); },
+    EXPECT_THAT([&] { ctx.WriteVariableFrom("X", test_case); },
                 ThrowsVariableNotFound("X"));
   }
   {  // No value
@@ -86,7 +86,7 @@ TEST(VariableOStreamContextTest, PrintVariableToWithUnknownVariableShouldFail) {
     VariableOStreamContext ctx(ss, context.Variables(), context.Values());
 
     TestCase test_case;
-    EXPECT_THAT([&] { ctx.PrintVariableFrom("X", test_case); },
+    EXPECT_THAT([&] { ctx.WriteVariableFrom("X", test_case); },
                 ThrowsValueNotFound("X"));
   }
   {  // No variable
@@ -96,7 +96,7 @@ TEST(VariableOStreamContextTest, PrintVariableToWithUnknownVariableShouldFail) {
 
     TestCase test_case;
     test_case.SetValue<MInteger>("X", 10);
-    EXPECT_THAT([&] { ctx.PrintVariableFrom("X", test_case); },
+    EXPECT_THAT([&] { ctx.WriteVariableFrom("X", test_case); },
                 ThrowsVariableNotFound("X"));
   }
 }

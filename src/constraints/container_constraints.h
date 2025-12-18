@@ -56,7 +56,7 @@ class Length : public MConstraint {
 
   // Determines if the container has the correct length.
   template <typename Container>
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  const Container& value) const;
 
   // Returns a string representation of this constraint.
@@ -85,7 +85,7 @@ class Elements : public MConstraint {
 
   // Determines if the container's elements satisfy all constraints.
   ConstraintViolation CheckValue(
-      librarian::AnalysisContext ctx,
+      librarian::AnalyzeVariableContext ctx,
       const std::vector<typename MElementType::value_type>& value) const;
 
   // Returns a string representation of this constraint.
@@ -114,7 +114,7 @@ class Element : public MConstraint {
   [[nodiscard]] MElementType GetConstraints() const;
 
   // Determines if an object satisfy all constraints.
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  const MElementType::value_type& value) const;
 
   // Returns a string representation of this constraint.
@@ -182,7 +182,7 @@ Length::Length(Constraints&&... constraints)
     : length_(std::forward<Constraints>(constraints)...) {}
 
 template <typename Container>
-ConstraintViolation Length::CheckValue(librarian::AnalysisContext ctx,
+ConstraintViolation Length::CheckValue(librarian::AnalyzeVariableContext ctx,
                                        const Container& value) const {
   auto check = length_.CheckValue(ctx, static_cast<int64_t>(value.size()));
   if (check.IsOk()) return ConstraintViolation::None();
@@ -206,7 +206,7 @@ MElementType Elements<MElementType>::GetConstraints() const {
 
 template <typename MElementType>
 ConstraintViolation Elements<MElementType>::CheckValue(
-    librarian::AnalysisContext ctx,
+    librarian::AnalyzeVariableContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
   for (int idx = -1; const auto& elem : value) {
     idx++;
@@ -244,7 +244,7 @@ MElementType Element<I, MElementType>::GetConstraints() const {
 
 template <size_t I, typename MElementType>
 ConstraintViolation Element<I, MElementType>::CheckValue(
-    librarian::AnalysisContext ctx,
+    librarian::AnalyzeVariableContext ctx,
     const MElementType::value_type& value) const {
   auto check = element_constraints_.CheckValue(ctx, value);
   if (check.IsOk()) return ConstraintViolation::None();

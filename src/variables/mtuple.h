@@ -162,9 +162,9 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
   // Whitespace must be handled outside of this.
   class Reader {
    public:
-    explicit Reader(librarian::ReaderContext ctx, int num_chunks,
+    explicit Reader(librarian::ReadVariableContext ctx, int num_chunks,
                     Ref<const MTuple> variable);
-    void ReadNext(librarian::ReaderContext ctx);
+    void ReadNext(librarian::ReadVariableContext ctx);
     tuple_value_type Finalize() &&;
 
    private:
@@ -173,7 +173,7 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
     Ref<const MTuple> variable_;
 
     template <std::size_t... Is>
-    void ReadCurrentIndex(librarian::ReaderContext ctx,
+    void ReadCurrentIndex(librarian::ReadVariableContext ctx,
                           std::index_sequence<Is...>);
   };
 
@@ -183,9 +183,10 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
 
   // ---------------------------------------------------------------------------
   //  MVariable overrides
-  tuple_value_type GenerateImpl(librarian::ResolverContext ctx) const override;
-  tuple_value_type ReadImpl(librarian::ReaderContext ctx) const override;
-  void PrintImpl(librarian::PrinterContext ctx,
+  tuple_value_type GenerateImpl(
+      librarian::GenerateVariableContext ctx) const override;
+  tuple_value_type ReadImpl(librarian::ReadVariableContext ctx) const override;
+  void WriteImpl(librarian::WriteVariableContext ctx,
                  const tuple_value_type& value) const override;
   // ---------------------------------------------------------------------------
 
@@ -193,7 +194,7 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
   struct ElementConstraintWrapper {
    public:
     explicit ElementConstraintWrapper(Element<I, MElementType> constraint);
-    ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+    ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                    const tuple_value_type& value) const;
     std::string ToString() const;
     std::vector<std::string> GetDependencies() const;
@@ -304,7 +305,7 @@ MTuple<T...>& MTuple<T...>::AddConstraint(Element<I, MElementType> constraint) {
 
 template <typename... T>
 MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
-    librarian::ResolverContext ctx) const {
+    librarian::GenerateVariableContext ctx) const {
   if (this->GetOneOf().HasBeenConstrained())
     return this->GetOneOf().SelectOneOf(
         [&](int n) { return ctx.RandomInteger(n); });
@@ -320,21 +321,21 @@ MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
 }
 
 template <typename... T>
-void MTuple<T...>::PrintImpl(librarian::PrinterContext ctx,
+void MTuple<T...>::WriteImpl(librarian::WriteVariableContext ctx,
                              const tuple_value_type& value) const {
-  auto print_one = [&]<std::size_t I>() {
-    if (I > 0) ctx.PrintWhitespace(Format().GetSeparator());
-    std::get<I>(core_constraints_.Elements()).Print(ctx, std::get<I>(value));
+  auto write_one = [&]<std::size_t I>() {
+    if (I > 0) ctx.WriteWhitespace(Format().GetSeparator());
+    std::get<I>(core_constraints_.Elements()).Write(ctx, std::get<I>(value));
   };
 
   [&]<size_t... I>(std::index_sequence<I...>) {
-    (print_one.template operator()<I>(), ...);
+    (write_one.template operator()<I>(), ...);
   }(std::index_sequence_for<T...>{});
 }
 
 template <typename... T>
 MTuple<T...>::tuple_value_type MTuple<T...>::ReadImpl(
-    librarian::ReaderContext ctx) const {
+    librarian::ReadVariableContext ctx) const {
   MTuple<T...>::Reader reader = MTuple<T...>::Reader(ctx, sizeof...(T), *this);
 
   for (size_t i = 0; i < sizeof...(T); ++i) {
@@ -354,7 +355,8 @@ template <typename... T>
 template <size_t I, typename MElementType>
 ConstraintViolation
 MTuple<T...>::ElementConstraintWrapper<I, MElementType>::CheckValue(
-    librarian::AnalysisContext ctx, const tuple_value_type& value) const {
+    librarian::AnalyzeVariableContext ctx,
+    const tuple_value_type& value) const {
   return constraint_.CheckValue(ctx, std::get<I>(value));
 }
 
@@ -396,7 +398,7 @@ bool MTuple<MElementTypes...>::CoreConstraints::IsSet(Flags flag) const {
 }
 
 template <typename... MElementTypes>
-MTuple<MElementTypes...>::Reader::Reader(librarian::ReaderContext ctx,
+MTuple<MElementTypes...>::Reader::Reader(librarian::ReadVariableContext ctx,
                                          int num_chunks,
                                          Ref<const MTuple> variable)
     : variable_(std::move(variable)) {
@@ -411,7 +413,8 @@ MTuple<MElementTypes...>::Reader::Reader(librarian::ReaderContext ctx,
 }
 
 template <typename... MElementTypes>
-void MTuple<MElementTypes...>::Reader::ReadNext(librarian::ReaderContext ctx) {
+void MTuple<MElementTypes...>::Reader::ReadNext(
+    librarian::ReadVariableContext ctx) {
   if (current_index_ >= sizeof...(MElementTypes)) {
     ctx.ThrowIOError(
         std::format("{}: Attempting to read more elements than exist in tuple.",
@@ -430,7 +433,7 @@ MTuple<MElementTypes...>::Reader::Finalize() && {
 template <typename... MElementTypes>
 template <std::size_t... Is>
 void MTuple<MElementTypes...>::Reader::ReadCurrentIndex(
-    librarian::ReaderContext ctx, std::index_sequence<Is...>) {
+    librarian::ReadVariableContext ctx, std::index_sequence<Is...>) {
   auto read_element = [&]<std::size_t I>() {
     if constexpr (I < sizeof...(Is)) {
       if (current_index_ == I) {

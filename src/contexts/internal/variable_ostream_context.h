@@ -28,28 +28,28 @@ namespace moriarty_internal {
 
 // VariableOStreamContext
 //
-// Print variables to an output stream.
+// Write variables to an output stream.
 class VariableOStreamContext {
  public:
   VariableOStreamContext(Ref<std::ostream> os, Ref<const VariableSet> variables,
                          Ref<const ValueSet> values);
 
-  // PrintVariable()
+  // WriteVariable()
   //
-  // Prints the value of `variable_name` to the output stream.
-  void PrintVariable(std::string_view variable_name);
+  // Writes the value of `variable_name` to the output stream.
+  void WriteVariable(std::string_view variable_name);
 
-  // PrintVariable()
+  // WriteVariable()
   //
-  // Prints `value` to the output stream using `variable` to determine how to do
+  // Writes `value` to the output stream using `variable` to determine how to do
   // so.
   template <MoriartyVariable T>
-  void PrintVariable(T variable, T::value_type value);
+  void WriteVariable(T variable, T::value_type value);
 
-  // PrintVariableFrom()
+  // WriteVariableFrom()
   //
-  // Prints the value of `variable_name` from `test_case` to the output stream.
-  void PrintVariableFrom(std::string_view variable_name,
+  // Writes the value of `variable_name` from `test_case` to the output stream.
+  void WriteVariableFrom(std::string_view variable_name,
                          const TestCase& test_case);
 
  protected:
@@ -65,8 +65,8 @@ class VariableOStreamContext {
 //  Template implementation below
 
 template <MoriartyVariable T>
-void VariableOStreamContext::PrintVariable(T variable, T::value_type value) {
-  variable.Print({"PrintVariable", os_, variables_, values_}, value);
+void VariableOStreamContext::WriteVariable(T variable, T::value_type value) {
+  variable.Write({"WriteVariable", os_, variables_, values_}, value);
 }
 
 }  // namespace moriarty_internal

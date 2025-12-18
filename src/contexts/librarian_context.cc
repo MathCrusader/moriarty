@@ -30,17 +30,17 @@
 namespace moriarty {
 namespace librarian {
 
-AnalysisContext::AnalysisContext(
+AnalyzeVariableContext::AnalyzeVariableContext(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values)
     : NameContext(variable_name), ViewOnlyContext(variables, values) {}
 
-AnalysisContext::AnalysisContext(std::string_view name,
-                                 const ViewOnlyContext& other)
+AnalyzeVariableContext::AnalyzeVariableContext(std::string_view name,
+                                               const ViewOnlyContext& other)
     : NameContext(name), ViewOnlyContext(other) {}
 
-AssignmentContext::AssignmentContext(
+AssignVariableContext::AssignVariableContext(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<moriarty_internal::ValueSet> values)
@@ -48,7 +48,7 @@ AssignmentContext::AssignmentContext(
       ViewOnlyContext(variables, values),
       MutableValuesContext(values) {}
 
-PrinterContext::PrinterContext(
+WriteVariableContext::WriteVariableContext(
     std::string_view variable_name, Ref<std::ostream> os,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values)
@@ -56,7 +56,7 @@ PrinterContext::PrinterContext(
       ViewOnlyContext(variables, values),
       BasicOStreamContext(os) {}
 
-ReaderContext::ReaderContext(
+ReadVariableContext::ReadVariableContext(
     std::string_view variable_name, Ref<InputCursor> input,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values)
@@ -64,7 +64,7 @@ ReaderContext::ReaderContext(
       ViewOnlyContext(variables, values),
       BasicIStreamContext(input) {}
 
-ResolverContext::ResolverContext(
+GenerateVariableContext::GenerateVariableContext(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<moriarty_internal::ValueSet> values,
@@ -81,14 +81,17 @@ ResolverContext::ResolverContext(
       engine_(engine),
       handler_(handler) {}
 
-ResolverContext ResolverContext::ForVariable(std::string_view new_name) const {
-  return ResolverContext(new_name, variables_, values_, engine_, handler_);
+GenerateVariableContext GenerateVariableContext::ForVariable(
+    std::string_view new_name) const {
+  return GenerateVariableContext(new_name, variables_, values_, engine_,
+                                 handler_);
 }
 
-ResolverContext ResolverContext::ForSubVariable(
+GenerateVariableContext GenerateVariableContext::ForSubVariable(
     std::string_view new_name) const {
-  return ResolverContext(std::format("{}.{}", GetVariableName(), new_name),
-                         variables_, values_, engine_, handler_);
+  return GenerateVariableContext(
+      std::format("{}.{}", GetVariableName(), new_name), variables_, values_,
+      engine_, handler_);
 }
 
 }  // namespace librarian

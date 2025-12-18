@@ -50,9 +50,9 @@ using ::moriarty_testing::GenerateSameValues;
 using ::moriarty_testing::GenerateThrowsGenerationError;
 using ::moriarty_testing::IsNotSatisfiedWith;
 using ::moriarty_testing::IsSatisfiedWith;
-using ::moriarty_testing::Print;
 using ::moriarty_testing::Read;
 using ::moriarty_testing::ThrowsVariableNotFound;
+using ::moriarty_testing::Write;
 using ::testing::AllOf;
 using ::testing::Each;
 using ::testing::ElementsAre;
@@ -88,10 +88,10 @@ MATCHER(HasDuplicateIntegers,
   }
   return false;
 }
-TEST(MArrayTest, TypicalPrintCaseWorks) {
-  EXPECT_EQ(Print(MArray<MInteger>(Length(6)), {1, 2, 3, 4, 5, 6}),
+TEST(MArrayTest, TypicalWriteCaseWorks) {
+  EXPECT_EQ(Write(MArray<MInteger>(Length(6)), {1, 2, 3, 4, 5, 6}),
             "1 2 3 4 5 6");
-  EXPECT_EQ(Print(MArray<MString>(Length(5)),
+  EXPECT_EQ(Write(MArray<MString>(Length(5)),
                   {"Hello,", "World!", "Welcome", "to", "Moriarty!"}),
             "Hello, World! Welcome to Moriarty!");
 }
@@ -338,9 +338,9 @@ TEST(MArrayTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
               GeneratedValuesAre(SizeIs(500)));
 }
 
-TEST(MArrayTest, WhitespaceSeparatorShouldAffectPrint) {
+TEST(MArrayTest, WhitespaceSeparatorShouldAffectWrite) {
   EXPECT_EQ(
-      Print(MArray<MInteger>(MArrayFormat().NewlineSeparated()), {1, 2, 3}),
+      Write(MArray<MInteger>(MArrayFormat().NewlineSeparated()), {1, 2, 3}),
       "1\n2\n3");  // Note no newline after
 }
 
@@ -408,8 +408,8 @@ TEST(MArrayTest, DirectlyUsingChunkedReaderShouldWork) {
   Context context;
   std::istringstream input("1\n2\n3\n4\n5\n6\n");
   InputCursor cursor(input, WhitespaceStrictness::kPrecise);
-  librarian::ReaderContext ctx("A", cursor, Context().Variables(),
-                               Context().Values());
+  librarian::ReadVariableContext ctx("A", cursor, Context().Variables(),
+                                     Context().Values());
   MArray<MInteger>::Reader reader(ctx, 6, arr);
 
   for (int i = 0; i < 6; i++) {

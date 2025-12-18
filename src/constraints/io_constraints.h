@@ -24,7 +24,7 @@
 namespace moriarty {
 
 // Constraint stating that the container should be separated by this whitespace
-// when printed or read.
+// when read or written.
 class IOSeparator : public MConstraint {
  public:
   // The separator to use between elements of a container.

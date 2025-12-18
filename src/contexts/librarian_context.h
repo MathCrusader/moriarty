@@ -36,22 +36,22 @@
 namespace moriarty {
 namespace librarian {
 
-// AnalysisContext
+// AnalyzeVariableContext
 //
 // Allows you to inspect the current state of the variables and values.
-// AnalysisContext is read-only. It does not allow you to modify the variables
-// or values.
+// AnalyzeVariableContext is read-only. It does not allow you to modify the
+// variables or values.
 //
 // Note: All Librarian contexts can be converted to this type.
-class AnalysisContext : public moriarty_internal::NameContext,
-                        public moriarty_internal::ViewOnlyContext {
+class AnalyzeVariableContext : public moriarty_internal::NameContext,
+                               public moriarty_internal::ViewOnlyContext {
  public:
-  AnalysisContext(std::string_view variable_name,
-                  Ref<const moriarty_internal::VariableSet> variables,
-                  Ref<const moriarty_internal::ValueSet> values);
-  AnalysisContext(std::string_view name, const ViewOnlyContext& other);
+  AnalyzeVariableContext(std::string_view variable_name,
+                         Ref<const moriarty_internal::VariableSet> variables,
+                         Ref<const moriarty_internal::ValueSet> values);
+  AnalyzeVariableContext(std::string_view name, const ViewOnlyContext& other);
   template <typename T>
-  AnalysisContext(const T& other)
+  AnalyzeVariableContext(const T& other)
       : NameContext(other.GetVariableName()), ViewOnlyContext(other) {}
 
   // ********************************************
@@ -59,58 +59,58 @@ class AnalysisContext : public moriarty_internal::NameContext,
   // ********************************************
 };
 
-// AssignmentContext
+// AssignVariableContext
 //
 // Allows you to inspect the current state of the variables and set values.
-class AssignmentContext : public moriarty_internal::NameContext,
-                          public moriarty_internal::ViewOnlyContext,
-                          public moriarty_internal::MutableValuesContext {
+class AssignVariableContext : public moriarty_internal::NameContext,
+                              public moriarty_internal::ViewOnlyContext,
+                              public moriarty_internal::MutableValuesContext {
  public:
-  AssignmentContext(std::string_view variable_name,
-                    Ref<const moriarty_internal::VariableSet> variables,
-                    Ref<moriarty_internal::ValueSet> values);
+  AssignVariableContext(std::string_view variable_name,
+                        Ref<const moriarty_internal::VariableSet> variables,
+                        Ref<moriarty_internal::ValueSet> values);
 
   // ********************************************
   // ** See parent classes for more functions. **
   // ********************************************
 };
 
-// PrinterContext
+// WriteVariableContext
 //
-// All context that MVariable<>::Print() has access to.
-class PrinterContext : public moriarty_internal::NameContext,
-                       public moriarty_internal::ViewOnlyContext,
-                       public moriarty_internal::BasicOStreamContext {
+// All context that MVariable<>::Write() has access to.
+class WriteVariableContext : public moriarty_internal::NameContext,
+                             public moriarty_internal::ViewOnlyContext,
+                             public moriarty_internal::BasicOStreamContext {
  public:
-  PrinterContext(std::string_view variable_name, Ref<std::ostream> os,
-                 Ref<const moriarty_internal::VariableSet> variables,
-                 Ref<const moriarty_internal::ValueSet> values);
+  WriteVariableContext(std::string_view variable_name, Ref<std::ostream> os,
+                       Ref<const moriarty_internal::VariableSet> variables,
+                       Ref<const moriarty_internal::ValueSet> values);
 
   // ********************************************
   // ** See parent classes for more functions. **
   // ********************************************
 };
 
-// ReaderContext
+// ReadVariableContext
 //
 // All context that MVariable<>::Read() has access to.
-class ReaderContext : public moriarty_internal::NameContext,
-                      public moriarty_internal::ViewOnlyContext,
-                      public moriarty_internal::BasicIStreamContext {
+class ReadVariableContext : public moriarty_internal::NameContext,
+                            public moriarty_internal::ViewOnlyContext,
+                            public moriarty_internal::BasicIStreamContext {
  public:
-  ReaderContext(std::string_view variable_name, Ref<InputCursor> input,
-                Ref<const moriarty_internal::VariableSet> variables,
-                Ref<const moriarty_internal::ValueSet> values);
+  ReadVariableContext(std::string_view variable_name, Ref<InputCursor> input,
+                      Ref<const moriarty_internal::VariableSet> variables,
+                      Ref<const moriarty_internal::ValueSet> values);
 
   // ********************************************
   // ** See parent classes for more functions. **
   // ********************************************
 };
 
-// ResolverContext
+// GenerateVariableContext
 //
 // All context that MVariable<>::Generate() has access to.
-class ResolverContext
+class GenerateVariableContext
     : public moriarty_internal::NameContext,
       public moriarty_internal::ViewOnlyContext,
       public moriarty_internal::MutableValuesContext,
@@ -118,17 +118,18 @@ class ResolverContext
       public moriarty_internal::BasicRandomContext,
       public moriarty_internal::GenerationOrchestrationContext {
  public:
-  ResolverContext(std::string_view variable_name,
-                  Ref<const moriarty_internal::VariableSet> variables,
-                  Ref<moriarty_internal::ValueSet> values,
-                  Ref<moriarty_internal::RandomEngine> engine,
-                  Ref<moriarty_internal::GenerationHandler> handler);
+  GenerateVariableContext(std::string_view variable_name,
+                          Ref<const moriarty_internal::VariableSet> variables,
+                          Ref<moriarty_internal::ValueSet> values,
+                          Ref<moriarty_internal::RandomEngine> engine,
+                          Ref<moriarty_internal::GenerationHandler> handler);
 
   // ForVariable()
   //
   // Creates a copy of this context, except the variable name is replaced with
   // `variable_name`.
-  [[nodiscard]] ResolverContext ForVariable(std::string_view new_name) const;
+  [[nodiscard]] GenerateVariableContext ForVariable(
+      std::string_view new_name) const;
 
   // ForSubVariable()
   //
@@ -136,7 +137,8 @@ class ResolverContext
   // the name of a subvariable of the current one. (E.g., if the current
   // variable is A, then ForSubVariable("length") will set the new variable to
   // be "A.length")
-  [[nodiscard]] ResolverContext ForSubVariable(std::string_view new_name) const;
+  [[nodiscard]] GenerateVariableContext ForSubVariable(
+      std::string_view new_name) const;
 
   // ********************************************
   // ** See parent classes for more functions. **

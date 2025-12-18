@@ -26,21 +26,21 @@ namespace moriarty_internal {
 
 // BasicOStreamContext
 //
-// A class to handle printing tokens to an output stream in a uniform way.
+// A class to handle writing tokens to an output stream in a uniform way.
 // The held ostream will have its exceptions enabled.
 class BasicOStreamContext {
  public:
   explicit BasicOStreamContext(Ref<std::ostream> os);
 
-  // PrintToken()
+  // WriteToken()
   //
-  // Prints a single token to the output stream.
-  void PrintToken(std::string_view token);
+  // Writes a single token to the output stream.
+  void WriteToken(std::string_view token);
 
-  // PrintWhitespace()
+  // WriteWhitespace()
   //
-  // Prints the whitespace character to the output stream.
-  void PrintWhitespace(moriarty::Whitespace whitespace);
+  // Writes the whitespace character to the output stream.
+  void WriteWhitespace(moriarty::Whitespace whitespace);
 
  protected:
   void UpdateBasicOStream(Ref<std::ostream> os) { os_ = os; }

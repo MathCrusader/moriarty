@@ -169,11 +169,11 @@ class AbstractVariable {
       std::string_view variable_name, int N, Ref<InputCursor> input,
       Ref<const VariableSet> variables, Ref<ValueSet> values) const = 0;
 
-  // PrintValue() [pure virtual]
+  // WriteValue() [pure virtual]
   //
-  // Prints the value of this variable to `ctx` using the constraints on this
+  // Writes the value of this variable to `ctx` using the constraints on this
   // variable to determine formatting, etc.
-  virtual void PrintValue(std::string_view variable_name, Ref<std::ostream> os,
+  virtual void WriteValue(std::string_view variable_name, Ref<std::ostream> os,
                           Ref<const VariableSet> variables,
                           Ref<const ValueSet> values) const = 0;
 

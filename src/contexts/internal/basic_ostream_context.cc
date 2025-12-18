@@ -26,11 +26,11 @@ BasicOStreamContext::BasicOStreamContext(Ref<std::ostream> os) : os_(os) {
   os_.get().exceptions(std::ostream::failbit | std::ostream::badbit);
 }
 
-void BasicOStreamContext::PrintToken(std::string_view token) {
+void BasicOStreamContext::WriteToken(std::string_view token) {
   os_.get() << token;
 }
 
-void BasicOStreamContext::PrintWhitespace(Whitespace whitespace) {
+void BasicOStreamContext::WriteWhitespace(Whitespace whitespace) {
   switch (whitespace) {
     case Whitespace::kSpace:
       os_.get() << ' ';

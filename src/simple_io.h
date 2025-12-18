@@ -49,7 +49,7 @@ class StringLiteral {
 //
 // Each token in SimpleIO must be one of the following:
 //  - `std::string`  : The name of a variable
-//  - `StringLiteral`: An exact string to be printed/read.
+//  - `StringLiteral`: An exact string to be read/write.
 using SimpleIOToken = std::variant<std::string, StringLiteral>;
 
 // SimpleIO
@@ -81,13 +81,13 @@ class SimpleIO {
 
   // AddLine()
   //
-  // Each variable will be printed over `number_of_lines_expression` lines. They
+  // Each variable will be written over `number_of_lines_expression` lines. They
   // will then be zipped together.
   //
   // For example:
   //   AddMultilineSection(3, "N", "X"); // N = [1, 2, 3], X = [11, 22, 33]
   //
-  // Prints:
+  // Writes:
   //   1 11
   //   2 22
   //   3 33

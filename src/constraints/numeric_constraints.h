@@ -79,13 +79,13 @@ class Between : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns true if `[minimum] <= value <= [maximum]`.
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  int64_t value) const;
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  int value) const;
 
   // Returns true if `[minimum] <= value <= [maximum]`.
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  double value) const;
 
   // Returns all variables that this constraint depends on.
@@ -123,13 +123,13 @@ class AtMost : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns true if `value <= [maximum]`.
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  int64_t value) const;
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  int value) const;
 
   // Returns true if `value <= [maximum]`.
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  double value) const;
 
   // Returns all variables that this constraint depends on.
@@ -166,13 +166,13 @@ class AtLeast : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns true if the given value satisfies this constraint.
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  int64_t value) const;
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  int value) const;
 
   // Returns true if `[minimum] <= value`.
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  double value) const;
 
   // Returns all variables that this constraint depends on.
@@ -197,11 +197,11 @@ class ExactlyNumeric : public MConstraint {
 
   [[nodiscard]] Range GetRange() const;
   [[nodiscard]] std::string ToString() const;
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  int64_t value) const;
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  int value) const;
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  double value) const;
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
 
@@ -229,7 +229,7 @@ class OneOfNumeric : public MConstraint {
 
   [[nodiscard]] bool HasBeenConstrained() const;
   [[nodiscard]] std::optional<Real> GetUniqueValue(
-      librarian::AnalysisContext fn) const;
+      librarian::AnalyzeVariableContext fn) const;
 
   [[nodiscard]] bool ConstrainOptions(const OneOfNumeric& other);
   [[nodiscard]] bool ConstrainOptions(
@@ -242,17 +242,17 @@ class OneOfNumeric : public MConstraint {
   [[nodiscard]] bool ConstrainOptions(const ExactlyNumeric& other);
 
   // Similar to OneOfHandler::HasOption()
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  int64_t value) const;
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  int value) const;
-  ConstraintViolation CheckValue(librarian::AnalysisContext ctx,
+  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
                                  double value) const;
 
   [[nodiscard]] std::vector<Real> GetOptionsLookup(
       std::function<int64_t(std::string_view)> lookup_fn) const;
   [[nodiscard]] std::vector<Real> GetOptions(
-      librarian::AnalysisContext ctx) const;
+      librarian::AnalyzeVariableContext ctx) const;
   [[nodiscard]] std::string ToString() const;
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
 

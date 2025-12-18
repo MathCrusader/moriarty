@@ -123,7 +123,7 @@ MReal& MReal::AddConstraint(MRealFormat constraint) {
 
 const Range& MReal::CoreConstraints::Bounds() const { return data_->bounds; }
 
-double MReal::GenerateImpl(librarian::ResolverContext ctx) const {
+double MReal::GenerateImpl(librarian::GenerateVariableContext ctx) const {
   if (GetOneOf().HasBeenConstrained()) {
     return GetOneOf().SelectOneOf([&](int n) { return ctx.RandomInteger(n); });
   }
@@ -151,17 +151,17 @@ double MReal::GenerateImpl(librarian::ResolverContext ctx) const {
   return ctx.RandomReal(extremes->min, extremes->max);
 }
 
-double MReal::ReadImpl(librarian::ReaderContext ctx) const {
+double MReal::ReadImpl(librarian::ReadVariableContext ctx) const {
   return ctx.ReadReal(Format().GetDigits());
 }
 
-void MReal::PrintImpl(librarian::PrinterContext ctx,
+void MReal::WriteImpl(librarian::WriteVariableContext ctx,
                       const double& value) const {
-  ctx.PrintToken(std::format("{:.{}f}", value, Format().GetDigits()));
+  ctx.WriteToken(std::format("{:.{}f}", value, Format().GetDigits()));
 }
 
 std::optional<double> MReal::GetUniqueValueImpl(
-    librarian::AnalysisContext ctx) const {
+    librarian::AnalyzeVariableContext ctx) const {
   if (auto dbl_one_of = GetOneOf().GetUniqueValue()) return *dbl_one_of;
 
   try {

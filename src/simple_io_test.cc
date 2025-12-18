@@ -95,7 +95,7 @@ end
 )"));
 }
 
-TEST(SimpleIOWriterTest, WriteWithNumberOfTestCasesShouldPrintProperly) {
+TEST(SimpleIOWriterTest, WriteWithNumberOfTestCasesShouldWriteProperly) {
   Context context = Context()
                         .WithVariable("a", MInteger())
                         .WithVariable("b", MInteger())

@@ -133,7 +133,8 @@ TEST(NumericConstraintsTest, GetOptionsShouldGiveCorrectValues) {
   context.WithValue<MInteger>("x", 10)
       .WithValue<MInteger>("y", 20)
       .WithValue<MInteger>("z", 30);
-  librarian::AnalysisContext ctx("N", context.Variables(), context.Values());
+  librarian::AnalyzeVariableContext ctx("N", context.Variables(),
+                                        context.Values());
 
   EXPECT_THAT(OneOfNumeric(std::vector<std::string_view>{"1", "2", "3"})
                   .GetOptions(ctx),
@@ -162,7 +163,8 @@ TEST(NumericConstraintsTest, OneOfGetUniqueValueShouldWork) {
   context.WithValue<MInteger>("x", 10)
       .WithValue<MInteger>("y", 20)
       .WithValue<MInteger>("z", 30);
-  librarian::AnalysisContext ctx("N", context.Variables(), context.Values());
+  librarian::AnalyzeVariableContext ctx("N", context.Variables(),
+                                        context.Values());
 
   {  // No unique value
     EXPECT_EQ(OneOfNumeric().GetUniqueValue(ctx), std::nullopt);
@@ -235,7 +237,8 @@ TEST(NumericConstraintsTest, ToStringShouldWork) {
 
 TEST(NumericConstraintsTest, IsSatisfiedWithWithIntegersWorks) {
   Context context;
-  librarian::AnalysisContext ctx("N", context.Variables(), context.Values());
+  librarian::AnalyzeVariableContext ctx("N", context.Variables(),
+                                        context.Values());
 
   {
     EXPECT_THAT(Between(10, 20).CheckValue(ctx, 10),
@@ -268,7 +271,8 @@ TEST(NumericConstraintsTest, IsSatisfiedWithRealsWorks) {
   context.WithValue<MInteger>("x", 10)
       .WithValue<MInteger>("y", 20)
       .WithValue<MInteger>("z", 30);
-  librarian::AnalysisContext ctx("N", context.Variables(), context.Values());
+  librarian::AnalyzeVariableContext ctx("N", context.Variables(),
+                                        context.Values());
 
   {
     EXPECT_THAT(Between(10, 20).CheckValue(ctx, 10.0),
@@ -331,7 +335,8 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
   context.WithValue<MInteger>("x", 10)
       .WithValue<MInteger>("y", 20)
       .WithValue<MInteger>("z", 30);
-  librarian::AnalysisContext ctx("N", context.Variables(), context.Values());
+  librarian::AnalyzeVariableContext ctx("N", context.Variables(),
+                                        context.Values());
 
   {
     EXPECT_THAT(ExactlyNumeric("x").CheckValue(ctx, 10),
