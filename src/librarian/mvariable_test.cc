@@ -25,6 +25,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/context.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_handler.h"
@@ -296,8 +297,7 @@ TEST(MVariableTest, IsSatisfiedWithWorksForValid) {
 TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
   {  // No value or variable known
     Context context;
-    librarian::AnalyzeVariableContext ctx("test", context.Variables(),
-                                          context.Values());
+    ConstraintContext ctx("test", context.Variables(), context.Values());
 
     EXPECT_THAT(
         [&] {
@@ -308,8 +308,7 @@ TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
   }
   {  // Variable known, but no value known.
     Context context = Context().WithVariable("t", MInteger());
-    librarian::AnalyzeVariableContext ctx("test", context.Variables(),
-                                          context.Values());
+    ConstraintContext ctx("test", context.Variables(), context.Values());
 
     EXPECT_THAT(
         [&] {

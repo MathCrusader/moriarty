@@ -26,6 +26,7 @@
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/graph_constraints.h"
 #include "src/constraints/numeric_constraints.h"
+#include "src/context.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/errors.h"
@@ -504,7 +505,7 @@ TEST(MGraphTest, ExactlyAndOneOfConstraintsShouldWork) {
 TEST(MGraphTest, NodeLabelsAndEdgeLabelsCheckValue) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  librarian::AnalyzeVariableContext ctx("MGraphTest", variables, values);
+  ConstraintContext ctx("MGraphTest", variables, values);
 
   Graph<int64_t, int64_t> G(2);
   G.SetNodeLabels({10, 20});

@@ -29,6 +29,7 @@
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
 #include "src/constraints/container_constraints.h"
+#include "src/context.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/librarian/errors.h"
@@ -194,7 +195,7 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
   struct ElementConstraintWrapper {
    public:
     explicit ElementConstraintWrapper(Element<I, MElementType> constraint);
-    ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
+    ConstraintViolation CheckValue(ConstraintContext ctx,
                                    const tuple_value_type& value) const;
     std::string ToString() const;
     std::vector<std::string> GetDependencies() const;
@@ -355,8 +356,7 @@ template <typename... T>
 template <size_t I, typename MElementType>
 ConstraintViolation
 MTuple<T...>::ElementConstraintWrapper<I, MElementType>::CheckValue(
-    librarian::AnalyzeVariableContext ctx,
-    const tuple_value_type& value) const {
+    ConstraintContext ctx, const tuple_value_type& value) const {
   return constraint_.CheckValue(ctx, std::get<I>(value));
 }
 

@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "src/constraints/constraint_violation.h"
-#include "src/contexts/librarian_context.h"
+#include "src/context.h"
 #include "src/librarian/util/cow_ptr.h"
 
 namespace moriarty {
@@ -56,7 +56,7 @@ class ConstraintHandler {
   // CheckValue()
   //
   // Determines if all constraints are satisfied with the given value.
-  ConstraintViolation CheckValue(AnalyzeVariableContext ctx,
+  ConstraintViolation CheckValue(ConstraintContext ctx,
                                  const ValueType& value) const;
 
   // ToString()
@@ -73,8 +73,7 @@ class ConstraintHandler {
   class ConstraintHusk {
    public:
     virtual ~ConstraintHusk() = default;
-    virtual auto CheckValue(AnalyzeVariableContext ctx,
-                            const ValueType& value) const
+    virtual auto CheckValue(ConstraintContext ctx, const ValueType& value) const
         -> ConstraintViolation = 0;
     virtual auto ToString() const -> std::string = 0;
     virtual auto ApplyTo(VariableType& other) const -> void = 0;
@@ -86,7 +85,7 @@ class ConstraintHandler {
     ~ConstraintWrapper() override = default;
     explicit ConstraintWrapper(U constraint)
         : constraint_(std::move(constraint)) {}
-    auto CheckValue(AnalyzeVariableContext ctx, const ValueType& value) const
+    auto CheckValue(ConstraintContext ctx, const ValueType& value) const
         -> ConstraintViolation override {
       if constexpr (ConstraintHasSimplifiedCheckValueFn<U, ValueType>) {
         return constraint_.CheckValue(value);
@@ -127,7 +126,7 @@ void ConstraintHandler<VariableType, ValueType>::AddConstraint(U constraint) {
 
 template <typename VariableType, typename ValueType>
 ConstraintViolation ConstraintHandler<VariableType, ValueType>::CheckValue(
-    AnalyzeVariableContext ctx, const ValueType& value) const {
+    ConstraintContext ctx, const ValueType& value) const {
   for (const auto& constraint : constraints_) {
     if (auto check = constraint->CheckValue(ctx, value)) return check;
   }

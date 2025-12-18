@@ -32,6 +32,7 @@ cc_library(
     srcs = ["mtest_type.cc"],
     hdrs = ["mtest_type.h"],
     deps = [
+        "//src:context",
         "//src/contexts:librarian_context",
         "//src/librarian:errors",
         "//src/librarian:mvariable",
@@ -44,6 +45,7 @@ cc_library(
     testonly = True,
     hdrs = ["gtest_helpers.h"],
     deps = [
+        "//src:context",
         "//src/contexts:librarian_context",
         "//src/contexts/internal:mutable_values_context",
         "//src/internal:abstract_variable",

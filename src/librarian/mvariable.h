@@ -35,6 +35,7 @@
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
 #include "src/constraints/custom_constraint.h"
+#include "src/context.h"
 #include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/internal/view_only_context.h"
 #include "src/contexts/librarian_context.h"
@@ -133,8 +134,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // least X, larger than the average of the elements in A, etc).
   VariableType& AddCustomConstraint(
       std::string_view name, std::vector<std::string> dependencies,
-      std::function<bool(librarian::AnalyzeVariableContext, const value_type&)>
-          checker);
+      std::function<bool(ConstraintContext, const value_type&)> checker);
 
   // AddConstraint()
   //
@@ -145,7 +145,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // CheckValue()
   //
   // Determines if `value` satisfies all constraints on this variable.
-  ConstraintViolation CheckValue(AnalyzeVariableContext ctx,
+  ConstraintViolation CheckValue(ConstraintContext ctx,
                                  const value_type& value) const;
 
   // Generate()
@@ -292,7 +292,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   class CustomConstraintWrapper {
    public:
     explicit CustomConstraintWrapper(CustomConstraint<VariableType> constraint);
-    ConstraintViolation CheckValue(AnalyzeVariableContext ctx,
+    ConstraintViolation CheckValue(ConstraintContext ctx,
                                    const value_type& value) const;
     std::string ToString() const;
     std::vector<std::string> GetDependencies() const;
@@ -361,8 +361,7 @@ V& MVariable<V>::AddCustomConstraint(
 template <typename V>
 V& MVariable<V>::AddCustomConstraint(
     std::string_view name, std::vector<std::string> dependencies,
-    std::function<bool(librarian::AnalyzeVariableContext, const value_type&)>
-        checker) {
+    std::function<bool(ConstraintContext, const value_type&)> checker) {
   return AddConstraint(
       CustomConstraint<V>(name, std::move(dependencies), std::move(checker)));
 }
@@ -373,7 +372,7 @@ V& MVariable<V>::AddConstraint(CustomConstraint<V> constraint) {
 }
 
 template <typename V>
-ConstraintViolation MVariable<V>::CheckValue(AnalyzeVariableContext ctx,
+ConstraintViolation MVariable<V>::CheckValue(ConstraintContext ctx,
                                              const value_type& value) const {
   return constraints_.CheckValue(ctx, value);
 }
@@ -436,7 +435,7 @@ void MVariable<V>::Write(WriteVariableContext ctx,
 template <typename V>
 auto MVariable<V>::Read(ReadVariableContext ctx) const -> value_type {
   value_type value = ReadImpl(ctx);
-  if (auto reason = CheckValue(ctx, value)) {
+  if (auto reason = CheckValue(ConstraintContext(ctx), value)) {
     ctx.ThrowIOError(std::format("Read value does not satisfy constraints: {}",
                                  reason.Reason()));
   }
@@ -569,7 +568,7 @@ typename MVariable<V>::value_type MVariable<V>::GenerateOnce(
   // validate. Generate them now.
   for (std::string_view dep : dependencies_) ctx.AssignVariable(dep);
 
-  if (auto reason = CheckValue(ctx, potential_value))
+  if (auto reason = CheckValue(ConstraintContext(ctx), potential_value))
     throw moriarty::GenerationError(
         ctx.GetVariableName(),
         std::format("Generated value does not satisfy constraints: {}",
@@ -663,7 +662,7 @@ ConstraintViolation MVariable<V>::CheckValue(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values) const {
-  AnalyzeVariableContext ctx(variable_name, variables, values);
+  ConstraintContext ctx(variable_name, variables, values);
   return CheckValue(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
 
@@ -690,7 +689,7 @@ MVariable<V>::CustomConstraintWrapper::CustomConstraintWrapper(
 
 template <typename V>
 ConstraintViolation MVariable<V>::CustomConstraintWrapper::CheckValue(
-    AnalyzeVariableContext ctx, const value_type& value) const {
+    ConstraintContext ctx, const value_type& value) const {
   return constraint_.CheckValue(ctx, value);
 }
 

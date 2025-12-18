@@ -19,7 +19,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/constraints/constraint_violation.h"
-#include "src/contexts/librarian_context.h"
+#include "src/context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/testing/gtest_helpers.h"
@@ -40,7 +40,7 @@ using ::testing::HasSubstr;
 using ::testing::Not;
 
 struct Even {
-  ConstraintViolation CheckValue(AnalyzeVariableContext ctx, int value) const {
+  ConstraintViolation CheckValue(ConstraintContext ctx, int value) const {
     if (value % 2 == 0) return ConstraintViolation::None();
     return ConstraintViolation(std::format("`{}` is not even", value));
   }
@@ -49,7 +49,7 @@ struct Even {
 };
 
 struct Positive {
-  ConstraintViolation CheckValue(AnalyzeVariableContext ctx, int value) const {
+  ConstraintViolation CheckValue(ConstraintContext ctx, int value) const {
     if (value > 0) return ConstraintViolation::None();
     return ConstraintViolation(std::format("`{}` is not positive", value));
   }
@@ -60,7 +60,7 @@ struct Positive {
 TEST(ConstraintHandlerTest, EmptyHandlerShouldBeSatisfiedWithEverything) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  AnalyzeVariableContext ctx("X", variables, values);
+  ConstraintContext ctx("X", variables, values);
 
   {
     ConstraintHandler<MInteger, int> handler;
@@ -96,7 +96,7 @@ TEST(ConstraintHandlerTest, ToStringShouldWork) {
 TEST(ConstraintHandlerTest, CheckValueShouldContainRelevantMessages) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  AnalyzeVariableContext ctx("X", variables, values);
+  ConstraintContext ctx("X", variables, values);
 
   ConstraintHandler<MInteger, int> handler;
   handler.AddConstraint(Even());
@@ -117,7 +117,7 @@ TEST(ConstraintHandlerTest, CheckValueShouldContainRelevantMessages) {
 TEST(ConstraintHandlerTest, CheckValueShouldReturnIfAnyFail) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  AnalyzeVariableContext ctx("X", variables, values);
+  ConstraintContext ctx("X", variables, values);
 
   ConstraintHandler<MInteger, int> handler;
   handler.AddConstraint(Even());

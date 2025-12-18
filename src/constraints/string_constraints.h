@@ -1,3 +1,4 @@
+// Copyright 2025 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -20,7 +21,7 @@
 
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
-#include "src/contexts/librarian_context.h"
+#include "src/context.h"
 #include "src/internal/simple_pattern.h"
 
 namespace moriarty {
@@ -96,7 +97,7 @@ class SimplePattern : public MConstraint {
   [[nodiscard]] moriarty_internal::SimplePattern GetCompiledPattern() const;
 
   // Determines if the string has the correct characters.
-  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
+  ConstraintViolation CheckValue(ConstraintContext ctx,
                                  std::string_view value) const;
 
   // Returns a string representation of this constraint.

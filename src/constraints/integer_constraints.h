@@ -22,7 +22,7 @@
 
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
-#include "src/contexts/librarian_context.h"
+#include "src/context.h"
 #include "src/internal/expressions.h"
 
 namespace moriarty {
@@ -54,8 +54,7 @@ class Mod : public MConstraint {
   [[nodiscard]] Equation GetConstraints() const;
 
   // Determines if the value has the appropriate remainder.
-  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
-                                 int64_t value) const;
+  ConstraintViolation CheckValue(ConstraintContext ctx, int64_t value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;

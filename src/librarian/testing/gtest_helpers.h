@@ -119,6 +119,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/constraints/constraint_violation.h"
+#include "src/context.h"
 #include "src/contexts/librarian_context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_bootstrap.h"
@@ -596,8 +597,8 @@ MATCHER_P2(IsSatisfiedWith, value, context, "") {
   Context context_copy = context;
 
   std::string var_name = std::format("{}::IsSatisfiedWith", arg.Typename());
-  moriarty::librarian::AnalyzeVariableContext ctx(
-      var_name, context_copy.Variables(), context_copy.Values());
+  moriarty::ConstraintContext ctx(var_name, context_copy.Variables(),
+                                  context_copy.Values());
 
   if (auto reason = arg.CheckValue(ctx, ValueType(value))) {
     *result_listener << "value does not satisfy constraints: "
@@ -635,8 +636,8 @@ MATCHER_P3(IsNotSatisfiedWith, value, expected_reason, context, "") {
   Context context_copy = context;
 
   std::string var_name = std::format("{}::IsNotSatisfiedWith", arg.Typename());
-  moriarty::librarian::AnalyzeVariableContext ctx(
-      var_name, context_copy.Variables(), context_copy.Values());
+  moriarty::ConstraintContext ctx(var_name, context_copy.Variables(),
+                                  context_copy.Values());
 
   if (auto actual_reason = arg.CheckValue(ctx, ValueType(value))) {
     if (!testing::Value(actual_reason.Reason(),

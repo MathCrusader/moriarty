@@ -195,7 +195,7 @@ struct ValidateOptions {
 
 // ConstraintContext
 //
-// All context that CustomConstraints have access to.
+// All context that Constraints (including CustomConstraints) have access to.
 class ConstraintContext : public moriarty_internal::NameContext,
                           public moriarty_internal::ViewOnlyContext {
  public:
@@ -203,6 +203,9 @@ class ConstraintContext : public moriarty_internal::NameContext,
                     Ref<const moriarty_internal::VariableSet> variables,
                     Ref<const moriarty_internal::ValueSet> values);
   ConstraintContext(std::string_view name, const ViewOnlyContext& other);
+  template <typename T>
+  explicit ConstraintContext(const T& other)
+      : NameContext(other.GetVariableName()), ViewOnlyContext(other) {}
 
   // ********************************************
   // ** See parent classes for more functions. **

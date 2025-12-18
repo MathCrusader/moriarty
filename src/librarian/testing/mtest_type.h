@@ -24,6 +24,7 @@
 
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
+#include "src/context.h"
 #include "src/contexts/librarian_context.h"
 #include "src/librarian/mvariable.h"
 #include "src/variables/minteger.h"
@@ -69,9 +70,8 @@ class LastDigit : public moriarty::MConstraint {
     return std::format("the last digit {}", digit_.ToString());
   }
 
-  moriarty::ConstraintViolation CheckValue(
-      moriarty::librarian::AnalyzeVariableContext ctx,
-      const TestType& value) const {
+  moriarty::ConstraintViolation CheckValue(moriarty::ConstraintContext ctx,
+                                           const TestType& value) const {
     auto check = digit_.CheckValue(ctx, value.value % 10);
     if (check.IsOk()) return moriarty::ConstraintViolation::None();
     return moriarty::ConstraintViolation(
@@ -94,9 +94,8 @@ class NumberOfDigits : public moriarty::MConstraint {
     return std::format("the number of digits {}", num_digits_.ToString());
   }
 
-  moriarty::ConstraintViolation CheckValue(
-      moriarty::librarian::AnalyzeVariableContext ctx,
-      const TestType& value) const {
+  moriarty::ConstraintViolation CheckValue(moriarty::ConstraintContext ctx,
+                                           const TestType& value) const {
     auto check =
         num_digits_.CheckValue(ctx, std::to_string(value.value).size());
     if (check.IsOk()) return moriarty::ConstraintViolation::None();

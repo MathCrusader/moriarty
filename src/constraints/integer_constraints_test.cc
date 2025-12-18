@@ -16,14 +16,14 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/contexts/librarian_context.h"
+#include "src/context.h"
 #include "src/librarian/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
 namespace {
 
-using ::moriarty::librarian::AnalyzeVariableContext;
+using ::moriarty::ConstraintContext;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::HasConstraintViolation;
 using ::moriarty_testing::HasNoConstraintViolation;
@@ -34,7 +34,7 @@ using ::testing::UnorderedElementsAre;
 TEST(IntegerConstraintsTest, ModCheckValue) {
   auto context = Context().WithValue<MInteger>("X", 7);
 
-  AnalyzeVariableContext ctx("N", context.Variables(), context.Values());
+  ConstraintContext ctx("N", context.Variables(), context.Values());
 
   EXPECT_THAT(Mod(1, 10).CheckValue(ctx, 11), HasNoConstraintViolation());
   EXPECT_THAT(Mod(0, 10).CheckValue(ctx, 110), HasNoConstraintViolation());

@@ -57,7 +57,7 @@ TEST(GraphConstraintsTest, ToStringLooksReasonable) {
 TEST(GraphConstraintsTest, UnsatisfiedReasonLooksReasonable) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  librarian::AnalyzeVariableContext ctx("N", variables, values);
+  ConstraintContext ctx("N", variables, values);
 
   EXPECT_THAT(NumNodes(Between(1, 10)).CheckValue(ctx, Graph(25)),
               HasConstraintViolation(
@@ -148,7 +148,7 @@ Graph<NoEdgeLabel, NoNodeLabel> CreateGraph(int64_t num_nodes,
 TEST(GraphConstraintsTest, NumNodesAndNumEdgesSatisfiedWithWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  librarian::AnalyzeVariableContext ctx("N", variables, values);
+  ConstraintContext ctx("N", variables, values);
 
   EXPECT_THAT(NumNodes(Between(1, 100)).CheckValue(ctx, CreateGraph(5, 3)),
               HasNoConstraintViolation());
@@ -163,7 +163,7 @@ TEST(GraphConstraintsTest, NumNodesAndNumEdgesSatisfiedWithWorks) {
 TEST(GraphConstraintsTest, NodeAndEdgeLabelsSatisfiedWithWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  librarian::AnalyzeVariableContext ctx("N", variables, values);
+  ConstraintContext ctx("N", variables, values);
 
   Graph<NoEdgeLabel, int64_t> graph_with_node_labels(3);
   graph_with_node_labels.SetNodeLabels({5, 8, 2});

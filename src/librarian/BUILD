@@ -30,8 +30,8 @@ cc_library(
     name = "constraint_handler",
     hdrs = ["constraint_handler.h"],
     deps = [
+        "//src:context",
         "//src/constraints:constraint_violation",
-        "//src/contexts:librarian_context",
         "//src/librarian/util:cow_ptr",
         "//src/librarian/util:ref",
     ],
@@ -105,8 +105,8 @@ cc_test(
     srcs = ["constraint_handler_test.cc"],
     deps = [
         ":constraint_handler",
+        "//src:context",
         "//src/constraints:constraint_violation",
-        "//src/contexts:librarian_context",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "//src/variables:mstring",

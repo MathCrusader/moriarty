@@ -22,7 +22,7 @@
 #include <string_view>
 
 #include "src/constraints/constraint_violation.h"
-#include "src/contexts/librarian_context.h"
+#include "src/context.h"
 #include "src/internal/simple_pattern.h"
 #include "src/librarian/util/debug_string.h"
 #include "src/variables/minteger.h"
@@ -106,8 +106,8 @@ moriarty_internal::SimplePattern SimplePattern::GetCompiledPattern() const {
   return pattern_;
 }
 
-ConstraintViolation SimplePattern::CheckValue(
-    librarian::AnalyzeVariableContext ctx, std::string_view value) const {
+ConstraintViolation SimplePattern::CheckValue(ConstraintContext ctx,
+                                              std::string_view value) const {
   auto lookup = [&](std::string_view var) -> int64_t {
     return ctx.GetValue<MInteger>(var);
   };

@@ -19,14 +19,14 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/contexts/librarian_context.h"
+#include "src/context.h"
 #include "src/librarian/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
 namespace {
 
-using ::moriarty::librarian::AnalyzeVariableContext;
+using ::moriarty::ConstraintContext;
 using ::moriarty_testing::Context;
 using ::moriarty_testing::HasConstraintViolation;
 using ::moriarty_testing::HasNoConstraintViolation;
@@ -192,7 +192,7 @@ TEST(SimplePatternTest, IsSatisfiedWithShouldWork) {
   // See moriarty_internal::SimplePattern class for a more exhaustive set of
   // tests.
   Context context;
-  AnalyzeVariableContext ctx("test", context.Variables(), context.Values());
+  ConstraintContext ctx("test", context.Variables(), context.Values());
   {
     EXPECT_THAT(SimplePattern("[a-z]*").CheckValue(ctx, ""),
                 HasNoConstraintViolation());
@@ -238,7 +238,7 @@ TEST(SimplePatternTest, IsSatisfiedWithIncludingVariablesShouldWork) {
   // tests.
   Context context =
       Context().WithValue<MInteger>("N", 2).WithValue<MInteger>("X", 7);
-  AnalyzeVariableContext ctx("test", context.Variables(), context.Values());
+  ConstraintContext ctx("test", context.Variables(), context.Values());
   EXPECT_THAT(SimplePattern("[a-z]{N, X}").CheckValue(ctx, "asdf"),
               HasNoConstraintViolation());
   EXPECT_THAT(SimplePattern("[a-z]{2 * N}").CheckValue(ctx, "asdf"),

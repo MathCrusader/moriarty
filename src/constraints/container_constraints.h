@@ -25,7 +25,6 @@
 #include "absl/container/flat_hash_map.h"
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
-#include "src/contexts/librarian_context.h"
 #include "src/librarian/util/debug_string.h"
 #include "src/variables/minteger.h"
 
@@ -56,7 +55,7 @@ class Length : public MConstraint {
 
   // Determines if the container has the correct length.
   template <typename Container>
-  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
+  ConstraintViolation CheckValue(ConstraintContext ctx,
                                  const Container& value) const;
 
   // Returns a string representation of this constraint.
@@ -85,7 +84,7 @@ class Elements : public MConstraint {
 
   // Determines if the container's elements satisfy all constraints.
   ConstraintViolation CheckValue(
-      librarian::AnalyzeVariableContext ctx,
+      ConstraintContext ctx,
       const std::vector<typename MElementType::value_type>& value) const;
 
   // Returns a string representation of this constraint.
@@ -114,7 +113,7 @@ class Element : public MConstraint {
   [[nodiscard]] MElementType GetConstraints() const;
 
   // Determines if an object satisfy all constraints.
-  ConstraintViolation CheckValue(librarian::AnalyzeVariableContext ctx,
+  ConstraintViolation CheckValue(ConstraintContext ctx,
                                  const MElementType::value_type& value) const;
 
   // Returns a string representation of this constraint.
@@ -182,7 +181,7 @@ Length::Length(Constraints&&... constraints)
     : length_(std::forward<Constraints>(constraints)...) {}
 
 template <typename Container>
-ConstraintViolation Length::CheckValue(librarian::AnalyzeVariableContext ctx,
+ConstraintViolation Length::CheckValue(ConstraintContext ctx,
                                        const Container& value) const {
   auto check = length_.CheckValue(ctx, static_cast<int64_t>(value.size()));
   if (check.IsOk()) return ConstraintViolation::None();
@@ -206,7 +205,7 @@ MElementType Elements<MElementType>::GetConstraints() const {
 
 template <typename MElementType>
 ConstraintViolation Elements<MElementType>::CheckValue(
-    librarian::AnalyzeVariableContext ctx,
+    ConstraintContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
   for (int idx = -1; const auto& elem : value) {
     idx++;
@@ -244,8 +243,7 @@ MElementType Element<I, MElementType>::GetConstraints() const {
 
 template <size_t I, typename MElementType>
 ConstraintViolation Element<I, MElementType>::CheckValue(
-    librarian::AnalyzeVariableContext ctx,
-    const MElementType::value_type& value) const {
+    ConstraintContext ctx, const MElementType::value_type& value) const {
   auto check = element_constraints_.CheckValue(ctx, value);
   if (check.IsOk()) return ConstraintViolation::None();
   return ConstraintViolation(std::format("tuple index {} (which is {}) {}", I,

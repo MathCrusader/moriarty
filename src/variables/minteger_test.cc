@@ -27,7 +27,7 @@
 #include "src/constraints/integer_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"
-#include "src/contexts/librarian_context.h"
+#include "src/context.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/errors.h"
@@ -234,7 +234,7 @@ TEST(MIntegerTest, IsSatisfiedWithWithExpressionsShouldWorkForBadData) {
 
   moriarty_internal::ValueSet values;
   moriarty_internal::VariableSet variables;
-  librarian::AnalyzeVariableContext ctx("_", variables, values);
+  ConstraintContext ctx("_", variables, values);
   // Could be VariableNotFound as well (impl detail)
   EXPECT_THAT(
       [&] { (void)MInteger(Between(1, "3 * N + 1")).CheckValue(ctx, 2); },

@@ -63,7 +63,7 @@ cc_library(
     hdrs = ["container_constraints.h"],
     deps = [
         ":base_constraints",
-        "//src/contexts:librarian_context",
+        "//src:context",
         "//src/librarian/util:debug_string",
         "//src/variables:minteger",
         "@abseil-cpp//absl/container:flat_hash_map",
@@ -77,7 +77,6 @@ cc_library(
     deps = [
         ":base_constraints",
         "//src:context",
-        "//src/contexts:librarian_context",
         "//src/librarian/util:debug_string",
     ],
 )
@@ -88,7 +87,7 @@ cc_library(
     hdrs = ["graph_constraints.h"],
     deps = [
         ":base_constraints",
-        "//src/contexts:librarian_context",
+        "//src:context",
         "//src/librarian/util:debug_string",
         "//src/types:graph",
         "//src/variables:minteger",
@@ -101,7 +100,7 @@ cc_library(
     hdrs = ["integer_constraints.h"],
     deps = [
         ":base_constraints",
-        "//src/contexts:librarian_context",
+        "//src:context",
         "//src/internal:expressions",
         "//src/librarian/util:debug_string",
     ],
@@ -113,6 +112,7 @@ cc_library(
     hdrs = ["io_constraints.h"],
     deps = [
         ":base_constraints",
+        "//src:context",
         "//src/librarian:io_config",
     ],
 )
@@ -123,6 +123,7 @@ cc_library(
     hdrs = ["numeric_constraints.h"],
     deps = [
         ":base_constraints",
+        "//src:context",
         "//src/contexts:librarian_context",
         "//src/internal:range",
         "//src/librarian:errors",
@@ -147,7 +148,7 @@ cc_library(
     hdrs = ["string_constraints.h"],
     deps = [
         ":base_constraints",
-        "//src/contexts:librarian_context",
+        "//src:context",
         "//src/internal:simple_pattern",
         "//src/variables:minteger",
         "@abseil-cpp//absl/strings",
@@ -208,6 +209,7 @@ cc_test(
     srcs = ["integer_constraints_test.cc"],
     deps = [
         ":integer_constraints",
+        "//src:context",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
@@ -252,7 +254,7 @@ cc_test(
     srcs = ["string_constraints_test.cc"],
     deps = [
         ":string_constraints",
-        "//src/contexts:librarian_context",
+        "//src:context",
         "//src/librarian/testing:gtest_helpers",
         "@abseil-cpp//absl/container:flat_hash_set",
         "@googletest//:gtest_main",

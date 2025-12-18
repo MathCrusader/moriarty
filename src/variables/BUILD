@@ -169,6 +169,7 @@ cc_test(
         ":minteger",
         ":mstring",
         ":mtuple",
+        "//src:context",
         "//src/constraints:base_constraints",
         "//src/constraints:container_constraints",
         "//src/constraints:numeric_constraints",
@@ -185,6 +186,7 @@ cc_test(
     srcs = ["minteger_test.cc"],
     deps = [
         ":minteger",
+        "//src:context",
         "//src/constraints:base_constraints",
         "//src/constraints:numeric_constraints",
         "//src/constraints:size_constraints",
@@ -232,9 +234,9 @@ cc_test(
     deps = [
         ":minteger",
         ":mreal",
+        "//src:context",
         "//src/constraints:base_constraints",
         "//src/constraints:numeric_constraints",
-        "//src/contexts:librarian_context",
         "//src/librarian/testing:gtest_helpers",
         "//src/types:real",
         "@googletest//:gtest_main",
