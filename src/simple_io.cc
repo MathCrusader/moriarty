@@ -136,7 +136,7 @@ void WriteLine(WriteContext ctx, const SimpleIO::Line& line,
     WriteToken(WriteContext(ctx, ss), token, test_case);
     std::string lines = ss.str();
     if (lines.empty() || lines.back() != '\n') lines += '\n';
-    int newlines = std::count(lines.begin(), lines.end(), '\n');
+    int newlines = std::ranges::count(lines, '\n');
     if (newlines != line_count) {
       throw std::runtime_error(std::format(
           "Expected {} lines in writeout of variable {}, but got {}",

@@ -99,7 +99,7 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
   //
   // E.g., MArray<MInteger>(Elements<MInteger>(Between(1, 10)), Length(15))
   template <typename... Constraints>
-    requires(ConstraintFor<MArray, Constraints> && ...)
+    requires(ConstraintFor<MArray<MElementType>, Constraints> && ...)
   explicit MArray(Constraints&&... constraints);
 
   // Create an MArray with this set of constraints on each element.
@@ -407,7 +407,7 @@ auto MArray<MElementType>::GenerateImpl(
   }
 
   if (core_constraints_.ComparatorConstrained())
-    std::sort(res.begin(), res.end(), core_constraints_.Comparator());
+    std::ranges::sort(res, core_constraints_.Comparator());
 
   return res;
 }

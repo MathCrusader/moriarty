@@ -396,7 +396,7 @@ std::string OneOf<T>::ToString() const {
 
 template <typename T>
 ConstraintViolation OneOf<T>::CheckValue(const T& value) const {
-  if (std::find(options_.begin(), options_.end(), value) != options_.end())
+  if (std::ranges::find(options_, value) != options_.end())
     return ConstraintViolation::None();
 
   std::string options = "{";

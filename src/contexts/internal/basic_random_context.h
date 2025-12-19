@@ -16,6 +16,7 @@
 #ifndef MORIARTY_CONTEXTS_INTERNAL_BASIC_RANDOM_CONTEXT_H_
 #define MORIARTY_CONTEXTS_INTERNAL_BASIC_RANDOM_CONTEXT_H_
 
+#include <algorithm>
 #include <cstdint>
 #include <format>
 #include <iterator>
@@ -309,7 +310,7 @@ std::vector<T> BasicRandomContext::RandomComposition(T n, int k,
   if (n == 0) return std::vector<T>(k, 0);
 
   auto barriers = DistinctIntegers(n + (k - 1), k - 1);
-  std::sort(barriers.begin(), barriers.end());
+  std::ranges::sort(barriers);
 
   std::vector<T> result;
   result.reserve(k);

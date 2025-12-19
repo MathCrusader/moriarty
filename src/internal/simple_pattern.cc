@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <format>
+#include <iterator>
 #include <limits>
 #include <optional>
 #include <string>
@@ -214,11 +215,15 @@ std::vector<std::string> RepeatedCharSet::GetDependencies() const {
   std::vector<std::string> dependencies;
   if (min_) {
     auto min_deps = min_->GetDependencies();
-    dependencies.insert(dependencies.end(), min_deps.begin(), min_deps.end());
+    dependencies.insert(dependencies.end(),
+                        std::make_move_iterator(min_deps.begin()),
+                        std::make_move_iterator(min_deps.end()));
   }
   if (max_) {
     auto max_deps = max_->GetDependencies();
-    dependencies.insert(dependencies.end(), max_deps.begin(), max_deps.end());
+    dependencies.insert(dependencies.end(),
+                        std::make_move_iterator(max_deps.begin()),
+                        std::make_move_iterator(max_deps.end()));
   }
   return dependencies;
 }
@@ -551,13 +556,16 @@ std::vector<std::string> ExtractDependencies(const PatternNode& node) {
   std::vector<std::string> dependencies;
   for (const PatternNode& subpattern : node.subpatterns) {
     std::vector<std::string> sub_dependencies = ExtractDependencies(subpattern);
-    dependencies.insert(dependencies.end(), sub_dependencies.begin(),
-                        sub_dependencies.end());
+    dependencies.insert(dependencies.end(),
+                        std::make_move_iterator(sub_dependencies.begin()),
+                        std::make_move_iterator(sub_dependencies.end()));
   }
   if (node.repeated_character_set) {
     std::vector<std::string> deps =
         node.repeated_character_set->GetDependencies();
-    dependencies.insert(dependencies.end(), deps.begin(), deps.end());
+    dependencies.insert(dependencies.end(),
+                        std::make_move_iterator(deps.begin()),
+                        std::make_move_iterator(deps.end()));
   }
 
   return dependencies;

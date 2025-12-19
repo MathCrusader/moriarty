@@ -454,12 +454,13 @@ TEST(MArrayTest, ExactlyConstraintWorks) {
 }
 
 MATCHER(IsSorted, "is sorted in ascending order") {
-  return std::is_sorted(arg.begin(), arg.end());
+  return std::ranges::is_sorted(arg);
 }
+
 MATCHER_P(IsSortedBy, comp, "is sorted by custom comparator") {
-  return std::is_sorted(
-      arg.begin(), arg.end(),
-      [&](const auto& a, const auto& b) { return std::invoke(comp, a, b); });
+  return std::ranges::is_sorted(arg, [&](const auto& a, const auto& b) {
+    return std::invoke(comp, a, b);
+  });
 }
 
 TEST(MArrayTest, SortedConstraintWorks) {

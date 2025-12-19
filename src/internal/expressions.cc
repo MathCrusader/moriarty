@@ -332,11 +332,9 @@ absl::int128 ExpressionProgram::EvaluateNode(size_t index,
         }
         switch (data.function) {
           case MultiArgFunction::kMin:
-            return *std::min_element(evaluated_args.begin(),
-                                     evaluated_args.end());
+            return *std::ranges::min_element(evaluated_args);
           case MultiArgFunction::kMax:
-            return *std::max_element(evaluated_args.begin(),
-                                     evaluated_args.end());
+            return *std::ranges::max_element(evaluated_args);
         }
       }
       throw ExpressionParseError(
@@ -541,7 +539,7 @@ void PushScopeToken(Token token, std::stack<Operator>& operators,
   operators.pop();
 
   if (op.op == OperatorT::kFunctionStartScope) {
-    std::reverse(args.begin(), args.end());
+    std::ranges::reverse(args);
     operands.push(program.AddFunctionNode(op.str, std::move(args), arg_str));
     return;
   }

@@ -15,6 +15,7 @@
 #include "src/constraints/integer_constraints.h"
 
 #include <cstdint>
+#include <iterator>
 #include <string>
 #include <string_view>
 
@@ -74,9 +75,11 @@ ConstraintViolation Mod::CheckValue(ConstraintContext ctx,
 std::vector<std::string> Mod::GetDependencies() const {
   std::vector<std::string> deps;
   auto rem_deps = remainder_.GetDependencies();
-  deps.insert(deps.end(), rem_deps.begin(), rem_deps.end());
+  deps.insert(deps.end(), std::make_move_iterator(rem_deps.begin()),
+              std::make_move_iterator(rem_deps.end()));
   auto mod_deps = modulus_.GetDependencies();
-  deps.insert(deps.end(), mod_deps.begin(), mod_deps.end());
+  deps.insert(deps.end(), std::make_move_iterator(mod_deps.begin()),
+              std::make_move_iterator(mod_deps.end()));
   return deps;
 }
 

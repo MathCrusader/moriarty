@@ -429,7 +429,7 @@ bool OneOfNumeric::ConstrainOptions(const OneOfNumeric& other) {
                        other.expr_options_.end());
   dependencies_.insert(dependencies_.end(), other.dependencies_.begin(),
                        other.dependencies_.end());
-  std::sort(dependencies_.begin(), dependencies_.end());
+  std::ranges::sort(dependencies_);
   dependencies_.erase(std::unique(dependencies_.begin(), dependencies_.end()),
                       dependencies_.end());
 
@@ -529,7 +529,7 @@ std::vector<Real> OneOfNumeric::GetOptions(
     std::vector<Real> expr_options;
     for (const Expression& expr : oneof_list)
       expr_options.push_back(Real(ctx.EvaluateExpression(expr)));
-    std::sort(expr_options.begin(), expr_options.end());
+    std::ranges::sort(expr_options);
     expr_options.erase(std::unique(expr_options.begin(), expr_options.end()),
                        expr_options.end());
     if (!valid_options) {
@@ -561,7 +561,7 @@ std::vector<Real> OneOfNumeric::GetOptionsLookup(
     std::vector<Real> expr_options;
     for (const Expression& expr : oneof_list)
       expr_options.push_back(Real(expr.Evaluate(lookup_variable)));
-    std::sort(expr_options.begin(), expr_options.end());
+    std::ranges::sort(expr_options);
     expr_options.erase(std::unique(expr_options.begin(), expr_options.end()),
                        expr_options.end());
     if (!valid_options) {
@@ -593,10 +593,9 @@ ConstraintViolation OneOfNumeric::CheckValue(ConstraintContext ctx,
   }
 
   for (const std::vector<Expression>& option_list : expr_options_) {
-    auto it = std::find_if(option_list.begin(), option_list.end(),
-                           [&](const Expression& expr) {
-                             return ctx.EvaluateExpression(expr) == value;
-                           });
+    auto it = std::ranges::find_if(option_list, [&](const Expression& expr) {
+      return ctx.EvaluateExpression(expr) == value;
+    });
     if (it == option_list.end()) {
       return ConstraintViolation(
           std::format("{} is not {}", DebugString(value),
@@ -614,20 +613,18 @@ ConstraintViolation OneOfNumeric::CheckValue(ConstraintContext ctx,
 ConstraintViolation OneOfNumeric::CheckValue(ConstraintContext ctx,
                                              double value) const {
   if (numeric_options_.HasBeenConstrained() &&
-      std::find_if(numeric_options_.GetOptions().begin(),
-                   numeric_options_.GetOptions().end(),
-                   [&](const Real& option) {
-                     return CloseEnough(option.GetApproxValue(), value);
-                   }) == numeric_options_.GetOptions().end()) {
+      std::ranges::find_if(numeric_options_.GetOptions(),
+                           [&](const Real& option) {
+                             return CloseEnough(option.GetApproxValue(), value);
+                           }) == numeric_options_.GetOptions().end()) {
     return ConstraintViolation(std::format(
         "{} is not {}", value, OptionString(expr_options_, numeric_options_)));
   }
 
   for (const std::vector<Expression>& option_list : expr_options_) {
-    auto it = std::find_if(
-        option_list.begin(), option_list.end(), [&](const Expression& expr) {
-          return CloseEnough(ctx.EvaluateExpression(expr), value);
-        });
+    auto it = std::ranges::find_if(option_list, [&](const Expression& expr) {
+      return CloseEnough(ctx.EvaluateExpression(expr), value);
+    });
     if (it == option_list.end()) {
       return ConstraintViolation(
           std::format("{} is not {}", DebugString(value),

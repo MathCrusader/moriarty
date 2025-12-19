@@ -56,9 +56,8 @@ MString& MString::AddConstraint(Alphabet constraint) {
   constraints.touched |= CoreConstraints::Flags::kAlphabet;
   // We later assume that there are no duplicates in the alphabet.
   std::string options = constraint.GetAlphabet();
-  std::sort(options.begin(), options.end());
-  auto last = std::unique(options.begin(), options.end());
-  options.erase(last, options.end());
+  std::ranges::sort(options);
+  options.erase(std::unique(options.begin(), options.end()), options.end());
 
   if (!constraints.alphabet.ConstrainOptions(options))
     throw ImpossibleToSatisfy(ToString(), constraint.ToString());
