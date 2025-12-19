@@ -302,8 +302,9 @@ class SimplePatternEvaluationError : public GenericMoriartyError {
   struct PatternTag {};
   explicit SimplePatternEvaluationError(std::string_view pattern,
                                         std::string_view message, PatternTag)
-      : GenericMoriartyError(std::format(
-            "Error parsing SimplePattern '{}'\nError: {}", pattern, message)),
+      : GenericMoriartyError(
+            std::format("Error evaluating SimplePattern '{}'\nError: {}",
+                        pattern, message)),
         pattern_(pattern),
         message_(message) {}
 
@@ -318,6 +319,60 @@ class SimplePatternEvaluationError : public GenericMoriartyError {
 
  private:
   std::string pattern_;
+  std::string message_;
+};
+
+// ExpressionParseError
+//
+// Thrown when there is an error parsing an Expression.
+class ExpressionParseError : public GenericMoriartyError {
+ public:
+  struct ExpressionTag {};
+  explicit ExpressionParseError(ExpressionTag, std::string_view expression,
+                                std::string_view message)
+      : GenericMoriartyError(std::format(
+            "Error parsing Expression '{}'\nError: {}", expression, message)),
+        expression_(expression),
+        message_(message) {}
+
+  template <typename... Args>
+  explicit ExpressionParseError(std::format_string<Args...> fmt, Args&&... args)
+      : GenericMoriartyError(std::format(fmt, std::forward<Args>(args)...)),
+        message_(std::format(fmt, std::forward<Args>(args)...)) {}
+
+  const std::string& Expression() const { return expression_; }
+  const std::string& Message() const { return message_; }
+
+ private:
+  std::string expression_;
+  std::string message_;
+};
+
+// ExpressionEvaluationError
+//
+// Thrown when there is an error evaluating an Expression.
+class ExpressionEvaluationError : public GenericMoriartyError {
+ public:
+  struct ExpressionTag {};
+  explicit ExpressionEvaluationError(ExpressionTag, std::string_view expression,
+                                     std::string_view message)
+      : GenericMoriartyError(
+            std::format("Error evaluating Expression '{}'\nError: {}",
+                        expression, message)),
+        expression_(expression),
+        message_(message) {}
+
+  template <typename... Args>
+  explicit ExpressionEvaluationError(std::format_string<Args...> fmt,
+                                     Args&&... args)
+      : GenericMoriartyError(std::format(fmt, std::forward<Args>(args)...)),
+        message_(std::format(fmt, std::forward<Args>(args)...)) {}
+
+  const std::string& Expression() const { return expression_; }
+  const std::string& Message() const { return message_; }
+
+ private:
+  std::string expression_;
   std::string message_;
 };
 

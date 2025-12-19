@@ -15,7 +15,6 @@
 #include "src/internal/expressions.h"
 
 #include <cstdint>
-#include <exception>
 #include <format>
 #include <limits>
 #include <stdexcept>
@@ -26,6 +25,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/librarian/errors.h"
 
 namespace moriarty {
 namespace {
@@ -41,7 +41,7 @@ MATCHER_P(DoesNotParse, reason, "expression should not be parseable") {
   std::string str(arg);
   try {
     auto x = Expression(str);
-  } catch (const std::invalid_argument& e) {
+  } catch (const ExpressionParseError& e) {
     if (testing::Matches(HasSubstr(reason))(e.what())) return true;
     *result_listener
         << "Expression failed to parse, but didn't have the right reason; "
@@ -58,7 +58,7 @@ MATCHER_P(EvaluatesTo, value,
   std::string str(arg);
   try {
     auto x = Expression(str);  // Only to check for parse issues
-  } catch (std::exception& e) {
+  } catch (const ExpressionParseError& e) {
     *result_listener << "Expression failed to parse; " << e.what();
     return false;
   }
@@ -75,7 +75,7 @@ MATCHER_P2(EvaluatesToWithVars, value, variables,
   std::string str(arg);
   try {
     auto x = Expression(str);  // Only to check for parse issues
-  } catch (std::exception& e) {
+  } catch (const ExpressionParseError& e) {
     *result_listener << "Expression failed to parse; " << e.what();
     return false;
   }
@@ -92,12 +92,11 @@ MATCHER_P2(EvaluatesToWithVars, value, variables,
 }
 
 MATCHER_P(EvaluateThrowsInvalid, value,
-          "expression should be parsable, but throws an std::invalid_argument "
-          "during evaluation") {
+          "expression should be parsable, but should fail to evaluate") {
   std::string str(arg);
   try {
     auto x = Expression(str);  // Only to check for parse issues
-  } catch (std::exception& e) {
+  } catch (const ExpressionParseError& e) {
     *result_listener << "Expression failed to parse; " << e.what();
     return false;
   }
@@ -106,9 +105,8 @@ MATCHER_P(EvaluateThrowsInvalid, value,
     Expression expr(str);
     (void)expr.Evaluate();
   };
-  // .at() throws std::out_of_range if the key is not found.
-  return testing::ExplainMatchResult(testing::Throws<std::invalid_argument>(),
-                                     run, result_listener);
+  return testing::ExplainMatchResult(
+      testing::Throws<ExpressionEvaluationError>(), run, result_listener);
 }
 
 MATCHER_P2(EvaluateThrowsMissingVariable, value, variables,
@@ -117,7 +115,7 @@ MATCHER_P2(EvaluateThrowsMissingVariable, value, variables,
   std::string str(arg);
   try {
     auto x = Expression(str);  // Only to check for parse issues
-  } catch (std::exception& e) {
+  } catch (const ExpressionParseError& e) {
     *result_listener << "Expression failed to parse; " << e.what();
     return false;
   }

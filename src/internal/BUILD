@@ -69,6 +69,7 @@ cc_library(
         "expressions.h",
     ],
     deps = [
+        "//src/librarian:errors",
         "@abseil-cpp//absl/numeric:int128",
         "@abseil-cpp//absl/strings",
     ],
@@ -186,11 +187,10 @@ cc_test(
 cc_test(
     name = "expressions_test",
     size = "small",
-    srcs = [
-        "expressions_test.cc",
-    ],
+    srcs = ["expressions_test.cc"],
     deps = [
         ":expressions",
+        "//src/librarian:errors",
         "@googletest//:gtest_main",
     ],
 )

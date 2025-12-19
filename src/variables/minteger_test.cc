@@ -256,11 +256,11 @@ TEST(MIntegerTest, AtMostLargerThanAtLeastShouldFail) {
 
 TEST(MIntegerTest, AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {
   EXPECT_THAT([] { MInteger(AtLeast("3 + ")); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
   EXPECT_THAT([] { MInteger(AtMost("+ X +")); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
   EXPECT_THAT([] { MInteger(Between("N + 2", "* M + M")); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
 }
 
 TEST(MIntegerTest, AtMostAndAtLeastWithExpressionsShouldLimitTheOutputRange) {
@@ -426,14 +426,14 @@ TEST(MIntegerTest, InvalidSizeCombinationsShouldThrow) {
 
 TEST(MIntegerTest, InvalidExpressionsShouldFail) {
   EXPECT_THAT([] { (void)Generate(MInteger(Exactly("N + "))); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
   EXPECT_THAT([] { (void)Generate(MInteger(AtMost("N + "))); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
   EXPECT_THAT([] { (void)Generate(MInteger(AtLeast("N + "))); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
   EXPECT_THAT(
       [] { (void)Generate(MInteger(Between("& x", "N + "))); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("Unknown character")));
+      ThrowsMessage<ExpressionParseError>(HasSubstr("Unknown character")));
 }
 
 TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithNoVariablesShouldWork) {

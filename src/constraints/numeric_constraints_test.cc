@@ -84,22 +84,22 @@ TEST(NumericConstraintsTest, InvalidBetweenShouldThrow) {
 
 TEST(NumericConstraintsTest, InvalidExpressionsShouldThrow) {
   {
-    EXPECT_THAT([] { ExactlyNumeric("2 *"); }, Throws<std::invalid_argument>());
+    EXPECT_THAT([] { ExactlyNumeric("2 *"); }, Throws<ExpressionParseError>());
     EXPECT_THAT([] { OneOfNumeric(std::vector<std::string_view>{"3", "2 *"}); },
-                Throws<std::invalid_argument>());
-    EXPECT_THAT([] { Between("2 *", 5); }, Throws<std::invalid_argument>());
-    EXPECT_THAT([] { Between(5, "2 *"); }, Throws<std::invalid_argument>());
-    EXPECT_THAT([] { AtMost("2 *"); }, Throws<std::invalid_argument>());
-    EXPECT_THAT([] { AtLeast("2 *"); }, Throws<std::invalid_argument>());
+                Throws<ExpressionParseError>());
+    EXPECT_THAT([] { Between("2 *", 5); }, Throws<ExpressionParseError>());
+    EXPECT_THAT([] { Between(5, "2 *"); }, Throws<ExpressionParseError>());
+    EXPECT_THAT([] { AtMost("2 *"); }, Throws<ExpressionParseError>());
+    EXPECT_THAT([] { AtLeast("2 *"); }, Throws<ExpressionParseError>());
   }
   {
-    EXPECT_THAT([] { ExactlyNumeric(""); }, Throws<std::invalid_argument>());
+    EXPECT_THAT([] { ExactlyNumeric(""); }, Throws<ExpressionParseError>());
     EXPECT_THAT([] { OneOfNumeric(std::vector<std::string_view>{""}); },
-                Throws<std::invalid_argument>());
-    EXPECT_THAT([] { Between("", 5); }, Throws<std::invalid_argument>());
-    EXPECT_THAT([] { Between(5, ""); }, Throws<std::invalid_argument>());
-    EXPECT_THAT([] { AtMost(""); }, Throws<std::invalid_argument>());
-    EXPECT_THAT([] { AtLeast(""); }, Throws<std::invalid_argument>());
+                Throws<ExpressionParseError>());
+    EXPECT_THAT([] { Between("", 5); }, Throws<ExpressionParseError>());
+    EXPECT_THAT([] { Between(5, ""); }, Throws<ExpressionParseError>());
+    EXPECT_THAT([] { AtMost(""); }, Throws<ExpressionParseError>());
+    EXPECT_THAT([] { AtLeast(""); }, Throws<ExpressionParseError>());
   }
 }
 

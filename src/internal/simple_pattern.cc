@@ -21,7 +21,6 @@
 #include <format>
 #include <limits>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -292,7 +291,7 @@ RepetitionRange ParseRepetitionBody(std::string_view repetition) {
   } catch (const SimplePatternParseError& e) {
     throw SimplePatternParseError(
         "Failed to parse repetition block: '{{{}}}'. {}", repetition, e.what());
-  } catch (const std::invalid_argument& e) {
+  } catch (const ExpressionParseError& e) {
     // Needed for Expression errors. TODO: Remove after Expression uses
     // MoriartyError.
     throw SimplePatternParseError(

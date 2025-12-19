@@ -19,13 +19,11 @@
 #include <cctype>
 #include <cstdint>
 #include <cstdlib>
-#include <exception>
 #include <format>
 #include <limits>
 #include <memory>
 #include <optional>
 #include <stack>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -33,6 +31,7 @@
 
 #include "absl/numeric/int128.h"
 #include "absl/strings/numbers.h"
+#include "src/librarian/errors.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -83,26 +82,27 @@ enum class TokenT {
 absl::int128 Validate(absl::int128 value) {
   if (value < std::numeric_limits<int64_t>::min() ||
       value > std::numeric_limits<int64_t>::max()) {
-    throw std::overflow_error("Expression overflows int64_t");
+    throw ExpressionEvaluationError("Expression overflows int64_t");
   }
   return value;
 }
 
 absl::int128 Divide(absl::int128 lhs, absl::int128 rhs) {
-  if (rhs == 0) throw std::invalid_argument("Division by zero in expression");
+  if (rhs == 0)
+    throw ExpressionEvaluationError("Division by zero in expression");
   return Validate(absl::int128(lhs) / rhs);
 }
 
 absl::int128 Mod(absl::int128 lhs, absl::int128 rhs) {
-  if (rhs == 0) throw std::invalid_argument("Mod by zero in expression");
+  if (rhs == 0) throw ExpressionEvaluationError("Mod by zero in expression");
   return Validate(absl::int128(lhs) % rhs);
 }
 
 absl::int128 Pow(absl::int128 base, absl::int128 exponent) {
   if (exponent < 0)
-    throw std::invalid_argument("exponent must be non-negative in pow()");
+    throw ExpressionEvaluationError("exponent must be non-negative in pow()");
   if (base == 0 && exponent == 0)
-    throw std::invalid_argument("0 to the power of 0 is undefined.");
+    throw ExpressionEvaluationError("0 to the power of 0 is undefined.");
 
   absl::int128 result = 1;
   while (exponent > 0) {
@@ -128,8 +128,8 @@ std::string_view Concat(std::string_view a, std::string_view b) {
   // There's really no generic message we can give here, since it really
   // depends on the exact expression.
   if (a.data() + a.size() != b.data())
-    throw std::invalid_argument(
-        std::format("Cannot parse expression (near `{}` or `{}`)", a, b));
+    throw ExpressionParseError("Cannot parse expression (near `{}` or `{}`)", a,
+                               b);
   return std::string_view(a.data(), b.data() - a.data() + b.size());
 }
 
@@ -171,8 +171,7 @@ const std::vector<std::string>& ExpressionProgram::Dependencies() const {
 size_t ExpressionProgram::AddIntegerNode(std::string_view span) {
   absl::int128 value;
   if (!absl::SimpleAtoi(span, &value)) {
-    throw std::invalid_argument(
-        std::format("Failed to parse integer: {}", span));
+    throw ExpressionParseError("Failed to parse integer: {}", span);
   };
   nodes_.push_back({.kind = NodeKind::kInteger,
                     .span = span,
@@ -208,7 +207,7 @@ size_t ExpressionProgram::AddFunctionNode(std::string_view fn_name_span,
                                           std::vector<size_t> args,
                                           std::string_view total_span) {
   if (fn_name_span.data() != total_span.data())
-    throw std::invalid_argument(
+    throw ExpressionParseError(
         "[Internal error]: function name and arguments mismatch");
   std::string_view x = Trim(fn_name_span);
   if (!x.empty() && x.back() == '(') x.remove_suffix(1);
@@ -217,9 +216,9 @@ size_t ExpressionProgram::AddFunctionNode(std::string_view fn_name_span,
   Node::Payload payload;
   if (auto single = ParseSingleArgFunction(fn_name)) {
     if (args.size() != 1) {
-      throw std::invalid_argument(
-          std::format("{}() expects exactly one argument, received {}", fn_name,
-                      args.size()));
+      throw ExpressionParseError(
+          "{}() expects exactly one argument, received {}", fn_name,
+          args.size());
     }
     nodes_.push_back({
         .kind = NodeKind::kFunction,
@@ -232,8 +231,7 @@ size_t ExpressionProgram::AddFunctionNode(std::string_view fn_name_span,
     });
   } else if (auto multi = ParseMultiArgFunction(fn_name)) {
     if (args.empty()) {
-      throw std::invalid_argument(
-          std::format("{}() expects at least one argument", fn_name));
+      throw ExpressionParseError("{}() expects at least one argument", fn_name);
     }
     nodes_.push_back({
         .kind = NodeKind::kFunction,
@@ -245,7 +243,7 @@ size_t ExpressionProgram::AddFunctionNode(std::string_view fn_name_span,
             },
     });
   } else {
-    throw std::invalid_argument(std::format("Unknown function: {}", fn_name));
+    throw ExpressionParseError("Unknown function: {}", fn_name);
   }
 
   return nodes_.size() - 1;
@@ -341,11 +339,11 @@ absl::int128 ExpressionProgram::EvaluateNode(size_t index,
                                      evaluated_args.end());
         }
       }
-      throw std::invalid_argument(
+      throw ExpressionParseError(
           "[Internal error] Unknown function; constructor should verify.");
     }
   }
-  throw std::runtime_error("[Internal Error] Unknown node kind");
+  throw ExpressionParseError("[Internal Error] Unknown node kind");
 }
 
 namespace {
@@ -395,7 +393,7 @@ int Precedence(OperatorT type) {
     case OperatorT::kStartExpressionScope:
       return 10030;
   }
-  throw std::runtime_error("[Internal Error] Unknown operator");
+  throw ExpressionParseError("[Internal Error] Unknown operator");
 }
 
 bool IsScopeOperator(OperatorT op) {
@@ -421,7 +419,7 @@ void NewApplyOperation(Operator op, ExpressionProgram& program,
                        std::stack<size_t>& operands) {
   auto binary_op = [&](ExpressionProgram::NodeKind kind) {
     if (operands.size() < 2) {
-      throw std::invalid_argument(
+      throw ExpressionParseError(
           "Attempting to do a binary operation, but I don't have 2 "
           "operands.");
     }
@@ -434,9 +432,9 @@ void NewApplyOperation(Operator op, ExpressionProgram& program,
   };
   auto unary_op = [&](ExpressionProgram::NodeKind kind) {
     if (operands.empty()) {
-      throw std::invalid_argument(
-          "Attempting to do a unary operation, but I don't have 2 "
-          "operands.");
+      throw ExpressionParseError(
+          "Attempting to do a unary operation, but I don't have an "
+          "operand.");
     }
     size_t rhs = operands.top();
     operands.pop();
@@ -470,10 +468,10 @@ void NewApplyOperation(Operator op, ExpressionProgram& program,
       unary_op(ExpressionProgram::NodeKind::kUnaryNegate);
       break;
     default:
-      throw std::runtime_error(std::format(
+      throw ExpressionParseError(
           "[Internal Error] Attempting to apply invalid operator. Minimal "
           "context available: {}::{}",
-          op.str, int(op.op)));
+          op.str, int(op.op));
   }
 }
 
@@ -488,9 +486,8 @@ void CollapseScope(std::stack<Operator>& operators,
 std::string ParsingErrorMessage(std::string_view full_expression,
                                 std::string_view current_expression,
                                 std::string_view error) {
-  return std::format("Error while parsing expression near index {}: {}\n{}",
-                     current_expression.data() - full_expression.data(),
-                     full_expression, error);
+  return std::format("Near index {}, Error:\n{}",
+                     current_expression.data() - full_expression.data(), error);
 }
 
 void PushScopeToken(Token token, std::stack<Operator>& operators,
@@ -498,7 +495,7 @@ void PushScopeToken(Token token, std::stack<Operator>& operators,
   auto close_scope_precedence = CloseScopePrecedence(token.kind);
 
   if (!close_scope_precedence) {
-    throw std::runtime_error(
+    throw ExpressionParseError(
         "[Internal Error] PushScopeToken called without a scope token");
   }
 
@@ -507,8 +504,7 @@ void PushScopeToken(Token token, std::stack<Operator>& operators,
   // This means we have an empty string in some substring scope.
   // E.g., "", "()", "max(4,,5)", etc
   if (operands.empty())
-    throw std::invalid_argument("No tokens to parse inside (sub)expression");
-
+    throw ExpressionParseError("No tokens to parse inside (sub)expression");
   if (token.kind == TokenT::kComma) {
     operators.push({OperatorT::kCommaScope, token.str});
     return;
@@ -529,14 +525,14 @@ void PushScopeToken(Token token, std::stack<Operator>& operators,
   if (operators.empty() ||
       *close_scope_precedence != Precedence(operators.top().op)) {
     if (token.kind == TokenT::kEndOfExpression) {
-      throw std::invalid_argument(
+      throw ExpressionParseError(
           "Unexpected end-of-expression. Probably an extra '(' or ','");
     } else {
-      throw std::invalid_argument("')' is missing a corresponding '('");
+      throw ExpressionParseError("')' is missing a corresponding '('");
     }
   }
   if (operands.empty())
-    throw std::invalid_argument("No tokens to parse inside (sub)expression");
+    throw ExpressionParseError("No tokens to parse inside (sub)expression");
 
   Operator op = operators.top();
   arg_str = Concat(op.str, program.NodeSpan(operands.top()), arg_str);
@@ -551,8 +547,7 @@ void PushScopeToken(Token token, std::stack<Operator>& operators,
   }
 
   if (args.size() != 1)
-    throw std::invalid_argument(
-        std::format("Invalid parentheses: {}", arg_str));
+    throw ExpressionParseError("Invalid parentheses: {}", arg_str);
   program.UpdateSpan(args[0], arg_str);
   operands.push(args[0]);
 }
@@ -600,7 +595,7 @@ void PushToken(Token token, std::stack<Operator>& operators,
         return OperatorT::kFunctionStartScope;
 
       default:
-        throw std::runtime_error(
+        throw ExpressionParseError(
             "[Internal error] Unknown operator in token_to_operator");
     }
   };
@@ -640,15 +635,15 @@ bool IsUnaryFollowing(TokenT previous_token) {
       return false;
     case TokenT::kUnaryNegate:
     case TokenT::kUnaryPlus:
-      throw std::invalid_argument(
+      throw ExpressionParseError(
           "Error in expression. Found a unary operator after another unary "
           "operator. --3 is not interpreted as -(-3). Note that `x--3` will "
           "work [x - (-3)], but `(--3)` will not.");
     case TokenT::kEndOfExpression:
-      throw std::runtime_error(
+      throw ExpressionParseError(
           "[Internal Error] IsUnaryFollowing called with kEndOfExpression");
   }
-  throw std::runtime_error("[Internal Error] Unknown token type");
+  throw ExpressionParseError("[Internal Error] Unknown token type");
 }
 
 // Reads the first token in expression. That token is returned, and the new
@@ -705,7 +700,7 @@ std::pair<TokenT, std::string_view> NewConsumeFirstToken(
     return {TokenT::kVariable, expression};
   }
 
-  throw std::invalid_argument("[Parse Error] Unknown character in expression");
+  throw ExpressionParseError("Unknown character in expression: '{}'", current);
 }
 
 }  // namespace
@@ -740,19 +735,24 @@ std::shared_ptr<const ExpressionProgram> ExpressionProgram::Parse(
       PushToken(token, operators, operands, *program);
       remaining = new_suffix;
       prev = token_kind;
-    } catch (std::exception& e) {
-      throw std::invalid_argument(
+    } catch (const ExpressionParseError& e) {
+      throw ExpressionParseError(
+          ExpressionParseError::ExpressionTag{}, original_expression,
+          ParsingErrorMessage(original_expression, remaining, e.what()));
+    } catch (const ExpressionEvaluationError& e) {
+      throw ExpressionParseError(
+          ExpressionParseError::ExpressionTag{}, original_expression,
           ParsingErrorMessage(original_expression, remaining, e.what()));
     }
   }
 
   if (operands.size() != 1 || !operators.empty()) {
-    throw std::runtime_error(
+    throw ExpressionParseError(
         "[Internal Error] Expression does not parse properly, but should "
         "have been caught by another exception.");
   }
   if (program->NodeSpan(operands.top()) != original_expression) {
-    throw std::runtime_error(
+    throw ExpressionParseError(
         "[Internal Error] Expression span does not match the original "
         "string.");
   }
@@ -778,7 +778,7 @@ int64_t Expression::Evaluate(
 
 int64_t Expression::Evaluate() const {
   auto missing = [](std::string_view) -> int64_t {
-    throw std::invalid_argument("Variable not found");
+    throw ExpressionEvaluationError("Variable not found");
   };
   return static_cast<int64_t>(program_->Evaluate(missing));
 }

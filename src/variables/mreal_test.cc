@@ -18,7 +18,6 @@
 #include <cstdint>
 #include <limits>
 #include <optional>
-#include <stdexcept>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -260,11 +259,11 @@ TEST(MRealTest, AtMostLargerThanAtLeastShouldFail) {
 
 TEST(MRealTest, AtMostAtLeastBetweenWithUnparsableExpressionsShouldFail) {
   EXPECT_THAT([] { MReal(AtLeast("3 + ")); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
   EXPECT_THAT([] { MReal(AtMost("+ X +")); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
   EXPECT_THAT([] { MReal(Between("N + 2", "* M + M")); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
 }
 
 TEST(MRealTest, AtMostAndAtLeastWithExpressionsShouldLimitTheOutputRange) {
@@ -362,14 +361,14 @@ TEST(MRealTest, GetUniqueValueFailsWhenTheValueIsNotUnique) {
 
 TEST(MRealTest, InvalidExpressionsShouldFail) {
   EXPECT_THAT([] { (void)Generate(MReal(Exactly("N + "))); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
   EXPECT_THAT([] { (void)Generate(MReal(AtMost("N + "))); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
   EXPECT_THAT([] { (void)Generate(MReal(AtLeast("N + "))); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("operation")));
+              ThrowsMessage<ExpressionParseError>(HasSubstr("operation")));
   EXPECT_THAT(
       [] { (void)Generate(MReal(Between("& x", "N + "))); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("Unknown character")));
+      ThrowsMessage<ExpressionParseError>(HasSubstr("Unknown character")));
 }
 
 TEST(MRealTest, ExactlyAndOneOfConstraintsWithNoVariablesShouldWork) {
