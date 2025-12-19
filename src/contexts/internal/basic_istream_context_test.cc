@@ -188,7 +188,7 @@ TEST(BasicIStreamTest,
   c.ReadWhitespace(Whitespace::kSpace);
   c.ReadWhitespace(Whitespace::kNewline);
   c.ReadWhitespace(Whitespace::kTab);
-  EXPECT_THROW({ c.ReadWhitespace(Whitespace::kSpace); }, IOError);
+  EXPECT_NO_THROW({ c.ReadWhitespace(Whitespace::kSpace); });
 }
 
 TEST(BasicIStreamTest, ReadFunctionBehaveEndToEnd) {

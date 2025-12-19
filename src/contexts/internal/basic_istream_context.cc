@@ -182,6 +182,7 @@ void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
   std::istream& is = GetIStream();
 
   if (IsEOF(is)) {
+    if (GetWhitespaceStrictness() == WhitespaceStrictness::kFlexible) return;
     ThrowIOError(std::format("Expected '{}', but got EOF.",
                              ReadableChar(WhitespaceAsChar(whitespace))));
   }

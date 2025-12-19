@@ -687,10 +687,9 @@ MATCHER_P(HasConstraintViolation, matcher, "") {
   return testing::ExplainMatchResult(matcher, arg.Reason(), result_listener);
 }
 
-namespace moriarty_testing_internal {
 // https://github.com/google/googletest/issues/4073#issuecomment-1925047305
 template <class Function>
-std::function<void()> single_call(Function function) {
+std::function<void()> SingleCall(Function function) {
   auto shared_exception_ptr = std::make_shared<std::exception_ptr>();
   auto was_called = std::make_shared<bool>(false);
   return [shared_exception_ptr, was_called, function]() {
@@ -709,7 +708,6 @@ std::function<void()> single_call(Function function) {
     }
   };
 }
-}  // namespace moriarty_testing_internal
 
 MATCHER_P(ThrowsVariableNotFound, expected_variable_name,
           std::format("{} a function that throws a VariableNotFound exception "
@@ -719,7 +717,7 @@ MATCHER_P(ThrowsVariableNotFound, expected_variable_name,
   // of the expected type.
   std::function<void()> fn = arg;
 
-  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  std::function<void()> function = SingleCall(fn);
   try {
     function();
     *result_listener << "did not throw";
@@ -749,7 +747,7 @@ MATCHER_P(ThrowsValueNotFound, expected_variable_name,
   // of the expected type.
   std::function<void()> fn = arg;
 
-  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  std::function<void()> function = SingleCall(fn);
   try {
     function();
     *result_listener << "did not throw";
@@ -779,7 +777,7 @@ MATCHER_P2(ThrowsMVariableTypeMismatch, from_type, to_type,
   // of the expected type.
   std::function<void()> fn = arg;
 
-  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  std::function<void()> function = SingleCall(fn);
   try {
     function();
     *result_listener << "did not throw";
@@ -810,7 +808,7 @@ MATCHER_P2(
   // of the expected type.
   std::function<void()> fn = arg;
 
-  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  std::function<void()> function = SingleCall(fn);
   try {
     function();
     *result_listener << "did not throw";
@@ -840,7 +838,7 @@ MATCHER_P(ThrowsImpossibleToSatisfy, substr,
   // of the expected type.
   std::function<void()> fn = arg;
 
-  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  std::function<void()> function = SingleCall(fn);
   try {
     function();
     *result_listener << "did not throw";
@@ -871,7 +869,7 @@ MATCHER_P2(
   // of the expected type.
   std::function<void()> fn = arg;
 
-  std::function<void()> function = moriarty_testing_internal::single_call(fn);
+  std::function<void()> function = SingleCall(fn);
   try {
     function();
     *result_listener << "did not throw";

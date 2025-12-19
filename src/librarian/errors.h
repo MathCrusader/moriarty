@@ -201,6 +201,10 @@ class GenerationError : public GenericMoriartyError {
 // Thrown when a test case fails validation.
 class ValidationError : public GenericMoriartyError {
  public:
+  explicit ValidationError(std::string_view message)
+      : GenericMoriartyError(std::string(message)),
+        context_(""),  // No specific context
+        message_(message) {}
   explicit ValidationError(std::string_view context, std::string_view message)
       : GenericMoriartyError(std::format(
             "Error while validating a test case in {}: {}", context, message)),
