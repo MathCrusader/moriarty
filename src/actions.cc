@@ -56,11 +56,11 @@ void ValidateInputBuilder::Run() const {
                              "ReadInputUsing() to specify options.");
   }
   // FIXME: Remove validation styles from options.
-  if (input_options_->validation != ValidationStyle::kOnlySetVariables) {
-    throw ConfigurationError("ValidateInput::Run",
-                             "Only ValidationStyle::kOnlySetVariables is "
-                             "supported for input validation.");
-  }
+  // if (input_options_->validation != ValidationStyle::kOnlySetVariables) {
+  //   throw ConfigurationError("ValidateInput::Run",
+  //                            "Only ValidationStyle::kOnlySetVariables is "
+  //                            "supported for input validation.");
+  // }
 
   InputCursor cursor(input_options_->is, input_options_->whitespace_strictness);
   ReadContext ctx(problem_.GetVariables(), cursor);

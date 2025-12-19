@@ -105,8 +105,7 @@ std::string BasicIStreamContext::ReadToken() {
   if (GetWhitespaceStrictness() == WhitespaceStrictness::kPrecise) {
     char c = is.peek();
     if (!std::isprint(c) || std::isspace(c)) {
-      ThrowIOError(
-          std::format("Expected a token, but got '{}'.", ReadableChar(c)));
+      ThrowIOError("Expected a token, but got '{}'.", ReadableChar(c));
     }
   }
 
@@ -183,14 +182,13 @@ void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
 
   if (IsEOF(is)) {
     if (GetWhitespaceStrictness() == WhitespaceStrictness::kFlexible) return;
-    ThrowIOError(std::format("Expected '{}', but got EOF.",
-                             ReadableChar(WhitespaceAsChar(whitespace))));
+    ThrowIOError("Expected '{}', but got EOF.",
+                 ReadableChar(WhitespaceAsChar(whitespace)));
   }
   GetCursor().col_num++;
   char c = is.get();
   if (!std::isspace(c)) {
-    ThrowIOError(
-        std::format("Expected whitespace, but got '{}'.", ReadableChar(c)));
+    ThrowIOError("Expected whitespace, but got '{}'.", ReadableChar(c));
   }
   RegisterNewline(c, GetCursor());
 
@@ -199,9 +197,8 @@ void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
   if (GetWhitespaceStrictness() == WhitespaceStrictness::kFlexible) return;
 
   if (c != WhitespaceAsChar(whitespace)) {
-    ThrowIOError(std::format("Expected '{}', but got '{}'.",
-                             ReadableChar(WhitespaceAsChar(whitespace)),
-                             ReadableChar(c)));
+    ThrowIOError("Expected '{}', but got '{}'.",
+                 ReadableChar(WhitespaceAsChar(whitespace)), ReadableChar(c));
   }
 }
 
@@ -226,16 +223,16 @@ int64_t BasicIStreamContext::ReadInteger() {
 
   if (GetNumericStrictness() == NumericStrictness::kPrecise) {
     if (value == 0 && read_token.size() != 1) {
-      ThrowIOError(std::format("Expected a (strict) integer, but got '{}'.",
-                               librarian::DebugString(read_token)));
+      ThrowIOError("Expected a (strict) integer, but got '{}'.",
+                   librarian::DebugString(read_token));
     }
     if (value != 0 && read_token[0] == '0') {
-      ThrowIOError(std::format("Expected a (strict) integer, but got '{}'.",
-                               librarian::DebugString(read_token)));
+      ThrowIOError("Expected a (strict) integer, but got '{}'.",
+                   librarian::DebugString(read_token));
     }
     if (value != 0 && (read_token[0] == '-' && read_token[1] == '0')) {
-      ThrowIOError(std::format("Expected a (strict) integer, but got '{}'.",
-                               librarian::DebugString(read_token)));
+      ThrowIOError("Expected a (strict) integer, but got '{}'.",
+                   librarian::DebugString(read_token));
     }
   }
 
@@ -297,10 +294,10 @@ double BasicIStreamContext::ReadReal(int num_digits) {
   if (GetNumericStrictness() == NumericStrictness::kPrecise) {
     std::optional<double> result = ParseStrictReal(read_token, num_digits);
     if (!result.has_value()) {
-      ThrowIOError(std::format(
+      ThrowIOError(
           "Expected a real number with {} digits after the decimal point, "
           "but got {}.",
-          num_digits, librarian::DebugString(read_token)));
+          num_digits, librarian::DebugString(read_token));
     }
     return *result;
   }
@@ -317,12 +314,12 @@ double BasicIStreamContext::ReadReal(int num_digits) {
   auto [ptr, ec] =
       std::from_chars(token.data(), token.data() + token.size(), result);
   if (ec != std::errc{} || ptr != token.data() + token.size()) {
-    ThrowIOError(std::format("Expected a real number, but got '{}'.",
-                             librarian::DebugString(read_token)));
+    ThrowIOError("Expected a real number, but got '{}'.",
+                 librarian::DebugString(read_token));
   }
   if (std::isinf(result) || std::isnan(result)) {
-    ThrowIOError(std::format("Expected a real number, but got '{}'.",
-                             librarian::DebugString(read_token)));
+    ThrowIOError("Expected a real number, but got '{}'.",
+                 librarian::DebugString(read_token));
   }
 
   return result;

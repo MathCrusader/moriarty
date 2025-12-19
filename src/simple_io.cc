@@ -212,8 +212,7 @@ void ReadLiteral(ReadContext ctx, const StringLiteral& literal) {
   std::string read_token = ctx.ReadToken();
   std::string expected = std::string(literal);
   if (read_token != expected) {
-    ctx.ThrowIOError(
-        std::format("Expected '{}', but got '{}'.", expected, read_token));
+    ctx.ThrowIOError("Expected '{}', but got '{}'.", expected, read_token);
   }
 }
 

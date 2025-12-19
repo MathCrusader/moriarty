@@ -16,6 +16,7 @@
 #define MORIARTY_CONTEXTS_INTERNAL_BASIC_ISTREAM_CONTEXT_H_
 
 #include <cstdint>
+#include <format>
 #include <optional>
 #include <string>
 
@@ -78,6 +79,15 @@ class BasicIStreamContext {
   // provided message.
   [[noreturn]] void ThrowIOError(std::string_view message) const;
 
+  // ThrowIOError()
+  //
+  // Throws an `IOError` exception with the current cursor position and the
+  // provided message. The message is formatted using `std::format()`.
+  template <typename... Args>
+    requires(sizeof...(Args) > 0)
+  [[noreturn]] void ThrowIOError(std::format_string<Args...> fmt,
+                                 Args&&... args) const;
+
   // ReadInteger()
   //
   // Reads the next token from the input stream and casts it to an integer.
@@ -109,6 +119,15 @@ class BasicIStreamContext {
   //  * update/access strictness and is_.
   //  * Query the state of is_ (e.g., IsEOF()).
 };
+
+// ----------------------------------------------------------------------------
+
+template <typename... Args>
+  requires(sizeof...(Args) > 0)
+[[noreturn]] void BasicIStreamContext::ThrowIOError(
+    std::format_string<Args...> fmt, Args&&... args) const {
+  ThrowIOError(std::format(fmt, std::forward<Args>(args)...));
+}
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

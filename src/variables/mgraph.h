@@ -744,10 +744,9 @@ MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(
           "Cannot determine the number of edges before reading edge list.");
 
     if (*num_edges != num_chunks) {
-      ctx.ThrowIOError(
-          std::format("MGraph::Reader expected to read {} chunks, but got {}.",
-                      librarian::DebugString(*num_edges),
-                      librarian::DebugString(num_chunks)));
+      ctx.ThrowIOError("MGraph::Reader expected to read {} chunks, but got {}.",
+                       librarian::DebugString(*num_edges),
+                       librarian::DebugString(num_chunks));
     }
   }
 
@@ -762,9 +761,9 @@ auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
   if (format.IsZeroBased()) {
     int64_t node_idx = ctx.ReadInteger();
     if (!(0 <= node_idx && node_idx < G_.NumNodes())) {
-      ctx.ThrowIOError(std::format(
+      ctx.ThrowIOError(
           "Invalid (0-based) node index {} for graph with {} nodes.", node_idx,
-          G_.NumNodes()));
+          G_.NumNodes());
     }
     return node_idx;
   }
@@ -772,9 +771,9 @@ auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
   if (format.IsOneBased()) {
     int64_t node_idx = ctx.ReadInteger() - 1;
     if (!(0 <= node_idx && node_idx < G_.NumNodes())) {
-      ctx.ThrowIOError(std::format(
+      ctx.ThrowIOError(
           "Invalid (1-based) node index {} for graph with {} nodes.",
-          node_idx + 1, G_.NumNodes()));
+          node_idx + 1, G_.NumNodes());
     }
     return node_idx;
   }
@@ -841,10 +840,10 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
 
       if (u > v && adj[v][u] != edge_label) {
         ctx.ThrowIOError(
-            std::format("Asymmetric adjacency matrix entries at ({}, {}) = "
-                        "{} and ({}, {}) = {}",
-                        u, v, librarian::DebugString(edge_label), v, u,
-                        librarian::DebugString(adj[v][u])));
+            "Asymmetric adjacency matrix entries at ({}, {}) = "
+            "{} and ({}, {}) = {}",
+            u, v, librarian::DebugString(edge_label), v, u,
+            librarian::DebugString(adj[v][u]));
       }
       adj[u][v] = edge_label;
       if (u <= v) G_.AddEdge(u, v, edge_label);
@@ -852,15 +851,14 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
       auto& adj = std::get<IMtxIdx>(adjacency_matrix_);
       int64_t edge_count = ctx.ReadInteger();
       if (edge_count < 0) {
-        ctx.ThrowIOError(
-            std::format("Number of edges between {} and {} is negative ({})", u,
-                        v, edge_count));
+        ctx.ThrowIOError("Number of edges between {} and {} is negative ({})",
+                         u, v, edge_count);
       }
       if (u > v && adj[v][u] != edge_count) {
         ctx.ThrowIOError(
-            std::format("Asymmetric adjacency matrix entries at ({}, {}) = {} "
-                        "and ({}, {}) = {}",
-                        u, v, adj[v][u], v, u, edge_count));
+            "Asymmetric adjacency matrix entries at ({}, {}) = {} "
+            "and ({}, {}) = {}",
+            u, v, adj[v][u], v, u, edge_count);
       }
       adj[u][v] = edge_count;
       if (u <= v)
