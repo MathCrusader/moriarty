@@ -267,6 +267,60 @@ class ConfigurationError : public GenericMoriartyError {
   std::string message_;
 };
 
+// SimplePatternError
+//
+// Thrown when there is an error parsing a SimplePattern.
+class SimplePatternParseError : public GenericMoriartyError {
+ public:
+  struct PatternTag {};
+  explicit SimplePatternParseError(PatternTag, std::string_view pattern,
+                                   std::string_view message)
+      : GenericMoriartyError(std::format(
+            "Error parsing SimplePattern '{}'\nError: {}", pattern, message)),
+        pattern_(pattern),
+        message_(message) {}
+
+  template <typename... Args>
+  explicit SimplePatternParseError(std::format_string<Args...> fmt,
+                                   Args&&... args)
+      : GenericMoriartyError(std::format(fmt, std::forward<Args>(args)...)),
+        message_(std::format(fmt, std::forward<Args>(args)...)) {}
+
+  const std::string& Pattern() const { return pattern_; }
+  const std::string& Message() const { return message_; }
+
+ private:
+  std::string pattern_;
+  std::string message_;
+};
+
+// SimplePatternEvaluationError
+//
+// Thrown when there is an error evaluating a SimplePattern.
+class SimplePatternEvaluationError : public GenericMoriartyError {
+ public:
+  struct PatternTag {};
+  explicit SimplePatternEvaluationError(std::string_view pattern,
+                                        std::string_view message, PatternTag)
+      : GenericMoriartyError(std::format(
+            "Error parsing SimplePattern '{}'\nError: {}", pattern, message)),
+        pattern_(pattern),
+        message_(message) {}
+
+  template <typename... Args>
+  explicit SimplePatternEvaluationError(std::format_string<Args...> fmt,
+                                        Args&&... args)
+      : GenericMoriartyError(std::format(fmt, std::forward<Args>(args)...)),
+        message_(std::format(fmt, std::forward<Args>(args)...)) {}
+
+  const std::string& Pattern() const { return pattern_; }
+  const std::string& Message() const { return message_; }
+
+ private:
+  std::string pattern_;
+  std::string message_;
+};
+
 }  // namespace moriarty
 
 #endif  // MORIARTY_LIBRARIAN_ERRORS_H_

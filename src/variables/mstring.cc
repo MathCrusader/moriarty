@@ -18,7 +18,6 @@
 #include <algorithm>
 #include <format>
 #include <optional>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -198,7 +197,7 @@ std::string MString::GenerateSimplePattern(
     // is arbitrary since all patterns must be satisfied.
     return core_constraints_.SimplePatterns().back().GenerateWithRestrictions(
         maybe_alphabet, lookup, rand);
-  } catch (const std::runtime_error& e) {
+  } catch (const SimplePatternEvaluationError& e) {
     throw GenerationError(
         ctx.GetVariableName(),
         std::format("Failed to generate SimplePattern: ", e.what()),

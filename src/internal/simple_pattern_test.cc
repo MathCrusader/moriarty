@@ -28,6 +28,7 @@
 #include "gtest/gtest.h"
 #include "src/internal/expressions.h"
 #include "src/internal/random_engine.h"
+#include "src/librarian/errors.h"
 #include "src/librarian/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"
 
@@ -85,7 +86,7 @@ MATCHER_P(SimplePatternMatches, str, "") {
 
   try {
     (void)SimplePattern(pattern);
-  } catch (const std::invalid_argument& e) {
+  } catch (const SimplePatternParseError& e) {
     *result_listener << "Invalid Pattern: " << e.what();
     return false;
   }
@@ -105,7 +106,7 @@ MATCHER_P2(SimplePatternMatches, str, context, "") {
 
   try {
     (void)SimplePattern(pattern);
-  } catch (const std::invalid_argument& e) {
+  } catch (const SimplePatternParseError& e) {
     *result_listener << "Invalid Pattern: " << e.what();
     return false;
   }
@@ -130,7 +131,7 @@ MATCHER_P(IsInvalidSimplePattern, reason, "") {
     *result_listener << "Expected invalid pattern, but got a valid one: "
                      << pattern;
     return false;
-  } catch (const std::invalid_argument& e) {
+  } catch (const SimplePatternParseError& e) {
     if (Matches(testing::HasSubstr(reason))(e.what())) {
       *result_listener << "Invalid Pattern (in a good way): " << e.what();
       return true;
@@ -490,12 +491,12 @@ TEST(SimplePatternTest, GenerationWithNestedSubExpressionsShouldWork) {
 TEST(SimplePatternTest, GenerationWithLargeWildcardShouldThrowError) {
   SimplePattern p1 = SimplePattern("a+");
   EXPECT_THAT([&] { (void)p1.Generate(EmptyLookup(), Random()); },
-              ThrowsMessage<std::runtime_error>(
+              ThrowsMessage<SimplePatternEvaluationError>(
                   AllOf(HasSubstr("generate"), HasSubstr("+"))));
 
   SimplePattern p2 = SimplePattern("a*");
   EXPECT_THAT([&] { (void)p2.Generate(EmptyLookup(), Random()); },
-              ThrowsMessage<std::runtime_error>(
+              ThrowsMessage<SimplePatternEvaluationError>(
                   AllOf(HasSubstr("generate"), HasSubstr("*"))));
 }
 
@@ -525,7 +526,7 @@ TEST(SimplePatternTest,
         (void)p.GenerateWithRestrictions(/*restricted_alphabet = */ "x",
                                          EmptyLookup(), Random());
       },
-      ThrowsMessage<std::invalid_argument>(
+      ThrowsMessage<SimplePatternEvaluationError>(
           HasSubstr("No valid characters for generation, but empty string is "
                     "not allowed.")));
 }
@@ -732,7 +733,7 @@ TEST(RepeatedCharSetTest, NegativeMinZeroMaxRangeShouldBeOk) {
 TEST(RepeatedCharSetTest, AddingANegativeCharShouldFail) {
   RepeatedCharSet r;
   EXPECT_THAT([&] { (void)r.Add(static_cast<char>(-1)); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
 }
 
 TEST(RepeatedCharSetTest, FlipShouldNotAcceptNegativeChars) {
@@ -755,7 +756,7 @@ TEST(RepeatedCharSetTest, AddingCharactersMultipleTimesShouldReturnFalse) {
 
 TEST(ParseCharSetTest, EmptyCharacterSetsShouldFail) {
   EXPECT_THAT([] { (void)CharacterSetPrefixLength(""); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("Empty")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("Empty")));
 }
 
 TEST(ParseCharSetTest, SingleCharacterCharacterSetsShouldBeOk) {
@@ -802,42 +803,42 @@ TEST(ParseCharSetTest, AnyDuplicateCharacterShouldForceTheEarlierOne) {
 
 TEST(ParseCharSetTest, MissingCloseBraceShouldFail) {
   EXPECT_THAT([] { (void)CharacterSetPrefixLength("[hi"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("]")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("]")));
 }
 
 TEST(ParseCharSetTest, SpecialCharacterAtStartShouldFail) {
   EXPECT_THAT([] { (void)CharacterSetPrefixLength("]"); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
   EXPECT_THAT([] { (void)CharacterSetPrefixLength("("); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
   EXPECT_THAT([] { (void)CharacterSetPrefixLength(")"); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
   EXPECT_THAT([] { (void)CharacterSetPrefixLength("{"); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
   EXPECT_THAT([] { (void)CharacterSetPrefixLength("}"); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
   EXPECT_THAT([] { (void)CharacterSetPrefixLength("^"); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
   EXPECT_THAT([] { (void)CharacterSetPrefixLength("?"); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
   EXPECT_THAT([] { (void)CharacterSetPrefixLength("*"); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
   EXPECT_THAT([] { (void)CharacterSetPrefixLength("+"); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
   EXPECT_THAT([] { (void)CharacterSetPrefixLength("-"); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
   EXPECT_THAT([] { (void)CharacterSetPrefixLength("|"); },
-              Throws<std::invalid_argument>());
+              Throws<SimplePatternParseError>());
 }
 
 TEST(ParseCharSetTest, EmptyCharSetBodyShouldFail) {
   EXPECT_THAT([] { (void)ParseCharacterSetBody(""); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("Empty")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("Empty")));
 }
 
 TEST(ParseCharSetTest, DuplicateCharactersInCharSetBodyShouldFail) {
   EXPECT_THAT([] { (void)ParseCharacterSetBody("aa"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("multiple")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("multiple")));
 }
 
 TEST(ParseCharSetTest, SquareBracesShouldBeOk) {
@@ -848,7 +849,7 @@ TEST(ParseCharSetTest, SquareBracesShouldBeOk) {
 TEST(ParseCharSetTest, SquareBracesShouldBeInTheRightOrder) {
   EXPECT_THAT(ParseCharacterSetBody("[]"), AcceptsOnly("[]"));
   EXPECT_THAT([] { (void)ParseCharacterSetBody("]["); },
-              ThrowsMessage<std::invalid_argument>(
+              ThrowsMessage<SimplePatternParseError>(
                   testing::AllOf(HasSubstr("]"), HasSubstr("["))));
 }
 
@@ -914,19 +915,19 @@ TEST(ParseCharSetTest, ValidRangeTypesShouldWork) {
 
 TEST(ParseCharSetTest, InvalidRangeShouldFail) {
   EXPECT_THAT([] { (void)ParseCharacterSetBody("9-0"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("'-'")));
   EXPECT_THAT([] { (void)ParseCharacterSetBody("Z-A"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("'-'")));
   EXPECT_THAT([] { (void)ParseCharacterSetBody("z-a"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("'-'")));
   EXPECT_THAT([] { (void)ParseCharacterSetBody("a-A"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("'-'")));
   EXPECT_THAT([] { (void)ParseCharacterSetBody("A-a"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("'-'")));
   EXPECT_THAT([] { (void)ParseCharacterSetBody("A-z"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("'-'")));
   EXPECT_THAT([] { (void)ParseCharacterSetBody("A-?"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("'-'")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("'-'")));
 }
 
 TEST(ParseCharSetTest, DotsShouldNotBeTreatedAsWildcards) {
@@ -944,7 +945,7 @@ TEST(ParseCharSetTest, NegativeCharsShouldBeInvalid) {
       [] {
         (void)ParseCharacterSetBody(std::string(1, static_cast<char>(-1)));
       },
-      Throws<std::invalid_argument>());
+      Throws<SimplePatternParseError>());
 }
 
 TEST(ParseRepetitionTest, EmptyRepetitionShouldPass) {
@@ -976,8 +977,9 @@ TEST(ParseRepetitionTest, CharactersAfterCloseShouldBeIgnored) {
 }
 
 TEST(ParseRepetitionTest, MissingCloseBraceShouldFail) {
-  EXPECT_THAT([] { (void)RepetitionPrefixLength("{1"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("No '}' found")));
+  EXPECT_THAT(
+      [] { (void)RepetitionPrefixLength("{1"); },
+      ThrowsMessage<SimplePatternParseError>(HasSubstr("No '}' found")));
 }
 
 TEST(ParseRepetitionTest, SpecialCharacterAtStartShouldReturnZero) {
@@ -1031,107 +1033,107 @@ TEST(ParseRepetitionTest, SimpleCasesShouldWork) {
 TEST(ParseRepetitionTest, MultipleCommasShouldFail) {
   EXPECT_THAT(
       [] { (void)ParseRepetitionBody("{3,4,5}"); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition block")));
+      ThrowsMessage<SimplePatternParseError>(HasSubstr("repetition block")));
 }
 
 TEST(ParseRepetitionTest, MissingBracesShouldFail) {
   EXPECT_THAT([] { (void)ParseRepetitionBody("{1,2"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("}")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("}")));
   EXPECT_THAT([] { (void)ParseRepetitionBody("1,2}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("{")));
   EXPECT_THAT([] { (void)ParseRepetitionBody(",1}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("{")));
   EXPECT_THAT([] { (void)ParseRepetitionBody("{1,"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("}")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("}")));
 }
 
 TEST(ParseRepetitionTest, NonIntegerShouldFail) {
   EXPECT_THAT(
       [] { (void)ParseRepetitionBody("{1.5,2}"); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition block")));
+      ThrowsMessage<SimplePatternParseError>(HasSubstr("repetition block")));
 }
 
 TEST(ParseRepetitionTest, HexShouldFail) {
   EXPECT_THAT(
       [] { (void)ParseRepetitionBody("{0x00,0x10}"); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition block")));
+      ThrowsMessage<SimplePatternParseError>(HasSubstr("repetition block")));
 }
 
 TEST(ParseRepetitionTest, SpecialCharacterAtStartShouldFail) {
-  EXPECT_THAT(
-      [] { (void)ParseRepetitionBody("}"); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
-  EXPECT_THAT(
-      [] { (void)ParseRepetitionBody("^"); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
-  EXPECT_THAT(
-      [] { (void)ParseRepetitionBody("("); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
-  EXPECT_THAT(
-      [] { (void)ParseRepetitionBody("|"); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
-  EXPECT_THAT(
-      [] { (void)ParseRepetitionBody("["); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
-  EXPECT_THAT(
-      [] { (void)ParseRepetitionBody(")"); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
-  EXPECT_THAT(
-      [] { (void)ParseRepetitionBody("]"); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
-  EXPECT_THAT(
-      [] { (void)ParseRepetitionBody("-"); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("}"); },
+              ThrowsMessage<SimplePatternParseError>(
+                  HasSubstr("repetition character")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("^"); },
+              ThrowsMessage<SimplePatternParseError>(
+                  HasSubstr("repetition character")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("("); },
+              ThrowsMessage<SimplePatternParseError>(
+                  HasSubstr("repetition character")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("|"); },
+              ThrowsMessage<SimplePatternParseError>(
+                  HasSubstr("repetition character")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("["); },
+              ThrowsMessage<SimplePatternParseError>(
+                  HasSubstr("repetition character")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody(")"); },
+              ThrowsMessage<SimplePatternParseError>(
+                  HasSubstr("repetition character")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("]"); },
+              ThrowsMessage<SimplePatternParseError>(
+                  HasSubstr("repetition character")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("-"); },
+              ThrowsMessage<SimplePatternParseError>(
+                  HasSubstr("repetition character")));
 }
 
 TEST(ParseRepetitionTest, OtherCharacterAtStartShouldFail) {
-  EXPECT_THAT(
-      [] { (void)ParseRepetitionBody("a"); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("repetition character")));
+  EXPECT_THAT([] { (void)ParseRepetitionBody("a"); },
+              ThrowsMessage<SimplePatternParseError>(
+                  HasSubstr("repetition character")));
   EXPECT_THAT(
       [] { (void)ParseRepetitionBody("abc"); },
-      ThrowsMessage<std::invalid_argument>(HasSubstr("Expected { and }")));
+      ThrowsMessage<SimplePatternParseError>(HasSubstr("Expected { and }")));
 }
 
 TEST(ParseRepeatedCharSetTest, EmptyStringShouldFail) {
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix(""); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("mpty")));
 }
 
 TEST(ParseRepeatedCharSetTest, SpecialCharacterAtStartShouldFail) {
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("{"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("{")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("}")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("}")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("^"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("^")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("^")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("("); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("(")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("(")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix(")"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr(")")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr(")")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("|"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("|")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("|")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("["); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("[")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("[")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("]"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("]")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("]")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("-"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("-")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("-")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("?"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("?")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("?")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("+"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("+")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("+")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("*"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("*")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("*")));
 }
 
 TEST(ParseRepeatedCharSetTest, RepetitionPartFirstShouldFail) {
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("{3,1}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("{")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("{,1}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("{")));
   EXPECT_THAT([] { (void)ParseRepeatedCharSetPrefix("*"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("*")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("*")));
 }
 
 TEST(ParseRepeatedCharSetTest,
@@ -1193,44 +1195,44 @@ TEST(ParseRepeatedCharSetTest,
 
 TEST(ParseScopePrefixTest, EmptyStringShouldFail) {
   EXPECT_THAT([] { (void)ParseScopePrefix(""); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("mpty")));
 }
 
 TEST(ParseScopePrefixTest, SingleCloseBracketShouldFail) {
   EXPECT_THAT([] { (void)ParseScopePrefix(")"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty scope")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("mpty scope")));
 }
 
 TEST(ParseScopePrefixTest, SpecialCharacterAtStartShouldFail) {
   EXPECT_THAT([] { (void)ParseScopePrefix("{"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("{")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("{")));
   EXPECT_THAT([] { (void)ParseScopePrefix("}"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("}")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("}")));
   EXPECT_THAT([] { (void)ParseScopePrefix("^"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("^")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("^")));
   EXPECT_THAT([] { (void)ParseScopePrefix("|"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("|")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("|")));
   EXPECT_THAT([] { (void)ParseScopePrefix("["); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("[")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("[")));
   EXPECT_THAT([] { (void)ParseScopePrefix("]"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("]")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("]")));
   EXPECT_THAT([] { (void)ParseScopePrefix("-"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("-")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("-")));
   EXPECT_THAT([] { (void)ParseScopePrefix("?"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("?")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("?")));
   EXPECT_THAT([] { (void)ParseScopePrefix("+"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("+")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("+")));
   EXPECT_THAT([] { (void)ParseScopePrefix("*"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("*")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("*")));
 }
 
 TEST(ParseScopePrefixTest, UnmatchedOpenBraceShouldFail) {
   EXPECT_THAT([] { (void)ParseScopePrefix("("); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty scope")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("mpty scope")));
   EXPECT_THAT([] { (void)ParseScopePrefix("(abc"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("')'")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("')'")));
   EXPECT_THAT([] { (void)ParseScopePrefix("(a(bc)"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("')'")));
+              ThrowsMessage<SimplePatternParseError>(HasSubstr("')'")));
 }
 
 TEST(ParseScopePrefixTest, NestedScopesShouldBeOk) {
@@ -1292,16 +1294,21 @@ TEST(ParseScopePrefixTest, ParsingScopeWithOrClauseShouldGetPatternCorrect) {
 }
 
 TEST(ParseScopePrefixTest, ParsingScopeWithEmptyOrClausesShouldFail) {
-  EXPECT_THAT([] { (void)ParseScopePrefix("|"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty or-block")));
-  EXPECT_THAT([] { (void)ParseScopePrefix("||"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty or-block")));
-  EXPECT_THAT([] { (void)ParseScopePrefix("|a"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty or-block")));
-  EXPECT_THAT([] { (void)ParseScopePrefix("a|"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty or-block")));
-  EXPECT_THAT([] { (void)ParseScopePrefix("a||b"); },
-              ThrowsMessage<std::invalid_argument>(HasSubstr("mpty or-block")));
+  EXPECT_THAT(
+      [] { (void)ParseScopePrefix("|"); },
+      ThrowsMessage<SimplePatternParseError>(HasSubstr("mpty or-block")));
+  EXPECT_THAT(
+      [] { (void)ParseScopePrefix("||"); },
+      ThrowsMessage<SimplePatternParseError>(HasSubstr("mpty or-block")));
+  EXPECT_THAT(
+      [] { (void)ParseScopePrefix("|a"); },
+      ThrowsMessage<SimplePatternParseError>(HasSubstr("mpty or-block")));
+  EXPECT_THAT(
+      [] { (void)ParseScopePrefix("a|"); },
+      ThrowsMessage<SimplePatternParseError>(HasSubstr("mpty or-block")));
+  EXPECT_THAT(
+      [] { (void)ParseScopePrefix("a||b"); },
+      ThrowsMessage<SimplePatternParseError>(HasSubstr("mpty or-block")));
 }
 
 TEST(ParseScopePrefixTest,
