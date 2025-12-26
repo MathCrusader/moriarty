@@ -1,7 +1,7 @@
 # Moriarty
 
 <p align="center">
-  <img width="250px" src="logo.png" alt="Moriarty Logo">
+  <img width="250px" src="docs/logo.png" alt="Moriarty Logo">
 </p>
 <p align="center">
   <em>Create robust data generators and data validators with little-to-no<br>
@@ -14,39 +14,53 @@ Moriarty is a tool for describing, generating, and verifying data through our
 expressive syntax.
 
 ```c++
+// Example generator
 int main() {
-  Moriarty M;
-  M.SetName("Example Constraints")
-      .AddVariable("N", MInteger(Between(1, 100)))
-      .AddVariable("A", MArray<MInteger>(Elements<MInteger>(Between(3, 5)),
-                                         Length("3 * N + 1")))
-      .AddVariable("S", MString(Alphabet("abc"), Length("N")))
-      .AddGenerator("CornerCaseGenerator", CustomCornerCaseGenerator())
-      .AddGenerator("SmallExamples", SmallCaseGenerator());
-  M.GenerateTestCases();
-  M.ExportTestCases(SimpleIO().AddLine("N", "S").AddLine("A"));
+  Problem p(
+    Title("The Famous Problem"),
+    Seed("longrandomuuidhere"),
+    Variables(
+      Var("N", MInteger(Between(1, 100))),
+      Var("A", MArray<MInteger>(Length("N"), Elements<MInteger>(Between(31, 35)))),
+      Var("S", MStringMString(Alphabet("abc"), Length("2 * N - 1")))
+      Var("X", MInteger())
+    ),
+    InputFormat(SimpleIO().AddLine("N", "S").AddLine("A")),
+    OutputFormat(SimpleIO().AddLine("X"))
+  );
+
+  Generate(p)
+    .Using("CornerCaseGenerator", CornerCaseGenerator)
+    .Using("SmallExamples", SmallCases, {.num_calls = 10})
+    .Using("PureRandom", Random, {.num_calls = 20})
+    .WriteInputUsing({.ostream = std::cout})
+    .WriteOutputUsing({.ostream = std::cerr})
+    .Run();
 }
 ```
 
-Example output from example (where N = 2):
+Example generated input from example (where N = 4):
 
 ```
-2 ab
-3 4 5 4 3 4 5
+4 abcdefg
+33 35 33 32
 ```
 
-`MVariable`s are used to describe a specific data type (primitive type, class,
-struct, proto, etc.) and are written in a way to allow users to put constraints
-on variables. The Moriarty team provides several `MVariable`s for common data
-types but also allows experts to write their own custom types.
+## The Basics
 
-Users are then able to describe their variables and constraints and either:
+Moriarty is centred around the concept of an `MVariable`. An `MVariable` is a
+collection of constraints on a variable. For example, an `MInteger` constrains
+an integer value (e.g., "between 1 and 10" or "is a prime number"). Variables
+can interact with one another. For example, the length of an `MString` can be
+`3 * N`, where `N` is an `MInteger`.
 
-1.  Generate and export test cases.
-1.  Import and verify test cases.
+## Available MVariables
 
-We provide several defaults for generation, importing, exporting, and
-verification but also allows users to customize to their heart's content!
-
-Start <a href="docs/getting_started.md">here</a> for a tutorial walking you
-through a full Moriarty example.
+| MVariable       | Underlying Type               | Example Constraints                                                |
+| --------------- | ----------------------------- | ------------------------------------------------------------------ |
+| `MInteger`      | `int64_t`                     | `Between(1, "N")`, `Exactly(5)`, `Mod(2, 0)`                       |
+| `MReal`         | `double`                      | `Between(0, Real("5.28"))`, `AtLeast(Real("0.0001"))`, `AtMost(1)` |
+| `MString`       | `std::string`                 | `Length(10)`, `Alphabet("abc")`, `DistinctCharacters()`            |
+| `MArray<T>`     | `std::vector< ... >`          | `Length("N")`, `Elements<T>(...)`, `DistinctElements()`            |
+| `MTuple<...>`   | `std::tuple< ... >`           | `Element<0, MInteger>(Between(1, 10))`                             |
+| `MGraph<E, N>`  | `Graph<EdgeLabel, NodeLabel>` | `NumNodes(100)`, `NumEdges(200)`, `Connected()`, `Simple()`        |
