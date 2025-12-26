@@ -26,6 +26,7 @@ namespace moriarty {
 namespace {
 
 using ::testing::_;
+using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::Optional;
 using ::testing::TypedEq;
@@ -46,11 +47,11 @@ TEST(ProblemTest, SeedShouldWork) {
 }
 
 TEST(ProblemTest, VariablesShouldWork) {
-  EXPECT_THAT(Problem().GetVariables().ListVariables(), IsEmpty());
+  EXPECT_THAT(Problem().UnsafeGetVariables().ListVariables(), IsEmpty());
 
   Problem problem(Variables(Var("X", MInteger(Exactly(10))),
                             Var("Y", MInteger(Exactly(20)))));
-  const auto& problem_vars = problem.GetVariables();
+  const auto& problem_vars = problem.UnsafeGetVariables();
 
   EXPECT_TRUE(problem_vars.Contains("X"));
   EXPECT_TRUE(problem_vars.Contains("Y"));
@@ -60,19 +61,23 @@ TEST(ProblemTest, VariablesShouldWork) {
 TEST(ProblemTest, InputFormatShouldWork) {
   EXPECT_EQ(Problem().GetInputReader(), std::nullopt);
   EXPECT_EQ(Problem().GetInputWriter(), std::nullopt);
+  EXPECT_EQ(Problem().GetInputDependencies(), std::nullopt);
 
   Problem problem(InputFormat(SimpleIO().AddLine("A")));
   EXPECT_THAT(problem.GetInputReader(), Optional(_));
   EXPECT_THAT(problem.GetInputWriter(), Optional(_));
+  EXPECT_THAT(problem.GetInputDependencies(), Optional(ElementsAre("A")));
 }
 
 TEST(ProblemTest, OutputFormatShouldWork) {
   EXPECT_EQ(Problem().GetOutputReader(), std::nullopt);
   EXPECT_EQ(Problem().GetOutputWriter(), std::nullopt);
+  EXPECT_EQ(Problem().GetOutputDependencies(), std::nullopt);
 
   Problem problem(OutputFormat(SimpleIO().AddLine("A")));
   EXPECT_THAT(problem.GetOutputReader(), Optional(_));
   EXPECT_THAT(problem.GetOutputWriter(), Optional(_));
+  EXPECT_THAT(problem.GetOutputDependencies(), Optional(ElementsAre("A")));
 }
 
 }  // namespace

@@ -14,6 +14,14 @@
 
 #include "src/problem.h"
 
+#include <algorithm>
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "src/librarian/errors.h"
+
 namespace moriarty {
 
 const std::string& Var::GetName() const { return name_; }
@@ -22,13 +30,29 @@ const moriarty_internal::AbstractVariable& Var::GetVariable() const {
   return *variable_;
 }
 
-const moriarty_internal::VariableSet& Variables::GetVariables() {
+const moriarty_internal::VariableSet& Variables::UnsafeGetVariables() {
   return variables_;
+}
+
+ReaderFn InputFormat::Reader() const { return format_.Reader(); }
+
+WriterFn InputFormat::Writer() const { return format_.Writer(); }
+
+std::vector<std::string> InputFormat::GetDependencies() const {
+  return format_.GetDependencies();
+}
+
+ReaderFn OutputFormat::Reader() const { return format_.Reader(); }
+
+WriterFn OutputFormat::Writer() const { return format_.Writer(); }
+
+std::vector<std::string> OutputFormat::GetDependencies() const {
+  return format_.GetDependencies();
 }
 
 std::optional<Title> Problem::GetTitle() const { return title_; }
 
-const moriarty_internal::VariableSet& Problem::GetVariables() const {
+const moriarty_internal::VariableSet& Problem::UnsafeGetVariables() const {
   return variables_;
 }
 
@@ -42,6 +66,10 @@ std::optional<WriterFn> Problem::GetInputWriter() const {
   return input_writer_;
 }
 
+std::optional<std::vector<std::string>> Problem::GetInputDependencies() const {
+  return input_dependencies_;
+}
+
 std::optional<ReaderFn> Problem::GetOutputReader() const {
   return output_reader_;
 }
@@ -50,11 +78,42 @@ std::optional<WriterFn> Problem::GetOutputWriter() const {
   return output_writer_;
 }
 
+std::optional<std::vector<std::string>> Problem::GetOutputDependencies() const {
+  return output_dependencies_;
+}
+
+std::vector<int64_t> Problem::BaseSeedForGenerator(
+    std::string_view generator_seed) const {
+  if (!seed_) {
+    throw ConfigurationError("Problem::BaseSeedForGenerator",
+                             "Problem seed is not set when generating.");
+  }
+
+  std::vector<int64_t> seed_vector;
+  seed_vector.reserve(std::string(*seed_).size() + generator_seed.size());
+  std::ranges::copy(static_cast<std::string>(*seed_),
+                    std::back_inserter(seed_vector));
+  std::ranges::copy(generator_seed, std::back_inserter(seed_vector));
+  return seed_vector;
+}
+
 void Problem::Apply(Title title) { title_ = std::move(title); }
 
-void Problem::Apply(Variables vars) { variables_ = vars.GetVariables(); }
+void Problem::Apply(Variables vars) { variables_ = vars.UnsafeGetVariables(); }
 
 void Problem::Apply(Seed seed) { seed_ = std::move(seed); }
+
+void Problem::Apply(InputFormat format) {
+  input_reader_ = format.Reader();
+  input_writer_ = format.Writer();
+  input_dependencies_ = format.GetDependencies();
+}
+
+void Problem::Apply(OutputFormat format) {
+  output_reader_ = format.Reader();
+  output_writer_ = format.Writer();
+  output_dependencies_ = format.GetDependencies();
+}
 
 Title::Title(std::string_view title) : title_(title) {}
 

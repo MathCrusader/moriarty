@@ -20,6 +20,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include "src/context.h"
 #include "src/internal/abstract_variable.h"
@@ -53,38 +54,73 @@ class Seed {
   std::string seed_;
 };
 
+template <typename T>
+concept MoriartyFormat = requires(T t) {
+  { t.Reader() } -> std::same_as<ReaderFn>;
+  { t.Writer() } -> std::same_as<WriterFn>;
+  { t.GetDependencies() } -> std::same_as<std::vector<std::string>>;
+};
+
+namespace moriarty_internal {
+
+class Format {
+ public:
+  Format(ReaderFn reader, WriterFn writer,
+         std::vector<std::string> dependencies)
+      : reader_(std::move(reader)),
+        writer_(std::move(writer)),
+        dependencies_(std::move(dependencies)) {}
+
+  ReaderFn Reader() const { return reader_; }
+  WriterFn Writer() const { return writer_; }
+  std::vector<std::string> GetDependencies() const { return dependencies_; }
+
+ private:
+  ReaderFn reader_;
+  WriterFn writer_;
+  std::vector<std::string> dependencies_;
+};
+
+}  // namespace moriarty_internal
+
 // InputFormat
 //
 // Specifies how to read and write input for a problem. Any type that has
-// `Reader()` and `Writer()` methods that return `ReaderFn` and `WriterFn`
-// respectively can be used as an InputFormat. Most commonly, this will be
-// `SimpleIO`.
-template <typename T>
+// `Reader()`, `Writer()`, and `GetDependencies()` methods can be used as an
+// InputFormat. Most commonly, this will be `SimpleIO`.
 class InputFormat {
  public:
-  explicit InputFormat(T format);
+  template <MoriartyFormat Fmt>
+  explicit InputFormat(Fmt format);
+
   ReaderFn Reader() const;
   WriterFn Writer() const;
+  std::vector<std::string> GetDependencies() const;
+
+  [[nodiscard]] moriarty_internal::Format UnsafeGetFormat() const;
 
  private:
-  T format_;
+  moriarty_internal::Format format_;
 };
 
 // OutputFormat
 //
 // Specifies how to read and write output for a problem. Any type that has
-// `Reader()` and `Writer()` methods that return `ReaderFn` and `WriterFn`
-// respectively can be used as an OutputFormat. Most commonly, this will be
-// `SimpleIO`.
-template <typename T>
+// `Reader()`, `Writer()`, and `GetDependencies()` methods can be used as an
+// OutputFormat. Most commonly, this will be `SimpleIO`.
 class OutputFormat {
  public:
-  explicit OutputFormat(T format);
+  template <MoriartyFormat Fmt>
+  explicit OutputFormat(Fmt format);
+
   ReaderFn Reader() const;
   WriterFn Writer() const;
+  std::vector<std::string> GetDependencies() const;
+
+  [[nodiscard]] moriarty_internal::Format UnsafeGetFormat() const;
 
  private:
-  T format_;
+  moriarty_internal::Format format_;
 };
 
 // Var
@@ -120,7 +156,7 @@ class Variables {
   template <typename... T>
   Variables(T... variables);
 
-  const moriarty_internal::VariableSet& GetVariables();
+  const moriarty_internal::VariableSet& UnsafeGetVariables();
 
  private:
   moriarty_internal::VariableSet variables_;
@@ -153,12 +189,17 @@ class Problem {
   explicit Problem(T... args);
 
   std::optional<Title> GetTitle() const;
-  const moriarty_internal::VariableSet& GetVariables() const;
   std::optional<Seed> GetSeed() const;
   std::optional<ReaderFn> GetInputReader() const;
   std::optional<WriterFn> GetInputWriter() const;
+  std::optional<std::vector<std::string>> GetInputDependencies() const;
   std::optional<ReaderFn> GetOutputReader() const;
   std::optional<WriterFn> GetOutputWriter() const;
+  std::optional<std::vector<std::string>> GetOutputDependencies() const;
+
+  [[nodiscard]] std::vector<int64_t> BaseSeedForGenerator(
+      std::string_view generator_seed) const;
+  const moriarty_internal::VariableSet& UnsafeGetVariables() const;
 
  private:
   std::optional<Title> title_;
@@ -166,16 +207,16 @@ class Problem {
   std::optional<Seed> seed_;
   std::optional<ReaderFn> input_reader_;
   std::optional<WriterFn> input_writer_;
+  std::optional<std::vector<std::string>> input_dependencies_;
   std::optional<ReaderFn> output_reader_;
   std::optional<WriterFn> output_writer_;
+  std::optional<std::vector<std::string>> output_dependencies_;
 
   void Apply(Title title);
   void Apply(Variables vars);
   void Apply(Seed seed);
-  template <typename T>
-  void Apply(InputFormat<T> format);
-  template <typename T>
-  void Apply(OutputFormat<T> format);
+  void Apply(InputFormat format);
+  void Apply(OutputFormat format);
 };
 
 // -----------------------------------------------------------------------------
@@ -186,48 +227,18 @@ Problem::Problem(T... args) {
   (Apply(std::move(args)), ...);
 }
 
-template <typename T>
-void Problem::Apply(InputFormat<T> format) {
-  input_reader_ = format.Reader();
-  input_writer_ = format.Writer();
-}
-
-template <typename T>
-void Problem::Apply(OutputFormat<T> format) {
-  output_reader_ = format.Reader();
-  output_writer_ = format.Writer();
-}
-
 template <typename... T>
 Variables::Variables(T... variables) {
   (variables_.SetVariable(variables.GetName(), variables.GetVariable()), ...);
 }
 
-template <typename T>
-InputFormat<T>::InputFormat(T format) : format_(std::move(format)) {}
+template <MoriartyFormat Fmt>
+InputFormat::InputFormat(Fmt format)
+    : format_(format.Reader(), format.Writer(), format.GetDependencies()) {}
 
-template <typename T>
-ReaderFn InputFormat<T>::Reader() const {
-  return format_.Reader();
-}
-
-template <typename T>
-WriterFn InputFormat<T>::Writer() const {
-  return format_.Writer();
-}
-
-template <typename T>
-OutputFormat<T>::OutputFormat(T format) : format_(std::move(format)) {}
-
-template <typename T>
-ReaderFn OutputFormat<T>::Reader() const {
-  return format_.Reader();
-}
-
-template <typename T>
-WriterFn OutputFormat<T>::Writer() const {
-  return format_.Writer();
-}
+template <MoriartyFormat Fmt>
+OutputFormat::OutputFormat(Fmt format)
+    : format_(format.Reader(), format.Writer(), format.GetDependencies()) {}
 
 template <MoriartyVariable T>
 Var::Var(std::string name, T variable)

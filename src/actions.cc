@@ -14,10 +14,16 @@
 
 #include "src/actions.h"
 
+#include <iterator>
+#include <vector>
+
 #include "src/context.h"
 #include "src/internal/analysis_bootstrap.h"
+#include "src/internal/generation_bootstrap.h"
+#include "src/internal/random_engine.h"
 #include "src/librarian/errors.h"
 #include "src/problem.h"
+#include "src/test_case.h"
 
 namespace moriarty {
 
@@ -47,6 +53,28 @@ std::string FailuresToString(
   return result;
 }
 
+void ValidateTestCases(const Problem& problem,
+                       const std::vector<TestCase>& test_cases) {
+  if (test_cases.empty()) {
+    throw ValidationError("ValidateTestCases", "No Test Cases.");
+  }
+
+  for (int case_num = 1; const auto& test_case : test_cases) {
+    std::vector<DetailedConstraintViolation> failures =
+        moriarty_internal::CheckValues(problem.UnsafeGetVariables(),
+                                       test_case.UnsafeGetValues(), {},
+                                       ValidationStyle::kOnlySetVariables);
+    if (!failures.empty()) {
+      if (test_cases.size() == 1) {
+        throw ValidationError(FailuresToString(failures));
+      }
+      throw ValidationError(std::format("Case #{} invalid:\n{}", case_num,
+                                        FailuresToString(failures)));
+    }
+    case_num++;
+  }
+}
+
 }  // namespace
 
 void ValidateInputBuilder::Run() const {
@@ -63,7 +91,7 @@ void ValidateInputBuilder::Run() const {
   // }
 
   InputCursor cursor(input_options_->is, input_options_->whitespace_strictness);
-  ReadContext ctx(problem_.GetVariables(), cursor);
+  ReadContext ctx(problem_.UnsafeGetVariables(), cursor);
 
   auto reader = problem_.GetInputReader();
   if (!reader) {
@@ -79,21 +107,69 @@ void ValidateInputBuilder::Run() const {
   if (test_cases.empty())
     throw ConfigurationError("ValidateInput::Run", "No Test Cases.");
 
-  for (int case_num = 1; const auto& test_case : test_cases) {
-    std::vector<DetailedConstraintViolation> failures =
-        moriarty_internal::CheckValues(problem_.GetVariables(),
-                                       test_case.UnsafeGetValues(), {},
-                                       ValidationStyle::kOnlySetVariables);
+  ValidateTestCases(problem_, test_cases);
+}
 
-    if (!failures.empty()) {
-      if (test_cases.size() == 1) {
-        throw ValidationError(FailuresToString(failures));
+GenerateBuilder::GenerateBuilder(Problem problem)
+    : problem_(std::move(problem)) {}
+
+GenerateBuilder& GenerateBuilder::WriteInputUsing(WriteOptions opts) {
+  input_writer_ = std::move(opts);
+  return *this;
+}
+
+GenerateBuilder& GenerateBuilder::WriteOutputUsing(WriteOptions opts) {
+  output_writer_ = std::move(opts);
+  return *this;
+}
+
+std::vector<TestCase> GenerateBuilder::Run() const {
+  std::vector<TestCase> all_test_cases;
+
+  for (const auto& [name, generator, options] : generators_) {
+    std::vector<int64_t> seed =
+        problem_.BaseSeedForGenerator(options.seed.value_or(name));
+    seed.push_back(0);  // Placeholder for call number
+
+    for (int call = 1; call <= options.num_calls; call++) {
+      seed.back() = call;
+
+      moriarty_internal::ValueSet values;
+      moriarty_internal::RandomEngine rng(seed, "v0.1");
+      GenerateContext ctx(problem_.UnsafeGetVariables(), values, rng);
+
+      std::vector<TestCase> generated_cases;
+      if (std::holds_alternative<NamedGenerator::ToTestCase>(generator)) {
+        const auto& gen = std::get<NamedGenerator::ToTestCase>(generator);
+        generated_cases = gen(ctx);
+      } else {
+        const auto& gen = std::get<NamedGenerator::ToMTestCase>(generator);
+        for (const MTestCase& test_case : gen(ctx)) {
+          generated_cases.push_back(
+              TestCase(moriarty_internal::GenerateAllValues(
+                  problem_.UnsafeGetVariables(), test_case.UnsafeGetVariables(),
+                  test_case.UnsafeGetValues(),
+                  {.random_engine = rng,
+                   .variables_to_generate =
+                       problem_.GetInputDependencies().value_or(
+                           std::vector<std::string>{})})));
+        }
       }
-      throw ValidationError(std::format("Case #{} invalid:\n{}", case_num,
-                                        FailuresToString(failures)));
+
+      if (generated_cases.empty()) {
+        throw ValidationError(
+            "Generate::Run",
+            std::format("Generator '{}' produced no test cases.", name));
+      }
+
+      all_test_cases.insert(all_test_cases.end(),
+                            std::make_move_iterator(generated_cases.begin()),
+                            std::make_move_iterator(generated_cases.end()));
     }
-    case_num++;
   }
+
+  ValidateTestCases(problem_, all_test_cases);
+  return all_test_cases;
 }
 
 }  // namespace moriarty
