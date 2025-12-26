@@ -84,8 +84,8 @@ concept MoriartyGenerator = requires(T t, GenerateContext ctx) {
 
 // GenerateBuilder
 //
-// Generates test cases for a problem. The InputFormat and OutputFormat are
-// specified in the `problem`.
+// Generates test cases for a problem and optionally writes them. The
+// InputFormat and OutputFormat are specified in the `problem`.
 //
 // Usage:
 // Generate(problem)
@@ -141,6 +141,20 @@ class GenerateBuilder {
   std::optional<WriteOptions> input_writer_;
   std::optional<WriteOptions> output_writer_;
 };
+
+// Generate
+//
+// Generates test cases for a problem and optionally writes them. The
+// InputFormat and OutputFormat are specified in the `problem`.
+//
+// Usage:
+// Generate(problem)
+//   .Using("MyGenerator", Gen, {.num_runs = 10})
+//   .Using("AnotherGenerator", AnotherGen)
+//   .WriteInputUsing({ .ostream = std::cout })
+//   .WriteOutputUsing({ .ostream = std::cout })
+//   .Run();
+GenerateBuilder Generate(Problem problem);
 
 // -----------------------------------------------------------------------------
 //  Template implementations below

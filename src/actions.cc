@@ -111,6 +111,10 @@ void ValidateInputBuilder::Run() const {
   ValidateTestCases(problem_, test_cases);
 }
 
+GenerateBuilder Generate(Problem problem) {
+  return GenerateBuilder(std::move(problem));
+}
+
 GenerateBuilder::GenerateBuilder(Problem problem)
     : problem_(std::move(problem)) {}
 
@@ -170,6 +174,31 @@ std::vector<TestCase> GenerateBuilder::Run() const {
   }
 
   ValidateTestCases(problem_, all_test_cases);
+  if (input_writer_) {
+    if (!problem_.GetInputWriter()) {
+      throw ConfigurationError(
+          "Generate::Run",
+          "No InputFormat specified in Problem. Cannot write input.");
+    }
+    auto values = moriarty_internal::ValueSet{};
+    WriteContext ctx(input_writer_->ostream, problem_.UnsafeGetVariables(),
+                     values);
+
+    std::invoke(*problem_.GetInputWriter(), ctx, all_test_cases);
+  }
+  if (output_writer_) {
+    if (!problem_.GetOutputWriter()) {
+      throw ConfigurationError(
+          "Generate::Run",
+          "No OutputFormat specified in Problem. Cannot write output.");
+    }
+    auto values = moriarty_internal::ValueSet{};
+    WriteContext ctx(output_writer_->ostream, problem_.UnsafeGetVariables(),
+                     values);
+
+    std::invoke(*problem_.GetOutputWriter(), ctx, all_test_cases);
+  }
+
   return all_test_cases;
 }
 
