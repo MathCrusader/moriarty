@@ -96,6 +96,33 @@ ReaderFn SimpleIO::Reader(int number_of_test_cases) const {
   };
 }
 
+std::vector<std::string> SimpleIO::GetDependencies() const {
+  std::vector<std::string> vars;
+  auto add_tokens = [&](std::span<const Line> lines) {
+    for (const Line& line : lines) {
+      for (const SimpleIOToken& token : line.tokens) {
+        if (std::holds_alternative<std::string>(token)) {
+          std::string var = std::get<std::string>(token);
+          if (std::ranges::find(vars, var) == vars.end()) vars.push_back(var);
+        }
+      }
+
+      if (line.num_lines) {
+        for (std::string_view var : line.num_lines->GetDependencies()) {
+          if (std::ranges::find(vars, var) == vars.end())
+            vars.push_back(std::string(var));
+        }
+      }
+    }
+  };
+
+  add_tokens(lines_in_header_);
+  add_tokens(lines_per_test_case_);
+  add_tokens(lines_in_footer_);
+
+  return vars;
+}
+
 namespace {
 
 // -----------------------------------------------------------------------------

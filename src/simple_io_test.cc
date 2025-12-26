@@ -38,6 +38,7 @@ using ::moriarty_testing::Context;
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::StrEq;
+using ::testing::UnorderedElementsAre;
 
 // -----------------------------------------------------------------------------
 //  SimpleIOWriter
@@ -328,6 +329,18 @@ TEST(SimpleIOReaderTest, MultilineSectionShouldWork) {
                   IntVariableIs("N", 3),
                   ArrayIntVariableIs("A", std::vector<int64_t>{1, 2, 3}),
                   ArrayIntVariableIs("B", std::vector<int64_t>{11, 22, 33}))));
+}
+
+TEST(SimpleIOTest, DependenciesShouldReturnAllVariablesUsed) {
+  SimpleIO io = SimpleIO()
+                    .AddHeaderLine("H1", "H2")
+                    .AddLine("A", "B", StringLiteral("C"))
+                    .AddMultilineSection("2 * N + M", "D", "E")
+                    .AddFooterLine(StringLiteral("F"), "G");
+
+  std::vector<std::string> vars = io.GetDependencies();
+  EXPECT_THAT(vars, UnorderedElementsAre("H1", "H2", "N", "M", "A", "B", "D",
+                                         "E", "G"));
 }
 
 }  // namespace

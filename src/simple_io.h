@@ -148,6 +148,13 @@ class SimpleIO {
   // This can be passed into `Moriarty::ReadTestCases()`.
   [[nodiscard]] ReaderFn Reader(int number_of_test_cases = 1) const;
 
+  // GetDependencies()
+  //
+  // Returns the list of variable names used in this SimpleIO. Either as
+  // something that will be printed or something needed to determine line count.
+  // Transitive dependencies are not included.
+  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+
   // Access the lines
   struct Line {
     std::vector<SimpleIOToken> tokens;
