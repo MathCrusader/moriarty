@@ -116,7 +116,7 @@ ValidationResults Moriarty::ValidateTestCases(ValidateOptions options) const {
 }
 
 void Moriarty::ReadTestCases(ReaderFn fn, ReadOptions options) {
-  InputCursor cursor(options.is, options.whitespace_strictness);
+  InputCursor cursor(options.istream, options.whitespace_strictness);
   ReadContext ctx(variables_, cursor);
 
   std::vector<TestCase> test_cases = fn(ctx);
@@ -132,7 +132,7 @@ void Moriarty::ReadTestCases(ReaderFn fn, ReadOptions options) {
 
 void Moriarty::WriteTestCases(WriterFn fn, WriteOptions options) const {
   moriarty_internal::ValueSet values;
-  WriteContext ctx(options.os, variables_, values);
+  WriteContext ctx(options.ostream, variables_, values);
   fn(ctx, test_cases_);
 }
 

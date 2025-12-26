@@ -420,14 +420,14 @@ TEST(MoriartyTest, ReadAndWriteWithIOStreamsShouldWork) {
       [](ReadContext ctx) {
         return ReadSingleInteger(ctx, "A", Whitespace::kSpace, 6);
       },
-      ReadOptions{.is = ss_in});
+      ReadOptions{.istream = ss_in});
 
   std::stringstream ss_out;
   M.WriteTestCases(
       [](WriteContext ctx, std::span<const TestCase> cases) {
         WriteSingleVariable(ctx, "A", cases);
       },
-      {.os = ss_out});
+      {.ostream = ss_out});
   EXPECT_EQ(ss_out.str(), "1\n2\n3\n4\n5\n6\n");
 }
 
@@ -447,7 +447,7 @@ TEST(MoriartyTest, ReadSingleArrayShouldWork) {
         ctx.ReadWhitespace(Whitespace::kNewline);
         return {C};
       },
-      ReadOptions{.is = ss_in});
+      ReadOptions{.istream = ss_in});
 
   std::stringstream ss_out;
   M.WriteTestCases(
@@ -457,7 +457,7 @@ TEST(MoriartyTest, ReadSingleArrayShouldWork) {
         ctx.WriteVariableFrom("A", cases[0]);
         ctx.WriteWhitespace(Whitespace::kNewline);
       },
-      {.os = ss_out});
+      {.ostream = ss_out});
   EXPECT_EQ(ss_out.str(), expected);
 }
 

@@ -120,7 +120,7 @@ using ReaderFn = std::function<std::vector<TestCase>(ReadContext)>;
 
 struct ReadOptions {
   // The input stream to read from.
-  Ref<std::istream> is = std::cin;
+  Ref<std::istream> istream = std::cin;
 
   // How strict the reader should be about whitespace.
   WhitespaceStrictness whitespace_strictness = WhitespaceStrictness::kPrecise;
@@ -155,7 +155,7 @@ using WriterFn = std::function<void(WriteContext, std::span<const TestCase>)>;
 
 struct WriteOptions {
   // The output stream to write to.
-  Ref<std::ostream> os = std::cout;
+  Ref<std::ostream> ostream = std::cout;
 };
 
 // -----------------------------------------------------------------------------

@@ -40,7 +40,7 @@ TEST(ValidateInputTest, WorksForValidInput) {
             InputFormat(SimpleIO().AddLine("N")));
 
   std::istringstream input("5\n");
-  EXPECT_NO_THROW(ValidateInput(p).ReadInputUsing({.is = input}).Run());
+  EXPECT_NO_THROW(ValidateInput(p).ReadInputUsing({.istream = input}).Run());
 }
 
 TEST(ValidateInputTest, InvalidVariableShouldFail) {
@@ -48,9 +48,10 @@ TEST(ValidateInputTest, InvalidVariableShouldFail) {
             InputFormat(SimpleIO().AddLine("N")));
 
   std::istringstream input("123\n");
-  EXPECT_THAT(
-      SingleCall([&] { ValidateInput(p).ReadInputUsing({.is = input}).Run(); }),
-      ThrowsMessage<IOError>(HasSubstr("between 1 and 10")));
+  EXPECT_THAT(SingleCall([&] {
+                ValidateInput(p).ReadInputUsing({.istream = input}).Run();
+              }),
+              ThrowsMessage<IOError>(HasSubstr("between 1 and 10")));
 }
 
 TEST(ValidateInputTest, InvalidWhitespaceShouldFail) {
@@ -61,21 +62,21 @@ TEST(ValidateInputTest, InvalidWhitespaceShouldFail) {
     std::istringstream input(" 5\n");
     EXPECT_THAT(
         SingleCall(
-            [&] { ValidateInput(p).ReadInputUsing({.is = input}).Run(); }),
+            [&] { ValidateInput(p).ReadInputUsing({.istream = input}).Run(); }),
         ThrowsMessage<IOError>(HasSubstr("Expected a token, but got ' '")));
   }
   {
     std::istringstream input("5");
     EXPECT_THAT(
         SingleCall(
-            [&] { ValidateInput(p).ReadInputUsing({.is = input}).Run(); }),
+            [&] { ValidateInput(p).ReadInputUsing({.istream = input}).Run(); }),
         ThrowsMessage<IOError>(HasSubstr("Expected '\\n', but got EOF")));
   }
   {
     std::istringstream input("");
     EXPECT_THAT(
         SingleCall(
-            [&] { ValidateInput(p).ReadInputUsing({.is = input}).Run(); }),
+            [&] { ValidateInput(p).ReadInputUsing({.istream = input}).Run(); }),
         ThrowsMessage<IOError>(HasSubstr("Expected a token, but got EOF")));
   }
 }
@@ -91,7 +92,7 @@ TEST(ValidateInputTest, ValidMultipleTestCasesShouldSucceed) {
 1 22
 5 25
 )");
-  EXPECT_NO_THROW(ValidateInput(p).ReadInputUsing({.is = input}).Run());
+  EXPECT_NO_THROW(ValidateInput(p).ReadInputUsing({.istream = input}).Run());
 }
 
 TEST(ValidateInputTest, InvalidMultipleTestCasesShouldFail) {
@@ -107,7 +108,7 @@ TEST(ValidateInputTest, InvalidMultipleTestCasesShouldFail) {
 )");
     EXPECT_THAT(
         SingleCall(
-            [&] { ValidateInput(p).ReadInputUsing({.is = input}).Run(); }),
+            [&] { ValidateInput(p).ReadInputUsing({.istream = input}).Run(); }),
         ThrowsMessage<IOError>(HasSubstr("Expected a token, but got EOF")));
   }
   {
@@ -118,7 +119,7 @@ TEST(ValidateInputTest, InvalidMultipleTestCasesShouldFail) {
 )");
     EXPECT_THAT(
         SingleCall(
-            [&] { ValidateInput(p).ReadInputUsing({.is = input}).Run(); }),
+            [&] { ValidateInput(p).ReadInputUsing({.istream = input}).Run(); }),
         ThrowsMessage<IOError>(HasSubstr("Expected EOF, but got more input")));
   }
 }
@@ -129,7 +130,7 @@ TEST(ValidateInputTest, WhitespaceStrictnessShouldBeRespected) {
             InputFormat(SimpleIO().AddLine("N", "X")));
   std::istringstream input(" 7 \t  \n \n21");
   EXPECT_NO_THROW(ValidateInput(p)
-                      .ReadInputUsing({.is = input,
+                      .ReadInputUsing({.istream = input,
                                        .whitespace_strictness =
                                            WhitespaceStrictness::kFlexible})
                       .Run());

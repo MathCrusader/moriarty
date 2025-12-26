@@ -90,7 +90,8 @@ void ValidateInputBuilder::Run() const {
   //                            "supported for input validation.");
   // }
 
-  InputCursor cursor(input_options_->is, input_options_->whitespace_strictness);
+  InputCursor cursor(input_options_->istream,
+                     input_options_->whitespace_strictness);
   ReadContext ctx(problem_.UnsafeGetVariables(), cursor);
 
   auto reader = problem_.GetInputReader();
