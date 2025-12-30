@@ -53,5 +53,9 @@ std::vector<std::string> ValueSet::ListValues() const {
   return result;
 }
 
+void ValueSet::DestructiveMergeFrom(ValueSet& other) {
+  values_.merge(other.values_);
+}
+
 }  // namespace moriarty_internal
 }  // namespace moriarty

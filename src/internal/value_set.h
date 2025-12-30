@@ -90,6 +90,13 @@ class ValueSet {
   // Returns a list of all variable names stored in this ValueSet.
   [[nodiscard]] std::vector<std::string> ListValues() const;
 
+  // DestructiveMergeFrom()
+  //
+  // Merges all values from `other` into this ValueSet. The behaviour of this
+  // function is the same as std::map::merge, which extracts elements from
+  // `other` and leaves the common elements in `other`.
+  void DestructiveMergeFrom(ValueSet& other);
+
  private:
   std::unordered_map<std::string, std::any, StrHash, std::equal_to<>> values_;
 };

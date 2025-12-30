@@ -157,6 +157,26 @@ TEST(ValueSetTest, ListValuesWorks) {
   EXPECT_THAT(values.ListValues(), UnorderedElementsAre("x", "s", "y"));
 }
 
+TEST(ValueSetTest, DestructiveMergeFromWorks) {
+  ValueSet a;
+  a.Set<MInteger>("x", 5);
+  a.Set<MString>("s", "hello");
+
+  ValueSet b;
+  b.Set<MInteger>("y", 10);
+  b.Set<MString>("s", "world");
+
+  a.DestructiveMergeFrom(b);
+
+  EXPECT_THAT(a.ListValues(), UnorderedElementsAre("x", "s", "y"));
+  EXPECT_EQ(a.Get<MInteger>("x"), 5);
+  EXPECT_EQ(a.Get<MString>("s"), "hello");
+  EXPECT_EQ(a.Get<MInteger>("y"), 10);
+
+  EXPECT_THAT(b.ListValues(), UnorderedElementsAre("s"));
+  EXPECT_EQ(b.Get<MString>("s"), "world");
+}
+
 }  // namespace
 }  // namespace moriarty_internal
 }  // namespace moriarty
