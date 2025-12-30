@@ -129,6 +129,12 @@ GenerateBuilder& GenerateBuilder::WriteOutputUsing(WriteOptions opts) {
 }
 
 std::vector<TestCase> GenerateBuilder::Run() const {
+  if (generators_.empty()) {
+    throw ConfigurationError("Generate::Run",
+                             "No generators specified. Call `Using()` to add "
+                             "generators.");
+  }
+
   std::vector<TestCase> all_test_cases;
 
   for (const auto& [name, generator, options] : generators_) {

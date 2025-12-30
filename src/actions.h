@@ -38,9 +38,6 @@ namespace moriarty {
 //   .Run();
 class ValidateInputBuilder {
  public:
-  // Creates a builder. The InputFormat from `problem` will be used to read.
-  explicit ValidateInputBuilder(Problem problem);
-
   // Adds options for reading input.
   ValidateInputBuilder& ReadInputUsing(ReadOptions opts);
 
@@ -53,6 +50,10 @@ class ValidateInputBuilder {
   void Run() const;
 
  private:
+  // Construct a builder using `ValidateInput(problem)`.
+  explicit ValidateInputBuilder(Problem problem);
+  friend ValidateInputBuilder ValidateInput(Problem problem);
+
   Problem problem_;
   std::optional<ReadOptions> input_options_;
 };
@@ -71,10 +72,10 @@ class ValidateInputBuilder {
 // Valid return types for a MoriartyGenerator.
 template <typename T>
 concept ValidGeneratorReturnType =
-    std::same_as<std::decay_t<T>, TestCase> ||
-    std::same_as<std::decay_t<T>, MTestCase> ||
-    std::same_as<std::decay_t<T>, std::vector<TestCase>> ||
-    std::same_as<std::decay_t<T>, std::vector<MTestCase>>;
+    std::same_as<std::remove_cvref_t<T>, TestCase> ||
+    std::same_as<std::remove_cvref_t<T>, MTestCase> ||
+    std::same_as<std::remove_cvref_t<T>, std::vector<TestCase>> ||
+    std::same_as<std::remove_cvref_t<T>, std::vector<MTestCase>>;
 
 // Determines whether a function is a MoriartyGenerator.
 template <typename T>
@@ -88,6 +89,7 @@ concept MoriartyGenerator = requires(T t, GenerateContext ctx) {
 // InputFormat and OutputFormat are specified in the `problem`.
 //
 // Usage:
+//
 // Generate(problem)
 //   .Using("MyGenerator", Gen, {.num_runs = 10})
 //   .Using("AnotherGenerator", AnotherGen)
@@ -96,37 +98,47 @@ concept MoriartyGenerator = requires(T t, GenerateContext ctx) {
 //   .Run();
 class GenerateBuilder {
  public:
-  // Creates a builder.
-  explicit GenerateBuilder(Problem problem);
-
-  // Adds a generator to use. The generator will be run with the given options.
-  // Generators may return either `TestCase`, `MTestCase` (or std::vector<> of
-  // either). If `generator` returns an `MTestCase`, then random values will be
-  // assigned to all variables, using the extra constraints set in the
-  // `MTestCase`.
+  // Adds a generator to use. Valid function signatures for `generator` are:
   //
-  // In general, we recommend that generators return `TestCase`(s) directly only
-  // if you are making a very specific test case, and should return
-  // `MTestCase`(s) for every other case.
+  //  auto foo(GenerateContext ctx) -> TestCase
+  //  auto foo(GenerateContext ctx) -> std::vector<TestCase>
+  //  auto foo(GenerateContext ctx) -> MTestCase
+  //  auto foo(GenerateContext ctx) -> std::vector<MTestCase>
+  //
+  // * An `MTestCase` will fill in all unspecified variables using the
+  //   appropriate random generators.
+  // * A `TestCase` will be taken exactly as-is.
+  //
+  // We recommend that most generators return `MTestCase`(s). You can use
+  // `MTestCase` to add more constraints ("e.g., I want a small odd value in
+  // this test case"). `TestCase`(s) should be returned only in the case where
+  // an *exact* example is needed.
   //
   // We recommend you provide the answer as part of the generator if you can
-  // easily compute a special answer (without just calling your actual
-  // solution). Example, if you are writing a "path generator", then it is
+  // easily compute a special answer *without just calling your actual
+  // solution*. Example, if you are writing a "path generator", then it is
   // (sometimes) possible to compute the answer in a different way.
+  //
+  // Note: `name` is used as the generator's seed if a specific seed is not
+  // provided in `options`.
   template <MoriartyGenerator Generator>
   GenerateBuilder& Using(std::string name, Generator generator,
                          GenerateOptions options = {});
 
-  // Where/how to write the inputs of the test cases.
+  // Specifies where/how to write the inputs of the test cases (optional).
   GenerateBuilder& WriteInputUsing(WriteOptions opts);
 
-  // Where/how to write the outputs of the test cases (optional).
+  // Specifies where/how to write the outputs of the test cases (optional).
   GenerateBuilder& WriteOutputUsing(WriteOptions opts);
 
   // Generates the test cases, writes them (if requested), and returns them.
   std::vector<TestCase> Run() const;
 
  private:
+  // Construct a builder using `Generate(problem)`.
+  explicit GenerateBuilder(Problem problem);
+  friend GenerateBuilder Generate(Problem problem);
+
   Problem problem_;
 
   struct NamedGenerator {
@@ -163,7 +175,7 @@ template <MoriartyGenerator Generator>
 GenerateBuilder& GenerateBuilder::Using(std::string name, Generator generator,
                                         GenerateOptions options) {
   using ReturnType =
-      std::decay_t<decltype(generator(std::declval<GenerateContext>()))>;
+      std::remove_cvref_t<std::invoke_result_t<Generator, GenerateContext>>;
 
   generators_.push_back({
       .name = std::move(name),

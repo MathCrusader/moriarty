@@ -294,5 +294,13 @@ TEST(GenerateTest, WritingWithoutCorrespondingFormatShouldThrow) {
                   HasSubstr("No OutputFormat specified in Problem")));
 }
 
+TEST(GenerateTest, CallingRunWithNoGeneratorsShouldThrow) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10)))), Seed("test_seed"));
+
+  EXPECT_THAT(
+      SingleCall([&] { Generate(p).Run(); }),
+      ThrowsMessage<ConfigurationError>(HasSubstr("No generators specified")));
+}
+
 }  // namespace
 }  // namespace moriarty
