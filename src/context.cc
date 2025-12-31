@@ -64,6 +64,11 @@ ConstraintContext::ConstraintContext(std::string_view name,
                                      const ViewOnlyContext& other)
     : NameContext(name), ViewOnlyContext(other) {}
 
+AnalyzeContext::AnalyzeContext(
+    Ref<const moriarty_internal::VariableSet> variables,
+    Ref<const moriarty_internal::ValueSet> values)
+    : ViewOnlyContext(variables, values) {}
+
 void ValidationResults::AddFailure(int case_num, std::string reason) {
   failures_.emplace_back(case_num, std::move(reason));
 }

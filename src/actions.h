@@ -160,6 +160,7 @@ class GenerateBuilder {
 // InputFormat and OutputFormat are specified in the `problem`.
 //
 // Usage:
+//
 // Generate(problem)
 //   .Using("MyGenerator", Gen, {.num_runs = 10})
 //   .Using("AnotherGenerator", AnotherGen)
@@ -167,6 +168,96 @@ class GenerateBuilder {
 //   .WriteOutputUsing({ .ostream = std::cout })
 //   .Run();
 GenerateBuilder Generate(Problem problem);
+
+// -----------------------------------------------------------------------------
+
+// Determines if a function is a MoriartyAnalyzer with a single TestCase.
+template <typename T>
+concept SingleTestCaseAnalyzer =
+    requires(T t, AnalyzeContext ctx, TestCase tc) {
+      { t(ctx, tc) } -> std::same_as<void>;
+    };
+
+// Determines if a function is a MoriartyAnalyzer with multiple TestCases.
+template <typename T>
+concept MultiTestCasesAnalyzer =
+    requires(T t, AnalyzeContext ctx, std::vector<TestCase> cases) {
+      { t(ctx, cases) } -> std::same_as<void>;
+    };
+
+// Determines whether a function is a MoriartyAnalyzer.
+template <typename T>
+concept MoriartyAnalyzer =
+    SingleTestCaseAnalyzer<T> || MultiTestCasesAnalyzer<T>;
+
+// AnalyzeBuilder
+//
+// Analyzes test cases for a problem. Analyzers are most typically used to
+// compute statistics on the test cases.
+//
+// Usage:
+//
+// Analyze(problem)
+//   .Using("MyGenerator", Gen, {.num_runs = 10})
+//   .Using("AnotherGenerator", AnotherGen)
+//   .ReadInputUsing({ .istream = std::cin })
+//   .ReadOutputUsing({ .istream = std::fstream(" ... ") })
+//   .Run();
+class AnalyzeBuilder {
+ public:
+  // Adds an analyzer to use. Valid function signatures for `analyzer` are:
+  //
+  //  auto foo(AnalyzeContext ctx, const TestCase& tc) -> void
+  //  auto foo(AnalyzeContext ctx, const std::vector<TestCase>& test_cases) ->
+  //  auto foo(AnalyzeContext ctx, std::span<const TestCase> test_cases) -> void
+  //
+  // If the container version is used, then all test cases are provided at
+  // once. If the single test case version is used, then the analyzer is called
+  // once per test case.
+  template <MoriartyAnalyzer Analyzer>
+  AnalyzeBuilder& Using(std::string name, Analyzer analyzer);
+
+  // Reads the input of the test case(s) using the specified options.
+  AnalyzeBuilder& ReadInputUsing(ReadOptions opts);
+
+  // Reads the output of the test case(s) using the specified options.
+  //
+  // FIXME: Right now, output variables do not have access to the values of the
+  // input variables. This will be fixed in a future release.
+  AnalyzeBuilder& ReadOutputUsing(ReadOptions opts);
+
+  // Runs each test case through each analyzer.
+  void Run() const;
+
+ private:
+  // Construct a builder using `Generate(problem)`.
+  explicit AnalyzeBuilder(Problem problem);
+  friend AnalyzeBuilder Analyze(Problem problem);
+
+  Problem problem_;
+
+  struct NamedAnalyzer {
+    std::string name;
+    std::function<void(AnalyzeContext, std::span<const TestCase>)> analyzer;
+  };
+  std::vector<NamedAnalyzer> analyzers_;
+  std::optional<ReadOptions> input_reader_;
+  std::optional<ReadOptions> output_reader_;
+};
+
+// Analyze
+//
+// Analyzes test cases for a problem.
+//
+// Usage:
+//
+// Analyze(problem)
+//   .Using("Find extremes", FindExtremes)
+//   .Using("Determine connectivity", DetermineConnectivity)
+//   .ReadInputUsing({ .istream = std::cin })
+//   .ReadOutputUsing({ .istream = std::cin })
+//   .Run();
+AnalyzeBuilder Analyze(Problem problem);
 
 // -----------------------------------------------------------------------------
 //  Template implementations below
@@ -202,6 +293,32 @@ GenerateBuilder& GenerateBuilder::Using(std::string name, Generator generator,
   } else {
     static_assert(false,
                   "Unhandled return type in MoriartyGenerator. The "
+                  "types in the concept don't match the list here.");
+  }
+
+  return *this;
+}
+
+template <MoriartyAnalyzer Analyzer>
+AnalyzeBuilder& AnalyzeBuilder::Using(std::string name, Analyzer analyzer) {
+  analyzers_.push_back({
+      .name = std::move(name),
+  });
+  auto& a = analyzers_.back();
+
+  if constexpr (SingleTestCaseAnalyzer<Analyzer>) {
+    a.analyzer = [analyzer](AnalyzeContext ctx,
+                            std::span<const TestCase> cases) {
+      for (const TestCase& tc : cases) analyzer(ctx, tc);
+    };
+  } else if constexpr (MultiTestCasesAnalyzer<Analyzer>) {
+    a.analyzer = [analyzer](AnalyzeContext ctx,
+                            std::span<const TestCase> cases) {
+      analyzer(ctx, cases);
+    };
+  } else {
+    static_assert(false,
+                  "Unhandled function signature in MoriartyAnalyzer. The "
                   "types in the concept don't match the list here.");
   }
 

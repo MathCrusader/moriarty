@@ -212,6 +212,22 @@ class ConstraintContext : public moriarty_internal::NameContext,
   // ********************************************
 };
 
+// -----------------------------------------------------------------------------
+//  Analyzers
+
+// AnalyzeContext
+//
+// All context that Analyzers have access to.
+class AnalyzeContext : public moriarty_internal::ViewOnlyContext {
+ public:
+  AnalyzeContext(Ref<const moriarty_internal::VariableSet> variables,
+                 Ref<const moriarty_internal::ValueSet> values);
+
+  // ********************************************
+  // ** See parent classes for more functions. **
+  // ********************************************
+};
+
 }  // namespace moriarty
 
 #endif  // MORIARTY_CONTEXT_H_

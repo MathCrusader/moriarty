@@ -14,6 +14,8 @@
 
 #include "src/actions.h"
 
+#include <span>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/constraints/numeric_constraints.h"
@@ -300,6 +302,198 @@ TEST(GenerateTest, CallingRunWithNoGeneratorsShouldThrow) {
   EXPECT_THAT(
       SingleCall([&] { Generate(p).Run(); }),
       ThrowsMessage<ConfigurationError>(HasSubstr("No generators specified")));
+}
+
+TEST(AnalyzeTest, CallingRunWithNoAnalyzersShouldThrow) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10)))), Seed("test_seed"),
+            InputFormat(SimpleIO().AddLine("N")));
+
+  std::stringstream ss("");
+  EXPECT_THAT(
+      SingleCall([&] { Analyze(p).ReadInputUsing({.istream = ss}).Run(); }),
+      ThrowsMessage<ConfigurationError>(HasSubstr("No analyzers specified")));
+}
+
+TEST(AnalyzeTest, CallingRunWithNoInputStreamShouldThrow) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10)))),
+            InputFormat(SimpleIO().AddLine("N")));
+
+  EXPECT_THAT(SingleCall([&] {
+                Analyze(p)
+                    .Using("TestAnalyzer",
+                           [](AnalyzeContext ctx, const TestCase& tc) {})
+                    .Run();
+              }),
+              ThrowsMessage<ConfigurationError>(
+                  HasSubstr("std::istream needed for input")));
+}
+
+TEST(AnalyzeTest, CallingRunWithNoInputFormatShouldThrow) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10)))));
+
+  std::istringstream input("5\n");
+  EXPECT_THAT(SingleCall([&] {
+                Analyze(p)
+                    .Using("TestAnalyzer",
+                           [](AnalyzeContext ctx, const TestCase& tc) {})
+                    .ReadInputUsing({.istream = input})
+                    .Run();
+              }),
+              ThrowsMessage<ConfigurationError>(
+                  HasSubstr("No InputFormat specified in Problem")));
+}
+
+TEST(AnalyzeTest, SingleTestCaseAnalyzerShouldWork) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10)))),
+            InputFormat(SimpleIO().AddLine("N")));
+
+  std::istringstream input("5\n");
+  int analyzer_calls = 0;
+  int observed_value = 0;
+
+  EXPECT_NO_THROW(Analyze(p)
+                      .Using("TestAnalyzer",
+                             [&](AnalyzeContext ctx, const TestCase& tc) {
+                               analyzer_calls++;
+                               observed_value = tc.GetValue<MInteger>("N");
+                             })
+                      .ReadInputUsing({.istream = input})
+                      .Run());
+
+  EXPECT_EQ(analyzer_calls, 1);
+  EXPECT_EQ(observed_value, 5);
+}
+
+TEST(AnalyzeTest, MultiTestCaseAnalyzerShouldWork) {
+  Problem p(
+      Variables(Var("N", MInteger(Between(1, 10)))),
+      InputFormat(SimpleIO().WithNumberOfTestCasesInHeader().AddLine("N")));
+
+  std::istringstream input("3\n5\n7\n9\n");
+  int analyzer_calls = 0;
+  std::vector<int> observed_values;
+
+  EXPECT_NO_THROW(
+      Analyze(p)
+          .Using("TestAnalyzer",
+                 [&](AnalyzeContext ctx, std::span<const TestCase> cases) {
+                   analyzer_calls++;
+                   for (const auto& tc : cases) {
+                     observed_values.push_back(tc.GetValue<MInteger>("N"));
+                   }
+                 })
+          .ReadInputUsing({.istream = input})
+          .Run());
+
+  EXPECT_EQ(analyzer_calls, 1);
+  EXPECT_THAT(observed_values, ElementsAre(5, 7, 9));
+}
+
+TEST(AnalyzeTest, MultipleAnalyzersShouldAllRun) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10)))),
+            InputFormat(SimpleIO().AddLine("N")));
+
+  std::istringstream input("5\n");
+  int analyzer1_calls = 0;
+  int analyzer2_calls = 0;
+
+  EXPECT_NO_THROW(
+      Analyze(p)
+          .Using("Analyzer1", [&](AnalyzeContext ctx,
+                                  const TestCase& tc) { analyzer1_calls++; })
+          .Using("Analyzer2", [&](AnalyzeContext ctx,
+                                  const TestCase& tc) { analyzer2_calls++; })
+          .ReadInputUsing({.istream = input})
+          .Run());
+
+  EXPECT_EQ(analyzer1_calls, 1);
+  EXPECT_EQ(analyzer2_calls, 1);
+}
+
+TEST(AnalyzeTest, ReadingOutputShouldWork) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10))),
+                      Var("Result", MInteger(Between(1, 100)))),
+            InputFormat(SimpleIO().AddLine("N")),
+            OutputFormat(SimpleIO().AddLine("Result")));
+
+  std::istringstream input("5\n");
+  std::istringstream output("42\n");
+  int observed_n = 0;
+  int observed_result = 0;
+
+  EXPECT_NO_THROW(Analyze(p)
+                      .Using("TestAnalyzer",
+                             [&](AnalyzeContext ctx, const TestCase& tc) {
+                               observed_n = tc.GetValue<MInteger>("N");
+                               observed_result =
+                                   tc.GetValue<MInteger>("Result");
+                             })
+                      .ReadInputUsing({.istream = input})
+                      .ReadOutputUsing({.istream = output})
+                      .Run());
+
+  EXPECT_EQ(observed_n, 5);
+  EXPECT_EQ(observed_result, 42);
+}
+
+TEST(AnalyzeTest, ReadingOutputWithoutOutputFormatShouldThrow) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10)))),
+            InputFormat(SimpleIO().AddLine("N")));
+
+  std::istringstream input("5\n");
+  std::istringstream output("42\n");
+
+  EXPECT_THAT(SingleCall([&] {
+                Analyze(p)
+                    .Using("TestAnalyzer",
+                           [&](AnalyzeContext ctx, const TestCase& tc) {})
+                    .ReadInputUsing({.istream = input})
+                    .ReadOutputUsing({.istream = output})
+                    .Run();
+              }),
+              ThrowsMessage<ConfigurationError>(
+                  HasSubstr("No OutputFormat specified in Problem")));
+}
+
+TEST(AnalyzeTest, MismatchedInputOutputCountsShouldThrow) {
+  Problem p(
+      Variables(Var("N", MInteger(Between(1, 10))),
+                Var("Result", MInteger(Between(1, 100)))),
+      InputFormat(SimpleIO().WithNumberOfTestCasesInHeader().AddLine("N")),
+      OutputFormat(
+          SimpleIO().WithNumberOfTestCasesInHeader().AddLine("Result")));
+
+  std::istringstream input("3\n5\n7\n9\n");
+  std::istringstream output("2\n42\n43\n");
+
+  EXPECT_THAT(SingleCall([&] {
+                Analyze(p)
+                    .Using("TestAnalyzer",
+                           [&](AnalyzeContext ctx, const TestCase& tc) {})
+                    .ReadInputUsing({.istream = input})
+                    .ReadOutputUsing({.istream = output})
+                    .Run();
+              }),
+              ThrowsMessage<ValidationError>(
+                  HasSubstr("Number of output test cases (2) does not match")));
+}
+
+TEST(AnalyzeTest, EmptyInputShouldThrow) {
+  Problem p(
+      Variables(Var("N", MInteger(Between(1, 10)))),
+      InputFormat(SimpleIO().WithNumberOfTestCasesInHeader().AddLine("N")));
+
+  std::istringstream input("0\n");
+
+  EXPECT_THAT(SingleCall([&] {
+                Analyze(p)
+                    .Using("TestAnalyzer",
+                           [&](AnalyzeContext ctx, const TestCase& tc) {})
+                    .ReadInputUsing({.istream = input})
+                    .Run();
+              }),
+              ThrowsMessage<ConfigurationError>(
+                  HasSubstr("No Test Cases read in input")));
 }
 
 }  // namespace

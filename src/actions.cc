@@ -101,8 +101,7 @@ void ValidateInputBuilder::Run() const {
         "No InputFormat specified in Problem. Cannot read input.");
   }
 
-  std::vector<TestCase> test_cases;
-  test_cases = (*reader)(ctx);
+  std::vector<TestCase> test_cases = (*reader)(ctx);
   ctx.ReadEof();
 
   if (test_cases.empty())
@@ -206,6 +205,89 @@ std::vector<TestCase> GenerateBuilder::Run() const {
   }
 
   return all_test_cases;
+}
+
+AnalyzeBuilder::AnalyzeBuilder(Problem problem)
+    : problem_(std::move(problem)) {}
+
+AnalyzeBuilder& AnalyzeBuilder::ReadInputUsing(ReadOptions opts) {
+  input_reader_ = std::move(opts);
+  return *this;
+}
+
+AnalyzeBuilder& AnalyzeBuilder::ReadOutputUsing(ReadOptions opts) {
+  output_reader_ = std::move(opts);
+  return *this;
+}
+
+AnalyzeBuilder Analyze(Problem problem) {
+  return AnalyzeBuilder(std::move(problem));
+}
+
+void AnalyzeBuilder::Run() const {
+  if (!input_reader_) {
+    throw ConfigurationError("Analyze::Run",
+                             "std::istream needed for input. Use "
+                             "ReadInputUsing() to specify options.");
+  }
+  if (analyzers_.empty()) {
+    throw ConfigurationError("Analyze::Run",
+                             "No analyzers specified. Call `Using()` to add "
+                             "analyzers.");
+  }
+
+  InputCursor cursor(input_reader_->istream,
+                     input_reader_->whitespace_strictness);
+  ReadContext ctx(problem_.UnsafeGetVariables(), cursor);
+
+  auto reader = problem_.GetInputReader();
+  if (!reader) {
+    throw ConfigurationError(
+        "Analyze::Run",
+        "No InputFormat specified in Problem. Cannot read input.");
+  }
+
+  std::vector<TestCase> test_cases = (*reader)(ctx);
+  ctx.ReadEof();
+
+  if (test_cases.empty())
+    throw ConfigurationError("Analyze::Run", "No Test Cases read in input.");
+
+  if (output_reader_) {
+    InputCursor cursor(output_reader_->istream,
+                       output_reader_->whitespace_strictness);
+    ReadContext ctx(problem_.UnsafeGetVariables(), cursor);
+
+    auto reader = problem_.GetOutputReader();
+    if (!reader) {
+      throw ConfigurationError(
+          "Analyze::Run",
+          "No OutputFormat specified in Problem. Cannot read output.");
+    }
+
+    std::vector<TestCase> outputs = (*reader)(ctx);
+    ctx.ReadEof();
+
+    if (outputs.size() != test_cases.size()) {
+      throw ValidationError(
+          "Analyze::Run",
+          std::format("Number of output test cases ({}) does not match "
+                      "number of input test cases ({}).",
+                      outputs.size(), test_cases.size()));
+    }
+
+    // TODO: views::zip when we can use C++23
+    for (int i = 0; i < test_cases.size(); i++) {
+      test_cases[i].UnsafeGetValues().DestructiveMergeFrom(
+          outputs[i].UnsafeGetValues());
+    }
+  }
+
+  for (const auto& [name, analyzer] : analyzers_) {
+    moriarty_internal::ValueSet values;
+    AnalyzeContext ctx(problem_.UnsafeGetVariables(), values);
+    analyzer(ctx, test_cases);
+  }
 }
 
 }  // namespace moriarty
