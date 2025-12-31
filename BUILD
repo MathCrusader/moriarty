@@ -34,8 +34,10 @@ cc_static_library(
         "//visibility:public",
     ],
     deps = [
+        "//src:actions",
         "//src:context",
         "//src:moriarty",
+        "//src:problem",
         "//src:simple_io",
         "//src:test_case",
         "//src/constraints:all_mconstraints",
