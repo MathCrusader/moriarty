@@ -1,0 +1,22 @@
+# Stage 1: Setup Bazelisk
+FROM ubuntu:24.04 AS bazelisk-installer
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+  curl git build-essential tar unzip wget python3 openjdk-11-jdk \
+  && rm -rf /var/lib/apt/lists/*
+
+# Install Bazelisk
+RUN curl -Lo /usr/local/bin/bazelisk \
+  https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64 \
+  && chmod +x /usr/local/bin/bazelisk \
+  && ln -s /usr/local/bin/bazelisk /usr/local/bin/bazel
+
+# Stage 2: Build
+FROM bazelisk-installer
+
+# Set working directory
+WORKDIR /workspace
+
+# Run bazel build
+CMD ["bazel", "build", "//..."]

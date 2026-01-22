@@ -15,6 +15,7 @@
 
 #include "src/internal/simple_pattern.h"
 
+#include <algorithm>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>

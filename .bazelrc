@@ -1,24 +1,28 @@
-build --action_env=BAZEL_CXXOPTS="-std=c++20:-Wno-sign-compare"
+build --cxxopt=-std=c++20
+build --copt=-Wno-sign-compare
 
 # GCC has a bug that absl will not make a workaround for.
+
 # So we're forced to use Clang for ASAN/UBSAN builds.
+
 # Issue: https://github.com/abseil/abseil-cpp/issues/1634
+
 # Workaround from: https://github.com/bazelbuild/bazel/issues/11122#issuecomment-1026073878
 
 build:asan-clang \
-  --repo_env=CC=clang \
-  --action_env=BAZEL_CXXOPTS="-std=c++20:-Wall:-fsanitize=address,undefined" \
-  --action_env=BAZEL_LINKOPTS="-fsanitize-link-c++-runtime:--driver-mode=g++:-fsanitize=address,undefined" \
-  --compiler=clang++ \
-  --host_compiler=clang++ \
-  --crosstool_top=@bazel_tools//tools/cpp:clang \
-  --host_crosstool_top=@bazel_tools//tools/cpp:clang \
-  --copt=-fsanitize=address,undefined \
-  --linkopt=-fsanitize=address,undefined \
-  --strip=never \
-  --copt=-O1 \
-  --copt=-g \
-  --copt=-fno-omit-frame-pointer
+ --repo_env=CC=clang \
+ --action_env=BAZEL_CXXOPTS="-std=c++20:-Wall:-fsanitize=address,undefined" \
+ --action_env=BAZEL_LINKOPTS="-fsanitize-link-c++-runtime:--driver-mode=g++:-fsanitize=address,undefined" \
+ --compiler=clang++ \
+ --host_compiler=clang++ \
+ --crosstool_top=@bazel_tools//tools/cpp:clang \
+ --host_crosstool_top=@bazel_tools//tools/cpp:clang \
+ --copt=-fsanitize=address,undefined \
+ --linkopt=-fsanitize=address,undefined \
+ --strip=never \
+ --copt=-O1 \
+ --copt=-g \
+ --copt=-fno-omit-frame-pointer
 
 build:asan --copt=-fsanitize=address,undefined --linkopt=-fsanitize=address,undefined
 test:asan --copt=-fsanitize=address,undefined --linkopt=-fsanitize=address,undefined

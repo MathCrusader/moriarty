@@ -1,3 +1,4 @@
+# Copyright 2025 Darcy Best
 # Copyright 2024 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -15,6 +16,8 @@
 package(
     default_visibility = ["//:internal"],
 )
+
+load("@rules_cc//cc:cc_static_library.bzl", "cc_static_library")
 
 package_group(
     name = "internal",
