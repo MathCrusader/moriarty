@@ -16,6 +16,7 @@
 
 #include <vector>
 
+#include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 
 namespace moriarty {
@@ -37,6 +38,36 @@ MVariantFormat& MVariantFormat::NewlineSeparated() {
 
 MVariantFormat& MVariantFormat::Discriminator(
     std::vector<std::string> options) {
+  for (const std::string& option : options) {
+    if (option.empty()) {
+      throw ConfigurationError("MVariantFormat::Discriminator",
+                               "Empty string is not a valid Discriminator.");
+    }
+    for (char c : option) {
+      if (!std::isprint(c) || std::isspace(c)) {
+        throw ConfigurationError(
+            "MVariantFormat::Discriminator",
+            "Discriminator options cannot contain whitespace.");
+      }
+    }
+  }
+
+  for (size_t i = 0; i < options.size(); ++i) {
+    // Compare options against their tolower versions to ensure case-insensitive
+    // uniqueness.
+    for (size_t j = i + 1; j < options.size(); ++j) {
+      if (std::ranges::equal(options[i], options[j], [](char a, char b) {
+            return std::tolower(a) == std::tolower(b);
+          })) {
+        throw ConfigurationError(
+            "MVariantFormat::Discriminator",
+            std::format(
+                "Duplicate discriminator option (case-insensitive): '{}'",
+                options[i]));
+      }
+    }
+  }
+
   discriminator_options_ = std::move(options);
   return *this;
 }

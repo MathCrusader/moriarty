@@ -64,6 +64,34 @@ TEST(MVariantTest, WriteShouldSucceed) {
   EXPECT_EQ(Write(constraints, "hello"), "str hello");
 }
 
+TEST(MVariantTest, DiscriminatorRejectsEmptyOption) {
+  MVariantFormat format;
+
+  EXPECT_THROW(format.Discriminator({""}), ConfigurationError);
+}
+
+TEST(MVariantTest, DiscriminatorRejectsWhitespace) {
+  MVariantFormat format;
+
+  EXPECT_THROW(format.Discriminator({"has space"}), ConfigurationError);
+  EXPECT_THROW(format.Discriminator({"tab\t"}), ConfigurationError);
+  EXPECT_THROW(format.Discriminator({"newline\n"}), ConfigurationError);
+}
+
+TEST(MVariantTest, DiscriminatorRejectsNonPrintable) {
+  MVariantFormat format;
+
+  std::string option = "bad";
+  option.push_back('\x01');
+  EXPECT_THROW(format.Discriminator({option}), ConfigurationError);
+}
+
+TEST(MVariantTest, DiscriminatorRejectsCaseInsensitiveDuplicates) {
+  MVariantFormat format;
+
+  EXPECT_THROW(format.Discriminator({"Int", "iNT"}), ConfigurationError);
+}
+
 TEST(MVariantTest, WriteWithProperSeparatorShouldSucceed) {
   auto newline_constraints = MVariant(MInteger(), MString());
   newline_constraints.Format().Discriminator({"int", "str"}).NewlineSeparated();
