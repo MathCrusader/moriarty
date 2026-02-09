@@ -36,6 +36,7 @@ cc_library(
         ":mreal",
         ":mstring",
         ":mtuple",
+        ":mvariant",
     ],
 )
 
@@ -161,6 +162,20 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "mvariant",
+    srcs = ["mvariant.cc"],
+    hdrs = ["mvariant.h"],
+    deps = [
+        ":mnone",
+        "//src/constraints:container_constraints",
+        "//src/contexts:librarian_context",
+        "//src/librarian:errors",
+        "//src/librarian:mvariable",
+        "@abseil-cpp//absl/strings",
+    ],
+)
+
 cc_test(
     name = "marray_test",
     srcs = ["marray_test.cc"],
@@ -250,6 +265,19 @@ cc_test(
         ":minteger",
         ":mstring",
         ":mtuple",
+        "//src/librarian:mvariable",
+        "//src/librarian/testing:gtest_helpers",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "mvariant_test",
+    srcs = ["mvariant_test.cc"],
+    deps = [
+        ":minteger",
+        ":mstring",
+        ":mvariant",
         "//src/librarian:mvariable",
         "//src/librarian/testing:gtest_helpers",
         "@googletest//:gtest_main",

@@ -50,19 +50,19 @@ struct MVariableValueTypeTrait<MTuple<MElementTypes...>> {
 
 // MTupleFormat
 //
-// How to format an MArray when reading/writing.
+// How to format an MTuple when reading/writing.
 class MTupleFormat {
  public:
-  // Sets the whitespace to be used between elements of the array.
+  // Sets the whitespace to be used between elements of the tuple.
   //
   // Default: kSpace
   MTupleFormat& WithSeparator(Whitespace separator);
-  // Returns if the format is an edge list. See `EdgeList()`.
+  // Returns the separator used between elements of the tuple.
   Whitespace GetSeparator() const;
 
-  // Sets the array to be space-separated.
+  // Sets the tuple to be space-separated.
   MTupleFormat& SpaceSeparated();
-  // Sets the array to be newline-separated.
+  // Sets the tuple to be newline-separated.
   MTupleFormat& NewlineSeparated();
 
   // Take any non-defaults in `other` and apply them to this format.
@@ -107,7 +107,7 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
   // Create an MTuple by specifying the MVariables directly.
   //
   // E.g.,
-  //     MTuple(MInteger(Between(1, 10)), String(Length(15)));
+  //     MTuple(MInteger(Between(1, 10)), MString(Length(15)));
   explicit MTuple(MElementTypes... values);
 
   ~MTuple() override = default;
@@ -206,9 +206,8 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
   };
 };
 
-// Class template argument deduction (CTAD). Allows for `Array(MInteger())`
-// instead of `Array<MInteger>(MInteger())`. See `NestedArray()` for nesting
-// multiple `Arrays` inside one another.
+// Class template argument deduction (CTAD). Allows for `MTuple(MInteger(),
+// MString())` instead of `MTuple<MInteger, MString>()`.
 template <typename... MElementTypes>
 MTuple(MElementTypes...) -> MTuple<MElementTypes...>;
 
@@ -221,6 +220,7 @@ MTuple<T...>::MTuple(T... values) {
       (MoriartyVariable<T> && ...),
       "MTuple<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
       "MString).");
+  static_assert(sizeof...(T) > 0, "MTuple must have at least one element.");
 
   auto apply_one = [&]<std::size_t I>() {
     this->AddConstraint(
@@ -317,7 +317,7 @@ MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
   };
 
   return [&]<size_t... I>(std::index_sequence<I...>) {
-    return tuple_value_type { generate_one.template operator()<I>()... };
+    return tuple_value_type{generate_one.template operator()<I>()...};
   }(std::index_sequence_for<T...>{});
 }
 

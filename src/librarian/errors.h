@@ -218,6 +218,7 @@ class ValidationError : public GenericMoriartyError {
   std::string message_;
 };
 
+// FIXME: Rename to ReadError (and change any writing errors to WriteError).
 // IOError
 //
 // Thrown when the I/O is invalid.
@@ -244,6 +245,17 @@ Context:
  private:
   std::string message_;
   InputCursor cursor_;
+};
+
+class WriteError : public GenericMoriartyError {
+ public:
+  explicit WriteError(std::string_view message)
+      : GenericMoriartyError(std::string(message)), message_(message) {}
+
+  const std::string& Message() const { return message_; }
+
+ private:
+  std::string message_;
 };
 
 // ConfigurationError

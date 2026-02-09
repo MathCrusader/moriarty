@@ -16,8 +16,10 @@
 #define MORIARTY_LIBRARIAN_DEBUG_STRING_H_
 
 #include <concepts>
+#include <ranges>
 #include <string>
 #include <tuple>
+#include <variant>
 
 namespace moriarty {
 namespace librarian {
@@ -56,6 +58,11 @@ std::string DebugString(const T& x, int max_len = kMaxDebugStringLength,
 
 template <typename... Ts>
 std::string DebugString(const std::tuple<Ts...>& x,
+                        int max_len = kMaxDebugStringLength,
+                        bool include_backticks = true);
+
+template <typename... Ts>
+std::string DebugString(const std::variant<Ts...>& x,
                         int max_len = kMaxDebugStringLength,
                         bool include_backticks = true);
 
@@ -121,6 +128,16 @@ std::string DebugString(const std::tuple<Ts...>& x, int max_len,
       },
       x);
   return CleanAndShortenDebugString(res + ">", max_len, include_backticks);
+}
+
+template <typename... Ts>
+std::string DebugString(const std::variant<Ts...>& x, int max_len,
+                        bool include_backticks) {
+  return CleanAndShortenDebugString(
+      std::visit(
+          [&](const auto& elem) { return DebugString(elem, max_len, false); },
+          x),
+      max_len, include_backticks);
 }
 
 template <typename T>
