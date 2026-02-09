@@ -119,6 +119,12 @@ class SimpleIO {
   // are no StringLiterals. Prefer to use `AddLine(Tokens... tokens).`
   SimpleIO& AddLine(std::span<const std::string> tokens);
 
+  // AddMultilineSection() for use when you don't know how many tokens you have
+  // and there are no StringLiterals. Prefer to use
+  // `AddMultilineSection(Tokens... tokens).`
+  SimpleIO& AddMultilineSection(std::string_view number_of_lines_expression,
+                                std::span<const std::string> tokens);
+
   // AddHeaderLine() for use when you don't know how many tokens you have and
   // there are no StringLiterals. Prefer to use `AddHeaderLine(Tokens...
   // tokens).`

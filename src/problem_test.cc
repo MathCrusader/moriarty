@@ -63,7 +63,7 @@ TEST(ProblemTest, InputFormatShouldWork) {
   EXPECT_EQ(Problem().GetInputWriter(), std::nullopt);
   EXPECT_EQ(Problem().GetInputDependencies(), std::nullopt);
 
-  Problem problem(InputFormat(SimpleIO().AddLine("A")));
+  Problem problem(InputFormat(Line("A")));
   EXPECT_THAT(problem.GetInputReader(), Optional(_));
   EXPECT_THAT(problem.GetInputWriter(), Optional(_));
   EXPECT_THAT(problem.GetInputDependencies(), Optional(ElementsAre("A")));
@@ -74,7 +74,7 @@ TEST(ProblemTest, OutputFormatShouldWork) {
   EXPECT_EQ(Problem().GetOutputWriter(), std::nullopt);
   EXPECT_EQ(Problem().GetOutputDependencies(), std::nullopt);
 
-  Problem problem(OutputFormat(SimpleIO().AddLine("A")));
+  Problem problem(OutputFormat(Line("A")));
   EXPECT_THAT(problem.GetOutputReader(), Optional(_));
   EXPECT_THAT(problem.GetOutputWriter(), Optional(_));
   EXPECT_THAT(problem.GetOutputDependencies(), Optional(ElementsAre("A")));

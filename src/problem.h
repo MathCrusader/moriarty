@@ -25,6 +25,7 @@
 #include "src/context.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/variable_set.h"
+#include "src/simple_io.h"
 
 namespace moriarty {
 
@@ -54,6 +55,53 @@ class Seed {
   std::string seed_;
 };
 
+// Line
+//
+// A single line of input or output. Use in InputFormat and OutputFormat.
+// Every variable listed will be read/written on the same line, separated by a
+// space.
+class Line {
+ public:
+  template <typename... Tokens>
+    requires(std::convertible_to<Tokens, std::string> && ...)
+  Line(Tokens&&... tokens) : tokens_{std::forward<Tokens>(tokens)...} {};
+
+  void ApplyTo(SimpleIO& io) const { io.AddLine(tokens_); }
+
+ private:
+  std::vector<std::string> tokens_;
+};
+
+// Multiline
+//
+// A multiline section of input or output. Use in InputFormat and OutputFormat.
+// The first parameter specifies how many lines are in the section. Then, every
+// variable listed will be read/written over the next
+// <number_of_lines_expression> lines.
+//
+// The variables will be zipped together. For example, if the variables are
+// `X` and `Y`, and the number of lines is 3, then the input will be in the
+// form:
+//   x1 y1
+//   x2 y2
+//   x3 y3
+class Multiline {
+ public:
+  template <typename... Tokens>
+    requires(std::convertible_to<Tokens, std::string> && ...)
+  Multiline(std::string_view number_of_lines_expression, Tokens&&... tokens)
+      : number_of_lines_expression_(number_of_lines_expression),
+        tokens_{std::forward<Tokens>(tokens)...} {};
+
+  void ApplyTo(SimpleIO& io) const {
+    io.AddMultilineSection(number_of_lines_expression_.ToString(), tokens_);
+  }
+
+ private:
+  Expression number_of_lines_expression_;
+  std::vector<std::string> tokens_;
+};
+
 template <typename T>
 concept MoriartyFormat = requires(T t) {
   { t.Reader() } -> std::same_as<ReaderFn>;
@@ -71,6 +119,11 @@ class Format {
         writer_(std::move(writer)),
         dependencies_(std::move(dependencies)) {}
 
+  template <typename... Lines>
+    requires((std::same_as<Lines, Line> || std::same_as<Lines, Multiline>) &&
+             ...)
+  Format(Lines&&... lines);
+
   ReaderFn Reader() const { return reader_; }
   WriterFn Writer() const { return writer_; }
   std::vector<std::string> GetDependencies() const { return dependencies_; }
@@ -85,13 +138,29 @@ class Format {
 
 // InputFormat
 //
-// Specifies how to read and write input for a problem. Any type that has
-// `Reader()`, `Writer()`, and `GetDependencies()` methods can be used as an
-// InputFormat. Most commonly, this will be `SimpleIO`.
+// Specifies how to read and write input for a problem. In general, use Line()
+// and Multiline() to specify the format.
+//
+// Example:
+//   InputFormat(
+//     Line("N", "S"),  // A single line with `N` and `S` separated by a space.
+//     Line("A"),       // A single line with `A`.
+//     Multiline("3 * N", "X"),  // 3*N lines, each with one element of X.
+//     Multiline("N", "P", "Q")  // N lines, each with an element of P and Q.
+//   );
+//
+// However, if you need something more complex, any type that has `Reader()`,
+// `Writer()`, and `GetDependencies()` methods can be used as an InputFormat.
+// Most commonly, this will be `SimpleIO`.
 class InputFormat {
  public:
   template <MoriartyFormat Fmt>
   explicit InputFormat(Fmt format);
+
+  template <typename... Lines>
+    requires((std::same_as<Lines, Line> || std::same_as<Lines, Multiline>) &&
+             ...)
+  explicit InputFormat(Lines&&... lines);
 
   ReaderFn Reader() const;
   WriterFn Writer() const;
@@ -105,13 +174,29 @@ class InputFormat {
 
 // OutputFormat
 //
-// Specifies how to read and write output for a problem. Any type that has
-// `Reader()`, `Writer()`, and `GetDependencies()` methods can be used as an
-// OutputFormat. Most commonly, this will be `SimpleIO`.
+// Specifies how to read and write output for a problem. In general, use Line()
+// and Multiline() to specify the format.
+//
+// Example:
+//   OutputFormat(
+//     Line("N", "S"),  // A single line with `N` and `S` separated by a space.
+//     Line("A"),       // A single line with `A`.
+//     Multiline("3 * N", "X"),  // 3*N lines, each with one element of X.
+//     Multiline("N", "P", "Q")  // N lines, each with an element of P and Q.
+//   );
+//
+// However, if you need something more complex, any type that has `Reader()`,
+// `Writer()`, and `GetDependencies()` methods can be used as an OutputFormat.
+// Most commonly, this will be `SimpleIO`.
 class OutputFormat {
  public:
   template <MoriartyFormat Fmt>
   explicit OutputFormat(Fmt format);
+
+  template <typename... Lines>
+    requires((std::same_as<Lines, Line> || std::same_as<Lines, Multiline>) &&
+             ...)
+  explicit OutputFormat(Lines&&... lines);
 
   ReaderFn Reader() const;
   WriterFn Writer() const;
@@ -150,7 +235,6 @@ class Var {
 //                             Length("3 * N + 1"))),
 //   Var("S", MString(Alphabet("abc"), Length("N")))
 // );
-
 class Variables {
  public:
   template <typename... T>
@@ -180,8 +264,13 @@ class Variables {
 //       Var("X", MInteger(Between(20, 25)))
 //     ),
 //     Seed("example_seed"),
-//     InputFormat(SimpleIO().AddLine("N", "S").AddLine("A")),
-//     OutputFormat(SimpleIO().AddLine("X"))
+//     InputFormat(
+//       Line("N", "S"),
+//       Multiline("N", "A")  // N lines, each with one element of A.
+//     ),
+//     OutputFormat(
+//       Line("X")
+//     )
 //   );
 class Problem {
  public:
@@ -227,6 +316,16 @@ Problem::Problem(T... args) {
   (Apply(std::move(args)), ...);
 }
 
+template <typename... Lines>
+  requires((std::same_as<Lines, Line> || std::same_as<Lines, Multiline>) && ...)
+moriarty_internal::Format::Format(Lines&&... lines) {
+  SimpleIO io;
+  (lines.ApplyTo(io), ...);
+  reader_ = io.Reader();
+  writer_ = io.Writer();
+  dependencies_ = io.GetDependencies();
+}
+
 template <typename... T>
 Variables::Variables(T... variables) {
   (variables_.SetVariable(variables.GetName(), variables.GetVariable()), ...);
@@ -236,9 +335,19 @@ template <MoriartyFormat Fmt>
 InputFormat::InputFormat(Fmt format)
     : format_(format.Reader(), format.Writer(), format.GetDependencies()) {}
 
+template <typename... Lines>
+  requires((std::same_as<Lines, Line> || std::same_as<Lines, Multiline>) && ...)
+InputFormat::InputFormat(Lines&&... lines)
+    : format_(std::forward<Lines>(lines)...) {}
+
 template <MoriartyFormat Fmt>
 OutputFormat::OutputFormat(Fmt format)
     : format_(format.Reader(), format.Writer(), format.GetDependencies()) {}
+
+template <typename... Lines>
+  requires((std::same_as<Lines, Line> || std::same_as<Lines, Multiline>) && ...)
+OutputFormat::OutputFormat(Lines&&... lines)
+    : format_(std::forward<Lines>(lines)...) {}
 
 template <MoriartyVariable T>
 Var::Var(std::string name, T variable)

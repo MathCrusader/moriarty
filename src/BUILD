@@ -85,6 +85,7 @@ cc_library(
     hdrs = ["problem.h"],
     deps = [
         ":context",
+        ":simple_io",
         "//src/internal:abstract_variable",
         "//src/internal:variable_set",
     ],

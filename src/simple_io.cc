@@ -51,6 +51,15 @@ SimpleIO& SimpleIO::AddLine(std::span<const std::string> tokens) {
   return *this;
 }
 
+SimpleIO& SimpleIO::AddMultilineSection(
+    std::string_view number_of_lines_expression,
+    std::span<const std::string> tokens) {
+  lines_per_test_case_.push_back(
+      {std::vector<SimpleIOToken>(tokens.begin(), tokens.end()),
+       Expression(number_of_lines_expression)});
+  return *this;
+}
+
 SimpleIO& SimpleIO::AddHeaderLine(std::span<const std::string> tokens) {
   lines_in_header_.push_back(
       {std::vector<SimpleIOToken>(tokens.begin(), tokens.end())});
