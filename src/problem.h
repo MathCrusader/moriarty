@@ -231,7 +231,7 @@ class Var {
 //
 // Variables(
 //   Var("N", MInteger(Between(1, 100))),
-//   Var("A", MArray<MInteger>(Elements<MInteger>(Between(3, 5)),
+//   Var("A", MArray<MInteger>(Elements(Between(3, 5)),
 //                             Length("3 * N + 1"))),
 //   Var("S", MString(Alphabet("abc"), Length("N")))
 // );
@@ -258,7 +258,7 @@ class Variables {
 //     Title("Example Problem"),
 //     Variables(
 //       Var("N", MInteger(Between(1, 100))),
-//       Var("A", MArray<MInteger>(Elements<MInteger>(Between(1, 3)),
+//       Var("A", MArray<MInteger>(Elements(Between(1, 3)),
 //                                 Length("N"))),
 //       Var("S", MString(Alphabet("abc"), Length("N"))),
 //       Var("X", MInteger(Between(20, 25)))

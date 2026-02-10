@@ -54,11 +54,17 @@ namespace moriarty {
 // Determines if ConstraintType is a valid constraint to be applied to
 // MVariableType.
 template <typename MVariableType, typename ConstraintType>
-concept ConstraintFor = MoriartyVariable<MVariableType> && requires {
-  std::declval<MVariableType>().AddConstraint(std::declval<ConstraintType>());
-};
+concept ConstraintFor =
+    MoriartyVariable<MVariableType> &&
+    requires(MVariableType var, ConstraintType c) { var.AddConstraint(c); };
 
 namespace librarian {
+
+template <typename MVariableType, typename ConstraintType>
+constexpr void AssertIsConstraintForType() {
+  static_assert(ConstraintFor<MVariableType, ConstraintType>,
+                "Constraint is not valid for the MVariable.");
+}
 
 struct NoValueType {};
 template <typename T>
@@ -141,6 +147,19 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Adds a constraint that is fully user-defined. See other overloads of
   // `AddCustomConstraint` for simple construction.
   VariableType& AddConstraint(CustomConstraint<VariableType> constraint);
+
+  // AddConstraints()
+  //
+  // Adds multiple constraints at once.
+  template <typename... Constraints>
+    requires(sizeof...(Constraints) > 0)
+  VariableType& AddConstraints(Constraints&&... constraints);
+
+  // AddConstraints()
+  //
+  // Adds multiple constraints at once.
+  template <typename... Constraints>
+  VariableType& AddConstraints(std::tuple<Constraints...> constraints);
 
   // CheckValue()
   //
@@ -369,6 +388,18 @@ V& MVariable<V>::AddCustomConstraint(
 template <typename V>
 V& MVariable<V>::AddConstraint(CustomConstraint<V> constraint) {
   return InternalAddConstraint(CustomConstraintWrapper(std::move(constraint)));
+}
+
+template <typename V>
+template <typename... Constraints>
+V& MVariable<V>::AddConstraints(std::tuple<Constraints...> constraints) {
+  std::apply(
+      [this](auto&&... cs) {
+        (UnderlyingVariableType().AddConstraint(std::forward<decltype(cs)>(cs)),
+         ...);
+      },
+      std::move(constraints));
+  return UnderlyingVariableType();
 }
 
 template <typename V>

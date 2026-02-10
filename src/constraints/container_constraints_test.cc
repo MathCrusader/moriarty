@@ -90,17 +90,18 @@ TEST(ContainerConstraintsTest, LengthIsSatisfiedWithWorks) {
 }
 
 TEST(ContainerConstraintsTest, ElementsConstraintsAreCorrect) {
-  EXPECT_THAT(Elements<MInteger>(Between(1, 10)).GetConstraints(),
+  EXPECT_THAT(StronglyTypedElements<MInteger>(Between(1, 10)).GetConstraints(),
               GeneratedValuesAre(AllOf(Ge(1), Le(10))));
-  EXPECT_THAT(Elements<MInteger>(AtLeast("X"), AtMost(15)).GetConstraints(),
+  EXPECT_THAT(StronglyTypedElements<MInteger>(AtLeast("X"), AtMost(15))
+                  .GetConstraints(),
               GeneratedValuesAre(AllOf(Ge(3), Le(15)),
                                  Context().WithValue<MInteger>("X", 3)));
 }
 
 TEST(ContainerConstraintsTest, ElementsToStringWorks) {
-  EXPECT_EQ(Elements<MInteger>(Between(1, 10)).ToString(),
+  EXPECT_EQ(StronglyTypedElements<MInteger>(Between(1, 10)).ToString(),
             "each element is between 1 and 10");
-  EXPECT_EQ(Elements<MString>(Length(Between(1, 10))).ToString(),
+  EXPECT_EQ(StronglyTypedElements<MString>(Length(Between(1, 10))).ToString(),
             "each element has length that is between 1 and 10");
 }
 
@@ -109,11 +110,12 @@ TEST(ContainerConstraintsTest, ElementsUnsatisfiedReasonWorks) {
   moriarty_internal::ValueSet values;
   ConstraintContext ctx("N", variables, values);
 
+  EXPECT_EQ(StronglyTypedElements<MInteger>(Between(1, 10))
+                .CheckValue(ctx, {-1, 2, 3})
+                .Reason(),
+            "array index 0 (which is `-1`) is not between 1 and 10");
   EXPECT_EQ(
-      Elements<MInteger>(Between(1, 10)).CheckValue(ctx, {-1, 2, 3}).Reason(),
-      "array index 0 (which is `-1`) is not between 1 and 10");
-  EXPECT_EQ(
-      Elements<MString>(Length(Between(3, 10)))
+      StronglyTypedElements<MString>(Length(Between(3, 10)))
           .CheckValue(ctx, std::vector<std::string>{"hello", "moto", "me"})
           .Reason(),
       "array index 2 (which is `me`) has length (which is `2`) that is not "
@@ -127,37 +129,37 @@ TEST(ContainerConstraintsTest, ElementsIsSatisfiedWithWorks) {
   ConstraintContext ctx("N", variables, values);
 
   {
-    EXPECT_THAT(Elements<MString>(Length(Between(1, 10)))
+    EXPECT_THAT(StronglyTypedElements<MString>(Length(Between(1, 10)))
                     .CheckValue(ctx, std::vector<std::string>{}),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Elements<MString>(Length(Between(1, 10)))
+    EXPECT_THAT(StronglyTypedElements<MString>(Length(Between(1, 10)))
                     .CheckValue(ctx, std::vector<std::string>{"hello", "moto"}),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Elements<MString>(Length(Between(1, "X")))
+    EXPECT_THAT(StronglyTypedElements<MString>(Length(Between(1, "X")))
                     .CheckValue(ctx, std::vector<std::string>{"hello", "moto"}),
                 HasNoConstraintViolation());
   }
   {
-    EXPECT_THAT(Elements<MInteger>(Between(1, 10))
+    EXPECT_THAT(StronglyTypedElements<MInteger>(Between(1, 10))
                     .CheckValue(ctx, std::vector<int64_t>{1, 2, 3}),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Elements<MInteger>(Between(1, "X"))
+    EXPECT_THAT(StronglyTypedElements<MInteger>(Between(1, "X"))
                     .CheckValue(ctx, std::vector<int64_t>{1}),
                 HasNoConstraintViolation());
   }
   {
-    EXPECT_THAT(Elements<MString>(Length(Between(1, 4)))
+    EXPECT_THAT(StronglyTypedElements<MString>(Length(Between(1, 4)))
                     .CheckValue(ctx, std::vector<std::string>{"hello"}),
                 HasConstraintViolation(HasSubstr("length")));
-    EXPECT_THAT(Elements<MString>(Length(Between(2, 10)))
+    EXPECT_THAT(StronglyTypedElements<MString>(Length(Between(2, 10)))
                     .CheckValue(ctx, std::vector<std::string>{"hello", "m"}),
                 HasConstraintViolation(HasSubstr("length")));
   }
   {
-    EXPECT_THAT(Elements<MInteger>(Between(1, 10))
+    EXPECT_THAT(StronglyTypedElements<MInteger>(Between(1, 10))
                     .CheckValue(ctx, std::vector<int64_t>{1, 2, 11}),
                 HasConstraintViolation(HasSubstr("is not between")));
-    EXPECT_THAT(Elements<MInteger>(Between(1, "X"))
+    EXPECT_THAT(StronglyTypedElements<MInteger>(Between(1, "X"))
                     .CheckValue(ctx, std::vector<int64_t>{1, 2, 11}),
                 HasConstraintViolation(HasSubstr("is not between")));
   }

@@ -436,8 +436,7 @@ TEST(MoriartyTest, ReadSingleArrayShouldWork) {
   std::stringstream ss_in(expected);
   Moriarty M;
   M.AddVariable("N", MInteger());
-  M.AddVariable(
-      "A", MArray<MInteger>(Elements<MInteger>(Between(1, 10)), Length("N")));
+  M.AddVariable("A", MArray<MInteger>(Elements(Between(1, 10)), Length("N")));
   M.ReadTestCases(
       [](ReadContext ctx) -> std::vector<TestCase> {
         TestCase C = {};

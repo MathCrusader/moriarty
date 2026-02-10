@@ -80,7 +80,7 @@ class MArrayFormat {
 //
 // Describes constraints placed on an array. The elements of the array must have
 // a corresponding MVariable, and general constraints on the elements are
-// controlled via the `Elements<>` constraint.
+// controlled via the `Elements` constraint.
 //
 // In order to generate, the length of the array must be constrained (via the
 // `Length` constraint).
@@ -97,7 +97,7 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
   // Create an MArray from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
   //
-  // E.g., MArray<MInteger>(Elements<MInteger>(Between(1, 10)), Length(15))
+  // E.g., MArray<MInteger>(Elements(Between(1, 10)), Length(15))
   template <typename... Constraints>
     requires(ConstraintFor<MArray<MElementType>, Constraints> && ...)
   explicit MArray(Constraints&&... constraints);
@@ -129,7 +129,10 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
   //  Constrain the elements of the array
 
   // The array's elements must satisfy these constraints.
-  MArray& AddConstraint(Elements<MElementType> constraint);
+  template <typename... MConstraints>
+  MArray& AddConstraint(Elements<MConstraints...> constraint);
+  // The array's elements must satisfy these constraints.
+  MArray& AddConstraint(StronglyTypedElements<MElementType> constraint);
   // The array's elements must be distinct.
   MArray& AddConstraint(DistinctElements constraint);
   // The array's elements must be in sorted order.
@@ -293,7 +296,7 @@ MArray<MArray<MElementType>> NestedMArray(MArray<MElementType> elements,
 
 template <typename T>
 MArray<T>::MArray(T element_constraints)
-    : MArray<T>(Elements<T>(std::move(element_constraints))) {}
+    : MArray<T>(StronglyTypedElements<T>(std::move(element_constraints))) {}
 
 template <typename T>
 template <typename... Constraints>
@@ -317,7 +320,14 @@ MArray<T>& MArray<T>::AddConstraint(OneOf<vector_value_type> constraint) {
 }
 
 template <typename T>
-MArray<T>& MArray<T>::AddConstraint(Elements<T> constraint) {
+template <typename... MConstraints>
+MArray<T>& MArray<T>::AddConstraint(Elements<MConstraints...> constraint) {
+  (librarian::AssertIsConstraintForType<T, MConstraints>(), ...);
+  return AddConstraint(StronglyTypedElements<T>(std::move(constraint)));
+}
+
+template <typename T>
+MArray<T>& MArray<T>::AddConstraint(StronglyTypedElements<T> constraint) {
   auto& constraints = core_constraints_.data_.Mutable();
   constraints.touched |= CoreConstraints::Flags::kElements;
   constraints.elements.MergeFrom(constraint.GetConstraints());

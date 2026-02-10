@@ -47,7 +47,7 @@ namespace moriarty {
 //   Moriarty M;
 //   M.SetName("Example Constraints")
 //     .AddVariable("N", MInteger(Between(1, 100)))
-//     .AddVariable("A", MArray<MInteger>(Elements<MInteger>(Between(3, 5)),
+//     .AddVariable("A", MArray<MInteger>(Elements(Between(3, 5)),
 //                                        Length("3 * N + 1")))
 //     .AddVariable("S", MString(Alphabet("abc"), Length("N")));
 //   M.GenerateTestCases(FancyGenerator);

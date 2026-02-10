@@ -20,6 +20,8 @@
 #include <functional>
 #include <string>
 #include <string_view>
+#include <tuple>
+#include <type_traits>
 #include <vector>
 
 #include "absl/container/flat_hash_map.h"
@@ -69,15 +71,45 @@ class Length : public MConstraint {
 };
 
 // Constraints that all elements of a container must satisfy.
-template <typename MElementType>
+template <typename... MConstraints>
 class Elements : public MConstraint {
  public:
+  static_assert(sizeof...(MConstraints) > 0,
+                "Elements must have at least one constraint.");
+
   // The elements of the container must satisfy all of these constraints.
-  // E.g., Elements<MInteger>(Between(1, 10), Prime())
+  // E.g., Elements(Between(1, 10), Prime())
+  template <typename... Constraints>
+    requires(sizeof...(Constraints) > 0)
+  explicit Elements(Constraints&&... element_constraints);
+
+  // Returns the constraints on the elements.
+  [[nodiscard]] std::tuple<MConstraints...> GetConstraints() const;
+
+ private:
+  std::tuple<MConstraints...> element_constraints_;
+};
+
+// CTAD for Elements<>
+template <typename... Constraints>
+Elements(Constraints&&...) -> Elements<std::decay_t<Constraints>...>;
+
+// Constraints that all elements of a container must satisfy.
+//
+// This is very similar to `Elements`, except you must explicitly specify the
+// MVariable that the constraints are for. Prefer to use `Elements` for
+// readability.
+template <typename MElementType>
+class StronglyTypedElements : public MConstraint {
+ public:
   template <typename... Constraints>
     requires(std::constructible_from<MElementType, Constraints...> &&
              sizeof...(Constraints) > 0)
-  explicit Elements(Constraints&&... element_constraints);
+  explicit StronglyTypedElements(Constraints&&... element_constraints);
+
+  template <typename... Constraints>
+    requires(sizeof...(Constraints) > 0)
+  explicit StronglyTypedElements(Elements<Constraints...> element_constraints);
 
   // Returns the constraints on the elements.
   [[nodiscard]] MElementType GetConstraints() const;
@@ -191,20 +223,44 @@ ConstraintViolation Length::CheckValue(ConstraintContext ctx,
 }
 
 // ====== Elements ======
-template <typename MElementType>
+template <typename... MConstraints>
 template <typename... Constraints>
-  requires(std::constructible_from<MElementType, Constraints...> &&
-           sizeof...(Constraints) > 0)
-Elements<MElementType>::Elements(Constraints&&... element_constraints)
+  requires(sizeof...(Constraints) > 0)
+Elements<MConstraints...>::Elements(Constraints&&... element_constraints)
     : element_constraints_(std::forward<Constraints>(element_constraints)...) {}
 
-template <typename MElementType>
-MElementType Elements<MElementType>::GetConstraints() const {
+template <typename... MConstraints>
+std::tuple<MConstraints...> Elements<MConstraints...>::GetConstraints() const {
   return element_constraints_;
 }
 
 template <typename MElementType>
-ConstraintViolation Elements<MElementType>::CheckValue(
+template <typename... Constraints>
+  requires(sizeof...(Constraints) > 0)
+StronglyTypedElements<MElementType>::StronglyTypedElements(
+    Elements<Constraints...> element_constraints)
+    : element_constraints_(std::make_from_tuple<MElementType>(
+          element_constraints.GetConstraints())) {}
+
+template <typename MElementType>
+template <typename... Constraints>
+  requires(std::constructible_from<MElementType, Constraints...> &&
+           sizeof...(Constraints) > 0)
+StronglyTypedElements<MElementType>::StronglyTypedElements(
+    Constraints&&... element_constraints)
+    : element_constraints_(std::forward<Constraints>(element_constraints)...) {
+  static_assert(
+      std::constructible_from<MElementType, Constraints...>,
+      "Element constraints are not valid for the given MElementType.");
+}
+
+template <typename MElementType>
+MElementType StronglyTypedElements<MElementType>::GetConstraints() const {
+  return element_constraints_;
+}
+
+template <typename MElementType>
+ConstraintViolation StronglyTypedElements<MElementType>::CheckValue(
     ConstraintContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
   for (int idx = -1; const auto& elem : value) {
@@ -219,12 +275,13 @@ ConstraintViolation Elements<MElementType>::CheckValue(
 }
 
 template <typename MElementType>
-std::string Elements<MElementType>::ToString() const {
+std::string StronglyTypedElements<MElementType>::ToString() const {
   return std::format("each element {}", element_constraints_.ToString());
 }
 
 template <typename MElementType>
-std::vector<std::string> Elements<MElementType>::GetDependencies() const {
+std::vector<std::string> StronglyTypedElements<MElementType>::GetDependencies()
+    const {
   return element_constraints_.GetDependencies();
 }
 

@@ -101,7 +101,7 @@ TEST(MArrayTest, ReadingTheWrongLengthOfMArrayShouldFail) {
 }
 
 TEST(MArrayTest, SimpleGenerateCaseWorks) {
-  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
+  EXPECT_THAT(MArray<MInteger>(Elements(Between(1, 10), Length(4)),
                                Length(Between(5, 50))),
               GeneratedValuesAre(AllOf(SizeIs(AllOf(Ge(5), Le(50))),
                                        Each(AllOf(Ge(1), Le(10))))));
@@ -109,21 +109,19 @@ TEST(MArrayTest, SimpleGenerateCaseWorks) {
 
 TEST(MArrayTest, NestedMArrayWorks) {
   EXPECT_THAT(
-      NestedMArray(
-          MArray<MInteger>(Elements<MInteger>(Between(1, 10)), Length(3)),
-          Length(5)),
+      NestedMArray(MArray<MInteger>(Elements(Between(1, 10)), Length(3)),
+                   Length(5)),
       GeneratedValuesAre(AllOf(
           SizeIs(5), Each(AllOf(SizeIs(3), Each(AllOf(Ge(1), Le(10))))))));
   {
     // Silly deeply nested case
     MArray A = NestedMArray(
-        NestedMArray(
-            NestedMArray(NestedMArray(MArray<MInteger>(
-                                          Elements<MInteger>(Between(1, 100)),
-                                          Length(Between(2, 2))),
-                                      Length(Between(1, 3))),
-                         Length(Between(2, 3))),
-            Length(Between(3, 3))),
+        NestedMArray(NestedMArray(NestedMArray(MArray<MInteger>(
+                                                   Elements(Between(1, 100)),
+                                                   Length(Between(2, 2))),
+                                               Length(Between(1, 3))),
+                                  Length(Between(2, 3))),
+                     Length(Between(3, 3))),
         Length(Between(2, 3)));
 
     EXPECT_THAT(
@@ -138,12 +136,10 @@ TEST(MArrayTest, NestedMArrayWorks) {
 
 TEST(MArrayTest, RepeatedLengthCallsShouldBeIntersectedTogether) {
   auto gen_given_length1 = [](int lo, int hi) {
-    return MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
-                            Length(Between(lo, hi)));
+    return MArray<MInteger>(Elements(Between(1, 10)), Length(Between(lo, hi)));
   };
   auto gen_given_length2 = [](int lo1, int hi1, int lo2, int hi2) {
-    return MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
-                            Length(Between(lo1, hi1)),
+    return MArray<MInteger>(Elements(Between(1, 10)), Length(Between(lo1, hi1)),
                             Length(Between(lo2, hi2)));
   };
 
@@ -178,8 +174,7 @@ TEST(MArrayTest, LengthZeroProducesTheEmptyArray) {
 TEST(MArrayTest, MergeFromCorrectlyMergesOnLength) {
   // The alphabet is irrelevant for the tests
   auto get_arr = [](int lo, int hi) {
-    return MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
-                            Length(Between(lo, hi)));
+    return MArray<MInteger>(Elements(Between(1, 10)), Length(Between(lo, hi)));
   };
 
   // All possible valid intersection of length
@@ -200,7 +195,7 @@ TEST(MArrayTest, MergeFromCorrectlyMergesOnLength) {
 
 TEST(MArrayTest, MergeFromCorrectlyMergesElementConstraints) {
   auto int_array = [](int lo, int hi) {
-    return MArray<MInteger>(Elements<MInteger>(Between(lo, hi)), Length(20));
+    return MArray<MInteger>(Elements(Between(lo, hi)), Length(20));
   };
 
   EXPECT_TRUE(GenerateSameValues(int_array(1, 10).MergeFrom(int_array(6, 12)),
@@ -223,14 +218,14 @@ TEST(MArrayTest, LengthIsSatisfied) {
 }
 
 TEST(MArrayTest, IsSatisfiedWithChecksMArrayContentsProperly) {
-  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 10))),
+  EXPECT_THAT(MArray<MInteger>(Elements(Between(1, 10))),
               IsSatisfiedWith(std::vector<int64_t>({5, 6, 1, 4, 3, 9, 10})));
 
-  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 10))),
+  EXPECT_THAT(MArray<MInteger>(Elements(Between(1, 10))),
               IsNotSatisfiedWith(std::vector<int64_t>({5, 6, 7, 8, 9, 10, 11}),
                                  "index 6"));
   EXPECT_THAT(
-      MArray<MInteger>(Elements<MInteger>(Between(1, 10))),
+      MArray<MInteger>(Elements(Between(1, 10))),
       IsNotSatisfiedWith(std::vector<int64_t>({5, 6, 0, 8, 9, 10}), "index 2"));
 }
 
@@ -265,7 +260,7 @@ TEST(MArrayTest, IsSatisfiedWithWithNoConstraintsShouldAcceptAnything) {
 
 TEST(MArrayTest, IsSatisfiedWithChecksLengthConstraintsProperly) {
   auto constraints = [](Length length_constraint) {
-    return MArray<MInteger>(Elements<MInteger>(Between(1, 10)),
+    return MArray<MInteger>(Elements(Between(1, 10)),
                             std::move(length_constraint));
   };
 
@@ -304,36 +299,36 @@ TEST(MArrayTest, IsSatisfiedWithChecksLengthConstraintsProperly) {
 }
 
 TEST(MArrayTest, IsSatisfiedWithShouldCheckForDistinctElements) {
-  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 5)),
-                               DistinctElements(), Length(3)),
-              IsSatisfiedWith(std::vector<int64_t>({1, 2, 5})));
+  EXPECT_THAT(
+      MArray<MInteger>(Elements(Between(1, 5)), DistinctElements(), Length(3)),
+      IsSatisfiedWith(std::vector<int64_t>({1, 2, 5})));
 
-  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 5)),
-                               DistinctElements(), Length(3)),
-              IsNotSatisfiedWith(std::vector<int64_t>({1, 2, 2}), "distinct"));
+  EXPECT_THAT(
+      MArray<MInteger>(Elements(Between(1, 5)), DistinctElements(), Length(3)),
+      IsNotSatisfiedWith(std::vector<int64_t>({1, 2, 2}), "distinct"));
 }
 
 TEST(MArrayTest, WithDistinctElementsReturnsOnlyDistinctValues) {
   EXPECT_THAT(
-      MArray<MInteger>(Elements<MInteger>(Between(1, 10)), Length(10),
+      MArray<MInteger>(Elements(Between(1, 10)), Length(10),
                        DistinctElements()),
       GeneratedValuesAre(UnorderedElementsAre(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)));
 
-  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 100)), Length(50),
+  EXPECT_THAT(MArray<MInteger>(Elements(Between(1, 100)), Length(50),
                                DistinctElements()),
               GeneratedValuesAre(Not(HasDuplicateIntegers())));
 }
 
 TEST(MArrayTest, WithDistinctElementsWithNotEnoughDistinctValuesFails) {
-  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 5)), Length(10),
-                               DistinctElements()),
-              GenerateThrowsGenerationError("", Context()));
+  EXPECT_THAT(
+      MArray<MInteger>(Elements(Between(1, 5)), Length(10), DistinctElements()),
+      GenerateThrowsGenerationError("", Context()));
 }
 
 TEST(MArrayTest, WithDistinctElementsIsAbleToGenerateWithHugeValue) {
   // This is asking for all integers between 1 and 500. This should
   // succeed relatively quickly. Testing if there are enough retries.
-  EXPECT_THAT(MArray<MInteger>(Elements<MInteger>(Between(1, 500)), Length(500),
+  EXPECT_THAT(MArray<MInteger>(Elements(Between(1, 500)), Length(500),
                                DistinctElements()),
               GeneratedValuesAre(SizeIs(500)));
 }
@@ -403,7 +398,7 @@ TEST(MArrayTest,
 }
 
 TEST(MArrayTest, DirectlyUsingChunkedReaderShouldWork) {
-  MArray<MInteger> arr(Elements<MInteger>(Between(1, 10)), Length(6));
+  MArray<MInteger> arr(Elements(Between(1, 10)), Length(6));
 
   Context context;
   std::istringstream input("1\n2\n3\n4\n5\n6\n");
@@ -424,7 +419,7 @@ TEST(MArrayTest, IndirectlyUsingChunkedReaderShouldWork) {
   std::istringstream input("1\n2\n3\n4\n5\n6\n");
   InputCursor cursor(input, WhitespaceStrictness::kPrecise);
 
-  MArray<MInteger> arr(Elements<MInteger>(Between(1, 10)), Length(6));
+  MArray<MInteger> arr(Elements(Between(1, 10)), Length(6));
   std::unique_ptr<moriarty_internal::ChunkedReader> reader =
       static_cast<moriarty_internal::AbstractVariable&>(arr).GetChunkedReader(
           "A", 6, cursor, context.Variables(), context.Values());
@@ -466,24 +461,23 @@ MATCHER_P(IsSortedBy, comp, "is sorted by custom comparator") {
 TEST(MArrayTest, SortedConstraintWorks) {
   EXPECT_THAT(MArray<MInteger>(Length(10), Sorted<MInteger>()),
               GeneratedValuesAre(IsSorted()));
-  EXPECT_THAT(MArray<MString>(Elements<MString>(Length(3), Alphabet("abc")),
-                              Length(20), Sorted<MString>()),
+  EXPECT_THAT(MArray<MString>(Elements(Length(3), Alphabet("abc")), Length(20),
+                              Sorted<MString>()),
               GeneratedValuesAre(IsSorted()));
-  EXPECT_THAT(MArray<MString>(DistinctElements(),
-                              Elements<MString>(Length(3), Alphabet("abc")),
-                              Length(20), Sorted<MString>()),
-              GeneratedValuesAre(IsSorted()));
-  EXPECT_THAT(MArray<MString>(DistinctElements(),
-                              Elements<MString>(Length(3), Alphabet("abc")),
-                              Length(20), Sorted<MString, std::greater<>>()),
-              GeneratedValuesAre(IsSortedBy(std::greater<>{})));
+  EXPECT_THAT(
+      MArray<MString>(DistinctElements(), Elements(Length(3), Alphabet("abc")),
+                      Length(20), Sorted<MString>()),
+      GeneratedValuesAre(IsSorted()));
+  EXPECT_THAT(
+      MArray<MString>(DistinctElements(), Elements(Length(3), Alphabet("abc")),
+                      Length(20), Sorted<MString, std::greater<>>()),
+      GeneratedValuesAre(IsSortedBy(std::greater<>{})));
 
-  EXPECT_THAT(MArray<MArray<MInteger>>(
-                  DistinctElements(),
-                  Elements<MArray<MInteger>>(
-                      Length(3), Elements<MInteger>(Between(1, 10))),
-                  Length(20), Sorted<MArray<MInteger>>()),
-              GeneratedValuesAre(IsSorted()));
+  EXPECT_THAT(
+      MArray<MArray<MInteger>>(DistinctElements(),
+                               Elements(Length(3), Elements(Between(1, 10))),
+                               Length(20), Sorted<MArray<MInteger>>()),
+      GeneratedValuesAre(IsSorted()));
 }
 
 }  // namespace
