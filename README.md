@@ -21,14 +21,14 @@ int main() {
     Seed("longrandomuuidhere"),
     Variables(
       Var("N", MInteger(Between(1, 100))),
-      Var("S", MString(Alphabet::LowerCase(), Length("2 * N - 1"))),
+      Var("S", MString(Alphabet::Lowercase(), Length("2 * N - 1"))),
       Var("A", MArray<MInteger>(Length("N + 1"), Elements<MInteger>(Between(31, 35)))),
       Var("B", MArray<MString>(Length("N + 1"), Elements<MString>(Alphabet("xyz"), Length(Between(1, 4))))),
       Var("X", MInteger())
     ),
     InputFormat(
-      Line("N", "S"),           // Single line with N and S on it.
-      Multiline("N+1", "A", "B")  // N+1 lines, the i-th of which contains A[i] and B[i].
+      Line("N", "S"),             // Single line with N and S on it.
+      Multiline("N+1", "A", "B")  // N+1 lines; i-th line contains A[i] and B[i].
     ),
     OutputFormat(
       Line("X")

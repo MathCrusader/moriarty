@@ -54,25 +54,25 @@ MATCHER(HasDuplicateLetter,
 // correctly typed and not accidentally modified later.
 TEST(AlphabetTest, CommonAlphabetsDoNotHaveDuplicatedLetters) {
   EXPECT_THAT(Alphabet::Letters().GetAlphabet(), Not(HasDuplicateLetter()));
-  EXPECT_THAT(Alphabet::UpperCase().GetAlphabet(), Not(HasDuplicateLetter()));
-  EXPECT_THAT(Alphabet::LowerCase().GetAlphabet(), Not(HasDuplicateLetter()));
+  EXPECT_THAT(Alphabet::Uppercase().GetAlphabet(), Not(HasDuplicateLetter()));
+  EXPECT_THAT(Alphabet::Lowercase().GetAlphabet(), Not(HasDuplicateLetter()));
   EXPECT_THAT(Alphabet::Numbers().GetAlphabet(), Not(HasDuplicateLetter()));
-  EXPECT_THAT(Alphabet::AlphaNumeric().GetAlphabet(),
+  EXPECT_THAT(Alphabet::Alphanumeric().GetAlphabet(),
               Not(HasDuplicateLetter()));
-  EXPECT_THAT(Alphabet::UpperAlphaNumeric().GetAlphabet(),
+  EXPECT_THAT(Alphabet::UpperAlphanumeric().GetAlphabet(),
               Not(HasDuplicateLetter()));
-  EXPECT_THAT(Alphabet::LowerAlphaNumeric().GetAlphabet(),
+  EXPECT_THAT(Alphabet::LowerAlphanumeric().GetAlphabet(),
               Not(HasDuplicateLetter()));
 }
 
 TEST(AlphabetTest, CommonAlphabetsHaveTheAppropriateNumberOfElements) {
   EXPECT_THAT(Alphabet::Letters().GetAlphabet(), SizeIs(26 + 26));
-  EXPECT_THAT(Alphabet::UpperCase().GetAlphabet(), SizeIs(26));
-  EXPECT_THAT(Alphabet::LowerCase().GetAlphabet(), SizeIs(26));
+  EXPECT_THAT(Alphabet::Uppercase().GetAlphabet(), SizeIs(26));
+  EXPECT_THAT(Alphabet::Lowercase().GetAlphabet(), SizeIs(26));
   EXPECT_THAT(Alphabet::Numbers().GetAlphabet(), SizeIs(10));
-  EXPECT_THAT(Alphabet::AlphaNumeric().GetAlphabet(), SizeIs(26 + 26 + 10));
-  EXPECT_THAT(Alphabet::UpperAlphaNumeric().GetAlphabet(), SizeIs(26 + 10));
-  EXPECT_THAT(Alphabet::LowerAlphaNumeric().GetAlphabet(), SizeIs(26 + 10));
+  EXPECT_THAT(Alphabet::Alphanumeric().GetAlphabet(), SizeIs(26 + 26 + 10));
+  EXPECT_THAT(Alphabet::UpperAlphanumeric().GetAlphabet(), SizeIs(26 + 10));
+  EXPECT_THAT(Alphabet::LowerAlphanumeric().GetAlphabet(), SizeIs(26 + 10));
 }
 
 TEST(AlphabetTest, BasicConstructorShouldReturnExactAlphabet) {
@@ -88,13 +88,13 @@ TEST(AlphabetTest, IsSatisfiedWithShouldWork) {
               HasConstraintViolation(HasSubstr("`A`")));
 
   {
-    EXPECT_THAT(Alphabet::AlphaNumeric().CheckValue("b"),
+    EXPECT_THAT(Alphabet::Alphanumeric().CheckValue("b"),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Alphabet::AlphaNumeric().CheckValue("B"),
+    EXPECT_THAT(Alphabet::Alphanumeric().CheckValue("B"),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Alphabet::AlphaNumeric().CheckValue("3"),
+    EXPECT_THAT(Alphabet::Alphanumeric().CheckValue("3"),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Alphabet::AlphaNumeric().CheckValue("%"),
+    EXPECT_THAT(Alphabet::Alphanumeric().CheckValue("%"),
                 HasConstraintViolation(HasSubstr("`%`")));
   }
   {
@@ -108,23 +108,23 @@ TEST(AlphabetTest, IsSatisfiedWithShouldWork) {
                 HasConstraintViolation(HasSubstr("`%`")));
   }
   {
-    EXPECT_THAT(Alphabet::LowerAlphaNumeric().CheckValue("b"),
+    EXPECT_THAT(Alphabet::LowerAlphanumeric().CheckValue("b"),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Alphabet::LowerAlphaNumeric().CheckValue("B"),
+    EXPECT_THAT(Alphabet::LowerAlphanumeric().CheckValue("B"),
                 HasConstraintViolation(HasSubstr("`B`")));
-    EXPECT_THAT(Alphabet::LowerAlphaNumeric().CheckValue("3"),
+    EXPECT_THAT(Alphabet::LowerAlphanumeric().CheckValue("3"),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Alphabet::LowerAlphaNumeric().CheckValue("%"),
+    EXPECT_THAT(Alphabet::LowerAlphanumeric().CheckValue("%"),
                 HasConstraintViolation(HasSubstr("`%`")));
   }
   {
-    EXPECT_THAT(Alphabet::LowerCase().CheckValue("b"),
+    EXPECT_THAT(Alphabet::Lowercase().CheckValue("b"),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Alphabet::LowerCase().CheckValue("B"),
+    EXPECT_THAT(Alphabet::Lowercase().CheckValue("B"),
                 HasConstraintViolation(HasSubstr("`B`")));
-    EXPECT_THAT(Alphabet::LowerCase().CheckValue("3"),
+    EXPECT_THAT(Alphabet::Lowercase().CheckValue("3"),
                 HasConstraintViolation(HasSubstr("`3`")));
-    EXPECT_THAT(Alphabet::LowerCase().CheckValue("%"),
+    EXPECT_THAT(Alphabet::Lowercase().CheckValue("%"),
                 HasConstraintViolation(HasSubstr("`%`")));
   }
   {
@@ -138,23 +138,23 @@ TEST(AlphabetTest, IsSatisfiedWithShouldWork) {
                 HasConstraintViolation(HasSubstr("`%`")));
   }
   {
-    EXPECT_THAT(Alphabet::UpperAlphaNumeric().CheckValue("b"),
+    EXPECT_THAT(Alphabet::UpperAlphanumeric().CheckValue("b"),
                 HasConstraintViolation(HasSubstr("`b`")));
-    EXPECT_THAT(Alphabet::UpperAlphaNumeric().CheckValue("B"),
+    EXPECT_THAT(Alphabet::UpperAlphanumeric().CheckValue("B"),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Alphabet::UpperAlphaNumeric().CheckValue("3"),
+    EXPECT_THAT(Alphabet::UpperAlphanumeric().CheckValue("3"),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Alphabet::UpperAlphaNumeric().CheckValue("%"),
+    EXPECT_THAT(Alphabet::UpperAlphanumeric().CheckValue("%"),
                 HasConstraintViolation(HasSubstr("`%`")));
   }
   {
-    EXPECT_THAT(Alphabet::UpperCase().CheckValue("b"),
+    EXPECT_THAT(Alphabet::Uppercase().CheckValue("b"),
                 HasConstraintViolation(HasSubstr("`b`")));
-    EXPECT_THAT(Alphabet::UpperCase().CheckValue("B"),
+    EXPECT_THAT(Alphabet::Uppercase().CheckValue("B"),
                 HasNoConstraintViolation());
-    EXPECT_THAT(Alphabet::UpperCase().CheckValue("3"),
+    EXPECT_THAT(Alphabet::Uppercase().CheckValue("3"),
                 HasConstraintViolation(HasSubstr("`3`")));
-    EXPECT_THAT(Alphabet::UpperCase().CheckValue("%"),
+    EXPECT_THAT(Alphabet::Uppercase().CheckValue("%"),
                 HasConstraintViolation(HasSubstr("`%`")));
   }
 }

@@ -33,14 +33,14 @@ namespace {
 
 constexpr static std::string_view kAlphabet =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-constexpr static std::string_view kUpperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-constexpr static std::string_view kLowerCase = "abcdefghijklmnopqrstuvwxyz";
+constexpr static std::string_view kUppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+constexpr static std::string_view kLowercase = "abcdefghijklmnopqrstuvwxyz";
 constexpr static std::string_view kNumbers = "0123456789";
-constexpr static std::string_view kAlphaNumeric =
+constexpr static std::string_view kAlphanumeric =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-constexpr static std::string_view kUpperAlphaNumeric =
+constexpr static std::string_view kUpperAlphanumeric =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-constexpr static std::string_view kLowerAlphaNumeric =
+constexpr static std::string_view kLowerAlphanumeric =
     "abcdefghijklmnopqrstuvwxyz0123456789";
 
 }  // namespace
@@ -52,12 +52,12 @@ Alphabet::Alphabet(std::string_view alphabet) : alphabet_(alphabet) {}
 std::string Alphabet::GetAlphabet() const { return alphabet_; }
 
 Alphabet Alphabet::Letters() { return Alphabet(kAlphabet); }
-Alphabet Alphabet::UpperCase() { return Alphabet(kUpperCase); }
-Alphabet Alphabet::LowerCase() { return Alphabet(kLowerCase); }
+Alphabet Alphabet::Uppercase() { return Alphabet(kUppercase); }
+Alphabet Alphabet::Lowercase() { return Alphabet(kLowercase); }
 Alphabet Alphabet::Numbers() { return Alphabet(kNumbers); }
-Alphabet Alphabet::AlphaNumeric() { return Alphabet(kAlphaNumeric); }
-Alphabet Alphabet::UpperAlphaNumeric() { return Alphabet(kUpperAlphaNumeric); }
-Alphabet Alphabet::LowerAlphaNumeric() { return Alphabet(kLowerAlphaNumeric); }
+Alphabet Alphabet::Alphanumeric() { return Alphabet(kAlphanumeric); }
+Alphabet Alphabet::UpperAlphanumeric() { return Alphabet(kUpperAlphanumeric); }
+Alphabet Alphabet::LowerAlphanumeric() { return Alphabet(kLowerAlphanumeric); }
 
 ConstraintViolation Alphabet::CheckValue(std::string_view value) const {
   for (int idx = -1; char c : value) {

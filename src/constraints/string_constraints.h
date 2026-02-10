@@ -38,17 +38,17 @@ class Alphabet : public MConstraint {
   // The string must only contain English letters (A-Z, a-z).
   static Alphabet Letters();
   // The string must only contain uppercase English letters (A-Z).
-  static Alphabet UpperCase();
+  static Alphabet Uppercase();
   // The string must only contain lowercase English letters (a-z).
-  static Alphabet LowerCase();
+  static Alphabet Lowercase();
   // The string must only contain numbers (0-9).
   static Alphabet Numbers();
   // The string must only contain alpha-numeric digits (A-Z, a-z, 0-9).
-  static Alphabet AlphaNumeric();
+  static Alphabet Alphanumeric();
   // The string must only contain uppercase alpha-numeric digits (A-Z, 0-9).
-  static Alphabet UpperAlphaNumeric();
+  static Alphabet UpperAlphanumeric();
   // The string must only contain lowercase alpha-numeric digits (a-z, 0-9).
-  static Alphabet LowerAlphaNumeric();
+  static Alphabet LowerAlphanumeric();
 
   // Returns the alphabet that the string must only contain characters from.
   [[nodiscard]] std::string GetAlphabet() const;
