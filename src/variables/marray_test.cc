@@ -101,10 +101,10 @@ TEST(MArrayTest, ReadingTheWrongLengthOfMArrayShouldFail) {
 }
 
 TEST(MArrayTest, SimpleGenerateCaseWorks) {
-  EXPECT_THAT(MArray<MInteger>(Elements(Between(1, 10), Length(4)),
-                               Length(Between(5, 50))),
-              GeneratedValuesAre(AllOf(SizeIs(AllOf(Ge(5), Le(50))),
-                                       Each(AllOf(Ge(1), Le(10))))));
+  EXPECT_THAT(
+      MArray<MInteger>(Elements(Between(1, 10)), Length(Between(5, 50))),
+      GeneratedValuesAre(
+          AllOf(SizeIs(AllOf(Ge(5), Le(50))), Each(AllOf(Ge(1), Le(10))))));
 }
 
 TEST(MArrayTest, NestedMArrayWorks) {
