@@ -40,6 +40,18 @@ ReadContext::ReadContext(Ref<const moriarty_internal::VariableSet> variables,
       BasicIStreamContext(input),
       VariableIStreamContext(input, variables, values_) {}
 
+// TODO: Should `values_` and `values` be merged?
+ReadContext::ReadContext(Ref<const moriarty_internal::VariableSet> variables,
+                         Ref<const moriarty_internal::ValueSet> external_values,
+                         Ref<InputCursor> input)
+    : ViewOnlyContext(variables, external_values),
+      BasicIStreamContext(input),
+      VariableIStreamContext(input, variables, external_values),
+      values_(external_values) {
+}  // FIXME: This should be a reference to external_values, not a copy
+
+TestCase ReadContext::ExternalKnownValues() const { return TestCase(values_); }
+
 WriteContext::WriteContext(Ref<std::ostream> os,
                            Ref<const moriarty_internal::VariableSet> variables,
                            Ref<const moriarty_internal::ValueSet> values)

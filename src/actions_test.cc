@@ -140,6 +140,193 @@ TEST(ValidateInputTest, WhitespaceStrictnessShouldBeRespected) {
 
 // -----------------------------------------------------------------------------
 
+TEST(ValidateOutputTest, WorksForValidOutput) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10))),
+                      Var("X", MInteger(Between(20, 25)))),
+            InputFormat(Line("N")), OutputFormat(Line("X")));
+
+  std::istringstream input("5\n");
+  std::istringstream output("21\n");
+  EXPECT_NO_THROW(ValidateOutput(p)
+                      .ReadInputUsing({.istream = input})
+                      .ReadOutputUsing({.istream = output})
+                      .Run());
+}
+
+TEST(ValidateOutputTest, InvalidInputShouldFail) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10))),
+                      Var("X", MInteger(Between(20, 25)))),
+            InputFormat(Line("N")), OutputFormat(Line("X")));
+
+  std::istringstream input("50\n");
+  std::istringstream output("21\n");
+  EXPECT_THAT(SingleCall([&]() {
+                ValidateOutput(p)
+                    .ReadInputUsing({.istream = input})
+                    .ReadOutputUsing({.istream = output})
+                    .Run();
+              }),
+              ThrowsMessage<IOError>(HasSubstr("between 1 and 10")));
+}
+
+TEST(ValidateOutputTest, InvalidOutputShouldFail) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10))),
+                      Var("X", MInteger(Between(20, 25)))),
+            InputFormat(Line("N")), OutputFormat(Line("X")));
+
+  std::istringstream input("5\n");
+  std::istringstream output("30\n");
+  EXPECT_THAT(SingleCall([&]() {
+                ValidateOutput(p)
+                    .ReadInputUsing({.istream = input})
+                    .ReadOutputUsing({.istream = output})
+                    .Run();
+              }),
+              ThrowsMessage<IOError>(HasSubstr("between 20 and 25")));
+}
+
+TEST(ValidateOutputTest, InvalidWhitespaceInOutputShouldRespectStrictness) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10))),
+                      Var("X", MInteger(Between(20, 25)))),
+            InputFormat(Line("N")), OutputFormat(Line("X")));
+
+  {  // Extra space in output
+    std::istringstream input("5\n");
+    std::istringstream output("21 \n");
+    EXPECT_THAT(
+        SingleCall([&]() {
+          ValidateOutput(p)
+              .ReadInputUsing({.istream = input})
+              .ReadOutputUsing({.istream = output})
+              .Run();
+        }),
+        ThrowsMessage<IOError>(HasSubstr("Expected '\\n', but got ' '")));
+  }
+  {  // Missing newline in output
+    std::istringstream input("5\n");
+    std::istringstream output("21");
+    EXPECT_THAT(
+        SingleCall([&]() {
+          ValidateOutput(p)
+              .ReadInputUsing({.istream = input})
+              .ReadOutputUsing({.istream = output})
+              .Run();
+        }),
+        ThrowsMessage<IOError>(HasSubstr("Expected '\\n', but got EOF")));
+  }
+  {  // Missing newline in input
+    std::istringstream input("5");
+    std::istringstream output("21\n");
+    EXPECT_THAT(
+        SingleCall([&]() {
+          ValidateOutput(p)
+              .ReadInputUsing({.istream = input})
+              .ReadOutputUsing({.istream = output})
+              .Run();
+        }),
+        ThrowsMessage<IOError>(HasSubstr("Expected '\\n', but got EOF")));
+  }
+  {  // Extra space in output, but with flexible whitespace strictness
+    std::istringstream input("5\n");
+    std::istringstream output("21 \n");
+    EXPECT_NO_THROW(ValidateOutput(p)
+                        .ReadInputUsing({.istream = input})
+                        .ReadOutputUsing({.istream = output,
+                                          .whitespace_strictness =
+                                              WhitespaceStrictness::kFlexible})
+                        .Run());
+  }
+  {  // Missing newline in output, but with flexible whitespace strictness
+    std::istringstream input("5\n");
+    std::istringstream output("21");
+    EXPECT_NO_THROW(ValidateOutput(p)
+                        .ReadInputUsing({.istream = input})
+                        .ReadOutputUsing({.istream = output,
+                                          .whitespace_strictness =
+                                              WhitespaceStrictness::kFlexible})
+                        .Run());
+  }
+  {  // Missing newline in input, but with flexible whitespace strictness
+    std::istringstream input("5");
+    std::istringstream output("21\n");
+    EXPECT_NO_THROW(ValidateOutput(p)
+                        .ReadInputUsing({.istream = input,
+                                         .whitespace_strictness =
+                                             WhitespaceStrictness::kFlexible})
+                        .ReadOutputUsing({.istream = output})
+                        .Run());
+  }
+}
+
+TEST(ValidateOutputTest, ExtraContentAtEOFShouldFail) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10))),
+                      Var("X", MInteger(Between(20, 25)))),
+            InputFormat(Line("N")), OutputFormat(Line("X")));
+
+  {
+    std::istringstream input("5\n");
+    std::istringstream output("21\nextra\n");
+    EXPECT_THAT(
+        SingleCall([&]() {
+          ValidateOutput(p)
+              .ReadInputUsing({.istream = input})
+              .ReadOutputUsing(
+                  {.istream = output,
+                   .whitespace_strictness = WhitespaceStrictness::kFlexible})
+              .Run();
+        }),
+        ThrowsMessage<IOError>(HasSubstr("Expected EOF, but got more input")));
+  }
+  {
+    std::istringstream input("5\nextra\n");
+    std::istringstream output("21\n");
+    EXPECT_THAT(
+        SingleCall([&]() {
+          ValidateOutput(p)
+              .ReadInputUsing(
+                  {.istream = input,
+                   .whitespace_strictness = WhitespaceStrictness::kFlexible})
+              .ReadOutputUsing(
+                  {.istream = output,
+                   .whitespace_strictness = WhitespaceStrictness::kFlexible})
+              .Run();
+        }),
+        ThrowsMessage<IOError>(HasSubstr("Expected EOF, but got more input")));
+  }
+}
+
+TEST(ValidateOutputTest, OutputShouldHaveAccessToInputVariables) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10))),
+                      Var("X", MInteger(Between(1, "N")))),
+            InputFormat(Line("N")), OutputFormat(Line("X")));
+
+  {
+    std::istringstream input("5\n");
+    std::istringstream output("3\n");
+    EXPECT_NO_THROW(ValidateOutput(p)
+                        .ReadInputUsing({.istream = input})
+                        .ReadOutputUsing({.istream = output,
+                                          .whitespace_strictness =
+                                              WhitespaceStrictness::kFlexible})
+                        .Run());
+  }
+  {
+    std::istringstream input("5\n");
+    std::istringstream output("6\n");
+    EXPECT_THAT(SingleCall([&]() {
+                  ValidateOutput(p)
+                      .ReadInputUsing({.istream = input})
+                      .ReadOutputUsing({.istream = output,
+                                        .whitespace_strictness =
+                                            WhitespaceStrictness::kFlexible})
+                      .Run();
+                }),
+                ThrowsMessage<IOError>(HasSubstr("between 1 and N")));
+  }
+}
+
+// -----------------------------------------------------------------------------
+
 TEST(GenerateTest, MissingSeedShouldThrow) {
   Problem p(Variables(Var("N", MInteger(Between(1, 10)))));
 

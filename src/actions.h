@@ -28,7 +28,7 @@ namespace moriarty {
 
 // ValidateInputBuilder
 //
-// Validates the input for a problem. The InputFormat is specified in the
+// Validates the input for a problem. The InputFormat must be specified in
 // `problem`.
 //
 // Usage:
@@ -66,6 +66,64 @@ class ValidateInputBuilder {
 //   .ReadInputUsing({.istream = std::cin})
 //   .Run();
 [[nodiscard]] ValidateInputBuilder ValidateInput(Problem problem);
+
+// -----------------------------------------------------------------------------
+
+// ValidateOutputBuilder
+//
+// Validates the output for a problem. Both the InputFormat and OutputFormat
+// must be specified in `problem`.
+//
+// FIXME: Currently only works with a single test case. This will be fixed in a
+// future release.
+//
+// Usage:
+//
+// ValidateOutput(problem)
+//   .ReadInputUsing({.istream = std::cin})
+//   .ReadOutputUsing({.istream = std::fstream(" ... ")})
+//   .Run();
+class ValidateOutputBuilder {
+ public:
+  // Adds options for reading input.
+  ValidateOutputBuilder& ReadInputUsing(ReadOptions opts);
+
+  // Adds options for reading output.
+  ValidateOutputBuilder& ReadOutputUsing(ReadOptions opts);
+
+  // Runs the validation. If there is an error, this throws an exception. In
+  // general, exceptions from Moriarty derive from `GenericMoriartyError`. Other
+  // exceptions are likely bugs.
+  //
+  // FIXME: This comment is a slight lie, as not all exceptions currently
+  // derive from GenericMoriartyError. This will be fixed in a future release.
+  //
+  // Reads the input first, then reads the output. The output will have access
+  // to the input variables and their values that were read.
+  void Run() const;
+
+ private:
+  // Construct a builder using `ValidateOutput(problem)`.
+  explicit ValidateOutputBuilder(Problem problem);
+  friend ValidateOutputBuilder ValidateOutput(Problem problem);
+
+  Problem problem_;
+  std::optional<ReadOptions> input_options_;
+  std::optional<ReadOptions> output_options_;
+};
+
+// ValidateOutput
+//
+// Creates a builder to validate output for `problem`.
+//
+// FIXME: Currently only works with a single test case. This will be fixed in a
+// future release.
+//
+// ValidateOutput(problem)
+//   .ReadInputUsing({.istream = std::cin})
+//   .ReadOutputUsing({.istream = std::fstream(" ... ")})
+//   .Run();
+[[nodiscard]] ValidateOutputBuilder ValidateOutput(Problem problem);
 
 // -----------------------------------------------------------------------------
 

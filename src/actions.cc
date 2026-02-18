@@ -53,6 +53,13 @@ std::string FailuresToString(
   return result;
 }
 
+std::vector<TestCase> ReadTestCases(const ReaderFn& reader, ReadContext ctx) {
+  std::vector<TestCase> test_cases = reader(ctx);
+  ctx.ReadEof();
+
+  return test_cases;
+}
+
 void ValidateTestCases(const Problem& problem,
                        const std::vector<TestCase>& test_cases) {
   if (test_cases.empty()) {
@@ -101,13 +108,77 @@ void ValidateInputBuilder::Run() const {
         "No InputFormat specified in Problem. Cannot read input.");
   }
 
-  std::vector<TestCase> test_cases = (*reader)(ctx);
-  ctx.ReadEof();
-
+  std::vector<TestCase> test_cases = ReadTestCases(*reader, ctx);
   if (test_cases.empty())
     throw ConfigurationError("ValidateInput::Run", "No Test Cases.");
 
   ValidateTestCases(problem_, test_cases);
+}
+
+ValidateOutputBuilder::ValidateOutputBuilder(Problem problem)
+    : problem_(std::move(problem)) {}
+
+ValidateOutputBuilder& ValidateOutputBuilder::ReadInputUsing(ReadOptions opts) {
+  input_options_ = std::move(opts);
+  return *this;
+}
+
+ValidateOutputBuilder& ValidateOutputBuilder::ReadOutputUsing(
+    ReadOptions opts) {
+  output_options_ = std::move(opts);
+  return *this;
+}
+
+ValidateOutputBuilder ValidateOutput(Problem problem) {
+  return ValidateOutputBuilder(std::move(problem));
+}
+
+void ValidateOutputBuilder::Run() const {
+  if (!input_options_) {
+    throw ConfigurationError("ValidateInput::Run",
+                             "std::istream needed for input. Use "
+                             "ReadInputUsing() to specify options.");
+  }
+  if (!output_options_) {
+    throw ConfigurationError("ValidateOutput::Run",
+                             "std::istream needed for output. Use "
+                             "ReadOutputUsing() to specify options.");
+  }
+  auto input_reader = problem_.GetInputReader();
+  if (!input_reader) {
+    throw ConfigurationError(
+        "ValidateOutput::Run",
+        "No InputFormat specified in Problem. Cannot read input.");
+  }
+  auto output_reader = problem_.GetOutputReader();
+  if (!output_reader) {
+    throw ConfigurationError(
+        "ValidateOutput::Run",
+        "No OutputFormat specified in Problem. Cannot read output.");
+  }
+
+  InputCursor input_cursor(input_options_->istream,
+                           input_options_->whitespace_strictness);
+  ReadContext ctx(problem_.UnsafeGetVariables(), input_cursor);
+
+  std::vector<TestCase> test_cases = ReadTestCases(*input_reader, ctx);
+  if (test_cases.empty())
+    throw ConfigurationError("ValidateOutput::Run", "No Test Cases.");
+  ValidateTestCases(problem_, test_cases);
+
+  if (test_cases.size() != 1) {
+    throw ConfigurationError(
+        "ValidateOutput::Run",
+        "ValidateOutput currently only works with exactly 1 test case.");
+  }
+
+  InputCursor output_cursor(output_options_->istream,
+                            output_options_->whitespace_strictness);
+  ReadContext output_ctx(problem_.UnsafeGetVariables(),
+                         test_cases[0].UnsafeGetValues(), output_cursor);
+  std::vector<TestCase> output_answers =
+      ReadTestCases(*output_reader, output_ctx);
+  ValidateTestCases(problem_, output_answers);
 }
 
 GenerateBuilder Generate(Problem problem) {

@@ -337,7 +337,7 @@ std::vector<TestCase> ReadTestCases(ReadContext ctx, SimpleIO simple_io,
   ReadLiteralOnlyLines(ctx, simple_io.LinesInHeader());
   std::vector<TestCase> test_cases;
   for (int i = 0; i < num_cases; i++) {
-    test_cases.push_back(TestCase());
+    test_cases.push_back(ctx.ExternalKnownValues());
     ReadLines(ctx, simple_io.LinesPerTestCase(), test_cases.back());
   }
   ReadLiteralOnlyLines(ctx, simple_io.LinesInFooter());

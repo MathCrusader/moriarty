@@ -105,10 +105,26 @@ class ReadContext : public moriarty_internal::ViewOnlyContext,
   // Created by Moriarty and passed to you; no need to instantiate.
   ReadContext(Ref<const moriarty_internal::VariableSet> variables,
               Ref<InputCursor> input);
+  ReadContext(Ref<const moriarty_internal::VariableSet> variables,
+              Ref<const moriarty_internal::ValueSet> external_values,
+              Ref<InputCursor> input);
 
   // *****************************************************
   // ** See parent classes for all available functions. **
   // *****************************************************
+
+  // ExternalKnownValues()
+  //
+  // Returns a TestCase containing all currently known variable values prior to
+  // starting the current read. For example, when reading the output, this will
+  // contain all input values.
+  //
+  // TODO: Consider if this should be an `Unsafe` function. We don't want people
+  // to be confused as to which function they should call. If you're using
+  // SimpleIO, it will add these values to the TestCase you're creating. If
+  // you're not using SimpleIO, it is up to you to handle where different values
+  // come from.
+  TestCase ExternalKnownValues() const;
 
  private:
   // TODO: In the future, these values will be the testset-wide values.
