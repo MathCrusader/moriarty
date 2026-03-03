@@ -123,6 +123,22 @@ TEST(ResolveValuesContextTest, AssignVariableShouldSetTheValueInContext) {
   EXPECT_EQ(context.Values().Get<MInteger>("N"), 42);  // Sets another variable
 }
 
+TEST(ResolveValuesContextTest,
+     ResolveExpressionShouldEvaluateExpressionsAndGenerateValues) {
+  Context context = Context()
+                        .WithVariable("X", MInteger(Between(1, 100)))
+                        .WithVariable("Y", MInteger(Between(1, 100)));
+  GenerationHandler handler;
+
+  ResolveValuesContext ctx(context.Variables(), context.Values(),
+                           context.RandomEngine(), handler);
+  int64_t result = ctx.ResolveExpression(Expression("X + Y"));
+  EXPECT_THAT(result, AllOf(Ge(2), Le(200)));
+  int64_t X = context.Values().Get<MInteger>("X");
+  int64_t Y = context.Values().Get<MInteger>("Y");
+  EXPECT_EQ(result, X + Y);
+}
+
 }  // namespace
 }  // namespace moriarty_internal
 }  // namespace moriarty

@@ -110,7 +110,11 @@ class ViewOnlyContext {
 
   // EvaluateExpression()
   //
-  // Evaluates the given expression in the current context.
+  // Evaluates the given expression in the current context. No variables will be
+  // affected by this.
+  //
+  // See `ResolveValuesContext::ResolveExpression()` if you want to evaluate an
+  // expression and generate values for all needed dependencies.
   [[nodiscard]] int64_t EvaluateExpression(const Expression& expr) const;
 
   // GetRangeEndpoints()

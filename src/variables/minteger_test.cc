@@ -536,5 +536,19 @@ TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithVariablesShouldWork) {
   }
 }
 
+TEST(MIntegerTest, ModShouldFailGracefullyIfNoValueKnownForUniqueValue) {
+  Context context =
+      Context().WithVariable<MInteger>("N", MInteger(Between(5, 6)));
+  EXPECT_EQ(GetUniqueValue(MInteger(Between(10, 17), Mod("N", 10)), context),
+            std::nullopt);
+}
+
+TEST(MIntegerTest, ModShouldGenerateDependentVariablesNoValueKnown) {
+  Context context =
+      Context().WithVariable<MInteger>("N", MInteger(Between(5, 6)));
+  EXPECT_THAT(MInteger(Between(10, 17), Mod("N", 10)),
+              GeneratedValuesAre(AnyOf(15, 16), context));
+}
+
 }  // namespace
 }  // namespace moriarty

@@ -115,15 +115,10 @@ MInteger& MInteger::AddConstraint(SizeCategory constraint) {
 
 std::optional<int64_t> MInteger::GetUniqueValueImpl(
     librarian::AnalyzeVariableContext ctx) const {
-  try {
-    if (auto one_of = numeric_one_of_->GetUniqueValue(ctx)) {
-      auto value = one_of->GetValue();
-      if (value.denominator != 1) return std::nullopt;
-      return value.numerator;
-    }
-  } catch (const ValueNotFound& e) {
-    // There might be a unique-value, but we can't evaluate it.
-    return std::nullopt;
+  if (auto one_of = numeric_one_of_->GetUniqueValue(ctx)) {
+    auto value = one_of->GetValue();
+    if (value.denominator != 1) return std::nullopt;
+    return value.numerator;
   }
 
   std::optional<Range::ExtremeValues<int64_t>> extremes = GetExtremeValues(ctx);
@@ -208,14 +203,14 @@ int64_t HandleModdedGeneration(
     const Range::ExtremeValues<int64_t>& original_extremes,
     const Range::ExtremeValues<int64_t>& size_adjusted_extremes,
     const Mod::Equation& m) {
-  int64_t mod = ctx.EvaluateExpression(m.modulus);
+  int64_t mod = ctx.ResolveExpression(m.modulus);
   if (mod <= 0) {
     throw GenerationError(
         ctx.GetVariableName(),
         std::format("Mod value evaluated to non-negative: {}", mod),
         RetryPolicy::kAbort);
   }
-  int64_t remainder = ctx.EvaluateExpression(m.remainder) % mod;
+  int64_t remainder = ctx.ResolveExpression(m.remainder) % mod;
   if (remainder < 0) remainder += mod;
 
   auto clamp_extremes =

@@ -164,26 +164,19 @@ std::optional<double> MReal::GetUniqueValueImpl(
     librarian::AnalyzeVariableContext ctx) const {
   if (auto dbl_one_of = GetOneOf().GetUniqueValue()) return *dbl_one_of;
 
-  try {
-    if (auto numeric_one_of = numeric_one_of_->GetUniqueValue(ctx)) {
-      return numeric_one_of->GetApproxValue();
-    }
-
-    std::optional<Range::ExtremeValues<Real>> extremes =
-        core_constraints_.Bounds().RealExtremes(
-            [&](std::string_view var) -> int64_t {
-              auto value = ctx.GetUniqueValue<MInteger>(var);
-              if (!value) throw ValueNotFound(var);
-              return *value;
-            });
-    if (!extremes || extremes->min != extremes->max) return std::nullopt;
-    return extremes->min.GetApproxValue();
-  } catch (const ValueNotFound& e) {
-    // There might be a unique-value, but we can't evaluate it.
-    return std::nullopt;
+  if (auto numeric_one_of = numeric_one_of_->GetUniqueValue(ctx)) {
+    return numeric_one_of->GetApproxValue();
   }
 
-  return std::nullopt;
+  std::optional<Range::ExtremeValues<Real>> extremes =
+      core_constraints_.Bounds().RealExtremes(
+          [&](std::string_view var) -> int64_t {
+            auto value = ctx.GetUniqueValue<MInteger>(var);
+            if (!value) throw ValueNotFound(var);
+            return *value;
+          });
+  if (!extremes || extremes->min != extremes->max) return std::nullopt;
+  return extremes->min.GetApproxValue();
 }
 
 MRealFormat& MReal::Format() { return format_; }

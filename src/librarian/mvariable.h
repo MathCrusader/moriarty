@@ -454,7 +454,13 @@ auto MVariable<V>::GetUniqueValue(AnalyzeVariableContext ctx) const
       ctx.GetValueIfKnown<V>(ctx.GetVariableName());
   if (known) return known;
   if (one_of_.GetUniqueValue()) return one_of_.GetUniqueValue();
-  return GetUniqueValueImpl(ctx);
+  try {
+    return GetUniqueValueImpl(ctx);
+  } catch (const ValueNotFound&) {
+    // Many places can throw a value not found error, but this isn't an error in
+    // this context, since it may be generated later.
+    return std::nullopt;
+  }
 }
 
 template <typename V>

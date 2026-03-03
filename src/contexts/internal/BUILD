@@ -91,6 +91,7 @@ cc_library(
     hdrs = ["resolve_values_context.h"],
     deps = [
         "//src/internal:abstract_variable",
+        "//src/internal:expressions",
         "//src/internal:generation_handler",
         "//src/internal:random_engine",
         "//src/internal:value_set",

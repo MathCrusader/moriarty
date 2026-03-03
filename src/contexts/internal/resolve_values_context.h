@@ -19,6 +19,7 @@
 #include <string_view>
 
 #include "src/internal/abstract_variable.h"
+#include "src/internal/expressions.h"
 #include "src/internal/generation_handler.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
@@ -60,6 +61,15 @@ class ResolveValuesContext {
   template <MoriartyVariable T>
   [[nodiscard]] T::value_type GenerateVariable(std::string_view variable_name,
                                                T extra_constraints);
+
+  // ResolveExpression()
+  //
+  // Evaluates `expr` and returns the result. This will generate values for all
+  // needed dependencies while evaluating.
+  //
+  // See `ViewOnlyContext::EvaluateExpression()` if you want to evaluate an
+  // expression without generating values.
+  [[nodiscard]] int64_t ResolveExpression(const Expression& expr);
 
   // AssignVariable()
   //

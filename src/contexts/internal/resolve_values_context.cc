@@ -17,6 +17,7 @@
 #include <string_view>
 
 #include "src/internal/abstract_variable.h"
+#include "src/internal/expressions.h"
 #include "src/internal/generation_handler.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"
@@ -41,5 +42,22 @@ void ResolveValuesContext::AssignVariable(std::string_view variable_name) {
       variables_.get().GetAnonymousVariable(variable_name);
   variable->AssignValue(variable_name, variables_, values_, engine_, handler_);
 }
+
+int64_t ResolveValuesContext::ResolveExpression(const Expression& expr) {
+  for (std::string_view variable_name : expr.GetDependencies())
+    AssignVariable(variable_name);
+
+  return expr.Evaluate([&](std::string_view variable_name) {
+    std::any value = values_.get().UnsafeGet(variable_name);
+    try {
+      return std::any_cast<int64_t>(value);
+    } catch (const std::bad_any_cast& e) {
+      throw std::runtime_error(std::string("Value for variable `") +
+                               std::string(variable_name) +
+                               "` cannot be cast to int64_t");
+    }
+  });
+}
+
 }  // namespace moriarty_internal
 }  // namespace moriarty
