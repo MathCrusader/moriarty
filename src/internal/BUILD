@@ -126,6 +126,13 @@ cc_library(
 )
 
 cc_library(
+    name = "value_printer",
+    hdrs = ["value_printer.h"],
+    deps = [
+    ],
+)
+
+cc_library(
     name = "value_set",
     srcs = ["value_set.cc"],
     hdrs = ["value_set.h"],
@@ -240,6 +247,15 @@ cc_test(
         ":simple_pattern",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "value_printer_test",
+    srcs = ["value_printer_test.cc"],
+    deps = [
+        ":value_printer",
         "@googletest//:gtest_main",
     ],
 )
