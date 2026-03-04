@@ -19,6 +19,7 @@
 #include <optional>
 #include <sstream>
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
@@ -26,6 +27,9 @@
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
+
+using ::testing::StartsWith;
+using ::testing::ThrowsMessage;
 
 TEST(BasicIStreamTest, ReadTokenShouldAdhereToWhitespaceScrictness) {
   {
@@ -497,6 +501,29 @@ TEST(BasicIStreamContextTest, PeekShouldWork) {
     EXPECT_EQ(c.PeekToken(), std::nullopt);
     c.ReadEof();
   }
+}
+
+TEST(BasicIStreamContextTest, ThrowIOErrorShouldThrowIOErrorWithMessage) {
+  std::stringstream ss("abc");
+  InputCursor cr(ss);
+  BasicIStreamContext c(cr);
+  (void)c.ReadToken();
+
+  EXPECT_THAT(
+      [&c] { c.ThrowIOError("Foo"); },
+      ThrowsMessage<IOError>(StartsWith("Line 1, token 1 (col 1): Foo\n")));
+}
+
+TEST(BasicIStreamContextTest,
+     ThrowIOErrorWithContextShouldThrowIOErrorWithPrefixedContext) {
+  std::stringstream ss("abc");
+  InputCursor cr(ss);
+  BasicIStreamContext c(cr);
+  (void)c.ReadToken();
+
+  EXPECT_THAT([&c] { c.ThrowIOErrorWithContext("Foo", "Bar"); },
+              ThrowsMessage<IOError>(
+                  StartsWith("Bar\n\nLine 1, token 1 (col 1): Foo\n")));
 }
 
 }  // namespace

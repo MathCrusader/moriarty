@@ -20,9 +20,7 @@
 #include <string>
 #include <string_view>
 
-#include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
-#include "src/librarian/util/debug_string.h"
 
 namespace moriarty {
 
@@ -224,27 +222,13 @@ class ValidationError : public GenericMoriartyError {
 // Thrown when the I/O is invalid.
 class IOError : public GenericMoriartyError {
  public:
-  explicit IOError(const InputCursor& cursor, std::string_view message)
-      : GenericMoriartyError(std::format(
-            R"({}
+  explicit IOError(std::string_view message)
+      : GenericMoriartyError(std::string(message)), message_(message) {}
 
-Context:
- * On line {} (column {})
- * Token #{} on this line (#{} in the entire file)
- * Most recently read value: '{}')",
-            message, cursor.line_num, cursor.col_num, cursor.token_num_line,
-            cursor.token_num_file,
-            librarian::DebugString(cursor.recently_read, 50,
-                                   /* include_backticks = */ false))),
-        message_(message),
-        cursor_(cursor) {}
-
-  const InputCursor& Cursor() const { return cursor_; }
   const std::string& Message() const { return message_; }
 
  private:
   std::string message_;
-  InputCursor cursor_;
 };
 
 class WriteError : public GenericMoriartyError {

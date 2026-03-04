@@ -49,16 +49,16 @@ cc_library(
     name = "errors",
     hdrs = ["errors.h"],
     deps = [
-        "//src/librarian:io_config",
         "//src/librarian:policies",
-        "//src/librarian/util:debug_string",
     ],
 )
 
 cc_library(
     name = "io_config",
+    srcs = ["io_config.cc"],
     hdrs = ["io_config.h"],
     deps = [
+        "//src/librarian:errors",
         "//src/librarian:policies",
         "//src/librarian/util:ref",
     ],
@@ -121,6 +121,17 @@ cc_test(
     deps = [
         ":errors",
         "//src/librarian:policies",
+        "//src/librarian/testing:gtest_helpers",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "io_config_test",
+    srcs = ["io_config_test.cc"],
+    deps = [
+        ":errors",
+        ":io_config",
         "//src/librarian/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],

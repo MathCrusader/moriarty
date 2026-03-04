@@ -79,6 +79,13 @@ class BasicIStreamContext {
   // provided message.
   [[noreturn]] void ThrowIOError(std::string_view message) const;
 
+  // ThrowIOErrorWithContext()
+  //
+  // Throws an `IOError` exception with the current cursor position and the
+  // provided message.
+  [[noreturn]] void ThrowIOErrorWithContext(std::string_view message,
+                                            std::string_view context) const;
+
   // ThrowIOError()
   //
   // Throws an `IOError` exception with the current cursor position and the
@@ -111,7 +118,6 @@ class BasicIStreamContext {
   Ref<InputCursor> input_;
 
   InputCursor& GetCursor();
-  std::istream& GetIStream();
   WhitespaceStrictness GetWhitespaceStrictness() const;
   NumericStrictness GetNumericStrictness() const;
 

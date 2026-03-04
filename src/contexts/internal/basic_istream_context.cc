@@ -14,13 +14,11 @@
 
 #include "src/contexts/internal/basic_istream_context.h"
 
-#include <cassert>
 #include <cctype>
 #include <charconv>
 #include <cmath>
 #include <cstdint>
 #include <format>
-#include <istream>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -39,167 +37,27 @@ BasicIStreamContext::BasicIStreamContext(Ref<InputCursor> input)
     : input_(input) {}
 
 void BasicIStreamContext::ThrowIOError(std::string_view message) const {
-  throw IOError(input_.get(), message);
+  input_.get().ThrowIOError(
+      message, InputCursor::ErrorSnippetCaretPosition::kBeforePreviousRead);
 }
 
-namespace {
-
-bool IsEOF(std::istream& is) {
-  if (is.eof()) return true;
-  return is.peek() == EOF;
+void BasicIStreamContext::ThrowIOErrorWithContext(
+    std::string_view message, std::string_view context) const {
+  input_.get().ThrowIOError(
+      message, InputCursor::ErrorSnippetCaretPosition::kBeforePreviousRead,
+      context);
 }
 
-std::string ReadableChar(char c) {
-  switch (c) {
-    case '\n':
-      return "\\n";
-    case '\t':
-      return "\\t";
-    case '\r':
-      return "\\r";
-  }
-  if (std::isprint(c)) return std::string(1, c);
-  return "ASCII=" + std::to_string(static_cast<int>(c));
-}
-
-char WhitespaceAsChar(Whitespace whitespace) {
-  switch (whitespace) {
-    case Whitespace::kNewline:
-      return '\n';
-    case Whitespace::kTab:
-      return '\t';
-    case Whitespace::kSpace:
-      return ' ';
-  }
-  throw std::logic_error("Invalid whitespace enum value");
-}
-
-void RegisterNewline(char c, InputCursor& cursor) {
-  if (c != '\n') return;
-  cursor.line_num++;
-  cursor.col_num = 0;
-  cursor.token_num_line = 0;
-}
-
-void StripLeadingWhitespace(std::istream& is, InputCursor& cursor) {
-  while (is) {
-    int c = is.peek();
-    if (c == EOF) break;
-    if (!std::isspace(c)) break;
-    cursor.col_num++;
-    is.get();
-    RegisterNewline(c, cursor);
-  }
-}
-
-}  // namespace
-
-std::string BasicIStreamContext::ReadToken() {
-  std::istream& is = GetIStream();
-
-  if (GetWhitespaceStrictness() == WhitespaceStrictness::kFlexible)
-    StripLeadingWhitespace(is, GetCursor());
-
-  if (IsEOF(is)) ThrowIOError("Expected a token, but got EOF.");
-
-  if (GetWhitespaceStrictness() == WhitespaceStrictness::kPrecise) {
-    char c = is.peek();
-    if (!std::isprint(c) || std::isspace(c)) {
-      ThrowIOError("Expected a token, but got '{}'.", ReadableChar(c));
-    }
-  }
-
-  if (!is) ThrowIOError("Failed to read from the input stream.");
-
-  GetCursor().token_num_file++;
-  GetCursor().token_num_line++;
-  // At this point, we are not at EOF and there is no leading whitespace.
-  std::string token;
-  is >> token;
-
-  // I don't think this is necessary, but it is here for safety.
-  if (!is) ThrowIOError("Failed to read from the input stream.");
-
-  GetCursor().AddReadItem(token);
-  GetCursor().col_num += token.length();
-
-  return token;
-}
+std::string BasicIStreamContext::ReadToken() { return GetCursor().ReadToken(); }
 
 std::optional<std::string> BasicIStreamContext::PeekToken() {
-  std::istream& is = GetIStream();
-  InputCursor& cursor = GetCursor();
-
-  std::streampos original_pos = is.tellg();
-  InputCursor original_cursor = cursor;
-
-  auto restore = [&]() {
-    is.clear();  // Clear EOF flag.
-    is.seekg(original_pos);
-    cursor = original_cursor;
-  };
-
-  if (GetWhitespaceStrictness() == WhitespaceStrictness::kFlexible)
-    StripLeadingWhitespace(is, cursor);
-
-  if (IsEOF(is)) {
-    restore();
-    return std::nullopt;
-  }
-
-  if (GetWhitespaceStrictness() == WhitespaceStrictness::kPrecise) {
-    char c = is.peek();
-    if (!std::isprint(c) || std::isspace(c)) {
-      restore();
-      return std::nullopt;
-    }
-  }
-
-  if (!is) {
-    restore();
-    return std::nullopt;
-  }
-
-  // At this point, we are not at EOF and there is no leading whitespace.
-  std::string token;
-  is >> token;
-
-  restore();
-  return token;
+  return GetCursor().PeekToken();
 }
 
-void BasicIStreamContext::ReadEof() {
-  std::istream& is = GetIStream();
-
-  if (GetWhitespaceStrictness() == WhitespaceStrictness::kFlexible)
-    StripLeadingWhitespace(is, GetCursor());
-
-  if (!IsEOF(is)) ThrowIOError("Expected EOF, but got more input.");
-}
+void BasicIStreamContext::ReadEof() { GetCursor().ReadEof(); }
 
 void BasicIStreamContext::ReadWhitespace(Whitespace whitespace) {
-  std::istream& is = GetIStream();
-
-  if (IsEOF(is)) {
-    if (GetWhitespaceStrictness() == WhitespaceStrictness::kFlexible) return;
-    ThrowIOError("Expected '{}', but got EOF.",
-                 ReadableChar(WhitespaceAsChar(whitespace)));
-  }
-  GetCursor().col_num++;
-  char c = is.get();
-  if (!std::isspace(c)) {
-    ThrowIOError("Expected whitespace, but got '{}'.", ReadableChar(c));
-  }
-  RegisterNewline(c, GetCursor());
-
-  GetCursor().AddReadItem(std::string(1, c));
-
-  if (GetWhitespaceStrictness() == WhitespaceStrictness::kFlexible) return;
-
-  if (c != WhitespaceAsChar(whitespace)) {
-    ThrowIOError("Expected '{}', but got '{}'.",
-                 ReadableChar(WhitespaceAsChar(whitespace)), ReadableChar(c));
-  }
+  GetCursor().ReadWhitespace(whitespace);
 }
 
 int64_t BasicIStreamContext::ReadInteger() {
@@ -326,14 +184,12 @@ double BasicIStreamContext::ReadReal(int num_digits) {
 }
 
 WhitespaceStrictness BasicIStreamContext::GetWhitespaceStrictness() const {
-  return input_.get().whitespace_strictness;
+  return input_.get().GetWhitespaceStrictness();
 }
 
 NumericStrictness BasicIStreamContext::GetNumericStrictness() const {
-  return input_.get().numeric_strictness;
+  return input_.get().GetNumericStrictness();
 }
-
-std::istream& BasicIStreamContext::GetIStream() { return input_.get().is; }
 
 InputCursor& BasicIStreamContext::GetCursor() { return input_; }
 
