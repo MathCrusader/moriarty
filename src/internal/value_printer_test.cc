@@ -25,15 +25,50 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+namespace custom_printer_test {
+
+struct GraphLike {
+  int num_nodes;
+  int num_edges;
+};
+
+std::string PrettyPrintValue(const GraphLike& graph, int max_len) {
+  std::string full = "Graph(n=" + std::to_string(graph.num_nodes) +
+                     ", m=" + std::to_string(graph.num_edges) + ")";
+  if (full.size() <= max_len) return full;
+  return "Graph(...)";
+}
+
+}  // namespace custom_printer_test
+
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
+
+using ::testing::HasSubstr;
 
 TEST(ValuePrinterTest, SimpleIntegerWorks) {
   EXPECT_EQ(ValuePrinter(5), "5");
   EXPECT_EQ(ValuePrinter(-10), "-10");
   EXPECT_EQ(ValuePrinter(0), "0");
   EXPECT_EQ(ValuePrinter(1234567890123456789ULL), "1234567890123456789");
+}
+
+TEST(ValuePrinterTest, FloatingPointWorks) {
+  EXPECT_THAT(ValuePrinter(0.0), HasSubstr("0"));
+  EXPECT_THAT(ValuePrinter(-0.0), HasSubstr("-0"));
+
+  EXPECT_THAT(ValuePrinter(1.5), HasSubstr("1.5"));
+  EXPECT_THAT(ValuePrinter(-0.125), HasSubstr("-0.125"));
+
+  long double value = 3.25L;
+  EXPECT_THAT(ValuePrinter(value), HasSubstr("3.25"));
+}
+
+TEST(ValuePrinterTest, AdlCustomPrinterInDifferentNamespaceWorks) {
+  custom_printer_test::GraphLike graph{5, 8};
+  EXPECT_EQ(ValuePrinter(graph), "Graph(n=5, m=8)");
+  EXPECT_EQ(ValuePrinter(graph, 4), "Graph(...)");
 }
 
 TEST(ValuePrinterTest, SmallStringsWork) {

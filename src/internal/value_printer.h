@@ -15,6 +15,7 @@
 #ifndef MORIARTY_INTERNAL_VALUE_PRINTER_H_
 #define MORIARTY_INTERNAL_VALUE_PRINTER_H_
 
+#include <concepts>
 #include <format>
 #include <functional>
 #include <optional>
@@ -97,6 +98,11 @@ std::string InternalValuePrinterInt(const IntLike& value) {
   return std::format("{}", value);
 }
 
+template <std::floating_point FloatLike>
+std::string InternalValuePrinterFloat(const FloatLike& value) {
+  return std::format("{}", value);
+}
+
 std::string InternalValuePrinterString(std::string_view value, int max_len) {
   max_len -= 2;                              // for the quotes
   if (value.size() > max_len) max_len -= 3;  // for the "..."
@@ -166,25 +172,28 @@ std::string InternalValuePrinterTuple(const std::pair<A, B>& p, int max_len) {
   return "(" + result + ")";
 }
 
-template <typename T>
-struct is_optional : std::false_type {};
-template <typename T>
-struct is_optional<std::optional<T>> : std::true_type {};
+template <typename T, template <typename...> class Template>
+struct is_specialization_of : std::false_type {};
+
+template <template <typename...> class Template, typename... Args>
+struct is_specialization_of<Template<Args...>, Template> : std::true_type {};
 
 template <typename T>
-struct is_variant : std::false_type {};
-template <typename... Args>
-struct is_variant<std::variant<Args...>> : std::true_type {};
+concept OptionalType = is_specialization_of<T, std::optional>::value;
 
 template <typename T>
-struct is_tuple : std::false_type {};
-template <typename... Args>
-struct is_tuple<std::tuple<Args...>> : std::true_type {};
+concept VariantType = is_specialization_of<T, std::variant>::value;
 
 template <typename T>
-struct is_pair : std::false_type {};
-template <typename A, typename B>
-struct is_pair<std::pair<A, B>> : std::true_type {};
+concept TupleType = is_specialization_of<T, std::tuple>::value;
+
+template <typename T>
+concept PairType = is_specialization_of<T, std::pair>::value;
+
+template <typename T>
+concept AdlPrettyPrintable = requires(const T& value, int max_len) {
+  { PrettyPrintValue(value, max_len) } -> std::convertible_to<std::string>;
+};
 
 template <typename>
 inline constexpr bool kDependentFalse = false;
@@ -192,18 +201,22 @@ inline constexpr bool kDependentFalse = false;
 template <typename T>
 std::string InternalValuePrinter(const T& value, int max_len) {
   using U = std::remove_cvref_t<T>;
-  if constexpr (std::is_integral_v<U>) {
+  if constexpr (std::integral<U>) {
     return InternalValuePrinterInt(value);
-  } else if constexpr (std::is_convertible_v<U, std::string_view>) {
+  } else if constexpr (std::floating_point<U>) {
+    return InternalValuePrinterFloat(value);
+  } else if constexpr (std::convertible_to<U, std::string_view>) {
     return InternalValuePrinterString(value, max_len);
-  } else if constexpr (is_optional<U>::value) {
+  } else if constexpr (OptionalType<U>) {
     return InternalValuePrinterOptional(value, max_len);
-  } else if constexpr (is_variant<U>::value) {
+  } else if constexpr (VariantType<U>) {
     return InternalValuePrinterVariant(value, max_len);
-  } else if constexpr (is_tuple<U>::value) {
+  } else if constexpr (TupleType<U>) {
     return InternalValuePrinterTuple(value, max_len);
-  } else if constexpr (is_pair<U>::value) {
+  } else if constexpr (PairType<U>) {
     return InternalValuePrinterTuple(value, max_len);
+  } else if constexpr (AdlPrettyPrintable<U>) {
+    return PrettyPrintValue(value, max_len);
   } else if constexpr (std::ranges::range<U> && requires(const U& container) {
                          { container.empty() } -> std::convertible_to<bool>;
                          container.size();
