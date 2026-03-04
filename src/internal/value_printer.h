@@ -42,6 +42,8 @@ std::string ValuePrinter(const T& value, int max_len = 100) {
   return InternalValuePrinter(value, max_len);
 }
 
+std::string InternalValuePrinterString(std::string_view value, int max_len);
+
 template <typename GetFn>
 std::string InternalValuePrinterGenericContainer(int n, int max_len,
                                                  int min_count, GetFn get_fn) {
@@ -117,18 +119,6 @@ std::string InternalValuePrinterInt(const IntLike& value) {
 template <std::floating_point FloatLike>
 std::string InternalValuePrinterFloat(const FloatLike& value) {
   return std::format("{}", value);
-}
-
-std::string InternalValuePrinterString(std::string_view value, int max_len) {
-  if (value.empty()) return "\"\"";
-  max_len -= 2;  // for the quotes
-  std::string prefix = "\"", suffix = "\"";
-  if (value.size() > max_len) max_len -= 3, suffix = "...\"";
-  max_len = std::max(max_len, 2);  // Always show at least 2 characters
-  std::string result;
-  for (size_t i = 0; i < value.size() && result.size() < max_len; i++)
-    result += InternalValuePrinterChar(static_cast<unsigned char>(value[i]));
-  return std::format("{}{}{}", prefix, result, suffix);
 }
 
 template <typename T>

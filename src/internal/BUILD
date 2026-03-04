@@ -127,6 +127,7 @@ cc_library(
 
 cc_library(
     name = "value_printer",
+    srcs = ["value_printer.cc"],
     hdrs = ["value_printer.h"],
     deps = [
     ],
