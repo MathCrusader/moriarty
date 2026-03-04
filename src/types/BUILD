@@ -38,6 +38,7 @@ cc_library(
     hdrs = ["graph.h"],
     deps = [
         ":no_type",
+        "//src/internal:value_printer",
     ],
 )
 

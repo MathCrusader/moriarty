@@ -15,6 +15,7 @@
 
 #include "src/constraints/string_constraints.h"
 
+#include <algorithm>
 #include <bitset>
 #include <cstdint>
 #include <format>
@@ -59,41 +60,48 @@ Alphabet Alphabet::Alphanumeric() { return Alphabet(kAlphanumeric); }
 Alphabet Alphabet::UpperAlphanumeric() { return Alphabet(kUpperAlphanumeric); }
 Alphabet Alphabet::LowerAlphanumeric() { return Alphabet(kLowerAlphanumeric); }
 
-ConstraintViolation Alphabet::CheckValue(std::string_view value) const {
+ValidationResult Alphabet::Validate(ConstraintContext ctx,
+                                    std::string_view value) const {
   for (int idx = -1; char c : value) {
     idx++;
     if (alphabet_.find(c) == std::string::npos) {
-      return ConstraintViolation(std::format(
-          "character at index {} (which is {}) is not a valid character (valid "
-          "characters are {})",
-          idx, librarian::DebugString(c), librarian::DebugString(alphabet_)));
+      return ValidationResult::Violation(
+          ctx.GetVariableName(), value,
+          ValidationResult::Violation(
+              std::format("index {}", idx), c,
+              std::format("character must be one of {}",
+                          moriarty_internal::ValuePrinter(alphabet_))));
     }
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 std::string Alphabet::ToString() const {
   return std::format("contains only the characters {}",
-                     librarian::DebugString(alphabet_));
+                     moriarty_internal::ValuePrinter(alphabet_));
 }
 
 std::vector<std::string> Alphabet::GetDependencies() const { return {}; }
 
 // ====== DistinctCharacters ======
 
-ConstraintViolation DistinctCharacters::CheckValue(
-    std::string_view value) const {
-  std::bitset<sizeof(unsigned char) * 256> seen;
+ValidationResult DistinctCharacters::Validate(ConstraintContext ctx,
+                                              std::string_view value) const {
+  std::array<int, (1 << 8) * sizeof(unsigned char)> seen;
+  std::fill(seen.begin(), seen.end(), -1);
   for (int idx = -1; unsigned char c : value) {
     idx++;
-    if (seen.test(c)) {
-      return ConstraintViolation(std::format(
-          "character at index {} (which is {}) appears multiple times", idx,
-          librarian::DebugString(c)));
+    if (seen[static_cast<int>(c)] != -1) {
+      return ValidationResult::Violation(
+          ctx.GetVariableName(), value,
+          ValidationResult::Violation(
+              std::format("index {}", idx), c, "distinct characters",
+              std::format("indices {} and {} are the same",
+                          seen[static_cast<int>(c)], idx)));
     }
-    seen.set(c);
+    seen[static_cast<int>(c)] = idx;
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 // ====== SimplePattern ======
@@ -106,20 +114,21 @@ moriarty_internal::SimplePattern SimplePattern::GetCompiledPattern() const {
   return pattern_;
 }
 
-ConstraintViolation SimplePattern::CheckValue(ConstraintContext ctx,
-                                              std::string_view value) const {
+ValidationResult SimplePattern::Validate(ConstraintContext ctx,
+                                         std::string_view value) const {
   auto lookup = [&](std::string_view var) -> int64_t {
     return ctx.GetValue<MInteger>(var);
   };
-  if (pattern_.Matches(value, lookup)) return ConstraintViolation::None();
-  return ConstraintViolation(
-      std::format("does not match the simple pattern of {}",
-                  librarian::DebugString(pattern_.Pattern())));
+  if (pattern_.Matches(value, lookup)) return ValidationResult::Ok();
+  return ValidationResult::Violation(
+      ctx.GetVariableName(), value,
+      std::format("must match the simple pattern {}",
+                  moriarty_internal::ValuePrinter(pattern_.Pattern())));
 }
 
 std::string SimplePattern::ToString() const {
   return std::format("has a simple pattern of {}",
-                     librarian::DebugString(pattern_.Pattern()));
+                     moriarty_internal::ValuePrinter(pattern_.Pattern()));
 }
 
 std::vector<std::string> SimplePattern::GetDependencies() const {

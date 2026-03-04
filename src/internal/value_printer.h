@@ -82,6 +82,25 @@ std::string InternalValuePrinterGenericContainer(int n, int max_len,
   return result;
 }
 
+// Note this disabled all implicit conversions.
+template <std::same_as<unsigned char> CharLike>
+std::string InternalValuePrinterChar(const CharLike& value) {
+  if (value == '\n') return "\\n";
+  if (value == '\t') return "\\t";
+  if (value == '\r') return "\\r";
+  if (value == '\\') return "\\\\";
+  if (value == '\0') return "\\0";
+  if (value == '\a') return "\\a";
+  if (value == '\b') return "\\b";
+  if (value == '\f') return "\\f";
+  if (value == '\v') return "\\v";
+  if (value == '\e') return "\\e";
+
+  if (std::isprint(value)) return std::string(1, value);
+  return std::format("[ASCII {}]",
+                     static_cast<int>(static_cast<unsigned char>(value)));
+}
+
 template <std::integral IntLike>
 std::string InternalValuePrinterInt(const IntLike& value) {
   using T = std::remove_cvref_t<IntLike>;
@@ -89,11 +108,8 @@ std::string InternalValuePrinterInt(const IntLike& value) {
                            std::is_same_v<T, unsigned char> ||
                            std::is_same_v<T, signed char>;
   if constexpr (is_char) {
-    if (std::isprint(static_cast<unsigned char>(value))) {
-      return std::format("'{}'", static_cast<char>(value));
-    } else {
-      return std::format("ASCII {}", static_cast<int>(value));
-    }
+    return std::format(
+        "'{}'", InternalValuePrinterChar(static_cast<unsigned char>(value)));
   }
   return std::format("{}", value);
 }
@@ -104,11 +120,15 @@ std::string InternalValuePrinterFloat(const FloatLike& value) {
 }
 
 std::string InternalValuePrinterString(std::string_view value, int max_len) {
-  max_len -= 2;                              // for the quotes
-  if (value.size() > max_len) max_len -= 3;  // for the "..."
+  if (value.empty()) return "\"\"";
+  max_len -= 2;  // for the quotes
+  std::string prefix = "\"", suffix = "\"";
+  if (value.size() > max_len) max_len -= 3, suffix = "...\"";
   max_len = std::max(max_len, 2);  // Always show at least 2 characters
-  return std::format("\"{}{}\"", value.substr(0, max_len),
-                     value.size() > max_len ? "..." : "");
+  std::string result;
+  for (size_t i = 0; i < value.size() && result.size() < max_len; i++)
+    result += InternalValuePrinterChar(static_cast<unsigned char>(value[i]));
+  return std::format("{}{}{}", prefix, result, suffix);
 }
 
 template <typename T>
@@ -133,9 +153,12 @@ std::string InternalValuePrinterOptional(const std::optional<T>& opt,
 template <typename... Args>
 std::string InternalValuePrinterVariant(const std::variant<Args...>& v,
                                         int max_len) {
-  return std::visit(
-      [max_len](const auto& arg) { return InternalValuePrinter(arg, max_len); },
-      v);
+  return std::format("(alternative {}) {}", v.index(),
+                     std::visit(
+                         [max_len](const auto& arg) {
+                           return InternalValuePrinter(arg, max_len);
+                         },
+                         v));
 }
 
 template <typename... Args>
@@ -196,10 +219,13 @@ concept AdlPrettyPrintable = requires(const T& value, int max_len) {
 };
 
 template <typename>
-inline constexpr bool kDependentFalse = false;
+inline constexpr bool kFalse = false;
 
 template <typename T>
 std::string InternalValuePrinter(const T& value, int max_len) {
+  // Ensure we have enough budget to print something meaningful. Hopefully this
+  // doesn't cause an infinite allowance anywhere
+  max_len = std::max(max_len, 3);
   using U = std::remove_cvref_t<T>;
   if constexpr (std::integral<U>) {
     return InternalValuePrinterInt(value);
@@ -224,10 +250,11 @@ std::string InternalValuePrinter(const T& value, int max_len) {
                        }) {
     return InternalValuePrinterArray(value, max_len);
   } else {
-    static_assert(kDependentFalse<U>,
+    static_assert(kFalse<U>,
                   "ValuePrinter does not know how to pretty-print "
                   "this type");
   }
+  return "";  // Unreachable
 }
 
 }  // namespace moriarty_internal

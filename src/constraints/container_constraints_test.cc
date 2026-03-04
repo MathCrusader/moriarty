@@ -32,8 +32,8 @@ namespace {
 
 using ::moriarty_testing::Context;
 using ::moriarty_testing::GeneratedValuesAre;
-using ::moriarty_testing::HasConstraintViolation;
-using ::moriarty_testing::HasNoConstraintViolation;
+using ::moriarty_testing::HasNoViolation;
+using ::moriarty_testing::HasViolation;
 using ::testing::AllOf;
 using ::testing::Ge;
 using ::testing::HasSubstr;
@@ -58,13 +58,13 @@ TEST(ContainerConstraintsTest, LengthUnsatisfiedReasonWorks) {
   moriarty_internal::ValueSet values;
   ConstraintContext ctx("N", variables, values);
 
-  EXPECT_EQ(Length(Between(1, 10))
-                .CheckValue(ctx, std::string("this string is long"))
-                .Reason(),
-            "has length (which is `19`) that is not between 1 and 10");
-  EXPECT_EQ(
-      Length(Between(3, 10)).CheckValue(ctx, std::vector<int>{1, 2}).Reason(),
-      "has length (which is `2`) that is not between 3 and 10");
+  EXPECT_THAT(
+      Length(Between(1, 10)).Validate(ctx, std::string("this string is long")),
+      HasViolation(
+          AllOf(HasSubstr("length"), HasSubstr("expected: between 1 and 10"))));
+  EXPECT_THAT(Length(Between(3, 10)).Validate(ctx, std::vector<int>{1, 2}),
+              HasViolation(AllOf(HasSubstr("length"),
+                                 HasSubstr("expected: between 3 and 10"))));
 }
 
 TEST(ContainerConstraintsTest, LengthIsSatisfiedWithWorks) {
@@ -72,21 +72,21 @@ TEST(ContainerConstraintsTest, LengthIsSatisfiedWithWorks) {
   moriarty_internal::ValueSet values;
   ConstraintContext ctx("N", variables, values);
 
-  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::string("123456")),
-              HasNoConstraintViolation());
-  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::string("1")),
-              HasNoConstraintViolation());
-  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::string("1234567890")),
-              HasNoConstraintViolation());
-  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::vector{1, 2, 3}),
-              HasNoConstraintViolation());
+  EXPECT_THAT(Length(Between(1, 10)).Validate(ctx, std::string("123456")),
+              HasNoViolation());
+  EXPECT_THAT(Length(Between(1, 10)).Validate(ctx, std::string("1")),
+              HasNoViolation());
+  EXPECT_THAT(Length(Between(1, 10)).Validate(ctx, std::string("1234567890")),
+              HasNoViolation());
+  EXPECT_THAT(Length(Between(1, 10)).Validate(ctx, std::vector{1, 2, 3}),
+              HasNoViolation());
 
-  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::string("")),
-              HasConstraintViolation(HasSubstr("length")));
-  EXPECT_THAT(Length(Between(1, 10)).CheckValue(ctx, std::vector<int>{}),
-              HasConstraintViolation(HasSubstr("length")));
-  EXPECT_THAT(Length(Between(2, 3)).CheckValue(ctx, std::vector{1}),
-              HasConstraintViolation(HasSubstr("length")));
+  EXPECT_THAT(Length(Between(1, 10)).Validate(ctx, std::string("")),
+              HasViolation(HasSubstr("length")));
+  EXPECT_THAT(Length(Between(1, 10)).Validate(ctx, std::vector<int>{}),
+              HasViolation(HasSubstr("length")));
+  EXPECT_THAT(Length(Between(2, 3)).Validate(ctx, std::vector{1}),
+              HasViolation(HasSubstr("length")));
 }
 
 TEST(ContainerConstraintsTest, ElementsConstraintsAreCorrect) {
@@ -110,16 +110,15 @@ TEST(ContainerConstraintsTest, ElementsUnsatisfiedReasonWorks) {
   moriarty_internal::ValueSet values;
   ConstraintContext ctx("N", variables, values);
 
-  EXPECT_EQ(StronglyTypedElements<MInteger>(Between(1, 10))
-                .CheckValue(ctx, {-1, 2, 3})
-                .Reason(),
-            "array index 0 (which is `-1`) is not between 1 and 10");
-  EXPECT_EQ(
+  EXPECT_THAT(
+      StronglyTypedElements<MInteger>(Between(1, 10)).Validate(ctx, {-1, 2, 3}),
+      HasViolation(AllOf(HasSubstr("index 0"),
+                         HasSubstr("expected: between 1 and 10"))));
+  EXPECT_THAT(
       StronglyTypedElements<MString>(Length(Between(3, 10)))
-          .CheckValue(ctx, std::vector<std::string>{"hello", "moto", "me"})
-          .Reason(),
-      "array index 2 (which is `me`) has length (which is `2`) that is not "
-      "between 3 and 10");
+          .Validate(ctx, std::vector<std::string>{"hello", "moto", "me"}),
+      HasViolation(AllOf(HasSubstr("index 2"),
+                         HasSubstr("expected: between 3 and 10"))));
 }
 
 TEST(ContainerConstraintsTest, ElementsIsSatisfiedWithWorks) {
@@ -130,38 +129,40 @@ TEST(ContainerConstraintsTest, ElementsIsSatisfiedWithWorks) {
 
   {
     EXPECT_THAT(StronglyTypedElements<MString>(Length(Between(1, 10)))
-                    .CheckValue(ctx, std::vector<std::string>{}),
-                HasNoConstraintViolation());
+                    .Validate(ctx, std::vector<std::string>{}),
+                HasNoViolation());
     EXPECT_THAT(StronglyTypedElements<MString>(Length(Between(1, 10)))
-                    .CheckValue(ctx, std::vector<std::string>{"hello", "moto"}),
-                HasNoConstraintViolation());
+                    .Validate(ctx, std::vector<std::string>{"hello", "moto"}),
+                HasNoViolation());
     EXPECT_THAT(StronglyTypedElements<MString>(Length(Between(1, "X")))
-                    .CheckValue(ctx, std::vector<std::string>{"hello", "moto"}),
-                HasNoConstraintViolation());
+                    .Validate(ctx, std::vector<std::string>{"hello", "moto"}),
+                HasNoViolation());
   }
   {
     EXPECT_THAT(StronglyTypedElements<MInteger>(Between(1, 10))
-                    .CheckValue(ctx, std::vector<int64_t>{1, 2, 3}),
-                HasNoConstraintViolation());
+                    .Validate(ctx, std::vector<int64_t>{1, 2, 3}),
+                HasNoViolation());
     EXPECT_THAT(StronglyTypedElements<MInteger>(Between(1, "X"))
-                    .CheckValue(ctx, std::vector<int64_t>{1}),
-                HasNoConstraintViolation());
+                    .Validate(ctx, std::vector<int64_t>{1}),
+                HasNoViolation());
   }
   {
     EXPECT_THAT(StronglyTypedElements<MString>(Length(Between(1, 4)))
-                    .CheckValue(ctx, std::vector<std::string>{"hello"}),
-                HasConstraintViolation(HasSubstr("length")));
+                    .Validate(ctx, std::vector<std::string>{"hello"}),
+                HasViolation(HasSubstr("length")));
     EXPECT_THAT(StronglyTypedElements<MString>(Length(Between(2, 10)))
-                    .CheckValue(ctx, std::vector<std::string>{"hello", "m"}),
-                HasConstraintViolation(HasSubstr("length")));
+                    .Validate(ctx, std::vector<std::string>{"hello", "m"}),
+                HasViolation(HasSubstr("length")));
   }
   {
     EXPECT_THAT(StronglyTypedElements<MInteger>(Between(1, 10))
-                    .CheckValue(ctx, std::vector<int64_t>{1, 2, 11}),
-                HasConstraintViolation(HasSubstr("is not between")));
+                    .Validate(ctx, std::vector<int64_t>{1, 2, 11}),
+                HasViolation(AllOf(HasSubstr("index 2"),
+                                   HasSubstr("between 1 and 10"))));
     EXPECT_THAT(StronglyTypedElements<MInteger>(Between(1, "X"))
-                    .CheckValue(ctx, std::vector<int64_t>{1, 2, 11}),
-                HasConstraintViolation(HasSubstr("is not between")));
+                    .Validate(ctx, std::vector<int64_t>{1, 2, 11}),
+                HasViolation(
+                    AllOf(HasSubstr("index 2"), HasSubstr("between 1 and X"))));
   }
 }
 
@@ -185,14 +186,11 @@ TEST(ContainerConstraintsTest, ElementUnsatisfiedReasonWorks) {
   moriarty_internal::ValueSet values;
   ConstraintContext ctx("N", variables, values);
 
-  EXPECT_EQ((Element<0, MInteger>(Between(1, 10)).CheckValue(ctx, -1).Reason()),
-            "tuple index 0 (which is `-1`) is not between 1 and 10");
-  EXPECT_EQ(
-      (Element<12, MString>(Length(Between(1, 3)))
-           .CheckValue(ctx, "hello")
-           .Reason()),
-      "tuple index 12 (which is `hello`) has length (which is `5`) that is not "
-      "between 1 and 3");
+  EXPECT_THAT((Element<0, MInteger>(Between(1, 10)).Validate(ctx, -1)),
+              HasViolation("between 1 and 10"));
+  EXPECT_THAT(
+      (Element<12, MString>(Length(Between(1, 3))).Validate(ctx, "hello")),
+      HasViolation(AllOf(HasSubstr("length"), HasSubstr("between 1 and 3"))));
 }
 
 TEST(ContainerConstraintsTest, ElementIsSatisfiedWithWorks) {
@@ -203,22 +201,22 @@ TEST(ContainerConstraintsTest, ElementIsSatisfiedWithWorks) {
 
   {
     EXPECT_THAT(
-        (Element<0, MString>(Length(Between(1, 10))).CheckValue(ctx, "123")),
-        HasNoConstraintViolation());
+        (Element<0, MString>(Length(Between(1, 10))).Validate(ctx, "123")),
+        HasNoViolation());
     EXPECT_THAT(
-        (Element<0, MString>(Length(Between(1, 10))).CheckValue(ctx, "hello")),
-        HasNoConstraintViolation());
+        (Element<0, MString>(Length(Between(1, 10))).Validate(ctx, "hello")),
+        HasNoViolation());
     EXPECT_THAT(
-        (Element<0, MString>(Length(Between(1, "X"))).CheckValue(ctx, "moto")),
-        HasNoConstraintViolation());
+        (Element<0, MString>(Length(Between(1, "X"))).Validate(ctx, "moto")),
+        HasNoViolation());
   }
   {
     EXPECT_THAT(
-        (Element<0, MString>(Length(Between(1, 4))).CheckValue(ctx, "hello")),
-        HasConstraintViolation(HasSubstr("length")));
+        (Element<0, MString>(Length(Between(1, 4))).Validate(ctx, "hello")),
+        HasViolation(HasSubstr("length")));
     EXPECT_THAT(
-        (Element<0, MString>(Length(Between(2, "X"))).CheckValue(ctx, "m")),
-        HasConstraintViolation(HasSubstr("length")));
+        (Element<0, MString>(Length(Between(2, "X"))).Validate(ctx, "m")),
+        HasViolation(HasSubstr("length")));
   }
 }
 
@@ -227,57 +225,61 @@ TEST(ContainerConstraintsTest, DistinctElementsToStringWorks) {
 }
 
 TEST(ContainerConstraintsTest, DistinctElementsUnsatisfiedReasonWorks) {
-  EXPECT_THAT(DistinctElements().CheckValue(std::vector{11, 22, 11}),
-              HasConstraintViolation(HasSubstr("not distinct")));
-  EXPECT_THAT(DistinctElements().CheckValue(
+  EXPECT_THAT(DistinctElements().Validate(std::vector{11, 22, 11}),
+              HasViolation(AllOf(HasSubstr("array indices 0 and 2"),
+                                 HasSubstr("distinct elements"))));
+  EXPECT_THAT(DistinctElements().Validate(
                   std::vector<std::string>{"hello", "hell", "help", "hell"}),
-              HasConstraintViolation(HasSubstr("not distinct")));
-  EXPECT_THAT(DistinctElements().CheckValue(std::vector{1, 2, 3, 2, 2, 3}),
-              HasConstraintViolation(HasSubstr("not distinct")));
+              HasViolation(AllOf(HasSubstr("array indices 1 and 3"),
+                                 HasSubstr("distinct elements"))));
+  EXPECT_THAT(DistinctElements().Validate(std::vector{1, 2, 3, 2, 2, 3}),
+              HasViolation(AllOf(HasSubstr("array indices 1 and 3"),
+                                 HasSubstr("distinct elements"))));
 }
 
 TEST(ContainerConstraintsTest, DistinctElementsIsSatisfiedWithWorks) {
   {
-    EXPECT_THAT(DistinctElements().CheckValue(std::vector<std::string>{}),
-                HasNoConstraintViolation());
-    EXPECT_THAT(DistinctElements().CheckValue(
-                    std::vector<std::string>{"hello", "moto"}),
-                HasNoConstraintViolation());
+    EXPECT_THAT(DistinctElements().Validate(std::vector<std::string>{}),
+                HasNoViolation());
+    EXPECT_THAT(
+        DistinctElements().Validate(std::vector<std::string>{"hello", "moto"}),
+        HasNoViolation());
   }
   {
+    EXPECT_THAT(DistinctElements().Validate(std::vector<std::string>{"a", "a"}),
+                HasViolation(AllOf(HasSubstr("array indices 0 and 1"),
+                                   HasSubstr("distinct elements"))));
     EXPECT_THAT(
-        DistinctElements().CheckValue(std::vector<std::string>{"a", "a"}),
-        HasConstraintViolation(HasSubstr("not distinct")));
-    EXPECT_THAT(DistinctElements().CheckValue(
-                    std::vector<std::string>{"a", "ba", "ba"}),
-                HasConstraintViolation(HasSubstr("not distinct")));
+        DistinctElements().Validate(std::vector<std::string>{"a", "ba", "ba"}),
+        HasViolation(AllOf(HasSubstr("array indices 1 and 2"),
+                           HasSubstr("distinct elements"))));
   }
 }
 
 TEST(ContainerConstraintsTest, SortedWorks) {
   {
-    EXPECT_THAT(Sorted<MString>().CheckValue(std::vector<std::string>{}),
-                HasNoConstraintViolation());
-    EXPECT_THAT((Sorted<MString, std::greater<>>().CheckValue(
+    EXPECT_THAT(Sorted<MString>().Validate(std::vector<std::string>{}),
+                HasNoViolation());
+    EXPECT_THAT((Sorted<MString, std::greater<>>().Validate(
                     std::vector<std::string>{"moto", "hello"})),
-                HasNoConstraintViolation());
+                HasNoViolation());
     EXPECT_THAT(
         (Sorted<MString, std::greater<>, std::function<char(std::string)>>(
              std::greater{}, [](std::string s) { return s[1]; })
-             .CheckValue(std::vector<std::string>{"axc", "zby"})),
-        HasNoConstraintViolation());
+             .Validate(std::vector<std::string>{"axc", "zby"})),
+        HasNoViolation());
   }
   {
-    EXPECT_THAT((Sorted<MInteger>().CheckValue({1, 2, 3, 3, 4})),
-                HasNoConstraintViolation());
-    EXPECT_THAT((Sorted<MInteger, std::greater<>>().CheckValue({1, 1, 1, 1})),
-                HasNoConstraintViolation());
+    EXPECT_THAT((Sorted<MInteger>().Validate({1, 2, 3, 3, 4})),
+                HasNoViolation());
+    EXPECT_THAT((Sorted<MInteger, std::greater<>>().Validate({1, 1, 1, 1})),
+                HasNoViolation());
   }
   {
-    EXPECT_THAT((Sorted<MInteger>().CheckValue({4, 3, 2, 1})),
-                HasConstraintViolation(HasSubstr("sorted")));
-    EXPECT_THAT((Sorted<MInteger>().CheckValue({2, 2, 2, 2, 1})),
-                HasConstraintViolation(HasSubstr("sorted")));
+    EXPECT_THAT((Sorted<MInteger>().Validate({4, 3, 2, 1})),
+                HasViolation(HasSubstr("sorted")));
+    EXPECT_THAT((Sorted<MInteger>().Validate({2, 2, 2, 2, 1})),
+                HasViolation(HasSubstr("sorted")));
   }
 }
 

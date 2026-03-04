@@ -32,9 +32,9 @@
 #include <utility>
 #include <vector>
 
-#include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
 #include "src/constraints/custom_constraint.h"
+#include "src/constraints/equality_constraints.h"
 #include "src/context.h"
 #include "src/contexts/internal/mutable_values_context.h"
 #include "src/contexts/internal/view_only_context.h"
@@ -161,11 +161,11 @@ class MVariable : public moriarty_internal::AbstractVariable {
   template <typename... Constraints>
   VariableType& AddConstraints(std::tuple<Constraints...> constraints);
 
-  // CheckValue()
+  // Validate()
   //
   // Determines if `value` satisfies all constraints on this variable.
-  ConstraintViolation CheckValue(ConstraintContext ctx,
-                                 const value_type& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const value_type& value) const;
 
   // Generate()
   //
@@ -298,7 +298,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   void WriteValue(std::string_view variable_name, Ref<std::ostream> os,
                   Ref<const moriarty_internal::VariableSet> variables,
                   Ref<const moriarty_internal::ValueSet> values) const override;
-  ConstraintViolation CheckValue(
+  ValidationResult Validate(
       std::string_view variable_name,
       Ref<const moriarty_internal::VariableSet> variables,
       Ref<const moriarty_internal::ValueSet> values) const override;
@@ -311,8 +311,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   class CustomConstraintWrapper {
    public:
     explicit CustomConstraintWrapper(CustomConstraint<VariableType> constraint);
-    ConstraintViolation CheckValue(ConstraintContext ctx,
-                                   const value_type& value) const;
+    ValidationResult Validate(ConstraintContext ctx,
+                              const value_type& value) const;
     std::string ToString() const;
     std::vector<std::string> GetDependencies() const;
     void ApplyTo(VariableType& other) const;
@@ -403,9 +403,9 @@ V& MVariable<V>::AddConstraints(std::tuple<Constraints...> constraints) {
 }
 
 template <typename V>
-ConstraintViolation MVariable<V>::CheckValue(ConstraintContext ctx,
-                                             const value_type& value) const {
-  return constraints_.CheckValue(ctx, value);
+ValidationResult MVariable<V>::Validate(ConstraintContext ctx,
+                                        const value_type& value) const {
+  return constraints_.Validate(ctx, value);
 }
 
 template <typename V>
@@ -472,9 +472,9 @@ void MVariable<V>::Write(WriteVariableContext ctx,
 template <typename V>
 auto MVariable<V>::Read(ReadVariableContext ctx) const -> value_type {
   value_type value = ReadImpl(ctx);
-  if (auto reason = CheckValue(ConstraintContext(ctx), value)) {
-    ctx.ThrowIOError("Read value does not satisfy constraints: {}",
-                     reason.Reason());
+  if (auto v = Validate(ConstraintContext(ctx), value); !v.IsOk()) {
+    ctx.ThrowIOError("Read value does not satisfy constraints:\n{}",
+                     v.PrettyReason());
   }
   return value;
 }
@@ -605,11 +605,11 @@ typename MVariable<V>::value_type MVariable<V>::GenerateOnce(
   // validate. Generate them now.
   for (std::string_view dep : dependencies_) ctx.AssignVariable(dep);
 
-  if (auto reason = CheckValue(ConstraintContext(ctx), potential_value))
+  if (auto v = Validate(ConstraintContext(ctx), potential_value); !v.IsOk())
     throw moriarty::GenerationError(
         ctx.GetVariableName(),
-        std::format("Generated value does not satisfy constraints: {}",
-                    reason.Reason()),
+        std::format("Generated value does not satisfy constraints:\n{}",
+                    v.PrettyReason()),
         RetryPolicy::kRetry);
 
   return potential_value;
@@ -695,12 +695,12 @@ void MVariable<V>::WriteValue(
 }
 
 template <typename V>
-ConstraintViolation MVariable<V>::CheckValue(
+ValidationResult MVariable<V>::Validate(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values) const {
   ConstraintContext ctx(variable_name, variables, values);
-  return CheckValue(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
+  return Validate(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
 }
 
 template <typename V>
@@ -725,9 +725,9 @@ MVariable<V>::CustomConstraintWrapper::CustomConstraintWrapper(
     : constraint_(std::move(constraint)) {}
 
 template <typename V>
-ConstraintViolation MVariable<V>::CustomConstraintWrapper::CheckValue(
+ValidationResult MVariable<V>::CustomConstraintWrapper::Validate(
     ConstraintContext ctx, const value_type& value) const {
-  return constraint_.CheckValue(ctx, value);
+  return constraint_.Validate(ctx, value);
 }
 
 template <typename V>

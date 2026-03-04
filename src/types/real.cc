@@ -222,4 +222,8 @@ std::strong_ordering operator<=>(const Real& lhs, const Real& rhs) {
   return lhs_num <=> rhs_num;
 }
 
+std::string PrettyPrintValue(const Real& value, int max_len) {
+  return value.ToString();
+}
+
 }  // namespace moriarty

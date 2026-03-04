@@ -223,6 +223,10 @@ class ConstraintContext : public moriarty_internal::NameContext,
   explicit ConstraintContext(const T& other)
       : NameContext(other.GetVariableName()), ViewOnlyContext(other) {}
 
+  ConstraintContext ForSubVariable(std::string_view sub_variable_name) const {
+    return ConstraintContext(sub_variable_name, *this);
+  }
+
   // ********************************************
   // ** See parent classes for more functions. **
   // ********************************************

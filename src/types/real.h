@@ -112,6 +112,8 @@ class Real {
   friend bool operator==(const Real& r, std::signed_integral auto d);
   friend bool operator==(const Real& r, std::unsigned_integral auto d);
 
+  friend std::string PrettyPrintValue(const Real& value, int max_len);
+
  private:
   int64_t numerator_;
   int64_t denominator_ = 1;

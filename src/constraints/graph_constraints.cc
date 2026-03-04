@@ -19,6 +19,7 @@
 #include <string_view>
 #include <vector>
 
+#include "src/constraints/equality_constraints.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

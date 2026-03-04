@@ -80,7 +80,7 @@ cc_library(
     srcs = ["minteger.cc"],
     hdrs = ["minteger.h"],
     deps = [
-        "//src/constraints:base_constraints",
+        "//src/constraints:equality_constraints",
         "//src/constraints:integer_constraints",
         "//src/constraints:numeric_constraints",
         "//src/constraints:size_constraints",

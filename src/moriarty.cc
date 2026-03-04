@@ -79,13 +79,12 @@ std::span<const int64_t> Moriarty::GetSeedForGenerator(int index) {
 namespace {
 
 std::string FailureToString(
-    const std::vector<DetailedConstraintViolation>& failures) {
+    const std::vector<DetailedValidationResult>& failures) {
   std::string result;
 
   for (const auto& [var_name, reason] : failures) {
     if (!result.empty()) result += "\n";
-    result += std::format(" - Variable `{}` failed constraint: {}\n", var_name,
-                          reason.Reason());
+    result += reason.PrettyReason();
   }
   return result;
 }
@@ -102,10 +101,10 @@ ValidationResults Moriarty::ValidateTestCases(ValidateOptions options) const {
   }
 
   for (int case_num = 1; const auto& test_case : test_cases_) {
-    std::vector<DetailedConstraintViolation> failures =
-        moriarty_internal::CheckValues(variables_, test_case.UnsafeGetValues(),
-                                       options.variables_to_validate,
-                                       options.validation);
+    std::vector<DetailedValidationResult> failures =
+        moriarty_internal::ValidateValues(
+            variables_, test_case.UnsafeGetValues(),
+            options.variables_to_validate, options.validation);
     if (!failures.empty()) {
       res.AddFailure(test_cases_.size() == 1 ? 0 : case_num,
                      FailureToString(failures));

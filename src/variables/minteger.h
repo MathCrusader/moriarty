@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-#include "src/constraints/base_constraints.h"
+#include "src/constraints/equality_constraints.h"
 #include "src/constraints/integer_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"

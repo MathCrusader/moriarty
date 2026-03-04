@@ -302,7 +302,7 @@ TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
     EXPECT_THAT(
         [&] {
           (void)MTestType(NumberOfDigits(MInteger(Exactly("t"))))
-              .CheckValue(ctx, 1);
+              .Validate(ctx, 1);
         },
         ThrowsVariableNotFound("t"));
   }
@@ -313,7 +313,7 @@ TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
     EXPECT_THAT(
         [&] {
           (void)MTestType(NumberOfDigits(MInteger(Exactly("t"))))
-              .CheckValue(ctx, 1);
+              .Validate(ctx, 1);
         },
         ThrowsValueNotFound("t"));
   }

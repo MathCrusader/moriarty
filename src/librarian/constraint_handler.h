@@ -27,9 +27,9 @@ namespace moriarty {
 namespace librarian {
 
 template <typename ConstraintType, typename ValueType>
-concept ConstraintHasSimplifiedCheckValueFn =
+concept ConstraintHasSimplifiedValidateFn =
     requires(const ConstraintType& c, const ValueType& v) {
-      { c.CheckValue(v) } -> std::same_as<ConstraintViolation>;
+      { c.Validate(v) } -> std::same_as<ValidationResult>;
     };
 
 template <typename ConstraintType, typename VariableType>
@@ -53,11 +53,11 @@ class ConstraintHandler {
   template <typename ConstraintType>
   void AddConstraint(ConstraintType constraint);
 
-  // CheckValue()
+  // Validate()
   //
   // Determines if all constraints are satisfied with the given value.
-  ConstraintViolation CheckValue(ConstraintContext ctx,
-                                 const ValueType& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const ValueType& value) const;
 
   // ToString()
   //
@@ -73,8 +73,8 @@ class ConstraintHandler {
   class ConstraintHusk {
    public:
     virtual ~ConstraintHusk() = default;
-    virtual auto CheckValue(ConstraintContext ctx, const ValueType& value) const
-        -> ConstraintViolation = 0;
+    virtual auto Validate(ConstraintContext ctx, const ValueType& value) const
+        -> ValidationResult = 0;
     virtual auto ToString() const -> std::string = 0;
     virtual auto ApplyTo(VariableType& other) const -> void = 0;
   };
@@ -85,12 +85,12 @@ class ConstraintHandler {
     ~ConstraintWrapper() override = default;
     explicit ConstraintWrapper(U constraint)
         : constraint_(std::move(constraint)) {}
-    auto CheckValue(ConstraintContext ctx, const ValueType& value) const
-        -> ConstraintViolation override {
-      if constexpr (ConstraintHasSimplifiedCheckValueFn<U, ValueType>) {
-        return constraint_.CheckValue(value);
+    auto Validate(ConstraintContext ctx, const ValueType& value) const
+        -> ValidationResult override {
+      if constexpr (ConstraintHasSimplifiedValidateFn<U, ValueType>) {
+        return constraint_.Validate(value);
       } else {
-        return constraint_.CheckValue(ctx, value);
+        return constraint_.Validate(ctx, value);
       }
     }
     auto ToString() const -> std::string override {
@@ -125,12 +125,12 @@ void ConstraintHandler<VariableType, ValueType>::AddConstraint(U constraint) {
 }
 
 template <typename VariableType, typename ValueType>
-ConstraintViolation ConstraintHandler<VariableType, ValueType>::CheckValue(
+ValidationResult ConstraintHandler<VariableType, ValueType>::Validate(
     ConstraintContext ctx, const ValueType& value) const {
   for (const auto& constraint : constraints_) {
-    if (auto check = constraint->CheckValue(ctx, value)) return check;
+    if (auto v = constraint->Validate(ctx, value); !v.IsOk()) return v;
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 template <typename VariableType, typename ValueType>

@@ -25,8 +25,8 @@
 namespace moriarty {
 namespace {
 
-using ::moriarty_testing::HasConstraintViolation;
-using ::moriarty_testing::HasNoConstraintViolation;
+using ::moriarty_testing::HasNoViolation;
+using ::moriarty_testing::HasViolation;
 using ::testing::ElementsAre;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
@@ -42,8 +42,9 @@ TEST(CustomConstraintTest, BasicGettersWork) {
     EXPECT_EQ(constraint.GetName(), "positive");
     EXPECT_THAT(constraint.GetDependencies(), IsEmpty());
     EXPECT_EQ(constraint.ToString(), "[CustomConstraint] positive");
-    EXPECT_EQ(constraint.CheckValue(ctx, -10).Reason(),
-              "`-10` does not satisfy the custom constraint `positive`");
+    EXPECT_THAT(
+        constraint.Validate(ctx, -10),
+        HasViolation("value must satisfy the custom constraint `positive`"));
   }
   {  // With context
     moriarty_internal::VariableSet variables;
@@ -58,12 +59,14 @@ TEST(CustomConstraintTest, BasicGettersWork) {
     EXPECT_EQ(constraint.GetName(), "bigger_than_N");
     EXPECT_THAT(constraint.GetDependencies(), ElementsAre("N"));
     EXPECT_EQ(constraint.ToString(), "[CustomConstraint] bigger_than_N");
-    EXPECT_EQ(constraint.CheckValue(ctx, 5).Reason(),
-              "`5` does not satisfy the custom constraint `bigger_than_N`");
+    EXPECT_THAT(
+        constraint.Validate(ctx, 5),
+        HasViolation(
+            "value must satisfy the custom constraint `bigger_than_N`"));
   }
 }
 
-TEST(CustomConstraintTest, CheckValueShouldWork) {
+TEST(CustomConstraintTest, ValidateShouldWork) {
   {  // No dependent variables
     moriarty_internal::VariableSet variables;
     moriarty_internal::ValueSet values;
@@ -71,11 +74,11 @@ TEST(CustomConstraintTest, CheckValueShouldWork) {
 
     CustomConstraint<MInteger> constraint("positive",
                                           [](int64_t x) { return x > 0; });
-    EXPECT_THAT(constraint.CheckValue(ctx, 10), HasNoConstraintViolation());
-    EXPECT_THAT(constraint.CheckValue(ctx, 0),
-                HasConstraintViolation(HasSubstr("positive")));
-    EXPECT_THAT(constraint.CheckValue(ctx, -10),
-                HasConstraintViolation(HasSubstr("positive")));
+    EXPECT_THAT(constraint.Validate(ctx, 10), HasNoViolation());
+    EXPECT_THAT(constraint.Validate(ctx, 0),
+                HasViolation(HasSubstr("positive")));
+    EXPECT_THAT(constraint.Validate(ctx, -10),
+                HasViolation(HasSubstr("positive")));
   }
   {  // With context
     moriarty_internal::VariableSet variables;
@@ -87,11 +90,11 @@ TEST(CustomConstraintTest, CheckValueShouldWork) {
         "bigger_than_N", {"N"}, [](ConstraintContext ctx, int64_t x) {
           return x > ctx.GetValue<MInteger>("N");
         });
-    EXPECT_THAT(constraint.CheckValue(ctx, 11), HasNoConstraintViolation());
-    EXPECT_THAT(constraint.CheckValue(ctx, 10),
-                HasConstraintViolation(HasSubstr("bigger_than_N")));
-    EXPECT_THAT(constraint.CheckValue(ctx, 9),
-                HasConstraintViolation(HasSubstr("bigger_than_N")));
+    EXPECT_THAT(constraint.Validate(ctx, 11), HasNoViolation());
+    EXPECT_THAT(constraint.Validate(ctx, 10),
+                HasViolation(HasSubstr("bigger_than_N")));
+    EXPECT_THAT(constraint.Validate(ctx, 9),
+                HasViolation(HasSubstr("bigger_than_N")));
   }
 }
 

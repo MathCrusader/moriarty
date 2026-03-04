@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MORIARTY_CONSTRAINTS_CONTAINERS_H_
-#define MORIARTY_CONSTRAINTS_CONTAINERS_H_
+#ifndef MORIARTY_CONSTRAINTS_CONTAINER_CONSTRAINTS_H_
+#define MORIARTY_CONSTRAINTS_CONTAINER_CONSTRAINTS_H_
 
 #include <concepts>
 #include <format>
@@ -57,8 +57,8 @@ class Length : public MConstraint {
 
   // Determines if the container has the correct length.
   template <typename Container>
-  ConstraintViolation CheckValue(ConstraintContext ctx,
-                                 const Container& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const Container& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
@@ -115,7 +115,7 @@ class StronglyTypedElements : public MConstraint {
   [[nodiscard]] MElementType GetConstraints() const;
 
   // Determines if the container's elements satisfy all constraints.
-  ConstraintViolation CheckValue(
+  ValidationResult Validate(
       ConstraintContext ctx,
       const std::vector<typename MElementType::value_type>& value) const;
 
@@ -145,8 +145,8 @@ class Element : public MConstraint {
   [[nodiscard]] MElementType GetConstraints() const;
 
   // Determines if an object satisfy all constraints.
-  ConstraintViolation CheckValue(ConstraintContext ctx,
-                                 const MElementType::value_type& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const MElementType::value_type& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
@@ -165,7 +165,7 @@ class DistinctElements : public BasicMConstraint {
 
   // Determines if the container's elements satisfy all constraints.
   template <typename T>
-  ConstraintViolation CheckValue(const std::vector<T>& value) const;
+  ValidationResult Validate(const std::vector<T>& value) const;
 };
 
 // Constraint stating that the elements of a container must be sorted.
@@ -180,7 +180,7 @@ class Sorted : public BasicMConstraint {
       : BasicMConstraint("is sorted"), comp_(comp), proj_(proj) {}
 
   // Determines if the container is sorted.
-  ConstraintViolation CheckValue(
+  ValidationResult Validate(
       const std::vector<typename MElementType::value_type>& value) const;
 
   // Compares two elements using the provided comparator and projection.
@@ -213,13 +213,12 @@ Length::Length(Constraints&&... constraints)
     : length_(std::forward<Constraints>(constraints)...) {}
 
 template <typename Container>
-ConstraintViolation Length::CheckValue(ConstraintContext ctx,
-                                       const Container& value) const {
-  auto check = length_.CheckValue(ctx, static_cast<int64_t>(value.size()));
-  if (check.IsOk()) return ConstraintViolation::None();
-  return ConstraintViolation(std::format("has length (which is {}) that {}",
-                                         librarian::DebugString(value.size()),
-                                         check.Reason()));
+ValidationResult Length::Validate(ConstraintContext ctx,
+                                  const Container& value) const {
+  auto v = length_.Validate(ctx.ForSubVariable("length"), value.size());
+  if (v.IsOk()) return ValidationResult::Ok();
+  return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                     std::move(v));
 }
 
 // ====== Elements ======
@@ -260,18 +259,19 @@ MElementType StronglyTypedElements<MElementType>::GetConstraints() const {
 }
 
 template <typename MElementType>
-ConstraintViolation StronglyTypedElements<MElementType>::CheckValue(
+ValidationResult StronglyTypedElements<MElementType>::Validate(
     ConstraintContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
   for (int idx = -1; const auto& elem : value) {
     idx++;
-    if (auto check = element_constraints_.CheckValue(ctx, elem)) {
-      return ConstraintViolation(std::format("array index {} (which is {}) {}",
-                                             idx, librarian::DebugString(elem),
-                                             check.Reason()));
+    if (auto v = element_constraints_.Validate(
+            ctx.ForSubVariable(std::format("index {}", idx)), elem);
+        !v.IsOk()) {
+      return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                         std::move(v));
     }
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 template <typename MElementType>
@@ -299,13 +299,9 @@ MElementType Element<I, MElementType>::GetConstraints() const {
 }
 
 template <size_t I, typename MElementType>
-ConstraintViolation Element<I, MElementType>::CheckValue(
+ValidationResult Element<I, MElementType>::Validate(
     ConstraintContext ctx, const MElementType::value_type& value) const {
-  auto check = element_constraints_.CheckValue(ctx, value);
-  if (check.IsOk()) return ConstraintViolation::None();
-  return ConstraintViolation(std::format("tuple index {} (which is {}) {}", I,
-                                         librarian::DebugString(value),
-                                         check.Reason()));
+  return element_constraints_.Validate(ctx, value);
 }
 
 template <size_t I, typename MElementType>
@@ -320,19 +316,18 @@ std::vector<std::string> Element<I, MElementType>::GetDependencies() const {
 
 // ====== DistinctElements ======
 template <typename T>
-ConstraintViolation DistinctElements::CheckValue(
-    const std::vector<T>& value) const {
+ValidationResult DistinctElements::Validate(const std::vector<T>& value) const {
   absl::flat_hash_map<T, int> seen;
   for (int idx = -1; const auto& elem : value) {
     idx++;
     auto [it, inserted] = seen.insert({elem, idx});
     if (!inserted) {
-      return ConstraintViolation(
-          std::format("array indices {} and {} (which are {}) are not distinct",
-                      it->second, idx, librarian::DebugString(elem)));
+      return ValidationResult::Violation(
+          std::format("array indices {} and {}", it->second, idx), elem,
+          "distinct elements");
     }
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 // ====== Sorted ======
@@ -354,16 +349,17 @@ Sorted<MElementType, Comp, Proj>::GetComparator() const {
 }
 
 template <typename MElementType, typename Comp, typename Proj>
-ConstraintViolation Sorted<MElementType, Comp, Proj>::CheckValue(
+ValidationResult Sorted<MElementType, Comp, Proj>::Validate(
     const std::vector<typename MElementType::value_type>& value) const {
   for (size_t i = 1; i < value.size(); ++i) {
     if (Compare(value[i], value[i - 1]))
-      return ConstraintViolation(
-          std::format("is not sorted at indices {} and {}", i - 1, i));
+      return ValidationResult::Violation(
+          std::format("indices {} and {}", i - 1, i),
+          std::make_tuple(value[i - 1], value[i]), "elements must be sorted");
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 }  // namespace moriarty
 
-#endif  // MORIARTY_CONSTRAINTS_CONTAINERS_H_
+#endif  // MORIARTY_CONSTRAINTS_CONTAINER_CONSTRAINTS_H_

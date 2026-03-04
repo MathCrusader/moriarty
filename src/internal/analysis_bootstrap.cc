@@ -40,13 +40,13 @@ bool ShouldValidateVariable(ValidationStyle validation,
 
 }  // namespace
 
-std::vector<DetailedConstraintViolation> CheckValues(
+std::vector<DetailedValidationResult> ValidateValues(
     const VariableSet& variables, const ValueSet& values,
     std::span<const std::string> variables_to_validate,
     ValidationStyle validation) {
   if (validation == ValidationStyle::kNone) return {};
 
-  std::vector<DetailedConstraintViolation> violations;
+  std::vector<DetailedValidationResult> violations;
   for (const auto& [name, var] : variables.ListVariables()) {
     if (!ShouldValidateVariable(validation, variables_to_validate, name))
       continue;
@@ -54,14 +54,13 @@ std::vector<DetailedConstraintViolation> CheckValues(
     if (!values.Contains(name)) {
       if (validation == ValidationStyle::kAllVariables ||
           validation == ValidationStyle::kEverything) {
-        violations.push_back(
-            {name, ConstraintViolation(std::format(
-                       "No value assigned to variable `{}`", name))});
+        violations.push_back({name, ValidationResult::Violation(
+                                        name, "should have a value assigned")});
       }
       continue;
     }
-    if (auto reason = var->CheckValue(name, variables, values)) {
-      violations.push_back({name, reason});
+    if (auto v = var->Validate(name, variables, values); !v.IsOk()) {
+      violations.push_back({name, std::move(v)});
     }
   }
 
@@ -73,10 +72,11 @@ std::vector<DetailedConstraintViolation> CheckValues(
         continue;
 
       violations.push_back(
-          {name, ConstraintViolation(std::format(
-                     "No variable found for `{}`, but a value "
-                     "was set for it (use `Moriarty::AddVariable()`)",
-                     name))});
+          {name, ValidationResult::Violation(
+                     name, std::format(
+                               "no variable found with this name, but a value "
+                               "was set for it",
+                               name))});
     }
   }
 

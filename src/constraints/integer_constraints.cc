@@ -53,12 +53,11 @@ std::string Mod::ToString() const {
                      remainder_.ToString());
 }
 
-ConstraintViolation Mod::CheckValue(ConstraintContext ctx,
-                                    int64_t value) const {
+ValidationResult Mod::Validate(ConstraintContext ctx, int64_t value) const {
   int64_t M = ctx.EvaluateExpression(modulus_);
   if (M <= 0) {
-    return ConstraintViolation("Modulus must be positive, but evaluated to " +
-                               std::to_string(M));
+    throw InvalidConstraint("Mod",
+                            std::format("Modulus must be positive, got {}", M));
   }
   int64_t R = ctx.EvaluateExpression(remainder_);
   R %= M;
@@ -66,10 +65,13 @@ ConstraintViolation Mod::CheckValue(ConstraintContext ctx,
   int64_t actual = value % M;
   if (actual < 0) actual += M;
   if (actual != R) {
-    return ConstraintViolation(
-        std::format("{} is not {} mod {}.", value, R, M));
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("{} (mod {}) ({} (mod {}))", remainder_.ToString(),
+                    modulus_.ToString(), R, M),
+        std::format("it is {} (mod {})", actual, M));
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 std::vector<std::string> Mod::GetDependencies() const {

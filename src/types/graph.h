@@ -21,6 +21,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "src/internal/value_printer.h"
 #include "src/types/no_type.h"
 
 namespace moriarty {
@@ -43,6 +44,16 @@ class Graph {
     EdgeLabel e;
 
     auto operator<=>(const Edge& other) const = default;
+
+    friend std::string PrettyPrintValue(const Edge& edge, int max_len) {
+      if constexpr (std::is_same_v<EdgeLabel, NoEdgeLabel>) {
+        return std::format("({}, {})", edge.u, edge.v);
+      } else {
+        return std::format(
+            "({}, {}, {})", edge.u, edge.v,
+            moriarty_internal::ValuePrinter(edge.e, max_len - 6));
+      }
+    }
   };
 
   // Constructs a graph with `num_nodes` nodes.
@@ -81,6 +92,12 @@ class Graph {
   friend bool operator==(const Graph<E, V>& lhs, const Graph<E, V>& rhs);
 
   std::string DebugString() const;
+
+  friend std::string PrettyPrintValue(const Graph& G, int max_len) {
+    return std::format(
+        "Graph(n={}, m={}, edges={})", G.NumNodes(), G.NumEdges(),
+        moriarty_internal::ValuePrinter(G.GetEdges(), max_len - 21));
+  }
 
  private:
   NodeIdx num_nodes_ = 0;
@@ -164,7 +181,7 @@ bool operator==(const Graph<E, V>& lhs, const Graph<E, V>& rhs) {
 
 template <typename E, typename V>
 std::string Graph<E, V>::DebugString() const {
-  return std::format("Graph(num_nodes={}, num_edges={})", num_nodes_,
+  return std::format("Graph(num_nodes={}, num_edges={})", NumNodes(),
                      NumEdges());
 }
 

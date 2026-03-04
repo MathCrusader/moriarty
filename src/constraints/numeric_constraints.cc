@@ -124,26 +124,6 @@ std::string Between::ToString() const {
                      NumericToString(maximum_));
 }
 
-ConstraintViolation Between::CheckValue(ConstraintContext ctx,
-                                        int64_t value) const {
-  std::optional<Range::ExtremeValues<int64_t>> extremes =
-      ctx.GetRangeEndpoints(GetRange());
-  if (!extremes)
-    return ConstraintViolation(
-        std::format("is not between {} and {} (impossible)",
-                    NumericToString(minimum_), NumericToString(maximum_)));
-  if (extremes->min <= value && value <= extremes->max)
-    return ConstraintViolation::None();
-  return ConstraintViolation(std::format("is not between {} and {}",
-                                         NumericToString(minimum_),
-                                         NumericToString(maximum_), value));
-}
-
-ConstraintViolation Between::CheckValue(ConstraintContext ctx,
-                                        int value) const {
-  return CheckValue(ctx, static_cast<int64_t>(value));
-}
-
 namespace {
 
 Real GetRealValue(ConstraintContext ctx,
@@ -156,16 +136,36 @@ Real GetRealValue(ConstraintContext ctx,
 
 }  // namespace
 
-ConstraintViolation Between::CheckValue(ConstraintContext ctx,
-                                        double value) const {
+ValidationResult Between::Validate(ConstraintContext ctx, int64_t value) const {
   Real mini = GetRealValue(ctx, minimum_);
   Real maxi = GetRealValue(ctx, maximum_);
 
   if (!(mini <= value && value <= maxi)) {
-    return ConstraintViolation(std::format("is not between {} and {}",
-                                           mini.ToString(), maxi.ToString()));
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("between {} and {} ({}...{}){}", NumericToString(minimum_),
+                    NumericToString(maximum_), mini.ToString(), maxi.ToString(),
+                    (maxi < mini ? " (which is impossible)" : "")));
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
+}
+
+ValidationResult Between::Validate(ConstraintContext ctx, int value) const {
+  return Validate(ctx, static_cast<int64_t>(value));
+}
+
+ValidationResult Between::Validate(ConstraintContext ctx, double value) const {
+  Real mini = GetRealValue(ctx, minimum_);
+  Real maxi = GetRealValue(ctx, maximum_);
+
+  if (!(mini <= value && value <= maxi)) {
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("between {} and {} ({}...{}){}", NumericToString(minimum_),
+                    NumericToString(maximum_), mini.ToString(), maxi.ToString(),
+                    (maxi < mini ? " (which is impossible)" : "")));
+  }
+  return ValidationResult::Ok();
 }
 
 std::vector<std::string> Between::GetDependencies() const {
@@ -193,38 +193,32 @@ std::string AtMost::ToString() const {
   return std::format("is at most {}", NumericToString(maximum_));
 }
 
-ConstraintViolation AtMost::CheckValue(ConstraintContext ctx,
-                                       int64_t value) const {
-  std::optional<Range::ExtremeValues<int64_t>> extremes =
-      ctx.GetRangeEndpoints(GetRange());
-  if (!extremes)
-    return ConstraintViolation(std::format("is not at most {} (impossible)",
-                                           NumericToString(maximum_)));
-  if (extremes->min <= value && value <= extremes->max)
-    return ConstraintViolation::None();
-  return ConstraintViolation(
-      std::format("is not at most {}", NumericToString(maximum_)));
-}
-
-ConstraintViolation AtMost::CheckValue(ConstraintContext ctx, int value) const {
-  return CheckValue(ctx, static_cast<int64_t>(value));
-}
-
-ConstraintViolation AtMost::CheckValue(ConstraintContext ctx,
-                                       double value) const {
+ValidationResult AtMost::Validate(ConstraintContext ctx, int64_t value) const {
   Real maxi = GetRealValue(ctx, maximum_);
 
-  if (value > maxi) {
-    return ConstraintViolation(
-        std::format("is not at most {}", maxi.ToString()));
+  if (!(value <= maxi)) {
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("at most {} ({})", NumericToString(maximum_),
+                    maxi.ToString()));
   }
-  std::partial_ordering maxi_cmp = maxi <=> value;
-  if (maxi_cmp != std::partial_ordering::greater &&
-      maxi_cmp != std::partial_ordering::equivalent) {
-    return ConstraintViolation(
-        std::format("is not at most {}", maxi.ToString()));
+  return ValidationResult::Ok();
+}
+
+ValidationResult AtMost::Validate(ConstraintContext ctx, int value) const {
+  return Validate(ctx, static_cast<int64_t>(value));
+}
+
+ValidationResult AtMost::Validate(ConstraintContext ctx, double value) const {
+  Real maxi = GetRealValue(ctx, maximum_);
+
+  if (!(value <= maxi)) {
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("at most {} ({})", NumericToString(maximum_),
+                    maxi.ToString()));
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 std::vector<std::string> AtMost::GetDependencies() const {
@@ -252,34 +246,32 @@ std::string AtLeast::ToString() const {
   return std::format("is at least {}", NumericToString(minimum_));
 }
 
-ConstraintViolation AtLeast::CheckValue(ConstraintContext ctx,
-                                        int64_t value) const {
-  std::optional<Range::ExtremeValues<int64_t>> extremes =
-      ctx.GetRangeEndpoints(GetRange());
-  if (!extremes)
-    return ConstraintViolation(std::format("is not at least {} (impossible)",
-                                           NumericToString(minimum_)));
-  if (extremes->min <= value && value <= extremes->max)
-    return ConstraintViolation::None();
-  return ConstraintViolation(
-      std::format("is not at least {}", NumericToString(minimum_)));
-}
-
-ConstraintViolation AtLeast::CheckValue(ConstraintContext ctx,
-                                        int value) const {
-  return CheckValue(ctx, static_cast<int64_t>(value));
-}
-
-ConstraintViolation AtLeast::CheckValue(ConstraintContext ctx,
-                                        double value) const {
+ValidationResult AtLeast::Validate(ConstraintContext ctx, int64_t value) const {
   Real mini = GetRealValue(ctx, minimum_);
 
-  if (value < mini) {
-    return ConstraintViolation(
-        std::format("is not at least {}", mini.ToString()));
+  if (!(mini <= value)) {
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("at least {} ({})", NumericToString(minimum_),
+                    mini.ToString()));
   }
+  return ValidationResult::Ok();
+}
 
-  return ConstraintViolation::None();
+ValidationResult AtLeast::Validate(ConstraintContext ctx, int value) const {
+  return Validate(ctx, static_cast<int64_t>(value));
+}
+
+ValidationResult AtLeast::Validate(ConstraintContext ctx, double value) const {
+  Real mini = GetRealValue(ctx, minimum_);
+
+  if (!(mini <= value)) {
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("at least {} ({})", NumericToString(minimum_),
+                    mini.ToString()));
+  }
+  return ValidationResult::Ok();
 }
 
 std::vector<std::string> AtLeast::GetDependencies() const {
@@ -314,61 +306,64 @@ std::string ExactlyNumeric::ToString() const {
   return std::format("is exactly {}", NumericToString(value_));
 }
 
-ConstraintViolation ExactlyNumeric::CheckValue(ConstraintContext ctx,
-                                               int64_t value) const {
+ValidationResult ExactlyNumeric::Validate(ConstraintContext ctx,
+                                          int64_t value) const {
   if (std::holds_alternative<Expression>(value_)) {
     int64_t expected = ctx.EvaluateExpression(std::get<Expression>(value_));
-    if (expected == value) return ConstraintViolation::None();
-    return ConstraintViolation(
-        std::format("is not exactly {} (got {})",
-                    std::get<Expression>(value_).ToString(), value));
+    if (expected == value) return ValidationResult::Ok();
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("{} ({})", std::get<Expression>(value_).ToString(),
+                    expected));
   }
 
   if (std::holds_alternative<int64_t>(value_)) {
-    if (std::get<int64_t>(value_) == value) return ConstraintViolation::None();
-    return ConstraintViolation(std::format("is not exactly {} (got {})",
-                                           std::get<int64_t>(value_), value));
+    if (std::get<int64_t>(value_) == value) return ValidationResult::Ok();
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("{}", std::get<int64_t>(value_)));
   }
 
   if (std::holds_alternative<Real>(value_)) {
-    if (std::get<Real>(value_) == value) return ConstraintViolation::None();
-    return ConstraintViolation(std::format("is not exactly {} (got {})",
-                                           std::get<Real>(value_).ToString(),
-                                           value));
+    if (std::get<Real>(value_) == value) return ValidationResult::Ok();
+    return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                       std::get<Real>(value_).ToString());
   }
 
   throw std::logic_error(
       "ExactlyNumeric::CheckIntegerValue: unexpected value type");
 }
 
-ConstraintViolation ExactlyNumeric::CheckValue(ConstraintContext ctx,
-                                               int value) const {
-  return CheckValue(ctx, static_cast<int64_t>(value));
+ValidationResult ExactlyNumeric::Validate(ConstraintContext ctx,
+                                          int value) const {
+  return Validate(ctx, static_cast<int64_t>(value));
 }
 
-ConstraintViolation ExactlyNumeric::CheckValue(ConstraintContext ctx,
-                                               double value) const {
+ValidationResult ExactlyNumeric::Validate(ConstraintContext ctx,
+                                          double value) const {
   if (std::holds_alternative<Expression>(value_)) {
     int64_t expected = ctx.EvaluateExpression(std::get<Expression>(value_));
-    if (CloseEnough(expected, value)) return ConstraintViolation::None();
-    return ConstraintViolation(
-        std::format("is not exactly {} (got {})",
-                    std::get<Expression>(value_).ToString(), value));
+    if (CloseEnough(expected, value)) return ValidationResult::Ok();
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("{} ({})", std::get<Expression>(value_).ToString(),
+                    expected));
   }
 
   if (std::holds_alternative<int64_t>(value_)) {
     if (CloseEnough(std::get<int64_t>(value_), value))
-      return ConstraintViolation::None();
-    return ConstraintViolation(std::format("is not exactly {} (got {})",
-                                           std::get<int64_t>(value_), value));
+      return ValidationResult::Ok();
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("{}", std::get<int64_t>(value_)));
   }
 
   if (std::holds_alternative<Real>(value_)) {
     if (CloseEnough(std::get<Real>(value_).GetApproxValue(), value))
-      return ConstraintViolation::None();
-    return ConstraintViolation(std::format("is not exactly {} (got {})",
-                                           std::get<Real>(value_).ToString(),
-                                           value));
+      return ValidationResult::Ok();
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("{}", std::get<Real>(value_).ToString()));
   }
 
   throw std::logic_error(
@@ -582,13 +577,14 @@ std::string OneOfNumeric::ToString() const {
   return std::format("is {}", OptionString(expr_options_, numeric_options_));
 }
 
-ConstraintViolation OneOfNumeric::CheckValue(ConstraintContext ctx,
-                                             int64_t value) const {
+ValidationResult OneOfNumeric::Validate(ConstraintContext ctx,
+                                        int64_t value) const {
   if (numeric_options_.HasBeenConstrained()) {
     if (!numeric_options_.HasOption(Real(value))) {
-      return ConstraintViolation(
-          std::format("{} is not {}", value,
-                      OptionString(expr_options_, numeric_options_)));
+      return ValidationResult::Violation(
+          ctx.GetVariableName(), value,
+          std::format("one of {}", moriarty_internal::ValuePrinter(
+                                       numeric_options_.GetOptions())));
     }
   }
 
@@ -597,28 +593,31 @@ ConstraintViolation OneOfNumeric::CheckValue(ConstraintContext ctx,
       return ctx.EvaluateExpression(expr) == value;
     });
     if (it == option_list.end()) {
-      return ConstraintViolation(
-          std::format("{} is not {}", DebugString(value),
-                      OptionString(expr_options_, numeric_options_)));
+      return ValidationResult::Violation(
+          ctx.GetVariableName(), value,
+          OptionString(expr_options_,
+                       numeric_options_));  // TODO: Migrate to ValuePrinter
     }
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
-ConstraintViolation OneOfNumeric::CheckValue(ConstraintContext ctx,
-                                             int value) const {
-  return CheckValue(ctx, static_cast<int64_t>(value));
+ValidationResult OneOfNumeric::Validate(ConstraintContext ctx,
+                                        int value) const {
+  return Validate(ctx, static_cast<int64_t>(value));
 }
 
-ConstraintViolation OneOfNumeric::CheckValue(ConstraintContext ctx,
-                                             double value) const {
+ValidationResult OneOfNumeric::Validate(ConstraintContext ctx,
+                                        double value) const {
   if (numeric_options_.HasBeenConstrained() &&
       std::ranges::find_if(numeric_options_.GetOptions(),
                            [&](const Real& option) {
                              return CloseEnough(option.GetApproxValue(), value);
                            }) == numeric_options_.GetOptions().end()) {
-    return ConstraintViolation(std::format(
-        "{} is not {}", value, OptionString(expr_options_, numeric_options_)));
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value,
+        std::format("one of {}", moriarty_internal::ValuePrinter(
+                                     numeric_options_.GetOptions())));
   }
 
   for (const std::vector<Expression>& option_list : expr_options_) {
@@ -626,12 +625,13 @@ ConstraintViolation OneOfNumeric::CheckValue(ConstraintContext ctx,
       return CloseEnough(ctx.EvaluateExpression(expr), value);
     });
     if (it == option_list.end()) {
-      return ConstraintViolation(
-          std::format("{} is not {}", DebugString(value),
+      return ValidationResult::Violation(
+          ctx.GetVariableName(), value,
+          std::format("one of {}",
                       OptionString(expr_options_, numeric_options_)));
     }
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 std::vector<std::string> OneOfNumeric::GetDependencies() const {

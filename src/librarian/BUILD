@@ -72,6 +72,7 @@ cc_library(
         ":conversions",
         ":one_of_handler",
         "//src/constraints:custom_constraint",
+        "//src/constraints:equality_constraints",
         "//src/contexts:librarian_context",
         "//src/internal:abstract_variable",
         "//src/internal:generation_handler",

@@ -36,8 +36,8 @@ using ::moriarty::Between;
 using ::moriarty::librarian::ExactlyNumeric;
 using ::moriarty::librarian::OneOfNumeric;
 using ::moriarty_testing::Context;
-using ::moriarty_testing::HasConstraintViolation;
-using ::moriarty_testing::HasNoConstraintViolation;
+using ::moriarty_testing::HasNoViolation;
+using ::moriarty_testing::HasViolation;
 using ::testing::HasSubstr;
 using ::testing::Optional;
 using ::testing::Throws;
@@ -238,28 +238,25 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithIntegersWorks) {
   ConstraintContext ctx("N", context.Variables(), context.Values());
 
   {
-    EXPECT_THAT(Between(10, 20).CheckValue(ctx, 10),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between(10, 20).CheckValue(ctx, 15),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between(10, 20).CheckValue(ctx, 20),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between(10, 20).CheckValue(ctx, 9),
-                HasConstraintViolation(HasSubstr("between")));
-    EXPECT_THAT(Between(10, 20).CheckValue(ctx, 21),
-                HasConstraintViolation(HasSubstr("between")));
+    EXPECT_THAT(Between(10, 20).Validate(ctx, 10), HasNoViolation());
+    EXPECT_THAT(Between(10, 20).Validate(ctx, 15), HasNoViolation());
+    EXPECT_THAT(Between(10, 20).Validate(ctx, 20), HasNoViolation());
+    EXPECT_THAT(Between(10, 20).Validate(ctx, 9),
+                HasViolation(HasSubstr("between")));
+    EXPECT_THAT(Between(10, 20).Validate(ctx, 21),
+                HasViolation(HasSubstr("between")));
   }
   {
-    EXPECT_THAT(AtLeast(10).CheckValue(ctx, 10), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast(10).CheckValue(ctx, 11), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast(10).CheckValue(ctx, 9),
-                HasConstraintViolation(HasSubstr("at least")));
+    EXPECT_THAT(AtLeast(10).Validate(ctx, 10), HasNoViolation());
+    EXPECT_THAT(AtLeast(10).Validate(ctx, 11), HasNoViolation());
+    EXPECT_THAT(AtLeast(10).Validate(ctx, 9),
+                HasViolation(HasSubstr("at least")));
   }
   {
-    EXPECT_THAT(AtMost(10).CheckValue(ctx, 10), HasNoConstraintViolation());
-    EXPECT_THAT(AtMost(10).CheckValue(ctx, 9), HasNoConstraintViolation());
-    EXPECT_THAT(AtMost(10).CheckValue(ctx, 11),
-                HasConstraintViolation(HasSubstr("at most")));
+    EXPECT_THAT(AtMost(10).Validate(ctx, 10), HasNoViolation());
+    EXPECT_THAT(AtMost(10).Validate(ctx, 9), HasNoViolation());
+    EXPECT_THAT(AtMost(10).Validate(ctx, 11),
+                HasViolation(HasSubstr("at most")));
   }
 }
 
@@ -271,58 +268,51 @@ TEST(NumericConstraintsTest, IsSatisfiedWithRealsWorks) {
   ConstraintContext ctx("N", context.Variables(), context.Values());
 
   {
-    EXPECT_THAT(Between(10, 20).CheckValue(ctx, 10.0),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between(10, 20).CheckValue(ctx, 15.5),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between(10, 20).CheckValue(ctx, 20.0),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between(10, 20).CheckValue(ctx, 9.9),
-                HasConstraintViolation(HasSubstr("between")));
-    EXPECT_THAT(Between(10, 20).CheckValue(ctx, 20.1),
-                HasConstraintViolation(HasSubstr("between")));
+    EXPECT_THAT(Between(10, 20).Validate(ctx, 10.0), HasNoViolation());
+    EXPECT_THAT(Between(10, 20).Validate(ctx, 15.5), HasNoViolation());
+    EXPECT_THAT(Between(10, 20).Validate(ctx, 20.0), HasNoViolation());
+    EXPECT_THAT(Between(10, 20).Validate(ctx, 9.9),
+                HasViolation(HasSubstr("between")));
+    EXPECT_THAT(Between(10, 20).Validate(ctx, 20.1),
+                HasViolation(HasSubstr("between")));
   }
   {
-    EXPECT_THAT(AtLeast(10).CheckValue(ctx, 10.0), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast(10).CheckValue(ctx, 10.1), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast(10).CheckValue(ctx, 9.9),
-                HasConstraintViolation(HasSubstr("at least")));
+    EXPECT_THAT(AtLeast(10).Validate(ctx, 10.0), HasNoViolation());
+    EXPECT_THAT(AtLeast(10).Validate(ctx, 10.1), HasNoViolation());
+    EXPECT_THAT(AtLeast(10).Validate(ctx, 9.9),
+                HasViolation(HasSubstr("at least")));
   }
   {
-    EXPECT_THAT(AtMost(10).CheckValue(ctx, 10.0), HasNoConstraintViolation());
-    EXPECT_THAT(AtMost(10).CheckValue(ctx, 9.9), HasNoConstraintViolation());
-    EXPECT_THAT(AtMost(10).CheckValue(ctx, 10.1),
-                HasConstraintViolation(HasSubstr("at most")));
+    EXPECT_THAT(AtMost(10).Validate(ctx, 10.0), HasNoViolation());
+    EXPECT_THAT(AtMost(10).Validate(ctx, 9.9), HasNoViolation());
+    EXPECT_THAT(AtMost(10).Validate(ctx, 10.1),
+                HasViolation(HasSubstr("at most")));
   }
   {
-    EXPECT_THAT(Between("x", "y").CheckValue(ctx, 15.0),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between("x", "y").CheckValue(ctx, 9.0),
-                HasConstraintViolation(HasSubstr("between")));
-    EXPECT_THAT(Between("x", "y").CheckValue(ctx, 21.0),
-                HasConstraintViolation(HasSubstr("between")));
+    EXPECT_THAT(Between("x", "y").Validate(ctx, 15.0), HasNoViolation());
+    EXPECT_THAT(Between("x", "y").Validate(ctx, 9.0),
+                HasViolation(HasSubstr("between")));
+    EXPECT_THAT(Between("x", "y").Validate(ctx, 21.0),
+                HasViolation(HasSubstr("between")));
   }
   {
-    EXPECT_THAT(AtLeast("x").CheckValue(ctx, 10.0), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast("x").CheckValue(ctx, 11.0), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast("x").CheckValue(ctx, 9.0),
-                HasConstraintViolation(HasSubstr("at least")));
+    EXPECT_THAT(AtLeast("x").Validate(ctx, 10.0), HasNoViolation());
+    EXPECT_THAT(AtLeast("x").Validate(ctx, 11.0), HasNoViolation());
+    EXPECT_THAT(AtLeast("x").Validate(ctx, 9.0),
+                HasViolation(HasSubstr("at least")));
   }
   {
-    EXPECT_THAT(AtMost("y").CheckValue(ctx, 20.0), HasNoConstraintViolation());
-    EXPECT_THAT(AtMost("y").CheckValue(ctx, 19.0), HasNoConstraintViolation());
-    EXPECT_THAT(AtMost("y").CheckValue(ctx, 21.0),
-                HasConstraintViolation(HasSubstr("at most")));
+    EXPECT_THAT(AtMost("y").Validate(ctx, 20.0), HasNoViolation());
+    EXPECT_THAT(AtMost("y").Validate(ctx, 19.0), HasNoViolation());
+    EXPECT_THAT(AtMost("y").Validate(ctx, 21.0),
+                HasViolation(HasSubstr("at most")));
   }
   {
-    EXPECT_THAT(AtMost(Real("20.0")).CheckValue(ctx, 20.0),
-                HasNoConstraintViolation());
-    EXPECT_THAT(AtMost(Real("1e6")).CheckValue(ctx, 1000000.0),
-                HasNoConstraintViolation());
-    EXPECT_THAT(AtMost(Real("-10e-2")).CheckValue(ctx, -0.1),
-                HasNoConstraintViolation());
-    EXPECT_THAT(AtMost(Real("-10e-2")).CheckValue(ctx, -0.01),
-                HasConstraintViolation(HasSubstr("at most")));
+    EXPECT_THAT(AtMost(Real("20.0")).Validate(ctx, 20.0), HasNoViolation());
+    EXPECT_THAT(AtMost(Real("1e6")).Validate(ctx, 1000000.0), HasNoViolation());
+    EXPECT_THAT(AtMost(Real("-10e-2")).Validate(ctx, -0.1), HasNoViolation());
+    EXPECT_THAT(AtMost(Real("-10e-2")).Validate(ctx, -0.01),
+                HasViolation(HasSubstr("at most")));
   }
 }
 
@@ -334,52 +324,46 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
   ConstraintContext ctx("N", context.Variables(), context.Values());
 
   {
-    EXPECT_THAT(ExactlyNumeric("x").CheckValue(ctx, 10),
-                HasNoConstraintViolation());
-    EXPECT_THAT(ExactlyNumeric("x").CheckValue(ctx, 11),
-                HasConstraintViolation(HasSubstr("exactly")));
-    EXPECT_THAT(ExactlyNumeric("x").CheckValue(ctx, 9),
-                HasConstraintViolation(HasSubstr("exactly")));
+    EXPECT_THAT(ExactlyNumeric("x").Validate(ctx, 10), HasNoViolation());
+    EXPECT_THAT(ExactlyNumeric("x").Validate(ctx, 11),
+                HasViolation("expected: x (10)"));
+    EXPECT_THAT(ExactlyNumeric("x").Validate(ctx, 9),
+                HasViolation("expected: x (10)"));
   }
   {
     EXPECT_THAT(OneOfNumeric(std::vector<std::string_view>{"x", "14"})
-                    .CheckValue(ctx, 10),
-                HasNoConstraintViolation());
+                    .Validate(ctx, 10),
+                HasNoViolation());
     EXPECT_THAT(OneOfNumeric(std::vector<std::string_view>{"x", "14"})
-                    .CheckValue(ctx, 14),
-                HasNoConstraintViolation());
+                    .Validate(ctx, 14),
+                HasNoViolation());
+    EXPECT_THAT(
+        OneOfNumeric(std::vector<std::string_view>{"x", "14"}).Validate(ctx, 9),
+        HasViolation(HasSubstr("one of")));
     EXPECT_THAT(OneOfNumeric(std::vector<std::string_view>{"x", "14"})
-                    .CheckValue(ctx, 9),
-                HasConstraintViolation(HasSubstr("one of")));
-    EXPECT_THAT(OneOfNumeric(std::vector<std::string_view>{"x", "14"})
-                    .CheckValue(ctx, 15),
-                HasConstraintViolation(HasSubstr("one of")));
+                    .Validate(ctx, 15),
+                HasViolation(HasSubstr("one of")));
   }
   {
-    EXPECT_THAT(Between("x", "y^2").CheckValue(ctx, 10),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between("x", "y^2").CheckValue(ctx, 25),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between("x", "y^2").CheckValue(ctx, 400),
-                HasNoConstraintViolation());
-    EXPECT_THAT(Between("x", "y^2").CheckValue(ctx, 9),
-                HasConstraintViolation(HasSubstr("between")));
-    EXPECT_THAT(Between("x", "y^2").CheckValue(ctx, 401),
-                HasConstraintViolation(HasSubstr("between")));
+    EXPECT_THAT(Between("x", "y^2").Validate(ctx, 10), HasNoViolation());
+    EXPECT_THAT(Between("x", "y^2").Validate(ctx, 25), HasNoViolation());
+    EXPECT_THAT(Between("x", "y^2").Validate(ctx, 400), HasNoViolation());
+    EXPECT_THAT(Between("x", "y^2").Validate(ctx, 9),
+                HasViolation(HasSubstr("between")));
+    EXPECT_THAT(Between("x", "y^2").Validate(ctx, 401),
+                HasViolation(HasSubstr("between")));
   }
   {
-    EXPECT_THAT(AtLeast("x").CheckValue(ctx, 10), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast("x").CheckValue(ctx, 11), HasNoConstraintViolation());
-    EXPECT_THAT(AtLeast("x").CheckValue(ctx, 9),
-                HasConstraintViolation(HasSubstr("at least")));
+    EXPECT_THAT(AtLeast("x").Validate(ctx, 10), HasNoViolation());
+    EXPECT_THAT(AtLeast("x").Validate(ctx, 11), HasNoViolation());
+    EXPECT_THAT(AtLeast("x").Validate(ctx, 9),
+                HasViolation(HasSubstr("at least")));
   }
   {
-    EXPECT_THAT(AtMost("x + 1").CheckValue(ctx, 11),
-                HasNoConstraintViolation());
-    EXPECT_THAT(AtMost("x + 1").CheckValue(ctx, 10),
-                HasNoConstraintViolation());
-    EXPECT_THAT(AtMost("x + 1").CheckValue(ctx, 12),
-                HasConstraintViolation(HasSubstr("at most")));
+    EXPECT_THAT(AtMost("x + 1").Validate(ctx, 11), HasNoViolation());
+    EXPECT_THAT(AtMost("x + 1").Validate(ctx, 10), HasNoViolation());
+    EXPECT_THAT(AtMost("x + 1").Validate(ctx, 12),
+                HasViolation(HasSubstr("at most")));
   }
 }
 

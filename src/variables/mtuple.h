@@ -195,8 +195,8 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
   struct ElementConstraintWrapper {
    public:
     explicit ElementConstraintWrapper(Element<I, MElementType> constraint);
-    ConstraintViolation CheckValue(ConstraintContext ctx,
-                                   const tuple_value_type& value) const;
+    ValidationResult Validate(ConstraintContext ctx,
+                              const tuple_value_type& value) const;
     std::string ToString() const;
     std::vector<std::string> GetDependencies() const;
     void ApplyTo(MTuple& other) const;
@@ -354,10 +354,14 @@ MTuple<T...>::ElementConstraintWrapper<I, MElementType>::
 
 template <typename... T>
 template <size_t I, typename MElementType>
-ConstraintViolation
-MTuple<T...>::ElementConstraintWrapper<I, MElementType>::CheckValue(
+ValidationResult
+MTuple<T...>::ElementConstraintWrapper<I, MElementType>::Validate(
     ConstraintContext ctx, const tuple_value_type& value) const {
-  return constraint_.CheckValue(ctx, std::get<I>(value));
+  auto v = constraint_.Validate(ctx.ForSubVariable(std::format("index {}", I)),
+                                std::get<I>(value));
+  if (v.IsOk()) return ValidationResult::Ok();
+  return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                     std::move(v));
 }
 
 template <typename... T>

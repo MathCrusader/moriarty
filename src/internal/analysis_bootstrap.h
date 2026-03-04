@@ -27,7 +27,7 @@
 namespace moriarty {
 namespace moriarty_internal {
 
-// CheckValues()
+// ValidateValues()
 //
 // Returns all variables that do not satisfy their constraints. If all variables
 // satisfy their constraints, returns an empty map.
@@ -36,7 +36,7 @@ namespace moriarty_internal {
 // If a value does not have a variable, this will return ok.
 //
 // If variables_to_validate is non-empty, only those variables will be checked.
-[[nodiscard]] std::vector<DetailedConstraintViolation> CheckValues(
+[[nodiscard]] std::vector<DetailedValidationResult> ValidateValues(
     const VariableSet& variables, const ValueSet& values,
     std::span<const std::string> variables_to_validate,
     ValidationStyle validation);

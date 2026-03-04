@@ -20,6 +20,7 @@
 
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
+#include "src/constraints/equality_constraints.h"
 #include "src/context.h"
 #include "src/types/graph.h"
 #include "src/variables/minteger.h"
@@ -48,8 +49,8 @@ class NumNodes : public MConstraint {
 
   // Determines if the graph has the correct number of nodes.
   template <typename EdgeLabel, typename NodeLabel>
-  ConstraintViolation CheckValue(
-      ConstraintContext ctx, const Graph<EdgeLabel, NodeLabel>& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const Graph<EdgeLabel, NodeLabel>& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
@@ -83,8 +84,8 @@ class NumEdges : public MConstraint {
 
   // Determines if the graph has the correct number of edges.
   template <typename EdgeLabel, typename NodeLabel>
-  ConstraintViolation CheckValue(
-      ConstraintContext ctx, const Graph<EdgeLabel, NodeLabel>& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const Graph<EdgeLabel, NodeLabel>& value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;
@@ -105,8 +106,8 @@ class Connected : public BasicMConstraint {
 
   // Determines if the graph is connected.
   template <typename EdgeLabel, typename NodeLabel>
-  ConstraintViolation CheckValue(
-      const Graph<EdgeLabel, NodeLabel>& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const Graph<EdgeLabel, NodeLabel>& value) const;
 };
 
 // The graph must contain no parallel edges. That is, the edge (u, v) is only
@@ -121,8 +122,8 @@ class NoParallelEdges : public BasicMConstraint {
 
   // Determines if the graph has any parallel edges.
   template <typename EdgeLabel, typename NodeLabel>
-  ConstraintViolation CheckValue(
-      const Graph<EdgeLabel, NodeLabel>& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const Graph<EdgeLabel, NodeLabel>& value) const;
 };
 
 // The graph must not contain any loops. That is, the edge (u, u) is not
@@ -133,8 +134,8 @@ class Loopless : public BasicMConstraint {
 
   // Determines if the graph has any loops.
   template <typename EdgeLabel, typename NodeLabel>
-  ConstraintViolation CheckValue(
-      const Graph<EdgeLabel, NodeLabel>& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const Graph<EdgeLabel, NodeLabel>& value) const;
 };
 
 // The graph is simple if it is loopless and contains no parallel edges.
@@ -144,8 +145,8 @@ class SimpleGraph : public BasicMConstraint {
 
   // Determines if the graph is simple.
   template <typename EdgeLabel, typename NodeLabel>
-  ConstraintViolation CheckValue(
-      const Graph<EdgeLabel, NodeLabel>& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const Graph<EdgeLabel, NodeLabel>& value) const;
 };
 
 // Constraints that all node labels of a graph must satisfy.
@@ -164,7 +165,7 @@ class NodeLabels : public MConstraint {
 
   // Determines if the graph's node labels satisfy all constraints.
   template <typename EdgeLabel>
-  ConstraintViolation CheckValue(
+  ValidationResult Validate(
       ConstraintContext ctx,
       const Graph<EdgeLabel, typename MLabelType::value_type>& value) const;
 
@@ -194,7 +195,7 @@ class EdgeLabels : public MConstraint {
 
   // Determines if the graph's edge labels satisfy all constraints.
   template <typename NodeLabel>
-  ConstraintViolation CheckValue(
+  ValidationResult Validate(
       ConstraintContext ctx,
       const Graph<typename MLabelType::value_type, NodeLabel>& value) const;
 
@@ -238,19 +239,20 @@ MLabelType NodeLabels<MLabelType>::GetConstraints() const {
 
 template <typename MLabelType>
 template <typename EdgeLabel>
-ConstraintViolation NodeLabels<MLabelType>::CheckValue(
+ValidationResult NodeLabels<MLabelType>::Validate(
     ConstraintContext ctx,
     const Graph<EdgeLabel, typename MLabelType::value_type>& value) const {
   int idx = -1;
   for (const auto& label : value.GetNodeLabels()) {
     idx++;
-    if (auto check = label_constraints_.CheckValue(ctx, label)) {
-      return ConstraintViolation(std::format("node {}'s label (which is {}) {}",
-                                             idx, librarian::DebugString(label),
-                                             check.Reason()));
+    if (auto v = label_constraints_.Validate(
+            ctx.ForSubVariable(std::format("node {}'s label", idx)), label);
+        !v.IsOk()) {
+      return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                         std::move(v));
     }
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 template <typename MLabelType>
@@ -278,19 +280,20 @@ MLabelType EdgeLabels<MLabelType>::GetConstraints() const {
 
 template <typename MLabelType>
 template <typename NodeLabel>
-ConstraintViolation EdgeLabels<MLabelType>::CheckValue(
+ValidationResult EdgeLabels<MLabelType>::Validate(
     ConstraintContext ctx,
     const Graph<typename MLabelType::value_type, NodeLabel>& value) const {
   int idx = -1;
   for (const auto& edge : value.GetEdges()) {
     idx++;
-    if (auto check = label_constraints_.CheckValue(ctx, edge.e)) {
-      return ConstraintViolation(
-          std::format("edge {}'s label (which is {}) {}", idx,
-                      librarian::DebugString(edge.e), check.Reason()));
+    if (auto v = label_constraints_.Validate(
+            ctx.ForSubVariable(std::format("edge {}'s label", idx)), edge.e);
+        !v.IsOk()) {
+      return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                         std::move(v));
     }
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 template <typename MLabelType>
@@ -305,33 +308,34 @@ std::vector<std::string> EdgeLabels<MLabelType>::GetDependencies() const {
 
 // ====== NumNodes ======
 template <typename EdgeLabel, typename NodeLabel>
-ConstraintViolation NumNodes::CheckValue(
+ValidationResult NumNodes::Validate(
     ConstraintContext ctx, const Graph<EdgeLabel, NodeLabel>& value) const {
-  auto check =
-      num_nodes_.CheckValue(ctx, static_cast<int64_t>(value.NumNodes()));
-  if (check.IsOk()) return ConstraintViolation::None();
-  return ConstraintViolation(std::format("number of nodes (which is {}) {}",
-                                         value.NumNodes(), check.Reason()));
+  auto v = num_nodes_.Validate(ctx.ForSubVariable("number of nodes"),
+                               static_cast<int64_t>(value.NumNodes()));
+  if (v.IsOk()) return ValidationResult::Ok();
+  return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                     std::move(v));
 }
 
 // ====== NumEdges ======
 template <typename EdgeLabel, typename NodeLabel>
-ConstraintViolation NumEdges::CheckValue(
+ValidationResult NumEdges::Validate(
     ConstraintContext ctx, const Graph<EdgeLabel, NodeLabel>& value) const {
-  auto check =
-      num_edges_.CheckValue(ctx, static_cast<int64_t>(value.NumEdges()));
-  if (check.IsOk()) return ConstraintViolation::None();
-  return ConstraintViolation(std::format("number of edges (which is {}) {}",
-                                         value.NumEdges(), check.Reason()));
+  auto v = num_edges_.Validate(ctx.ForSubVariable("number of edges"),
+                               value.NumEdges());
+  if (v.IsOk()) return ValidationResult::Ok();
+  return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                     std::move(v));
 }
 
 // ====== Connected ======
 template <typename EdgeLabel, typename NodeLabel>
-ConstraintViolation Connected::CheckValue(
-    const Graph<EdgeLabel, NodeLabel>& value) const {
+ValidationResult Connected::Validate(
+    ConstraintContext ctx, const Graph<EdgeLabel, NodeLabel>& value) const {
   if (value.NumNodes() == 0)
-    return ConstraintViolation(
-        "is not connected (a graph with 0 nodes is not considered connected)");
+    return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                       "graph must be connected (a graph with "
+                                       "0 nodes is not considered connected)");
 
   class UnionFind {
    public:
@@ -359,58 +363,59 @@ ConstraintViolation Connected::CheckValue(
 
   for (int i = 1; i < value.NumNodes(); ++i)
     if (uf.find(i) != uf.find(0))
-      return ConstraintViolation(
-          std::format("is not connected (no path from node 0 to node {})", i));
-  return ConstraintViolation::None();
+      return ValidationResult::Violation(
+          ctx.GetVariableName(), value, "connected graph",
+          std::format("no path from node 0 to node {}", i));
+  return ValidationResult::Ok();
 }
 
 // ====== NoParallelEdges ======
 template <typename EdgeLabel, typename NodeLabel>
-ConstraintViolation NoParallelEdges::CheckValue(
-    const Graph<EdgeLabel, NodeLabel>& value) const {
+ValidationResult NoParallelEdges::Validate(
+    ConstraintContext ctx, const Graph<EdgeLabel, NodeLabel>& value) const {
   std::set<std::pair<typename Graph<EdgeLabel, NodeLabel>::NodeIdx,
                      typename Graph<EdgeLabel, NodeLabel>::NodeIdx>>
       seen;
   auto edges = value.GetEdges();
   for (const auto& [u, v, _] : edges) {
     if (!seen.emplace(u, v).second)
-      return ConstraintViolation(std::format(
-          "contains a parallel edge (between nodes {} and {})", u, v));
+      return ValidationResult::Violation(
+          ctx.GetVariableName(), value, "no parallel edges",
+          std::format("parallel edges between nodes {} and {}", u, v));
     if (u != v && !seen.emplace(v, u).second)
-      return ConstraintViolation(std::format(
-          "contains a parallel edge (between nodes {} and {})", v, u));
+      return ValidationResult::Violation(
+          ctx.GetVariableName(), value, "no parallel edges",
+          std::format("parallel edges between nodes {} and {}", v, u));
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 // ====== Loopless ======
 template <typename EdgeLabel, typename NodeLabel>
-ConstraintViolation Loopless::CheckValue(
-    const Graph<EdgeLabel, NodeLabel>& value) const {
+ValidationResult Loopless::Validate(
+    ConstraintContext ctx, const Graph<EdgeLabel, NodeLabel>& value) const {
   auto edges = value.GetEdges();
   for (const auto& [u, v, _] : edges) {
     if (u == v) {
-      return ConstraintViolation(std::format("contains a loop at node {}", u));
+      return ValidationResult::Violation(
+          ctx.GetVariableName(), value, "no loops",
+          std::format("edge from node {} to itself", u));
     }
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 // ====== SimpleGraph ======
 template <typename EdgeLabel, typename NodeLabel>
-ConstraintViolation SimpleGraph::CheckValue(
-    const Graph<EdgeLabel, NodeLabel>& value) const {
-  auto check1 = Loopless().CheckValue(value);
-  if (!check1.IsOk()) {
-    return ConstraintViolation(
-        std::format("is not simple: {}", check1.Reason()));
+ValidationResult SimpleGraph::Validate(
+    ConstraintContext ctx, const Graph<EdgeLabel, NodeLabel>& value) const {
+  if (auto v1 = Loopless().Validate(ctx, value); !v1.IsOk()) {
+    return v1;  // No extra info to add
   }
-  auto check2 = NoParallelEdges().CheckValue(value);
-  if (!check2.IsOk()) {
-    return ConstraintViolation(
-        std::format("is not simple: {}", check2.Reason()));
+  if (auto v2 = NoParallelEdges().Validate(ctx, value); !v2.IsOk()) {
+    return v2;  // No extra info to add
   }
-  return ConstraintViolation::None();
+  return ValidationResult::Ok();
 }
 
 }  // namespace moriarty

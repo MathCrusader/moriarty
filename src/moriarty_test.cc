@@ -364,7 +364,7 @@ TEST(MoriartyTest, GenerateTestCasesCrashesOnValidationErrorIfRequested) {
             {.validation = ValidationStyle::kAllVariables});
       },
       ThrowsMessage<ValidationError>(
-          HasSubstr("No value assigned to variable `M`")));
+          HasSubstr("should have a value assigned")));
 
   EXPECT_NO_THROW({
     M.GenerateTestCases(
@@ -383,7 +383,7 @@ TEST(MoriartyTest, GenerateTestCasesCrashesOnValidationErrorIfRequested) {
             {.validation = ValidationStyle::kEverything});
       },
       ThrowsMessage<ValidationError>(
-          HasSubstr("No value assigned to variable `M`")));
+          HasSubstr("should have a value assigned")));
 }
 
 TEST(MoriartyTest, ReadAndWriteShouldWorkTypicalCase) {
@@ -499,7 +499,8 @@ TEST(MoriartyTest, ValidateAllTestCasesHandlesMissingVariableOrValue) {
       M.ValidateTestCases({.validation = ValidationStyle::kAllVariables});
   EXPECT_FALSE(results.IsValid());
   EXPECT_THAT(results.DescribeFailures(),
-              HasSubstr("No value assigned to variable `q`"));
+              AllOf(HasSubstr("q"),
+                    HasSubstr("expected: should have a value assigned")));
 
   results =
       M.ValidateTestCases({.validation = ValidationStyle::kOnlySetVariables});
@@ -510,14 +511,18 @@ TEST(MoriartyTest, ValidateAllTestCasesHandlesMissingVariableOrValue) {
   EXPECT_FALSE(results.IsValid());
   EXPECT_THAT(
       results.DescribeFailures(),
-      HasSubstr("No variable found for `S`, but a value was set for it"));
+      AllOf(HasSubstr("s"), HasSubstr("expected: no variable found with this "
+                                      "name, but a value was set for it")));
 
   results = M.ValidateTestCases({.validation = ValidationStyle::kEverything});
   EXPECT_FALSE(results.IsValid());
+  // TODO: This should do stronger checks than `HasSubstr`...
   EXPECT_THAT(
       results.DescribeFailures(),
-      AnyOf(HasSubstr("No variable found for S, but a value was set for it"),
-            HasSubstr("No value assigned to variable `q`")));
+      AllOf(HasSubstr("q"), HasSubstr("expected: should have a value assigned"),
+            HasSubstr("s"),
+            HasSubstr("expected: no variable found with this "
+                      "name, but a value was set for it")));
 }
 
 TEST(MoriartyTest, ReadTestCasesCrashesOnValidationErrorIfRequested) {
@@ -532,7 +537,8 @@ TEST(MoriartyTest, ReadTestCasesCrashesOnValidationErrorIfRequested) {
             {.validation = ValidationStyle::kAllVariables});
       },
       ThrowsMessage<ValidationError>(
-          HasSubstr("No value assigned to variable `q`")));
+          AllOf(HasSubstr("q"),
+                HasSubstr("expected: should have a value assigned"))));
 
   EXPECT_NO_THROW(M.ReadTestCases(
       [](ReadContext ctx) { return ReadTwoIota(ctx, "R", "S", 4); },
@@ -544,8 +550,9 @@ TEST(MoriartyTest, ReadTestCasesCrashesOnValidationErrorIfRequested) {
             [](ReadContext ctx) { return ReadTwoIota(ctx, "R", "S", 4); },
             {.validation = ValidationStyle::kOnlySetValues});
       },
-      ThrowsMessage<ValidationError>(
-          HasSubstr("No variable found for `S`, but a value was set for it")));
+      ThrowsMessage<ValidationError>(AllOf(
+          HasSubstr("s"), HasSubstr("expected: no variable found with this "
+                                    "name, but a value was set for it"))));
 }
 
 TEST(MoriartyTest, ReadTestCasesHandlesMissingVariableOrValue) {
@@ -560,7 +567,8 @@ TEST(MoriartyTest, ReadTestCasesHandlesMissingVariableOrValue) {
             {.validation = ValidationStyle::kAllVariables});
       },
       ThrowsMessage<ValidationError>(
-          HasSubstr("No value assigned to variable `q`")));
+          AllOf(HasSubstr("q"),
+                HasSubstr("expected: should have a value assigned"))));
 }
 
 TEST(MoriartyTest, ValidateAllTestCasesHandFailsIfAVariableIsMissing) {
@@ -573,7 +581,7 @@ TEST(MoriartyTest, ValidateAllTestCasesHandFailsIfAVariableIsMissing) {
   ValidationResults results = M.ValidateTestCases();
   EXPECT_FALSE(results.IsValid());
   EXPECT_THAT(results.DescribeFailures(),
-              HasSubstr("No value assigned to variable `q`"));
+              HasSubstr("expected: should have a value assigned"));
 }
 
 TEST(MoriartyTest, VariableNameValidationShouldWork) {

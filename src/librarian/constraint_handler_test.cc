@@ -32,26 +32,27 @@ namespace {
 
 using ::moriarty::MInteger;
 using ::moriarty::MString;
-using ::moriarty_testing::HasConstraintViolation;
-using ::moriarty_testing::HasNoConstraintViolation;
+using ::moriarty_testing::HasNoViolation;
+using ::moriarty_testing::HasViolation;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::HasSubstr;
 using ::testing::Not;
 
 struct Even {
-  ConstraintViolation CheckValue(ConstraintContext ctx, int value) const {
-    if (value % 2 == 0) return ConstraintViolation::None();
-    return ConstraintViolation(std::format("`{}` is not even", value));
+  ValidationResult Validate(ConstraintContext ctx, int value) const {
+    if (value % 2 == 0) return ValidationResult::Ok();
+    return ValidationResult::Violation(ctx.GetVariableName(), value, "even");
   }
   std::string ToString() const { return "is even"; }
   void ApplyTo(MInteger& other) const { throw "unimplemented"; }
 };
 
 struct Positive {
-  ConstraintViolation CheckValue(ConstraintContext ctx, int value) const {
-    if (value > 0) return ConstraintViolation::None();
-    return ConstraintViolation(std::format("`{}` is not positive", value));
+  ValidationResult Validate(ConstraintContext ctx, int value) const {
+    if (value > 0) return ValidationResult::Ok();
+    return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                       "positive");
   }
   std::string ToString() const { return "is positive"; }
   void ApplyTo(MInteger& other) const { throw "unimplemented"; }
@@ -64,13 +65,13 @@ TEST(ConstraintHandlerTest, EmptyHandlerShouldBeSatisfiedWithEverything) {
 
   {
     ConstraintHandler<MInteger, int> handler;
-    EXPECT_THAT(handler.CheckValue(ctx, 5), HasNoConstraintViolation());
-    EXPECT_THAT(handler.CheckValue(ctx, 0), HasNoConstraintViolation());
+    EXPECT_THAT(handler.Validate(ctx, 5), HasNoViolation());
+    EXPECT_THAT(handler.Validate(ctx, 0), HasNoViolation());
   }
   {
     ConstraintHandler<MString, std::string> handler;
-    EXPECT_THAT(handler.CheckValue(ctx, "hello"), HasNoConstraintViolation());
-    EXPECT_THAT(handler.CheckValue(ctx, ""), HasNoConstraintViolation());
+    EXPECT_THAT(handler.Validate(ctx, "hello"), HasNoViolation());
+    EXPECT_THAT(handler.Validate(ctx, ""), HasNoViolation());
   }
 }
 
@@ -93,7 +94,7 @@ TEST(ConstraintHandlerTest, ToStringShouldWork) {
   }
 }
 
-TEST(ConstraintHandlerTest, CheckValueShouldContainRelevantMessages) {
+TEST(ConstraintHandlerTest, ValidateShouldContainRelevantMessages) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   ConstraintContext ctx("X", variables, values);
@@ -102,19 +103,18 @@ TEST(ConstraintHandlerTest, CheckValueShouldContainRelevantMessages) {
   handler.AddConstraint(Even());
   handler.AddConstraint(Positive());
 
+  EXPECT_THAT(handler.Validate(ctx, -5),
+              HasViolation(AnyOf(HasSubstr("even"), HasSubstr("positive"))));
   EXPECT_THAT(
-      handler.CheckValue(ctx, -5),
-      HasConstraintViolation(AnyOf(HasSubstr("even"), HasSubstr("positive"))));
-  EXPECT_THAT(handler.CheckValue(ctx, 5),
-              HasConstraintViolation(
-                  AllOf(HasSubstr("even"), Not(HasSubstr("positive")))));
-  EXPECT_THAT(handler.CheckValue(ctx, 0),
-              HasConstraintViolation(
-                  AllOf(Not(HasSubstr("even")), HasSubstr("positive"))));
-  EXPECT_THAT(handler.CheckValue(ctx, 10), HasNoConstraintViolation());
+      handler.Validate(ctx, 5),
+      HasViolation(AllOf(HasSubstr("even"), Not(HasSubstr("positive")))));
+  EXPECT_THAT(
+      handler.Validate(ctx, 0),
+      HasViolation(AllOf(Not(HasSubstr("even")), HasSubstr("positive"))));
+  EXPECT_THAT(handler.Validate(ctx, 10), HasNoViolation());
 }
 
-TEST(ConstraintHandlerTest, CheckValueShouldReturnIfAnyFail) {
+TEST(ConstraintHandlerTest, ValidateShouldReturnIfAnyFail) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   ConstraintContext ctx("X", variables, values);
@@ -123,14 +123,11 @@ TEST(ConstraintHandlerTest, CheckValueShouldReturnIfAnyFail) {
   handler.AddConstraint(Even());
   handler.AddConstraint(Positive());
 
-  EXPECT_THAT(
-      handler.CheckValue(ctx, -5),
-      HasConstraintViolation(AnyOf(HasSubstr("even"), HasSubstr("positive"))));
-  EXPECT_THAT(handler.CheckValue(ctx, 5),
-              HasConstraintViolation(HasSubstr("even")));
-  EXPECT_THAT(handler.CheckValue(ctx, 0),
-              HasConstraintViolation(HasSubstr("positive")));
-  EXPECT_THAT(handler.CheckValue(ctx, 10), HasNoConstraintViolation());
+  EXPECT_THAT(handler.Validate(ctx, -5),
+              HasViolation(AnyOf(HasSubstr("even"), HasSubstr("positive"))));
+  EXPECT_THAT(handler.Validate(ctx, 5), HasViolation(HasSubstr("even")));
+  EXPECT_THAT(handler.Validate(ctx, 0), HasViolation(HasSubstr("positive")));
+  EXPECT_THAT(handler.Validate(ctx, 10), HasNoViolation());
 }
 
 }  // namespace

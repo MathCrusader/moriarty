@@ -261,11 +261,11 @@ TEST(MTupleTest, ExactlyAndOneOfShouldGenerateAndValidate) {
   }
   {
     EXPECT_THAT((MTuple<MInteger, MInteger>(Exactly(tup{11, 22}))),
-                IsNotSatisfiedWith(tup{33, 44}, "exactly"));
+                IsNotSatisfiedWith(tup{33, 44}, "expected: (11, 22)"));
     EXPECT_THAT((MTuple<MInteger, MInteger>(OneOf({tup{11, 22}}))),
-                IsNotSatisfiedWith(tup{11, 33}, "one of"));
+                IsNotSatisfiedWith(tup{11, 33}, "expected: one of"));
     EXPECT_THAT((MTuple<MInteger, MInteger>(OneOf({tup{11, 22}, tup{33, 44}}))),
-                IsNotSatisfiedWith(tup{11, 44}, "one of"));
+                IsNotSatisfiedWith(tup{11, 44}, "expected: one of"));
   }
 }
 

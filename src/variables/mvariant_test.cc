@@ -268,14 +268,14 @@ TEST(MVariantTest, ExactlyAndOneOfShouldGenerateAndValidate) {
   {
     EXPECT_THAT((MVariant<MInteger, MString>(
                     Exactly(std::variant<int64_t, std::string>{int64_t{11}}))),
-                IsNotSatisfiedWith(33, "exactly"));
+                IsNotSatisfiedWith(33, "expected: (alternative 0) 11"));
     EXPECT_THAT((MVariant<MInteger, MString>(
                     OneOf({std::variant<int64_t, std::string>{int64_t{11}}}))),
-                IsNotSatisfiedWith("nope", "one of"));
+                IsNotSatisfiedWith("nope", "expected: one of"));
     EXPECT_THAT((MVariant<MInteger, MString>(OneOf(
                     {std::variant<int64_t, std::string>{int64_t{11}},
                      std::variant<int64_t, std::string>{std::string("hi")}}))),
-                IsNotSatisfiedWith("nope", "one of"));
+                IsNotSatisfiedWith("nope", "expected: one of"));
   }
 }
 

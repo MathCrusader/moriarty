@@ -185,7 +185,7 @@ class AbstractVariable {
   // should have 5 <= x <= 10.
   virtual void MergeFromAnonymous(const AbstractVariable& other) = 0;
 
-  // CheckValue() [pure virtual]
+  // Validate() [pure virtual]
   //
   // Determines if the value stored in `ctx` satisfies all constraints for this
   // variable. `std::nullopt` means it is satisfied. A string is the reason why
@@ -193,9 +193,9 @@ class AbstractVariable {
   //
   // If a variable does not have a value, this will return false.
   // If a value does not have a variable, this will return true.
-  virtual ConstraintViolation CheckValue(std::string_view variable_name,
-                                         Ref<const VariableSet> variables,
-                                         Ref<const ValueSet> values) const = 0;
+  virtual ValidationResult Validate(std::string_view variable_name,
+                                    Ref<const VariableSet> variables,
+                                    Ref<const ValueSet> values) const = 0;
 
   // ListAnonymousEdgeCases() [pure virtual]
   //

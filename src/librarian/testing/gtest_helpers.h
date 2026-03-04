@@ -86,13 +86,13 @@
 //        the same values.
 //
 //    * HasInvalidConstraints(variable_names)
-//       Matcher for the result of CheckValues(). Succeeds if the returned
-//       std::vector<DetailedConstraintViolation> contains exactly
+//       Matcher for the result of ValidateValues(). Succeeds if the returned
+//       std::vector<DetailedValidationResult> contains exactly
 //       the variable names in `variable_names`.
 //
 //    * HasNoInvalidConstraints()
-//       Matcher for the result of CheckValues(). Succeeds if the returned
-//       std::vector<DetailedConstraintViolation> is empty.
+//       Matcher for the result of ValidateValues(). Succeeds if the returned
+//       std::vector<DetailedValidationResult> is empty.
 //
 // Exceptions:
 //
@@ -600,9 +600,9 @@ MATCHER_P2(IsSatisfiedWith, value, context, "") {
   moriarty::ConstraintContext ctx(var_name, context_copy.Variables(),
                                   context_copy.Values());
 
-  if (auto reason = arg.CheckValue(ctx, ValueType(value))) {
-    *result_listener << "value does not satisfy constraints: "
-                     << reason.Reason();
+  if (auto v = arg.Validate(ctx, ValueType(value)); !v.IsOk()) {
+    *result_listener << "value does not satisfy constraints:\n"
+                     << v.PrettyReason();
     return false;
   }
 
@@ -639,17 +639,17 @@ MATCHER_P3(IsNotSatisfiedWith, value, expected_reason, context, "") {
   moriarty::ConstraintContext ctx(var_name, context_copy.Variables(),
                                   context_copy.Values());
 
-  if (auto actual_reason = arg.CheckValue(ctx, ValueType(value))) {
-    if (!testing::Value(actual_reason.Reason(),
+  if (auto v = arg.Validate(ctx, ValueType(value)); !v.IsOk()) {
+    if (!testing::Value(v.PrettyReason(),
                         testing::HasSubstr(expected_reason))) {
       *result_listener << "value does not satisfy constraints, but not for the "
                           "correct reason. Expected '"
-                       << expected_reason << "', got '"
-                       << actual_reason.Reason() << "'";
+                       << expected_reason << "', got '" << v.PrettyReason()
+                       << "'";
       return false;
     }
-    *result_listener << "value does not satisfy constraints: "
-                     << actual_reason.Reason();
+    *result_listener << "value does not satisfy constraints:\n"
+                     << v.PrettyReason();
     return true;
   }
 
@@ -664,27 +664,33 @@ MATCHER_P2(IsNotSatisfiedWith, value, reason, "") {
       result_listener);
 }
 
-MATCHER(HasNoConstraintViolation, "") {
+MATCHER(HasNoViolation, "") {
   static_assert(
-      std::is_same_v<std::decay_t<arg_type>, moriarty::ConstraintViolation>,
-      "Expected a ConstraintViolation");
+      std::is_same_v<std::decay_t<arg_type>, moriarty::ValidationResult>,
+      "Expected a ValidationResult");
   if (arg.IsOk()) return true;
 
   *result_listener << "expected no constraint violations, but got: "
-                   << arg.Reason();
+                   << arg.PrettyReason();
   return false;
 }
 
-MATCHER_P(HasConstraintViolation, matcher, "") {
+MATCHER_P(HasViolation, matcher, "") {
   static_assert(
-      std::is_same_v<std::decay_t<arg_type>, moriarty::ConstraintViolation>,
-      "Expected a ConstraintViolation");
+      std::is_same_v<std::decay_t<arg_type>, moriarty::ValidationResult>,
+      "Expected a ValidationResult");
   if (arg.IsOk()) {
     *result_listener << "expected a constraint violation, but got no violation";
     return false;
   }
-  *result_listener << "constraint violation: " << arg.Reason();
-  return testing::ExplainMatchResult(matcher, arg.Reason(), result_listener);
+  *result_listener << "constraint violation: " << arg.PrettyReason();
+  if constexpr (std::is_convertible_v<std::decay_t<matcher_type>,
+                                      std::string>) {
+    return testing::Value(arg.PrettyReason(), testing::HasSubstr(matcher));
+  } else {
+    return testing::ExplainMatchResult(matcher, arg.PrettyReason(),
+                                       result_listener);
+  }
 }
 
 // https://github.com/google/googletest/issues/4073#issuecomment-1925047305

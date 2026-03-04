@@ -68,9 +68,9 @@ class SizeCategory : public MConstraint {
 
   // Determines if the container's elements satisfy all constraints.
   template <typename T>
-  ConstraintViolation CheckValue(const T& value) const {
+  ValidationResult Validate(const T& value) const {
     // Size is a suggestion, not a strict requirement.
-    return ConstraintViolation::None();
+    return ValidationResult::Ok();
   }
 
   // Returns a string representation of this constraint.

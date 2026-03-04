@@ -38,17 +38,20 @@
 namespace moriarty {
 namespace {
 
-using moriarty_testing::Context;
-using moriarty_testing::GeneratedValuesAre;
-using moriarty_testing::GenerateThrowsGenerationError;
-using moriarty_testing::Read;
-using moriarty_testing::Write;
-using testing::AllOf;
-using testing::AnyOf;
-using testing::Eq;
-using testing::Optional;
-using testing::Truly;
-using testing::UnorderedElementsAre;
+using ::moriarty_testing::Context;
+using ::moriarty_testing::GeneratedValuesAre;
+using ::moriarty_testing::GenerateThrowsGenerationError;
+using ::moriarty_testing::HasNoViolation;
+using ::moriarty_testing::HasViolation;
+using ::moriarty_testing::Read;
+using ::moriarty_testing::Write;
+using ::testing::AllOf;
+using ::testing::AnyOf;
+using ::testing::Eq;
+using ::testing::HasSubstr;
+using ::testing::Optional;
+using ::testing::Truly;
+using ::testing::UnorderedElementsAre;
 
 Graph<NoEdgeLabel, NoNodeLabel> Graph1() {
   Graph G(3);
@@ -502,7 +505,7 @@ TEST(MGraphTest, ExactlyAndOneOfConstraintsShouldWork) {
               GeneratedValuesAre(AnyOf(Eq(Graph1()), Eq(Graph2()))));
 }
 
-TEST(MGraphTest, NodeLabelsAndEdgeLabelsCheckValue) {
+TEST(MGraphTest, NodeLabelsAndEdgeLabelsValidate) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   ConstraintContext ctx("MGraphTest", variables, values);
@@ -513,23 +516,21 @@ TEST(MGraphTest, NodeLabelsAndEdgeLabelsCheckValue) {
 
   // Node label constraints
   NodeLabels<MInteger> node_labels_ok(AtLeast(5));
-  EXPECT_THAT(node_labels_ok.CheckValue(ctx, G),
-              moriarty_testing::HasNoConstraintViolation());
+  EXPECT_THAT(node_labels_ok.Validate(ctx, G), HasNoViolation());
 
   NodeLabels<MInteger> node_labels_fail(AtMost(15));
-  EXPECT_THAT(node_labels_fail.CheckValue(ctx, G),
-              moriarty_testing::HasConstraintViolation(
-                  "node 1's label (which is `20`) is not at most 15"));
+  EXPECT_THAT(node_labels_fail.Validate(ctx, G),
+              HasViolation(
+                  AllOf(HasSubstr("node 1's label"), HasSubstr("at most 15"))));
 
   // Edge label constraints
   EdgeLabels<MInteger> edge_labels_ok(AtLeast(50));
-  EXPECT_THAT(edge_labels_ok.CheckValue(ctx, G),
-              moriarty_testing::HasNoConstraintViolation());
+  EXPECT_THAT(edge_labels_ok.Validate(ctx, G), HasNoViolation());
 
   EdgeLabels<MInteger> edge_labels_fail(AtMost(90));
-  EXPECT_THAT(edge_labels_fail.CheckValue(ctx, G),
-              moriarty_testing::HasConstraintViolation(
-                  "edge 0's label (which is `100`) is not at most 90"));
+  EXPECT_THAT(edge_labels_fail.Validate(ctx, G),
+              HasViolation(
+                  AllOf(HasSubstr("edge 0's label"), HasSubstr("at most 90"))));
 }
 
 TEST(MGraphTest, NodeLabelsAndEdgeLabelsAreGenerated) {

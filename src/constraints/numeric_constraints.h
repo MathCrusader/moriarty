@@ -80,11 +80,11 @@ class Between : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns true if `[minimum] <= value <= [maximum]`.
-  ConstraintViolation CheckValue(ConstraintContext ctx, int64_t value) const;
-  ConstraintViolation CheckValue(ConstraintContext ctx, int value) const;
+  ValidationResult Validate(ConstraintContext ctx, int64_t value) const;
+  ValidationResult Validate(ConstraintContext ctx, int value) const;
 
   // Returns true if `[minimum] <= value <= [maximum]`.
-  ConstraintViolation CheckValue(ConstraintContext ctx, double value) const;
+  ValidationResult Validate(ConstraintContext ctx, double value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -121,11 +121,11 @@ class AtMost : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns true if `value <= [maximum]`.
-  ConstraintViolation CheckValue(ConstraintContext ctx, int64_t value) const;
-  ConstraintViolation CheckValue(ConstraintContext ctx, int value) const;
+  ValidationResult Validate(ConstraintContext ctx, int64_t value) const;
+  ValidationResult Validate(ConstraintContext ctx, int value) const;
 
   // Returns true if `value <= [maximum]`.
-  ConstraintViolation CheckValue(ConstraintContext ctx, double value) const;
+  ValidationResult Validate(ConstraintContext ctx, double value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -161,11 +161,11 @@ class AtLeast : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns true if the given value satisfies this constraint.
-  ConstraintViolation CheckValue(ConstraintContext ctx, int64_t value) const;
-  ConstraintViolation CheckValue(ConstraintContext ctx, int value) const;
+  ValidationResult Validate(ConstraintContext ctx, int64_t value) const;
+  ValidationResult Validate(ConstraintContext ctx, int value) const;
 
   // Returns true if `[minimum] <= value`.
-  ConstraintViolation CheckValue(ConstraintContext ctx, double value) const;
+  ValidationResult Validate(ConstraintContext ctx, double value) const;
 
   // Returns all variables that this constraint depends on.
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
@@ -189,9 +189,9 @@ class ExactlyNumeric : public MConstraint {
 
   [[nodiscard]] Range GetRange() const;
   [[nodiscard]] std::string ToString() const;
-  ConstraintViolation CheckValue(ConstraintContext ctx, int64_t value) const;
-  ConstraintViolation CheckValue(ConstraintContext ctx, int value) const;
-  ConstraintViolation CheckValue(ConstraintContext ctx, double value) const;
+  ValidationResult Validate(ConstraintContext ctx, int64_t value) const;
+  ValidationResult Validate(ConstraintContext ctx, int value) const;
+  ValidationResult Validate(ConstraintContext ctx, double value) const;
   [[nodiscard]] std::vector<std::string> GetDependencies() const;
 
   std::variant<int64_t, Expression, Real> GetValue() const;
@@ -231,9 +231,9 @@ class OneOfNumeric : public MConstraint {
   [[nodiscard]] bool ConstrainOptions(const ExactlyNumeric& other);
 
   // Similar to OneOfHandler::HasOption()
-  ConstraintViolation CheckValue(ConstraintContext ctx, int64_t value) const;
-  ConstraintViolation CheckValue(ConstraintContext ctx, int value) const;
-  ConstraintViolation CheckValue(ConstraintContext ctx, double value) const;
+  ValidationResult Validate(ConstraintContext ctx, int64_t value) const;
+  ValidationResult Validate(ConstraintContext ctx, int value) const;
+  ValidationResult Validate(ConstraintContext ctx, double value) const;
 
   [[nodiscard]] std::vector<Real> GetOptionsLookup(
       std::function<int64_t(std::string_view)> lookup_fn) const;

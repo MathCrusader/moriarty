@@ -29,8 +29,8 @@
 namespace moriarty {
 namespace {
 
-using moriarty_testing::HasConstraintViolation;
-using moriarty_testing::HasNoConstraintViolation;
+using moriarty_testing::HasNoViolation;
+using moriarty_testing::HasViolation;
 using testing::ElementsAre;
 using testing::HasSubstr;
 using testing::Throws;
@@ -126,16 +126,15 @@ TEST(BaseConstraintsTest, ExactlyWithTooLargeOfIntegersShouldThrow) {
               Throws<InvalidConstraint>());
 }
 
-TEST(BaseConstraintsTest, ExactlyCheckValueShouldWork) {
+TEST(BaseConstraintsTest, ExactlyValidateShouldWork) {
   {
-    EXPECT_THAT(Exactly(123).CheckValue(123), HasNoConstraintViolation());
-    EXPECT_THAT(Exactly("abc").CheckValue("abc"), HasNoConstraintViolation());
+    EXPECT_THAT(Exactly(123).Validate(123), HasNoViolation());
+    EXPECT_THAT(Exactly("abc").Validate("abc"), HasNoViolation());
   }
   {
-    EXPECT_THAT(Exactly(123).CheckValue(124),
-                HasConstraintViolation(HasSubstr("exactly")));
-    EXPECT_THAT(Exactly("abc").CheckValue("def"),
-                HasConstraintViolation(HasSubstr("exactly")));
+    EXPECT_THAT(Exactly(123).Validate(124), HasViolation(HasSubstr("exactly")));
+    EXPECT_THAT(Exactly("abc").Validate("def"),
+                HasViolation(HasSubstr("exactly")));
   }
 }
 
@@ -233,8 +232,8 @@ TEST(BaseConstraintsTest, OneOfForOtherTypesWorks) {
 }
 
 TEST(BaseConstraintsTest, OneOfToStringWorks) {
-  EXPECT_EQ(OneOf({123, 456}).ToString(), "is one of {`123`, `456`}");
-  EXPECT_EQ(OneOf({"abc", "def"}).ToString(), "is one of {`abc`, `def`}");
+  EXPECT_EQ(OneOf({123, 456}).ToString(), R"(is one of [123, 456])");
+  EXPECT_EQ(OneOf({"abc", "def"}).ToString(), R"(is one of ["abc", "def"])");
 }
 
 TEST(BaseConstraintsTest, OneOfWithTooLargeOfIntegersShouldThrow) {
@@ -246,24 +245,23 @@ TEST(BaseConstraintsTest, OneOfWithTooLargeOfIntegersShouldThrow) {
       Throws<InvalidConstraint>());
 }
 
-TEST(BaseConstraintsTest, OneOfCheckValueShouldWork) {
+TEST(BaseConstraintsTest, OneOfValidateShouldWork) {
   {
-    EXPECT_THAT(OneOf({123, 456}).CheckValue(123), HasNoConstraintViolation());
-    EXPECT_THAT(OneOf({456}).CheckValue(456), HasNoConstraintViolation());
-    EXPECT_THAT(OneOf({"abc", "def", "hello"}).CheckValue("abc"),
-                HasNoConstraintViolation());
-    EXPECT_THAT(OneOf({"abc", "def", "hello"}).CheckValue("hello"),
-                HasNoConstraintViolation());
+    EXPECT_THAT(OneOf({123, 456}).Validate(123), HasNoViolation());
+    EXPECT_THAT(OneOf({456}).Validate(456), HasNoViolation());
+    EXPECT_THAT(OneOf({"abc", "def", "hello"}).Validate("abc"),
+                HasNoViolation());
+    EXPECT_THAT(OneOf({"abc", "def", "hello"}).Validate("hello"),
+                HasNoViolation());
   }
   {
-    EXPECT_THAT(OneOf({123, 456}).CheckValue(123567),
-                HasConstraintViolation(HasSubstr("one of")));
-    EXPECT_THAT(OneOf({456}).CheckValue(123),
-                HasConstraintViolation(HasSubstr("one of")));
-    EXPECT_THAT(OneOf({"abc", "def", "hello"}).CheckValue("ABC"),
-                HasConstraintViolation(HasSubstr("one of")));
-    EXPECT_THAT(OneOf({"abc", "def", "hello"}).CheckValue("ertert"),
-                HasConstraintViolation(HasSubstr("one of")));
+    EXPECT_THAT(OneOf({123, 456}).Validate(123567),
+                HasViolation(HasSubstr("one of")));
+    EXPECT_THAT(OneOf({456}).Validate(123), HasViolation(HasSubstr("one of")));
+    EXPECT_THAT(OneOf({"abc", "def", "hello"}).Validate("ABC"),
+                HasViolation(HasSubstr("one of")));
+    EXPECT_THAT(OneOf({"abc", "def", "hello"}).Validate("ertert"),
+                HasViolation(HasSubstr("one of")));
   }
 }
 

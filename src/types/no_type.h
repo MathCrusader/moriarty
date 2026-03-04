@@ -27,6 +27,7 @@ struct NoType {
   friend std::strong_ordering operator<=>(const NoType&,
                                           const NoType&) = default;
   friend bool operator==(const NoType&, const NoType&) = default;
+  friend std::string PrettyPrintValue(const NoType&, int) { return "NoType"; }
 };
 
 }  // namespace moriarty

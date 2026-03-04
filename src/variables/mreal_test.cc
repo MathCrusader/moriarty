@@ -240,7 +240,7 @@ TEST(MRealTest, IsSatisfiedWithWithExpressionsShouldWorkForBadData) {
   moriarty_internal::VariableSet variables;
   ConstraintContext ctx("_", variables, values);
   // Could be VariableNotFound as well (impl detail)
-  EXPECT_THAT([&] { (void)MReal(Between(1, "3 * N + 1")).CheckValue(ctx, 2); },
+  EXPECT_THAT([&] { (void)MReal(Between(1, "3 * N + 1")).Validate(ctx, 2); },
               ThrowsVariableNotFound("N"));
 }
 
@@ -374,7 +374,7 @@ TEST(MRealTest, InvalidExpressionsShouldFail) {
 TEST(MRealTest, ExactlyAndOneOfConstraintsWithNoVariablesShouldWork) {
   {  // IsSatisfiedWith
     EXPECT_THAT(MReal(Exactly(Real(10, 2))), IsSatisfiedWith(5));
-    EXPECT_THAT(MReal(Exactly(5)), IsNotSatisfiedWith(6, "exactly"));
+    EXPECT_THAT(MReal(Exactly(5)), IsNotSatisfiedWith(6, "expected: 5"));
 
     EXPECT_THAT(
         MReal(OneOf({Real("5"), Real("6.4"), Real("7.3")})),
@@ -388,7 +388,7 @@ TEST(MRealTest, ExactlyAndOneOfConstraintsWithNoVariablesShouldWork) {
                       Between(Real("5.5"), 1000000)),
                 IsSatisfiedWith(5.5));
     EXPECT_THAT(MReal(Exactly(Real(5)), OneOf({Real(5), Real(6, 5), Real(7)})),
-                IsNotSatisfiedWith(6.0 / 5, "exactly"));
+                IsNotSatisfiedWith(6.0 / 5, "expected: 5"));
     EXPECT_THAT([] { MReal(Exactly(Real(5, 2)), OneOf({Real(6), Real(5)})); },
                 ThrowsImpossibleToSatisfy("one of"));
   }
@@ -425,7 +425,7 @@ TEST(MRealTest, ExactlyAndOneOfConstraintsWithVariablesShouldWork) {
     EXPECT_THAT(MReal(Exactly("N")),
                 IsSatisfiedWith(10, Context().WithValue<MInteger>("N", 10)));
     EXPECT_THAT(MReal(Exactly("N")),
-                IsNotSatisfiedWith(11, "exactly",
+                IsNotSatisfiedWith(11, "expected: N (10)",
                                    Context().WithValue<MInteger>("N", 10)));
 
     EXPECT_THAT(
@@ -444,7 +444,7 @@ TEST(MRealTest, ExactlyAndOneOfConstraintsWithVariablesShouldWork) {
                       Between("N-1", 1000)),
                 IsSatisfiedWith(6, Context().WithValue<MInteger>("N", 5)));
     EXPECT_THAT(MReal(Exactly("N"), OneOf({"N", "N+1", "N+2"})),
-                IsNotSatisfiedWith(6, "exactly",
+                IsNotSatisfiedWith(6, "expected: N (5)",
                                    Context().WithValue<MInteger>("N", 5)));
     EXPECT_THAT(
         MReal(Exactly("N"), OneOf({6, 7, 8})),

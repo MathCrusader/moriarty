@@ -91,7 +91,7 @@ TEST(ResolveValuesContextTest,
                            context.RandomEngine(), handler);
   EXPECT_THAT(
       [&] { (void)ctx.GenerateVariable<MInteger>("X", MInteger(Exactly(10))); },
-      Throws<std::runtime_error>());
+      Throws<GenerationError>());
 }
 
 TEST(ResolveValuesContextTest,

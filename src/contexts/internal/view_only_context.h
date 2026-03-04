@@ -175,7 +175,7 @@ std::optional<typename T::value_type> ViewOnlyContext::GetUniqueValue(
 template <MoriartyVariable T>
 bool ViewOnlyContext::IsSatisfiedWith(T variable,
                                       const T::value_type& value) const {
-  return variable.CheckValue({"IsSatisfiedWith()", variables_, values_}, value)
+  return variable.Validate({"IsSatisfiedWith()", variables_, values_}, value)
       .IsOk();
 }
 

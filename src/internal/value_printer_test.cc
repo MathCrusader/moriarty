@@ -91,7 +91,9 @@ TEST(ValuePrinterTest, StringVerySmallBudgetStillShowsCharacters) {
 TEST(ValuePrinterTest, CharacterFormattingWorks) {
   EXPECT_EQ(ValuePrinter('A'), "'A'");
   EXPECT_EQ(ValuePrinter(static_cast<unsigned char>('B')), "'B'");
-  EXPECT_EQ(ValuePrinter(static_cast<signed char>(7)), "ASCII 7");
+  EXPECT_EQ(ValuePrinter('\n'), "'\\n'");
+  EXPECT_EQ(ValuePrinter(static_cast<signed char>(7)), "'\\a'");
+  EXPECT_EQ(ValuePrinter(static_cast<unsigned char>(4)), "'[ASCII 4]'");
 }
 
 TEST(ValuePrinterTest, OptionalWorks) {
@@ -107,16 +109,16 @@ TEST(ValuePrinterTest, OptionalRespectsNestedBudget) {
 
 TEST(ValuePrinterTest, VariantWorks) {
   std::variant<int, std::string> v = 42;
-  EXPECT_EQ(ValuePrinter(v), "42");
+  EXPECT_EQ(ValuePrinter(v), "(alternative 0) 42");
   v = std::string("hello");
-  EXPECT_EQ(ValuePrinter(v), "\"hello\"");
+  EXPECT_EQ(ValuePrinter(v), "(alternative 1) \"hello\"");
 }
 
 TEST(ValuePrinterTest, VariantWithNestedContainerWorks) {
   std::variant<std::vector<int>, std::string> v = std::vector<int>{1, 2, 3, 4};
-  EXPECT_EQ(ValuePrinter(v), "[1, 2, 3, 4]");
+  EXPECT_EQ(ValuePrinter(v), "(alternative 0) [1, 2, 3, 4]");
   v = std::string("hello");
-  EXPECT_EQ(ValuePrinter(v), "\"hello\"");
+  EXPECT_EQ(ValuePrinter(v), "(alternative 1) \"hello\"");
 }
 
 TEST(ValuePrinterTest, TupleWorks) {
@@ -132,7 +134,7 @@ TEST(ValuePrinterTest, TupleWithMoreThanMinCountAddsEllipsis) {
 TEST(ValuePrinterTest, TupleNestedTypesWork) {
   std::tuple<std::optional<int>, std::variant<int, std::string>> t{
       std::optional<int>{5}, std::variant<int, std::string>{"x"}};
-  EXPECT_EQ(ValuePrinter(t), "(5, \"x\")");
+  EXPECT_EQ(ValuePrinter(t), "(5, (alternative 1) \"x\")");
 }
 
 TEST(ValuePrinterTest, PairWorks) {

@@ -245,7 +245,8 @@ TEST(MStringTest, IsSatisfiedWithShouldCheckTheAlphabetIfSet) {
   EXPECT_THAT(MString(Alphabet("abcdefghij")), IsSatisfiedWith("abcde"));
   EXPECT_THAT(MString(Alphabet("edbca")), IsSatisfiedWith("abcde"));
 
-  EXPECT_THAT(MString(Alphabet("abcd")), IsNotSatisfiedWith("abcde", "`abcd`"));
+  EXPECT_THAT(MString(Alphabet("abcd")),
+              IsNotSatisfiedWith("abcde", "must be one of \"abcd\""));
 }
 
 TEST(MStringTest, IsSatisfiedWithWithInvalidLengthShouldFail) {
@@ -259,7 +260,7 @@ TEST(MStringTest, IsSatisfiedWithShouldCheckForDistinctCharacters) {
               IsSatisfiedWith("cbf"));
 
   EXPECT_THAT(MString(Alphabet("abcdef"), DistinctCharacters()),
-              IsNotSatisfiedWith("cc", "multiple times"));
+              IsNotSatisfiedWith("cc", "expected: distinct characters"));
 }
 
 TEST(MStringTest, DistinctCharactersWorksInTheSimpleCase) {
@@ -313,7 +314,7 @@ TEST(MStringTest, GenerateWithoutSimplePatternOrLengthOrAlphabetShouldFail) {
   // No simple pattern and no alphabet
   EXPECT_THAT(MString(), GenerateThrowsGenerationError("", Context()));
   EXPECT_THAT([] { MString(Alphabet("")); },
-              ThrowsImpossibleToSatisfy("only the characters ``"));
+              ThrowsImpossibleToSatisfy("only the characters \"\""));
 
   // Has Alphabet, but not simple pattern or length.
   EXPECT_THAT(MString(), GenerateThrowsGenerationError("", Context()));

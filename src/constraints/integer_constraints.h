@@ -54,7 +54,7 @@ class Mod : public MConstraint {
   [[nodiscard]] Equation GetConstraints() const;
 
   // Determines if the value has the appropriate remainder.
-  ConstraintViolation CheckValue(ConstraintContext ctx, int64_t value) const;
+  ValidationResult Validate(ConstraintContext ctx, int64_t value) const;
 
   // Returns a string representation of this constraint.
   [[nodiscard]] std::string ToString() const;

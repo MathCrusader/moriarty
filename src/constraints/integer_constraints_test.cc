@@ -25,29 +25,30 @@ namespace {
 
 using ::moriarty::ConstraintContext;
 using ::moriarty_testing::Context;
-using ::moriarty_testing::HasConstraintViolation;
-using ::moriarty_testing::HasNoConstraintViolation;
+using ::moriarty_testing::HasNoViolation;
+using ::moriarty_testing::HasViolation;
 using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::UnorderedElementsAre;
 
-TEST(IntegerConstraintsTest, ModCheckValue) {
+TEST(IntegerConstraintsTest, ModValidate) {
   auto context = Context().WithValue<MInteger>("X", 7);
 
   ConstraintContext ctx("N", context.Variables(), context.Values());
 
-  EXPECT_THAT(Mod(1, 10).CheckValue(ctx, 11), HasNoConstraintViolation());
-  EXPECT_THAT(Mod(0, 10).CheckValue(ctx, 110), HasNoConstraintViolation());
-  EXPECT_THAT(Mod(1, 10).CheckValue(ctx, -9), HasNoConstraintViolation());
-  EXPECT_THAT(Mod("X + 4", 10).CheckValue(ctx, 1), HasNoConstraintViolation());
-  EXPECT_THAT(Mod(1, "X + 3").CheckValue(ctx, 1), HasNoConstraintViolation());
-  EXPECT_THAT(Mod("10 * X + 1", "X + 3").CheckValue(ctx, 1),
-              HasNoConstraintViolation());
+  EXPECT_THAT(Mod(1, 10).Validate(ctx, 11), HasNoViolation());
+  EXPECT_THAT(Mod(0, 10).Validate(ctx, 110), HasNoViolation());
+  EXPECT_THAT(Mod(1, 10).Validate(ctx, -9), HasNoViolation());
+  EXPECT_THAT(Mod("X + 4", 10).Validate(ctx, 1), HasNoViolation());
+  EXPECT_THAT(Mod(1, "X + 3").Validate(ctx, 1), HasNoViolation());
+  EXPECT_THAT(Mod("10 * X + 1", "X + 3").Validate(ctx, 1), HasNoViolation());
 
-  EXPECT_THAT(Mod(1, 10).CheckValue(ctx, 6),
-              HasConstraintViolation(HasSubstr("6 is not 1 mod 10")));
-  EXPECT_THAT(Mod("X + 4", 10).CheckValue(ctx, 6),
-              HasConstraintViolation(HasSubstr("6 is not 1 mod 10")));
+  EXPECT_THAT(Mod(1, 10).Validate(ctx, 6),
+              HasViolation(AllOf(HasSubstr("expected: 1 (mod 10)"),
+                                 HasSubstr("6 (mod 10)"))));
+  EXPECT_THAT(Mod("X + 4", 10).Validate(ctx, 6),
+              HasViolation(AllOf(HasSubstr("expected: X + 4 (mod 10)"),
+                                 HasSubstr("6 (mod 10)"))));
 }
 
 TEST(IntegerConstraintsTest, ModToString) {

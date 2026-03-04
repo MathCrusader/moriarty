@@ -42,13 +42,12 @@ ValidateInputBuilder ValidateInput(Problem problem) {
 namespace {
 
 std::string FailuresToString(
-    const std::vector<DetailedConstraintViolation>& failures) {
+    const std::vector<DetailedValidationResult>& failures) {
   std::string result;
 
   for (const auto& [var_name, reason] : failures) {
     if (!result.empty()) result += "\n";
-    result += std::format(" - Variable `{}` failed constraint: {}\n", var_name,
-                          reason.Reason());
+    result += reason.PrettyReason();
   }
   return result;
 }
@@ -67,10 +66,10 @@ void ValidateTestCases(const Problem& problem,
   }
 
   for (int case_num = 1; const auto& test_case : test_cases) {
-    std::vector<DetailedConstraintViolation> failures =
-        moriarty_internal::CheckValues(problem.UnsafeGetVariables(),
-                                       test_case.UnsafeGetValues(), {},
-                                       ValidationStyle::kOnlySetVariables);
+    std::vector<DetailedValidationResult> failures =
+        moriarty_internal::ValidateValues(problem.UnsafeGetVariables(),
+                                          test_case.UnsafeGetValues(), {},
+                                          ValidationStyle::kOnlySetVariables);
     if (!failures.empty()) {
       if (test_cases.size() == 1) {
         throw ValidationError(FailuresToString(failures));

@@ -236,9 +236,8 @@ TEST(MIntegerTest, IsSatisfiedWithWithExpressionsShouldWorkForBadData) {
   moriarty_internal::VariableSet variables;
   ConstraintContext ctx("_", variables, values);
   // Could be VariableNotFound as well (impl detail)
-  EXPECT_THAT(
-      [&] { (void)MInteger(Between(1, "3 * N + 1")).CheckValue(ctx, 2); },
-      ThrowsVariableNotFound("N"));
+  EXPECT_THAT([&] { (void)MInteger(Between(1, "3 * N + 1")).Validate(ctx, 2); },
+              ThrowsVariableNotFound("N"));
 }
 
 TEST(MIntegerTest, AtMostAndAtLeastShouldLimitTheOutputRange) {
@@ -439,7 +438,7 @@ TEST(MIntegerTest, InvalidExpressionsShouldFail) {
 TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithNoVariablesShouldWork) {
   {  // IsSatisfiedWith
     EXPECT_THAT(MInteger(Exactly(5)), IsSatisfiedWith(5));
-    EXPECT_THAT(MInteger(Exactly(5)), IsNotSatisfiedWith(6, "exactly"));
+    EXPECT_THAT(MInteger(Exactly(5)), IsNotSatisfiedWith(6, "expected: 5"));
 
     EXPECT_THAT(
         MInteger(OneOf({5, 6, 7})),
@@ -449,8 +448,8 @@ TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithNoVariablesShouldWork) {
     EXPECT_THAT(MInteger(Exactly(5), OneOf({5, 6, 7})), IsSatisfiedWith(5));
     EXPECT_THAT(MInteger(Exactly(5), OneOf({4, 5, 6}), Between(5, 1000000)),
                 IsSatisfiedWith(5));
-    EXPECT_THAT(MInteger(Exactly(5), OneOf({5, 6, 7})),
-                IsNotSatisfiedWith(6, "exactly"));
+    EXPECT_THAT(MInteger(OneOf({5, 6, 7}), Exactly(5)),
+                IsNotSatisfiedWith(6, "expected: 5"));
     EXPECT_THAT([] { MInteger(Exactly(5), OneOf({6, 7, 8})); },
                 ThrowsImpossibleToSatisfy("one of"));
   }
@@ -479,7 +478,7 @@ TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithVariablesShouldWork) {
     EXPECT_THAT(MInteger(Exactly("N")),
                 IsSatisfiedWith(10, Context().WithValue<MInteger>("N", 10)));
     EXPECT_THAT(MInteger(Exactly("N")),
-                IsNotSatisfiedWith(11, "exactly",
+                IsNotSatisfiedWith(11, "expected: N (10)",
                                    Context().WithValue<MInteger>("N", 10)));
 
     EXPECT_THAT(
@@ -498,14 +497,14 @@ TEST(MIntegerTest, ExactlyAndOneOfConstraintsWithVariablesShouldWork) {
                          Between("N-1", 1000)),
                 IsSatisfiedWith(6, Context().WithValue<MInteger>("N", 5)));
     EXPECT_THAT(MInteger(Exactly("N"), OneOf({"N", "N+1", "N+2"})),
-                IsNotSatisfiedWith(6, "exactly",
+                IsNotSatisfiedWith(6, "expected: N (5)",
                                    Context().WithValue<MInteger>("N", 5)));
-    EXPECT_THAT(
-        MInteger(Exactly("N"), OneOf({6, 7, 8})),
-        IsNotSatisfiedWith(5, "one of", Context().WithValue<MInteger>("N", 5)));
-    EXPECT_THAT(
-        MInteger(Exactly("N"), OneOf({"N+1", "N+2"})),
-        IsNotSatisfiedWith(5, "one of", Context().WithValue<MInteger>("N", 5)));
+    EXPECT_THAT(MInteger(Exactly("N"), OneOf({6, 7, 8})),
+                IsNotSatisfiedWith(5, "expected: one of",
+                                   Context().WithValue<MInteger>("N", 5)));
+    EXPECT_THAT(MInteger(Exactly("N"), OneOf({"N+1", "N+2"})),
+                IsNotSatisfiedWith(5, "expected: one of",
+                                   Context().WithValue<MInteger>("N", 5)));
   }
   {  // Generate
     EXPECT_THAT(MInteger(Exactly(5)), GeneratedValuesAre(5));

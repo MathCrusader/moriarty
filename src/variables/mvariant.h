@@ -257,8 +257,8 @@ class MVariant : public librarian::MVariable<MVariant<MAlternativeTypes...>> {
   struct ElementConstraintWrapper {
    public:
     explicit ElementConstraintWrapper(Element<I, MElementType> constraint);
-    ConstraintViolation CheckValue(ConstraintContext ctx,
-                                   const variant_value_type& value) const;
+    ValidationResult Validate(ConstraintContext ctx,
+                              const variant_value_type& value) const;
     std::string ToString() const;
     std::vector<std::string> GetDependencies() const;
     void ApplyTo(MVariant& other) const;
@@ -511,11 +511,16 @@ MVariant<T...>::ElementConstraintWrapper<I, MAlternativeType>::
 
 template <typename... T>
 template <size_t I, typename MAlternativeType>
-ConstraintViolation
-MVariant<T...>::ElementConstraintWrapper<I, MAlternativeType>::CheckValue(
+ValidationResult
+MVariant<T...>::ElementConstraintWrapper<I, MAlternativeType>::Validate(
     ConstraintContext ctx, const variant_value_type& value) const {
-  if (value.index() != I) return ConstraintViolation::None();
-  return constraint_.CheckValue(ctx, std::get<I>(value));
+  if (value.index() != I) return ValidationResult::Ok();
+  // Note that we don't make a subvariable here.
+  auto v = constraint_.Validate(ctx.ForSubVariable(std::format("index {}", I)),
+                                std::get<I>(value));
+  if (v.IsOk()) return ValidationResult::Ok();
+  return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                     std::move(v));
 }
 
 template <typename... T>

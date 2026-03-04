@@ -32,6 +32,7 @@ cc_library(
         ":base_constraints",
         ":container_constraints",
         ":custom_constraint",
+        ":equality_constraints",
         ":graph_constraints",
         ":io_constraints",
         ":numeric_constraints",
@@ -52,8 +53,10 @@ cc_library(
 
 cc_library(
     name = "constraint_violation",
+    srcs = ["constraint_violation.cc"],
     hdrs = ["constraint_violation.h"],
     deps = [
+        "//src/internal:value_printer",
     ],
 )
 
@@ -82,11 +85,24 @@ cc_library(
 )
 
 cc_library(
+    name = "equality_constraints",
+    hdrs = ["equality_constraints.h"],
+    deps = [
+        ":base_constraints",
+        ":constraint_violation",
+        "//src:context",
+        "//src/librarian:errors",
+        "//src/librarian/util:debug_string",
+    ],
+)
+
+cc_library(
     name = "graph_constraints",
     srcs = ["graph_constraints.cc"],
     hdrs = ["graph_constraints.h"],
     deps = [
         ":base_constraints",
+        ":equality_constraints",
         "//src:context",
         "//src/librarian/util:debug_string",
         "//src/types:graph",
@@ -100,6 +116,7 @@ cc_library(
     hdrs = ["integer_constraints.h"],
     deps = [
         ":base_constraints",
+        ":equality_constraints",
         "//src:context",
         "//src/internal:expressions",
         "//src/librarian/util:debug_string",
@@ -123,6 +140,7 @@ cc_library(
     hdrs = ["numeric_constraints.h"],
     deps = [
         ":base_constraints",
+        ":equality_constraints",
         "//src:context",
         "//src/contexts:librarian_context",
         "//src/internal:range",
@@ -152,17 +170,6 @@ cc_library(
         "//src/internal:simple_pattern",
         "//src/variables:minteger",
         "@abseil-cpp//absl/strings",
-    ],
-)
-
-cc_test(
-    name = "base_constraints_test",
-    srcs = ["base_constraints_test.cc"],
-    deps = [
-        ":base_constraints",
-        "//src/librarian:errors",
-        "//src/librarian/testing:gtest_helpers",
-        "@googletest//:gtest_main",
     ],
 )
 

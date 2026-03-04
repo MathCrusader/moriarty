@@ -38,8 +38,8 @@ class IOSeparator : public MConstraint {
   [[nodiscard]] Whitespace GetSeparator() const;
 
   // IOConstraints are always satisfied
-  ConstraintViolation CheckValue(const auto& value) const {
-    return ConstraintViolation::None();
+  ValidationResult Validate(const auto& value) const {
+    return ValidationResult::Ok();
   }
 
   // Returns a string representation of this constraint.

@@ -60,6 +60,10 @@ struct TestType {
   operator int() const { return value; }
 
   int value;
+
+  friend std::string PrettyPrintValue(const TestType& value, int max_len) {
+    return std::to_string(value.value);
+  }
 };
 
 class LastDigit : public moriarty::MConstraint {
@@ -70,12 +74,13 @@ class LastDigit : public moriarty::MConstraint {
     return std::format("the last digit {}", digit_.ToString());
   }
 
-  moriarty::ConstraintViolation CheckValue(moriarty::ConstraintContext ctx,
-                                           const TestType& value) const {
-    auto check = digit_.CheckValue(ctx, value.value % 10);
-    if (check.IsOk()) return moriarty::ConstraintViolation::None();
-    return moriarty::ConstraintViolation(
-        std::format("the last digit of {} {}", value.value, check.Reason()));
+  moriarty::ValidationResult Validate(moriarty::ConstraintContext ctx,
+                                      const TestType& value) const {
+    auto v =
+        digit_.Validate(ctx.ForSubVariable("last digit"), value.value % 10);
+    if (v.IsOk()) return moriarty::ValidationResult::Ok();
+    return moriarty::ValidationResult::Violation(ctx.GetVariableName(), value,
+                                                 std::move(v));
   }
   std::vector<std::string> GetDependencies() const {
     return digit_.GetDependencies();
@@ -94,13 +99,13 @@ class NumberOfDigits : public moriarty::MConstraint {
     return std::format("the number of digits {}", num_digits_.ToString());
   }
 
-  moriarty::ConstraintViolation CheckValue(moriarty::ConstraintContext ctx,
-                                           const TestType& value) const {
-    auto check =
-        num_digits_.CheckValue(ctx, std::to_string(value.value).size());
-    if (check.IsOk()) return moriarty::ConstraintViolation::None();
-    return moriarty::ConstraintViolation(std::format(
-        "the number of digits in {} {}", value.value, check.Reason()));
+  moriarty::ValidationResult Validate(moriarty::ConstraintContext ctx,
+                                      const TestType& value) const {
+    auto v = num_digits_.Validate(ctx.ForSubVariable("number of digits"),
+                                  std::to_string(value.value).size());
+    if (v.IsOk()) return moriarty::ValidationResult::Ok();
+    return moriarty::ValidationResult::Violation(ctx.GetVariableName(), value,
+                                                 std::move(v));
   }
   std::vector<std::string> GetDependencies() const {
     return num_digits_.GetDependencies();

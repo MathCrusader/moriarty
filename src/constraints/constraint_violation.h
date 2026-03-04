@@ -15,50 +15,128 @@
 #ifndef MORIARTY_CONSTRAINTS_CONSTRAINT_VIOLATION_H_
 #define MORIARTY_CONSTRAINTS_CONSTRAINT_VIOLATION_H_
 
+#include <memory>
 #include <optional>
 #include <ostream>
 #include <string>
 
+#include "src/internal/value_printer.h"
+
 namespace moriarty {
 
-// A status indicator whether a constraint is violated or not.
-class ConstraintViolation {
- public:
-  explicit ConstraintViolation(std::string reason) : reason_(reason) {}
-  static ConstraintViolation None() { return ConstraintViolation(0); }
+namespace moriarty_internal {
 
-  // Implicit conversion that returns true if the constraint is violated, false
-  // otherwise.
-  operator bool() const { return reason_.has_value(); }
+struct ValidationResultNode {
+  struct Details {
+    std::string expected;
+    std::optional<std::string> violation;
+  };
+  // Either the variable or sub-variable name ("length, "element 5", "A")
+  std::string name;
+  // A stringified value that caused the violation, for debugging purposes.
+  std::string value;
+  // Either a string expected/violation or a nested violation node.
+  std::variant<Details, std::unique_ptr<ValidationResultNode>> details;
+};
+
+std::string PrettyPrintValidationResult(const ValidationResultNode& node);
+
+}  // namespace moriarty_internal
+
+// A status indicator whether a constraint is violated or not.
+class [[nodiscard]] ValidationResult {
+ public:
+  // There is no constraint violation.
+  static ValidationResult Ok();
+  // There is a direct constraint violation on this variable.
+  template <typename T>
+  static ValidationResult Violation(std::string name, const T& value,
+                                    std::string expected);
+  // There is a direct constraint violation on this variable.
+  template <typename T>
+  static ValidationResult Violation(std::string name, const T& value,
+                                    std::string expected,
+                                    std::string violation);
+  // There is a direct constraint violation on this variable, but it doesn't
+  // have a value.
+  static ValidationResult Violation(std::string name, std::string expected);
+  // There is an indirect constraint violation on either this variable or the
+  // sub-variable. The details from `details` will be nested under `name` and
+  // `value` in the message.
+  template <typename T>
+  static ValidationResult Violation(std::string name, const T& value,
+                                    ValidationResult&& details);
 
   // Returns true if the constraint is satisfied (i.e., not violated).
-  [[nodiscard]] bool IsOk() const { return !reason_.has_value(); }
+  [[nodiscard]] bool IsOk() const;
 
   // Returns the reason for the constraint violation.
   //
-  // NOTE: It is intended that this function is only called if the constraint is
-  // violated. If the constraint is not violated, this will return an empty
-  // string. But note that an empty string does not mean the constraint is
-  // satisfied.
-  [[nodiscard]] std::string Reason() const { return reason_.value_or(""); }
+  // NOTE: If a reason wasn't provided or the constraint is satisfied, this will
+  // return an empty string (empty string does not necessarily mean the
+  // constraint is satisfied).
+  [[nodiscard]] std::string PrettyReason() const;
 
   friend std::ostream& operator<<(std::ostream& os,
-                                  const ConstraintViolation& violation) {
-    if (violation.IsOk()) return os << "Constraint is satisfied";
-    return os << "Constraint violation: " << violation.Reason();
-  }
+                                  const ValidationResult& validation);
 
  private:
-  ConstraintViolation(int) : reason_(std::nullopt) {}
-  std::optional<std::string> reason_;
+  struct InternalConstructorTag {};
+  ValidationResult(
+      InternalConstructorTag, bool ok,
+      std::unique_ptr<moriarty_internal::ValidationResultNode> details);
+  bool ok_;
+  std::unique_ptr<moriarty_internal::ValidationResultNode> details_;
 };
 
-// A detailed constraint violation contains the violation, as well as the
+std::ostream& operator<<(std::ostream& os, const ValidationResult& validation);
+
+// A detailed constraint validation contains the violation, as well as the
 // variable that violated it.
-struct DetailedConstraintViolation {
+struct DetailedValidationResult {
   std::string variable_name;
-  ConstraintViolation violation;
+  ValidationResult violation;
 };
+
+// ----------------------------------------------------------------------------
+//  Template implementations below
+
+template <typename T>
+ValidationResult ValidationResult::Violation(std::string name, const T& value,
+                                             std::string expected) {
+  return ValidationResult(
+      InternalConstructorTag{}, false,
+      std::make_unique<moriarty_internal::ValidationResultNode>(
+          moriarty_internal::ValidationResultNode{
+              std::move(name), moriarty_internal::ValuePrinter(value),
+              moriarty_internal::ValidationResultNode::Details{
+                  .expected = std::move(expected)}}));
+}
+
+template <typename T>
+ValidationResult ValidationResult::Violation(std::string name, const T& value,
+                                             std::string expected,
+                                             std::string violation) {
+  return ValidationResult(
+      InternalConstructorTag{}, false,
+      std::make_unique<moriarty_internal::ValidationResultNode>(
+          moriarty_internal::ValidationResultNode{
+              std::move(name), moriarty_internal::ValuePrinter(value),
+              moriarty_internal::ValidationResultNode::Details{
+                  .expected = std::move(expected),
+                  .violation = std::move(violation)}}));
+}
+
+template <typename T>
+ValidationResult ValidationResult::Violation(std::string name, const T& value,
+                                             ValidationResult&& details) {
+  return ValidationResult(
+      InternalConstructorTag{}, false,
+      std::make_unique<moriarty_internal::ValidationResultNode>(
+          moriarty_internal::ValidationResultNode{
+              std::move(name), moriarty_internal::ValuePrinter(value),
+              std::move(details.details_)}));
+}
 
 }  // namespace moriarty
 

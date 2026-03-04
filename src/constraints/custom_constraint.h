@@ -53,8 +53,8 @@ class CustomConstraint : public MConstraint {
   [[nodiscard]] std::string GetName() const;
 
   // Determines if `value` satisfies the constraint.
-  ConstraintViolation CheckValue(ConstraintContext ctx,
-                                 const T::value_type& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const T::value_type& value) const;
 
   // Returns a string representation of the constraint.
   [[nodiscard]] std::string ToString() const;
@@ -101,13 +101,13 @@ std::string CustomConstraint<T>::GetName() const {
 }
 
 template <typename T>
-ConstraintViolation CustomConstraint<T>::CheckValue(
+ValidationResult CustomConstraint<T>::Validate(
     ConstraintContext ctx, const T::value_type& value) const {
   if (constraint_(ConstraintContext(ctx.GetVariableName(), ctx), value))
-    return ConstraintViolation::None();
-  return ConstraintViolation(
-      std::format("{} does not satisfy the custom constraint `{}`",
-                  librarian::DebugString(value), name_));
+    return ValidationResult::Ok();
+  return ValidationResult::Violation(
+      ctx.GetVariableName(), value,
+      std::format("value must satisfy the custom constraint `{}`", name_));
 }
 
 template <typename T>
