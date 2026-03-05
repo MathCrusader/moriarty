@@ -49,7 +49,7 @@ std::string PrettyPrintValidationResult(const ValidationResultNode& node) {
     if (d.details)
       result += std::format("   │  details: {}\n", d.details->value);
   } else {
-    result += std::format("   │    value: {}\n", node.value);
+    result += std::format("   │ {}\n", node.value);
     result += PrettyPrintValidationResult(*std::get<Node>(node.details));
   }
   return result;

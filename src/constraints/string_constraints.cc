@@ -16,7 +16,6 @@
 #include "src/constraints/string_constraints.h"
 
 #include <algorithm>
-#include <bitset>
 #include <cstdint>
 #include <format>
 #include <string>

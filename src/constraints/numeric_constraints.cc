@@ -15,7 +15,6 @@
 #include "src/constraints/numeric_constraints.h"
 
 #include <algorithm>
-#include <compare>
 #include <cstdint>
 #include <format>
 #include <functional>
@@ -611,7 +610,7 @@ ValidationResult OneOfNumeric::Validate(ConstraintContext ctx,
       const std::vector<Real>& options = numeric_options_.GetOptions();
       return ValidationResult::Violation(
           ctx.GetVariableName(), value,
-          librarian::Expected("one of {}", ctx.GetVariableName(),
+          librarian::Expected("one of {}",
                               moriarty_internal::ValuePrinter(options)));
     }
   }
@@ -628,11 +627,9 @@ ValidationResult OneOfNumeric::Validate(ConstraintContext ctx,
       AppendList(option_list, expected_options);
       return ValidationResult::Violation(
           ctx.GetVariableName(), value,
-          librarian::Expected("one of {}", ctx.GetVariableName(),
-                              expected_options),
+          librarian::Expected("one of {}", expected_options),
           librarian::Evaluated(
-              "one of {}", ctx.GetVariableName(),
-              moriarty_internal::ValuePrinter(evaluated_options)));
+              "one of {}", moriarty_internal::ValuePrinter(evaluated_options)));
     }
   }
   return ValidationResult::Ok();
@@ -653,7 +650,7 @@ ValidationResult OneOfNumeric::Validate(ConstraintContext ctx,
     const std::vector<Real>& options = numeric_options_.GetOptions();
     return ValidationResult::Violation(
         ctx.GetVariableName(), value,
-        librarian::Expected("one of {}", ctx.GetVariableName(),
+        librarian::Expected("one of {}",
                             moriarty_internal::ValuePrinter(options)));
   }
 
@@ -671,11 +668,9 @@ ValidationResult OneOfNumeric::Validate(ConstraintContext ctx,
       AppendList(option_list, expected_options);
       return ValidationResult::Violation(
           ctx.GetVariableName(), value,
-          librarian::Expected("one of {}", ctx.GetVariableName(),
-                              expected_options),
+          librarian::Expected("one of {}", expected_options),
           librarian::Evaluated(
-              "one of {}", ctx.GetVariableName(),
-              moriarty_internal::ValuePrinter(evaluated_options)));
+              "one of {}", moriarty_internal::ValuePrinter(evaluated_options)));
     }
   }
   return ValidationResult::Ok();
