@@ -173,7 +173,6 @@ cc_test(
     srcs = ["problem_test.cc"],
     deps = [
         ":problem",
-        ":simple_io",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],

@@ -19,7 +19,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/simple_io.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {
