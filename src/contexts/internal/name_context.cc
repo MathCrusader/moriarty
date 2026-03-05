@@ -14,16 +14,50 @@
 
 #include "src/contexts/internal/name_context.h"
 
+#include <functional>
+#include <iostream>
 #include <string>
 #include <string_view>
 
 namespace moriarty {
 namespace moriarty_internal {
 
-std::string NameContext::GetVariableName() const { return name_; }
-
 NameContext::NameContext(std::string_view variable_name)
     : name_(variable_name) {}
+
+NameContext NameContext::ForSubVariable(
+    std::string_view sub_variable_name) const {
+  NameContext sub_ctx(sub_variable_name);
+  sub_ctx.parent_ = this;
+  return sub_ctx;
+}
+
+NameContext NameContext::ForIndexedSubVariable(
+    std::function<std::string(int index)> indexed_name_fn, int index) const {
+  NameContext indexed_ctx("");
+  indexed_ctx.indexed_name_fn_ = std::move(indexed_name_fn);
+  indexed_ctx.indexed_name_fn_index_ = index;
+  indexed_ctx.parent_ = this;
+  return indexed_ctx;
+}
+
+std::string NameContext::GetVariableName() const {
+  if (indexed_name_fn_) return indexed_name_fn_(indexed_name_fn_index_);
+  return name_;
+}
+
+std::vector<std::string> NameContext::GetVariableStack() const {
+  std::vector<std::string> stack;
+  const NameContext* current = this;
+  while (current != nullptr) {
+    std::cout << "N " << current->name_ << std::endl;
+    std::cout << "# " << current->indexed_name_fn_index_ << std::endl;
+    stack.push_back(current->GetVariableName());
+    current = current->parent_;
+  }
+  std::reverse(stack.begin(), stack.end());
+  return stack;
+}
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

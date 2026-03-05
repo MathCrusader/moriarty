@@ -15,6 +15,7 @@
 #ifndef MORIARTY_CONTEXTS_INTERNAL_NAME_CONTEXT_H_
 #define MORIARTY_CONTEXTS_INTERNAL_NAME_CONTEXT_H_
 
+#include <functional>
 #include <string>
 #include <string_view>
 
@@ -28,13 +29,46 @@ class NameContext {
  public:
   explicit NameContext(std::string_view variable_name);
 
+  // ForSubVariable()
+  //
+  // Returns a new NameContext for a sub-variable of the current variable.
+  //
+  // NOTE: The current NameContext must outlive the returned NameContext.
+  [[nodiscard]] NameContext ForSubVariable(
+      std::string_view sub_variable_name) const;
+
+  // ForIndexedSubVariable()
+  //
+  // Returns a new NameContext for an indexed sub-variable of the current
+  // variable. The indexed_name_fn should take an index and return the name
+  // of the indexed sub-variable at that index.
+  //
+  // This function will be lazily evaluated, meaning that the indexed_name_fn
+  // will only be called when GetVariableName() or GetVariableStack() is called
+  // on the returned NameContext.
+  //
+  // NOTE: The current NameContext must outlive the returned NameContext.
+  [[nodiscard]] NameContext ForIndexedSubVariable(
+      std::function<std::string(int index)> indexed_name_fn, int index) const;
+
   // GetVariableName()
   //
   // Returns the name of the variable currently being operated on.
   [[nodiscard]] std::string GetVariableName() const;
 
+  // GetVariableStack()
+  //
+  // Returns a vector of variable names representing the stack of variables
+  // leading to the current variable. For example, if the current variable is
+  // "X[2].Y", this might return ["X", "index 2", "Y"].
+  [[nodiscard]] std::vector<std::string> GetVariableStack() const;
+
  private:
   std::string name_;
+  std::function<std::string(int)>
+      indexed_name_fn_;            // Will be used if non-null.
+  int indexed_name_fn_index_ = 0;  // The index to pass to indexed_name_fn_.
+  const NameContext* parent_ = nullptr;  // The parent context, if any.
 };
 
 }  // namespace moriarty_internal

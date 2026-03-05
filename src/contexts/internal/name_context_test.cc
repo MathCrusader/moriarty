@@ -15,15 +15,65 @@
 
 #include "src/contexts/internal/name_context.h"
 
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 namespace moriarty {
 namespace moriarty_internal {
 namespace {
 
+using ::testing::ElementsAre;
+
 TEST(NameContextTest, GetVariableNameShouldReturnCorrectName) {
   NameContext ctx("X");
   EXPECT_EQ(ctx.GetVariableName(), "X");
+}
+
+TEST(NameContextTest, ForSubVariableShouldReturnCorrectName) {
+  NameContext ctx("X");
+  NameContext sub_ctx = ctx.ForSubVariable("Y");
+  EXPECT_EQ(sub_ctx.GetVariableName(), "Y");
+}
+
+TEST(NameContextTest, ForIndexedSubVariableShouldReturnCorrectName) {
+  NameContext ctx("X");
+  NameContext indexed_ctx = ctx.ForIndexedSubVariable(
+      [](int index) { return "index " + std::to_string(index); }, 2);
+  EXPECT_EQ(indexed_ctx.GetVariableName(), "index 2");
+}
+
+TEST(NameContextTest, GetVariableStackShouldReturnCorrectStack) {
+  {
+    NameContext ctx("X");
+    EXPECT_THAT(ctx.GetVariableStack(), ElementsAre("X"));
+  }
+  {
+    NameContext ctx("X");
+    NameContext sub_ctx = ctx.ForSubVariable("Y");
+
+    EXPECT_THAT(sub_ctx.GetVariableStack(), ElementsAre("X", "Y"));
+  }
+  {
+    NameContext ctx("X");
+    NameContext sub_ctx = ctx.ForSubVariable("Y");
+    NameContext indexed_ctx = sub_ctx.ForIndexedSubVariable(
+        [](int index) { return "index " + std::to_string(index); }, 2);
+
+    EXPECT_THAT(indexed_ctx.GetVariableStack(),
+                ElementsAre("X", "Y", "index 2"));
+  }
+  {
+    NameContext ctx("X");
+    NameContext sub_ctx = ctx.ForSubVariable("Y");
+    NameContext indexed_ctx = sub_ctx.ForIndexedSubVariable(
+        [](int index) { return "index " + std::to_string(index); }, 2);
+
+    EXPECT_THAT(indexed_ctx
+                    .ForIndexedSubVariable(
+                        [](int x) { return "inner " + std::to_string(x); }, 3)
+                    .GetVariableStack(),
+                ElementsAre("X", "Y", "index 2", "inner 3"));
+  }
 }
 
 }  // namespace
