@@ -32,7 +32,6 @@
 #include "src/internal/expressions.h"
 #include "src/internal/range.h"
 #include "src/librarian/errors.h"
-#include "src/librarian/util/debug_string.h"
 #include "src/types/real.h"
 
 namespace moriarty {

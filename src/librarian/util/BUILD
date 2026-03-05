@@ -29,12 +29,6 @@ cc_library(
 )
 
 cc_library(
-    name = "debug_string",
-    srcs = ["debug_string.cc"],
-    hdrs = ["debug_string.h"],
-)
-
-cc_library(
     name = "locked_optional",
     hdrs = ["locked_optional.h"],
 )
@@ -54,15 +48,6 @@ cc_test(
     srcs = ["cow_ptr_test.cc"],
     deps = [
         ":cow_ptr",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "debug_string_test",
-    srcs = ["debug_string_test.cc"],
-    deps = [
-        ":debug_string",
         "@googletest//:gtest_main",
     ],
 )

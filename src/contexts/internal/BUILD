@@ -28,10 +28,10 @@ cc_library(
     srcs = ["basic_istream_context.cc"],
     hdrs = ["basic_istream_context.h"],
     deps = [
+        "//src/internal:value_printer",
         "//src/librarian:errors",
         "//src/librarian:io_config",
         "//src/librarian:policies",
-        "//src/librarian/util:debug_string",
         "//src/librarian/util:ref",
     ],
 )

@@ -25,7 +25,7 @@
 #include "src/constraints/constraint_violation.h"
 #include "src/context.h"
 #include "src/internal/simple_pattern.h"
-#include "src/librarian/util/debug_string.h"
+#include "src/internal/value_printer.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

@@ -30,8 +30,8 @@
 
 #include "absl/strings/match.h"
 #include "src/internal/expressions.h"
+#include "src/internal/value_printer.h"
 #include "src/librarian/errors.h"
-#include "src/librarian/util/debug_string.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -60,7 +60,7 @@ bool ValidCharSetRange(std::string_view range) {
 bool RepeatedCharSet::Add(char character) {
   if (!IsNonNegativeChar(character)) {
     throw SimplePatternParseError("Invalid character: {}",
-                                  librarian::DebugString(character));
+                                  moriarty_internal::ValuePrinter(character));
   }
   if (valid_chars_[character]) return false;
   valid_chars_[character] = true;
@@ -161,7 +161,7 @@ RepeatedCharSet ParseCharacterSetBody(std::string_view chars) {
   std::string_view original = chars;
   auto throw_duplicate_char = [original](char c) {
     throw SimplePatternParseError("{} appears multiple times in [{}]",
-                                  librarian::DebugString(c), original);
+                                  moriarty_internal::ValuePrinter(c), original);
   };
 
   bool negation = false;
@@ -372,7 +372,7 @@ std::string Sanitize(std::string_view pattern) {
       if (pattern[i + 1] != '\\' && pattern[i + 1] != ' ') {
         throw SimplePatternParseError(
             "Invalid escape character: \\ followed by {}",
-            librarian::DebugString(pattern[i + 1]));
+            moriarty_internal::ValuePrinter(pattern[i + 1]));
       }
       sanitized_pattern += pattern[i + 1];
       i++;

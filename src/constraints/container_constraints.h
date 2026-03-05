@@ -27,7 +27,6 @@
 #include "absl/container/flat_hash_map.h"
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
-#include "src/librarian/util/debug_string.h"
 #include "src/variables/minteger.h"
 
 namespace moriarty {

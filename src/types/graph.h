@@ -91,8 +91,6 @@ class Graph {
   template <typename E, typename V>
   friend bool operator==(const Graph<E, V>& lhs, const Graph<E, V>& rhs);
 
-  std::string DebugString() const;
-
   friend std::string PrettyPrintValue(const Graph& G, int max_len) {
     return std::format(
         "Graph(n={}, m={}, edges={})", G.NumNodes(), G.NumEdges(),
@@ -177,12 +175,6 @@ bool operator==(const Graph<E, V>& lhs, const Graph<E, V>& rhs) {
   return lhs.num_nodes_ == rhs.num_nodes_ &&
          lhs.edges_.size() == rhs.edges_.size() && lhs.edges_ == rhs.edges_ &&
          lhs.node_labels_ == rhs.node_labels_;
-}
-
-template <typename E, typename V>
-std::string Graph<E, V>::DebugString() const {
-  return std::format("Graph(num_nodes={}, num_edges={})", NumNodes(),
-                     NumEdges());
 }
 
 }  // namespace moriarty

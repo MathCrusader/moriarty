@@ -119,8 +119,8 @@ cc_library(
     hdrs = ["simple_pattern.h"],
     deps = [
         "//src/internal:expressions",
+        "//src/internal:value_printer",
         "//src/librarian:errors",
-        "//src/librarian/util:debug_string",
         "@abseil-cpp//absl/strings",
     ],
 )

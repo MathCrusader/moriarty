@@ -25,7 +25,6 @@
 #include "src/constraints/constraint_violation.h"
 #include "src/context.h"
 #include "src/contexts/librarian_context.h"
-#include "src/librarian/util/debug_string.h"
 
 namespace moriarty {
 

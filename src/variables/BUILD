@@ -70,6 +70,7 @@ cc_library(
         "//src/constraints:graph_constraints",
         "//src/constraints:size_constraints",
         "//src/contexts:librarian_context",
+        "//src/internal:value_printer",
         "//src/librarian:mvariable",
         "//src/types:graph",
     ],
@@ -120,7 +121,6 @@ cc_library(
         "//src/librarian:one_of_handler",
         "//src/librarian:size_property",
         "//src/librarian/util:cow_ptr",
-        "//src/librarian/util:debug_string",
         "//src/types:real",
     ],
 )

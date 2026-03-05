@@ -24,10 +24,10 @@
 #include <string>
 #include <string_view>
 
+#include "src/internal/value_printer.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
-#include "src/librarian/util/debug_string.h"
 #include "src/librarian/util/ref.h"
 
 namespace moriarty {
@@ -76,21 +76,21 @@ int64_t BasicIStreamContext::ReadInteger() {
       token.data(), token.data() + token.size(), value, /* base = */ 10);
   if (result.ec != std::errc{} || result.ptr != token.data() + token.size()) {
     ThrowIOError(std::format("Expected an integer, but got '{}'.",
-                             librarian::DebugString(read_token)));
+                             moriarty_internal::ValuePrinter(read_token)));
   }
 
   if (GetNumericStrictness() == NumericStrictness::kPrecise) {
     if (value == 0 && read_token.size() != 1) {
-      ThrowIOError("Expected a (strict) integer, but got '{}'.",
-                   librarian::DebugString(read_token));
+      ThrowIOError("Expected a (strict) integer, but got {}.",
+                   moriarty_internal::ValuePrinter(read_token));
     }
     if (value != 0 && read_token[0] == '0') {
-      ThrowIOError("Expected a (strict) integer, but got '{}'.",
-                   librarian::DebugString(read_token));
+      ThrowIOError("Expected a (strict) integer, but got {}.",
+                   moriarty_internal::ValuePrinter(read_token));
     }
     if (value != 0 && (read_token[0] == '-' && read_token[1] == '0')) {
-      ThrowIOError("Expected a (strict) integer, but got '{}'.",
-                   librarian::DebugString(read_token));
+      ThrowIOError("Expected a (strict) integer, but got {}.",
+                   moriarty_internal::ValuePrinter(read_token));
     }
   }
 
@@ -155,7 +155,7 @@ double BasicIStreamContext::ReadReal(int num_digits) {
       ThrowIOError(
           "Expected a real number with {} digits after the decimal point, "
           "but got {}.",
-          num_digits, librarian::DebugString(read_token));
+          num_digits, moriarty_internal::ValuePrinter(read_token));
     }
     return *result;
   }
@@ -173,11 +173,11 @@ double BasicIStreamContext::ReadReal(int num_digits) {
       std::from_chars(token.data(), token.data() + token.size(), result);
   if (ec != std::errc{} || ptr != token.data() + token.size()) {
     ThrowIOError("Expected a real number, but got '{}'.",
-                 librarian::DebugString(read_token));
+                 moriarty_internal::ValuePrinter(read_token));
   }
   if (std::isinf(result) || std::isnan(result)) {
     ThrowIOError("Expected a real number, but got '{}'.",
-                 librarian::DebugString(read_token));
+                 moriarty_internal::ValuePrinter(read_token));
   }
 
   return result;

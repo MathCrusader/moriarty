@@ -46,8 +46,8 @@ cc_library(
     hdrs = ["base_constraints.h"],
     deps = [
         ":constraint_violation",
+        "//src/internal:value_printer",
         "//src/librarian:errors",
-        "//src/librarian/util:debug_string",
     ],
 )
 
@@ -67,7 +67,7 @@ cc_library(
     deps = [
         ":base_constraints",
         "//src:context",
-        "//src/librarian/util:debug_string",
+        "//src/internal:value_printer",
         "//src/variables:minteger",
         "@abseil-cpp//absl/container:flat_hash_map",
         "@abseil-cpp//absl/container:flat_hash_set",
@@ -80,7 +80,7 @@ cc_library(
     deps = [
         ":base_constraints",
         "//src:context",
-        "//src/librarian/util:debug_string",
+        "//src/internal:value_printer",
     ],
 )
 
@@ -91,8 +91,8 @@ cc_library(
         ":base_constraints",
         ":constraint_violation",
         "//src:context",
+        "//src/internal:value_printer",
         "//src/librarian:errors",
-        "//src/librarian/util:debug_string",
     ],
 )
 
@@ -104,7 +104,7 @@ cc_library(
         ":base_constraints",
         ":equality_constraints",
         "//src:context",
-        "//src/librarian/util:debug_string",
+        "//src/internal:value_printer",
         "//src/types:graph",
         "//src/variables:minteger",
     ],
@@ -119,7 +119,7 @@ cc_library(
         ":equality_constraints",
         "//src:context",
         "//src/internal:expressions",
-        "//src/librarian/util:debug_string",
+        "//src/internal:value_printer",
     ],
 )
 

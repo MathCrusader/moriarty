@@ -32,11 +32,11 @@
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"
 #include "src/contexts/librarian_context.h"
+#include "src/internal/value_printer.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/mvariable.h"
 #include "src/librarian/policies.h"
-#include "src/librarian/util/debug_string.h"
 #include "src/types/graph.h"
 #include "src/variables/minteger.h"
 #include "src/variables/mnone.h"
@@ -745,8 +745,7 @@ MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(
 
     if (*num_edges != num_chunks) {
       ctx.ThrowIOError("MGraph::Reader expected to read {} chunks, but got {}.",
-                       librarian::DebugString(*num_edges),
-                       librarian::DebugString(num_chunks));
+                       *num_edges, num_chunks);
     }
   }
 
@@ -842,8 +841,8 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
         ctx.ThrowIOError(
             "Asymmetric adjacency matrix entries at ({}, {}) = "
             "{} and ({}, {}) = {}",
-            u, v, librarian::DebugString(edge_label), v, u,
-            librarian::DebugString(adj[v][u]));
+            u, v, moriarty_internal::ValuePrinter(edge_label), v, u,
+            moriarty_internal::ValuePrinter(adj[v][u]));
       }
       adj[u][v] = edge_label;
       if (u <= v) G_.AddEdge(u, v, edge_label);

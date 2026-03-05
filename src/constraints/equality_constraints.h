@@ -30,8 +30,8 @@
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
 #include "src/context.h"
+#include "src/internal/value_printer.h"
 #include "src/librarian/errors.h"
-#include "src/librarian/util/debug_string.h"
 
 namespace moriarty {
 
@@ -252,7 +252,7 @@ T Exactly<T>::GetValue() const {
 
 template <typename T>
 std::string Exactly<T>::ToString() const {
-  return std::format("is exactly {}", librarian::DebugString(value_));
+  return std::format("is exactly {}", moriarty_internal::ValuePrinter(value_));
 }
 
 template <typename T>
