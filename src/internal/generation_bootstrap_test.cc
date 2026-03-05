@@ -15,14 +15,18 @@
 
 #include "src/internal/generation_bootstrap.h"
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/constraints/base_constraints.h"
+#include "src/constraints/equality_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/internal/random_engine.h"
 #include "src/internal/value_set.h"

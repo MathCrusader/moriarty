@@ -16,6 +16,7 @@
 #define MORIARTY_INTERNAL_GENERATION_HANDLER_H_
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <stack>
 #include <string>

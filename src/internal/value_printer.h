@@ -15,15 +15,18 @@
 #ifndef MORIARTY_INTERNAL_VALUE_PRINTER_H_
 #define MORIARTY_INTERNAL_VALUE_PRINTER_H_
 
+#include <algorithm>
+#include <cctype>
 #include <concepts>
 #include <format>
 #include <functional>
+#include <iterator>
 #include <optional>
-#include <ostream>
 #include <ranges>
 #include <string>
 #include <string_view>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>

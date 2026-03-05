@@ -19,6 +19,7 @@
 #ifndef MORIARTY_INTERNAL_VARIABLE_SET_H_
 #define MORIARTY_INTERNAL_VARIABLE_SET_H_
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <string_view>

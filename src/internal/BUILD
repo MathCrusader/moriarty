@@ -43,6 +43,7 @@ cc_library(
     srcs = ["analysis_bootstrap.cc"],
     hdrs = ["analysis_bootstrap.h"],
     deps = [
+        ":abstract_variable",
         ":value_set",
         ":variable_set",
         "//src:context",
@@ -165,6 +166,8 @@ cc_test(
     srcs = ["analysis_bootstrap_test.cc"],
     deps = [
         ":analysis_bootstrap",
+        "//src:context",
+        "//src/constraints:equality_constraints",
         "//src/librarian/testing:gtest_helpers",
         "//src/librarian/testing:mtest_type",
         "//src/variables:minteger",
@@ -233,7 +236,6 @@ cc_test(
         "range_test.cc",
     ],
     deps = [
-        ":expressions",
         ":range",
         "@googletest//:gtest_main",
     ],
@@ -246,6 +248,8 @@ cc_test(
         ":expressions",
         ":random_engine",
         ":simple_pattern",
+        ":value_set",
+        "//src/librarian:errors",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
@@ -267,7 +271,6 @@ cc_test(
     deps = [
         ":value_set",
         "//src/librarian/testing:gtest_helpers",
-        "//src/variables:marray",
         "//src/variables:minteger",
         "//src/variables:mstring",
         "@googletest//:gtest_main",
@@ -281,10 +284,8 @@ cc_test(
         "variable_set_test.cc",
     ],
     deps = [
-        ":generation_bootstrap",
-        ":random_engine",
-        ":value_set",
         ":variable_set",
+        "//src/constraints:equality_constraints",
         "//src/librarian/testing:gtest_helpers",
         "//src/librarian/testing:mtest_type",
         "//src/variables:minteger",
@@ -302,7 +303,9 @@ cc_library(
         ":random_engine",
         ":value_set",
         ":variable_set",
-        "//src:test_case",
+        "//src/constraints:constraint_violation",
+        "//src/librarian:errors",
+        "//src/librarian:policies",
     ],
 )
 
@@ -314,9 +317,11 @@ cc_test(
         ":random_engine",
         ":value_set",
         ":variable_set",
+        "//src/constraints:equality_constraints",
+        "//src/constraints:numeric_constraints",
+        "//src/librarian:errors",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
-        "//src/variables:mstring",
         "@googletest//:gtest_main",
     ],
 )

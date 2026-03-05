@@ -14,7 +14,6 @@
 
 #include "src/internal/value_printer.h"
 
-#include <cstdint>
 #include <optional>
 #include <string>
 #include <tuple>

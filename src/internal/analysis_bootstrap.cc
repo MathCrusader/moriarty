@@ -14,13 +14,21 @@
 
 #include "src/internal/analysis_bootstrap.h"
 
+#include <algorithm>
+#include <format>
+#include <functional>
+#include <memory>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "src/constraints/constraint_violation.h"
 #include "src/context.h"
+#include "src/internal/abstract_variable.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 

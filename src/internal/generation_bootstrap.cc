@@ -17,6 +17,7 @@
 
 #include <format>
 #include <functional>
+#include <memory>
 #include <queue>
 #include <ranges>
 #include <span>
@@ -27,11 +28,13 @@
 #include <utility>
 #include <vector>
 
+#include "src/constraints/constraint_violation.h"
 #include "src/internal/abstract_variable.h"
 #include "src/internal/generation_handler.h"
 #include "src/internal/value_set.h"
 #include "src/internal/variable_set.h"
 #include "src/librarian/errors.h"
+#include "src/librarian/policies.h"
 
 namespace moriarty {
 namespace moriarty_internal {

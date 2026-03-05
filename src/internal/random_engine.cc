@@ -17,11 +17,11 @@
 
 #include <cstdint>
 #include <format>
+#include <iterator>
 #include <limits>
 #include <random>
 #include <span>
 #include <stdexcept>
-#include <string>
 #include <string_view>
 
 namespace moriarty {

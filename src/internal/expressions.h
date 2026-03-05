@@ -16,6 +16,7 @@
 #ifndef MORIARTY_INTERNAL_EXPRESSIONS_H_
 #define MORIARTY_INTERNAL_EXPRESSIONS_H_
 
+#include <cstddef>
 #include <cstdint>
 #include <functional>
 #include <memory>

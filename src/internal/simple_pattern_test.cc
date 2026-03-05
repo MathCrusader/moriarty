@@ -28,6 +28,7 @@
 #include "gtest/gtest.h"
 #include "src/internal/expressions.h"
 #include "src/internal/random_engine.h"
+#include "src/internal/value_set.h"
 #include "src/librarian/errors.h"
 #include "src/librarian/testing/gtest_helpers.h"
 #include "src/variables/minteger.h"

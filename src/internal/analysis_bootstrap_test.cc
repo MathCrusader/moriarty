@@ -14,9 +14,11 @@
 
 #include "src/internal/analysis_bootstrap.h"
 
+#include <algorithm>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/constraints/base_constraints.h"
+#include "src/constraints/equality_constraints.h"
 #include "src/context.h"
 #include "src/librarian/testing/gtest_helpers.h"
 #include "src/librarian/testing/mtest_type.h"

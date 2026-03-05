@@ -18,11 +18,11 @@
 #include <algorithm>
 #include <cctype>
 #include <cstdint>
-#include <cstdlib>
 #include <format>
 #include <limits>
 #include <memory>
 #include <optional>
+#include <ranges>
 #include <stack>
 #include <string>
 #include <string_view>

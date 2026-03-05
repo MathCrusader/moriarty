@@ -16,6 +16,7 @@
 #ifndef MORIARTY_INTERNAL_ANALYSIS_BOOTSTRAP_H_
 #define MORIARTY_INTERNAL_ANALYSIS_BOOTSTRAP_H_
 
+#include <span>
 #include <string>
 #include <vector>
 

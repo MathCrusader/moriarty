@@ -15,6 +15,7 @@
 #include "src/internal/range.h"
 
 #include <algorithm>
+#include <compare>
 #include <cstdint>
 #include <format>
 #include <functional>
