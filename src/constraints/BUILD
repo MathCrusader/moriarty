@@ -171,6 +171,15 @@ cc_library(
 )
 
 cc_test(
+    name = "constraint_violation_test",
+    srcs = ["constraint_violation_test.cc"],
+    deps = [
+        ":constraint_violation",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
     name = "container_constraints_test",
     srcs = ["container_constraints_test.cc"],
     deps = [

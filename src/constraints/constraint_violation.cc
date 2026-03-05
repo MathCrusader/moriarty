@@ -18,40 +18,68 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <string_view>
 #include <variant>
 
 namespace moriarty {
 namespace moriarty_internal {
 
 /*
-Example message:
-
-└─ A
-   │ which is: [...]
-└─ element 5
-   │ which is: "abcdef..."
-└─ length
-   │ which is: 14
-Value must be between 1 and 3 * N + 1 (1..13)
+strings: ["a", "bb", "ccc", "dddd", "eeeee", "abcdefghijklmn", ...]
+╰─ index 5: "abcdefghijklmn"
+   ╰─ length: 14
+      ╰─ expected: 1 ≤ length ≤ 3 * N + 1
+         which is: 1 ≤ length ≤ 13
+          details: too large
 */
-std::string PrettyPrintValidationResult(const ValidationResultNode& node) {
-  using Dets = moriarty_internal::ValidationResultNode::Details;
-  using Node = std::unique_ptr<moriarty_internal::ValidationResultNode>;
 
-  std::string result = std::format("└─ {}\n", node.name);
+namespace {
+
+using Dets = moriarty_internal::ValidationResultNode::Details;
+using Node = std::unique_ptr<moriarty_internal::ValidationResultNode>;
+
+void AppendValidationResultTree(std::string& result,
+                                const ValidationResultNode& node,
+                                std::string_view prefix, bool is_root) {
+  result +=
+      (is_root ? std::format("{}: {}\n", node.name, node.value)
+               : std::format("{}╰─ {}: {}\n", prefix, node.name, node.value));
 
   if (std::holds_alternative<Dets>(node.details)) {
     const auto& d = std::get<Dets>(node.details);
-    result += std::format("   │ expected: {}\n", d.expected.value);
-    if (d.evaluated && d.evaluated->value != d.expected.value)
-      result += std::format("   │           = {}\n", d.evaluated->value);
-    result += std::format("   │      got: {}\n", node.value);
-    if (d.details)
-      result += std::format("   │  details: {}\n", d.details->value);
-  } else {
-    result += std::format("   │ {}\n", node.value);
-    result += PrettyPrintValidationResult(*std::get<Node>(node.details));
+
+    const std::string child_prefix =
+        is_root ? std::string(prefix) : std::format("{}   ", prefix);
+
+    result +=
+        std::format("{}╰─ expected: {}\n", child_prefix, d.expected.value);
+
+    const bool has_evaluated =
+        d.evaluated && d.evaluated->value != d.expected.value;
+    if (has_evaluated) {
+      result +=
+          std::format("{}   which is: {}\n", child_prefix, d.evaluated->value);
+    }
+
+    if (d.details) {
+      // Keep one leading space so labels align: expected / which is / details.
+      result += std::format("{}   {}: {}\n", child_prefix, " details",
+                            d.details->value);
+    }
+    return;
   }
+
+  const std::string child_prefix =
+      is_root ? std::string(prefix) : std::format("{}   ", prefix);
+  AppendValidationResultTree(result, *std::get<Node>(node.details),
+                             child_prefix, false);
+}
+
+}  // namespace
+
+std::string PrettyPrintValidationResult(const ValidationResultNode& node) {
+  std::string result;
+  AppendValidationResultTree(result, node, "", true);
   return result;
 }
 
