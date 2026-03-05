@@ -44,11 +44,6 @@ cc_library(
 cc_library(
     name = "base_constraints",
     hdrs = ["base_constraints.h"],
-    deps = [
-        ":constraint_violation",
-        "//src/internal:value_printer",
-        "//src/librarian:errors",
-    ],
 )
 
 cc_library(
@@ -66,11 +61,9 @@ cc_library(
     hdrs = ["container_constraints.h"],
     deps = [
         ":base_constraints",
-        "//src:context",
-        "//src/internal:value_printer",
+        ":constraint_violation",
         "//src/variables:minteger",
         "@abseil-cpp//absl/container:flat_hash_map",
-        "@abseil-cpp//absl/container:flat_hash_set",
     ],
 )
 
@@ -79,8 +72,9 @@ cc_library(
     hdrs = ["custom_constraint.h"],
     deps = [
         ":base_constraints",
+        ":constraint_violation",
         "//src:context",
-        "//src/internal:value_printer",
+        "//src/contexts:librarian_context",
     ],
 )
 
@@ -102,9 +96,9 @@ cc_library(
     hdrs = ["graph_constraints.h"],
     deps = [
         ":base_constraints",
+        ":constraint_violation",
         ":equality_constraints",
         "//src:context",
-        "//src/internal:value_printer",
         "//src/types:graph",
         "//src/variables:minteger",
     ],
@@ -116,10 +110,10 @@ cc_library(
     hdrs = ["integer_constraints.h"],
     deps = [
         ":base_constraints",
-        ":equality_constraints",
+        ":constraint_violation",
         "//src:context",
         "//src/internal:expressions",
-        "//src/internal:value_printer",
+        "//src/librarian:errors",
     ],
 )
 
@@ -129,7 +123,7 @@ cc_library(
     hdrs = ["io_constraints.h"],
     deps = [
         ":base_constraints",
-        "//src:context",
+        ":constraint_violation",
         "//src/librarian:io_config",
     ],
 )
@@ -140,9 +134,10 @@ cc_library(
     hdrs = ["numeric_constraints.h"],
     deps = [
         ":base_constraints",
-        ":equality_constraints",
+        ":constraint_violation",
         "//src:context",
         "//src/contexts:librarian_context",
+        "//src/internal:expressions",
         "//src/internal:range",
         "//src/librarian:errors",
         "//src/librarian:one_of_handler",
@@ -156,6 +151,7 @@ cc_library(
     hdrs = ["size_constraints.h"],
     deps = [
         ":base_constraints",
+        ":constraint_violation",
         "//src/librarian:size_property",
     ],
 )
@@ -166,10 +162,11 @@ cc_library(
     hdrs = ["string_constraints.h"],
     deps = [
         ":base_constraints",
+        ":constraint_violation",
         "//src:context",
         "//src/internal:simple_pattern",
+        "//src/internal:value_printer",
         "//src/variables:minteger",
-        "@abseil-cpp//absl/strings",
     ],
 )
 
@@ -179,6 +176,9 @@ cc_test(
     deps = [
         ":container_constraints",
         ":numeric_constraints",
+        "//src/contexts:librarian_context",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "//src/variables:mstring",
@@ -191,6 +191,7 @@ cc_test(
     srcs = ["custom_constraint_test.cc"],
     deps = [
         ":custom_constraint",
+        "//src:context",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian/testing:gtest_helpers",
@@ -204,6 +205,7 @@ cc_test(
     srcs = ["graph_constraints_test.cc"],
     deps = [
         ":graph_constraints",
+        ":numeric_constraints",
         "//src/librarian/testing:gtest_helpers",
         "//src/types:graph",
         "//src/variables:minteger",
@@ -238,6 +240,7 @@ cc_test(
     srcs = ["numeric_constraints_test.cc"],
     deps = [
         ":numeric_constraints",
+        "//src/contexts:librarian_context",
         "//src/internal:range",
         "//src/librarian:errors",
         "//src/librarian/testing:gtest_helpers",
@@ -263,7 +266,7 @@ cc_test(
         ":string_constraints",
         "//src:context",
         "//src/librarian/testing:gtest_helpers",
-        "@abseil-cpp//absl/container:flat_hash_set",
+        "//src/variables:minteger",
         "@googletest//:gtest_main",
     ],
 )

@@ -72,6 +72,7 @@ cc_library(
     srcs = ["mutable_values_context.cc"],
     hdrs = ["mutable_values_context.h"],
     deps = [
+        "//src/internal:abstract_variable",
         "//src/internal:value_set",
         "//src/librarian/util:ref",
     ],
@@ -124,7 +125,7 @@ cc_library(
         "//src/internal:abstract_variable",
         "//src/internal:value_set",
         "//src/internal:variable_set",
-        "//src/librarian:policies",
+        "//src/librarian:io_config",
         "//src/librarian/util:ref",
     ],
 )
@@ -147,10 +148,12 @@ cc_library(
     srcs = ["view_only_context.cc"],
     hdrs = ["view_only_context.h"],
     deps = [
+        "//src/internal:abstract_variable",
         "//src/internal:expressions",
         "//src/internal:range",
         "//src/internal:value_set",
         "//src/internal:variable_set",
+        "//src/librarian:errors",
         "//src/librarian/util:ref",
     ],
 )
@@ -160,8 +163,8 @@ cc_test(
     srcs = ["basic_istream_context_test.cc"],
     deps = [
         ":basic_istream_context",
+        "//src/librarian:errors",
         "//src/librarian:io_config",
-        "//src/librarian:policies",
         "@googletest//:gtest_main",
     ],
 )
@@ -189,6 +192,7 @@ cc_test(
     name = "mutable_values_context_test",
     srcs = ["mutable_values_context_test.cc"],
     deps = [
+        ":mutable_values_context",
         "//src/internal:value_set",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
@@ -209,6 +213,7 @@ cc_test(
     srcs = ["resolve_values_context_test.cc"],
     deps = [
         ":resolve_values_context",
+        "//src/constraints:numeric_constraints",
         "//src/internal:generation_handler",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
@@ -221,7 +226,11 @@ cc_test(
     srcs = ["variable_istream_context_test.cc"],
     deps = [
         ":variable_istream_context",
+        "//src:test_case",
         "//src/constraints:container_constraints",
+        "//src/internal:value_set",
+        "//src/librarian:errors",
+        "//src/librarian:io_config",
         "//src/librarian:policies",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:marray",
@@ -235,6 +244,7 @@ cc_test(
     srcs = ["variable_ostream_context_test.cc"],
     deps = [
         ":variable_ostream_context",
+        "//src:test_case",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
@@ -257,6 +267,7 @@ cc_test(
     srcs = ["view_only_context_test.cc"],
     deps = [
         ":view_only_context",
+        "//src/constraints:container_constraints",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:marray",
         "//src/variables:minteger",

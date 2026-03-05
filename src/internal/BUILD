@@ -55,10 +55,7 @@ cc_library(
     name = "combinatorial_coverage",
     srcs = ["combinatorial_coverage.cc"],
     hdrs = ["combinatorial_coverage.h"],
-    deps = [
-        "@abseil-cpp//absl/algorithm:container",
-        "@abseil-cpp//absl/log:absl_check",
-    ],
+    deps = ["@abseil-cpp//absl/log:absl_check"],
 )
 
 cc_library(
@@ -237,6 +234,7 @@ cc_test(
     ],
     deps = [
         ":range",
+        "//src/types:real",
         "@googletest//:gtest_main",
     ],
 )
@@ -330,7 +328,6 @@ cc_library(
     name = "variable_name_utils",
     srcs = ["variable_name_utils.cc"],
     hdrs = ["variable_name_utils.h"],
-    deps = ["@abseil-cpp//absl/strings"],
 )
 
 cc_test(

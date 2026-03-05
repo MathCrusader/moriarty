@@ -17,6 +17,7 @@
 
 #include <compare>
 #include <functional>
+#include <string>
 
 namespace moriarty {
 

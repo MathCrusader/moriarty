@@ -24,8 +24,8 @@
 #include <vector>
 
 #include "absl/log/absl_check.h"
-#include "src/constraints/base_constraints.h"
 #include "src/constraints/container_constraints.h"
+#include "src/constraints/equality_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/constraints/size_constraints.h"
 #include "src/constraints/string_constraints.h"

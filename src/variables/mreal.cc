@@ -18,6 +18,7 @@
 #include <format>
 #include <optional>
 
+#include "src/constraints/equality_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/contexts/librarian_context.h"
 #include "src/librarian/errors.h"

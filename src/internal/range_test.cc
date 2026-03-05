@@ -20,7 +20,6 @@
 #include <stdexcept>
 #include <string_view>
 #include <unordered_map>
-#include <utility>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -62,24 +61,22 @@ testing::AssertionResult EqualRanges(const Range& r1, const Range& r2) {
 
   if (!extremes1.has_value())
     return testing::AssertionFailure()
-           << "first range is empty, second is "
-           << "[" << extremes2->min << ", " << extremes2->max << "]";
+           << "first range is empty, second is " << "[" << extremes2->min
+           << ", " << extremes2->max << "]";
 
   if (!extremes2.has_value())
     return testing::AssertionFailure()
-           << "first range is "
-           << "[" << extremes1->min << ", " << extremes1->max << "]"
-           << ", second is empty";
+           << "first range is " << "[" << extremes1->min << ", "
+           << extremes1->max << "]" << ", second is empty";
 
   if (extremes1 == extremes2)
     return testing::AssertionSuccess()
            << "both ranges are [" << extremes1->min << ", " << extremes1->max;
 
   return testing::AssertionFailure()
-         << "are not equal "
-         << "[" << extremes1->min << ", " << extremes1->max << "]"
-         << " vs "
-         << "[" << extremes2->min << ", " << extremes2->max << "]";
+         << "are not equal " << "[" << extremes1->min << ", " << extremes1->max
+         << "]" << " vs " << "[" << extremes2->min << ", " << extremes2->max
+         << "]";
 }
 
 // Checks if a range is empty, taking into account any expressions.

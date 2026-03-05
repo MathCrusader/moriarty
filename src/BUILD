@@ -35,6 +35,9 @@ cc_library(
         ":problem",
         ":test_case",
         "//src/internal:analysis_bootstrap",
+        "//src/internal:generation_bootstrap",
+        "//src/internal:random_engine",
+        "//src/librarian:errors",
     ],
 )
 
@@ -43,6 +46,7 @@ cc_library(
     srcs = ["context.cc"],
     hdrs = ["context.h"],
     deps = [
+        ":test_case",
         "//src/contexts/internal:basic_istream_context",
         "//src/contexts/internal:basic_ostream_context",
         "//src/contexts/internal:basic_random_context",
@@ -55,6 +59,8 @@ cc_library(
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:io_config",
+        "//src/librarian:policies",
+        "//src/librarian/util:ref",
     ],
 )
 
@@ -76,6 +82,8 @@ cc_library(
         "//src/internal:value_set",
         "//src/internal:variable_name_utils",
         "//src/internal:variable_set",
+        "//src/librarian:errors",
+        "//src/librarian:io_config",
     ],
 )
 
@@ -88,6 +96,7 @@ cc_library(
         ":simple_io",
         "//src/internal:abstract_variable",
         "//src/internal:variable_set",
+        "//src/librarian:errors",
     ],
 )
 
@@ -98,6 +107,9 @@ cc_library(
     deps = [
         ":context",
         "//src:test_case",
+        "//src/constraints:numeric_constraints",
+        "//src/internal:expressions",
+        "//src/librarian:errors",
         "//src/variables:minteger",
     ],
 )
@@ -122,11 +134,11 @@ cc_test(
     srcs = ["actions_test.cc"],
     deps = [
         ":actions",
-        ":context",
         ":problem",
         ":simple_io",
         "//src/constraints:numeric_constraints",
         "//src/librarian:errors",
+        "//src/librarian:policies",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "@googletest//:gtest_main",
@@ -143,6 +155,10 @@ cc_test(
         ":context",
         ":moriarty",
         ":test_case",
+        "//src/constraints:container_constraints",
+        "//src/constraints:numeric_constraints",
+        "//src/librarian:errors",
+        "//src/librarian:io_config",
         "//src/librarian/testing:gtest_helpers",
         "//src/librarian/testing:mtest_type",
         "//src/variables:marray",
@@ -170,6 +186,7 @@ cc_test(
         ":context",
         ":simple_io",
         ":test_case",
+        "//src/librarian:errors",
         "//src/librarian:io_config",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:marray",

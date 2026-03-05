@@ -21,7 +21,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "src/constraints/base_constraints.h"
+#include "src/constraints/equality_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/context.h"
 #include "src/internal/value_set.h"

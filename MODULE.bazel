@@ -25,6 +25,13 @@ bazel_dep(name = "rules_cc", version = "0.2.16")
 bazel_dep(name = "hedron_compile_commands", dev_dependency = True)
 git_override(
     module_name = "hedron_compile_commands",
-    remote = "https://github.com/mikael-s-persson/bazel-compile-commands-extractor",
     commit = "f5fbd4cee671d8d908f37c83abaf70fba5928fc7",
+    remote = "https://github.com/mikael-s-persson/bazel-compile-commands-extractor",
+)
+
+bazel_dep(name = "bazel_cc_meta", version = "0.0.0")
+git_override(
+    module_name = "bazel_cc_meta",
+    commit = "6a534335a0375ccdbee9e63a5d78a64f22df0b25",
+    remote = "https://github.com/mikael-s-persson/bazel_cc_meta",
 )

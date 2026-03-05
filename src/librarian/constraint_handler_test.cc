@@ -14,8 +14,6 @@
 
 #include "src/librarian/constraint_handler.h"
 
-#include <format>
-
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/constraints/constraint_violation.h"

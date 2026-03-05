@@ -1,5 +1,18 @@
-bazel-bin
-bazel-out
-bazel-testlogs
-bazel-moriarty
-bazel-workspace
+# Bazel output and build artifacts.
+bazel-*
+
+# Basic configuration files.
+.cache/
+.vscode/
+
+# Generated JSONs.
+compile_commands.json
+dependency_issues.json
+target_exports.json
+
+# Compiled C++ programs
+*.o
+*.so
+*.a
+*.dylib
+a.out

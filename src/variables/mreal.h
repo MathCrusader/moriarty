@@ -19,6 +19,7 @@
 
 #include <cstdint>
 
+#include "src/constraints/equality_constraints.h"
 #include "src/constraints/numeric_constraints.h"
 #include "src/internal/range.h"
 #include "src/librarian/mvariable.h"

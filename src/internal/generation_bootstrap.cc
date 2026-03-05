@@ -17,7 +17,6 @@
 
 #include <format>
 #include <functional>
-#include <memory>
 #include <queue>
 #include <ranges>
 #include <span>

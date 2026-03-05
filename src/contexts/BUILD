@@ -35,11 +35,11 @@ cc_library(
         "//src/contexts/internal:name_context",
         "//src/contexts/internal:resolve_values_context",
         "//src/contexts/internal:view_only_context",
-        "//src/internal:abstract_variable",
         "//src/internal:generation_handler",
         "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian:io_config",
+        "//src/librarian/util:ref",
     ],
 )

@@ -33,7 +33,6 @@ cc_library(
         "//src:context",
         "//src/constraints:constraint_violation",
         "//src/librarian/util:cow_ptr",
-        "//src/librarian/util:ref",
     ],
 )
 
@@ -42,6 +41,7 @@ cc_library(
     hdrs = ["conversions.h"],
     deps = [
         ":errors",
+        "//src/internal:abstract_variable",
     ],
 )
 
@@ -70,14 +70,20 @@ cc_library(
     deps = [
         ":constraint_handler",
         ":conversions",
+        ":errors",
+        ":io_config",
         ":one_of_handler",
+        ":policies",
+        "//src:context",
+        "//src/constraints:constraint_violation",
         "//src/constraints:custom_constraint",
         "//src/constraints:equality_constraints",
         "//src/contexts:librarian_context",
+        "//src/contexts/internal:mutable_values_context",
+        "//src/contexts/internal:view_only_context",
         "//src/internal:abstract_variable",
-        "//src/internal:generation_handler",
-        "//src/internal:random_engine",
-        "//src/internal:variable_name_utils",
+        "//src/internal:variable_set",
+        "//src/librarian/util:ref",
     ],
 )
 
@@ -108,6 +114,8 @@ cc_test(
         ":constraint_handler",
         "//src:context",
         "//src/constraints:constraint_violation",
+        "//src/internal:value_set",
+        "//src/internal:variable_set",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
         "//src/variables:mstring",
@@ -143,6 +151,7 @@ cc_test(
     srcs = ["mvariable_test.cc"],
     deps = [
         ":mvariable",
+        "//src:context",
         "//src/contexts:librarian_context",
         "//src/internal:abstract_variable",
         "//src/internal:generation_handler",

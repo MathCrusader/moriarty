@@ -40,8 +40,11 @@ cc_test(
     srcs = ["combinatorial_generator_test.cc"],
     deps = [
         ":combinatorial_generator",
+        "//src:context",
         "//src/internal:combinatorial_coverage",
         "//src/internal:combinatorial_coverage_test_util",
+        "//src/internal:generation_bootstrap",
+        "//src/internal:random_engine",
         "//src/internal:value_set",
         "//src/internal:variable_set",
         "//src/librarian/testing:gtest_helpers",

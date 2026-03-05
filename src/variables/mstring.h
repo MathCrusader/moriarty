@@ -20,8 +20,8 @@
 #include <type_traits>
 #include <vector>
 
-#include "src/constraints/base_constraints.h"
 #include "src/constraints/container_constraints.h"
+#include "src/constraints/equality_constraints.h"
 #include "src/constraints/size_constraints.h"
 #include "src/constraints/string_constraints.h"
 #include "src/contexts/librarian_context.h"
