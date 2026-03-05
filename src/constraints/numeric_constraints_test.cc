@@ -242,21 +242,21 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithIntegersWorks) {
     EXPECT_THAT(Between(10, 20).Validate(ctx, 15), HasNoViolation());
     EXPECT_THAT(Between(10, 20).Validate(ctx, 20), HasNoViolation());
     EXPECT_THAT(Between(10, 20).Validate(ctx, 9),
-                HasViolation(HasSubstr("between")));
+                HasViolation(HasSubstr("too small")));
     EXPECT_THAT(Between(10, 20).Validate(ctx, 21),
-                HasViolation(HasSubstr("between")));
+                HasViolation(HasSubstr("too large")));
   }
   {
     EXPECT_THAT(AtLeast(10).Validate(ctx, 10), HasNoViolation());
     EXPECT_THAT(AtLeast(10).Validate(ctx, 11), HasNoViolation());
     EXPECT_THAT(AtLeast(10).Validate(ctx, 9),
-                HasViolation(HasSubstr("at least")));
+                HasViolation(HasSubstr("too small")));
   }
   {
     EXPECT_THAT(AtMost(10).Validate(ctx, 10), HasNoViolation());
     EXPECT_THAT(AtMost(10).Validate(ctx, 9), HasNoViolation());
     EXPECT_THAT(AtMost(10).Validate(ctx, 11),
-                HasViolation(HasSubstr("at most")));
+                HasViolation(HasSubstr("too large")));
   }
 }
 
@@ -272,47 +272,47 @@ TEST(NumericConstraintsTest, IsSatisfiedWithRealsWorks) {
     EXPECT_THAT(Between(10, 20).Validate(ctx, 15.5), HasNoViolation());
     EXPECT_THAT(Between(10, 20).Validate(ctx, 20.0), HasNoViolation());
     EXPECT_THAT(Between(10, 20).Validate(ctx, 9.9),
-                HasViolation(HasSubstr("between")));
+                HasViolation(HasSubstr("too small")));
     EXPECT_THAT(Between(10, 20).Validate(ctx, 20.1),
-                HasViolation(HasSubstr("between")));
+                HasViolation(HasSubstr("too large")));
   }
   {
     EXPECT_THAT(AtLeast(10).Validate(ctx, 10.0), HasNoViolation());
     EXPECT_THAT(AtLeast(10).Validate(ctx, 10.1), HasNoViolation());
     EXPECT_THAT(AtLeast(10).Validate(ctx, 9.9),
-                HasViolation(HasSubstr("at least")));
+                HasViolation(HasSubstr("too small")));
   }
   {
     EXPECT_THAT(AtMost(10).Validate(ctx, 10.0), HasNoViolation());
     EXPECT_THAT(AtMost(10).Validate(ctx, 9.9), HasNoViolation());
     EXPECT_THAT(AtMost(10).Validate(ctx, 10.1),
-                HasViolation(HasSubstr("at most")));
+                HasViolation(HasSubstr("too large")));
   }
   {
     EXPECT_THAT(Between("x", "y").Validate(ctx, 15.0), HasNoViolation());
     EXPECT_THAT(Between("x", "y").Validate(ctx, 9.0),
-                HasViolation(HasSubstr("between")));
+                HasViolation(HasSubstr("too small")));
     EXPECT_THAT(Between("x", "y").Validate(ctx, 21.0),
-                HasViolation(HasSubstr("between")));
+                HasViolation(HasSubstr("too large")));
   }
   {
     EXPECT_THAT(AtLeast("x").Validate(ctx, 10.0), HasNoViolation());
     EXPECT_THAT(AtLeast("x").Validate(ctx, 11.0), HasNoViolation());
     EXPECT_THAT(AtLeast("x").Validate(ctx, 9.0),
-                HasViolation(HasSubstr("at least")));
+                HasViolation(HasSubstr("too small")));
   }
   {
     EXPECT_THAT(AtMost("y").Validate(ctx, 20.0), HasNoViolation());
     EXPECT_THAT(AtMost("y").Validate(ctx, 19.0), HasNoViolation());
     EXPECT_THAT(AtMost("y").Validate(ctx, 21.0),
-                HasViolation(HasSubstr("at most")));
+                HasViolation(HasSubstr("too large")));
   }
   {
     EXPECT_THAT(AtMost(Real("20.0")).Validate(ctx, 20.0), HasNoViolation());
     EXPECT_THAT(AtMost(Real("1e6")).Validate(ctx, 1000000.0), HasNoViolation());
     EXPECT_THAT(AtMost(Real("-10e-2")).Validate(ctx, -0.1), HasNoViolation());
     EXPECT_THAT(AtMost(Real("-10e-2")).Validate(ctx, -0.01),
-                HasViolation(HasSubstr("at most")));
+                HasViolation(HasSubstr("too large")));
   }
 }
 
@@ -326,9 +326,9 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
   {
     EXPECT_THAT(ExactlyNumeric("x").Validate(ctx, 10), HasNoViolation());
     EXPECT_THAT(ExactlyNumeric("x").Validate(ctx, 11),
-                HasViolation("expected: x (10)"));
+                HasViolation("expected: x"));
     EXPECT_THAT(ExactlyNumeric("x").Validate(ctx, 9),
-                HasViolation("expected: x (10)"));
+                HasViolation("expected: x"));
   }
   {
     EXPECT_THAT(OneOfNumeric(std::vector<std::string_view>{"x", "14"})
@@ -349,21 +349,21 @@ TEST(NumericConstraintsTest, IsSatisfiedWithWithExpressionWorks) {
     EXPECT_THAT(Between("x", "y^2").Validate(ctx, 25), HasNoViolation());
     EXPECT_THAT(Between("x", "y^2").Validate(ctx, 400), HasNoViolation());
     EXPECT_THAT(Between("x", "y^2").Validate(ctx, 9),
-                HasViolation(HasSubstr("between")));
+                HasViolation(HasSubstr("too small")));
     EXPECT_THAT(Between("x", "y^2").Validate(ctx, 401),
-                HasViolation(HasSubstr("between")));
+                HasViolation(HasSubstr("too large")));
   }
   {
     EXPECT_THAT(AtLeast("x").Validate(ctx, 10), HasNoViolation());
     EXPECT_THAT(AtLeast("x").Validate(ctx, 11), HasNoViolation());
     EXPECT_THAT(AtLeast("x").Validate(ctx, 9),
-                HasViolation(HasSubstr("at least")));
+                HasViolation(HasSubstr("too small")));
   }
   {
     EXPECT_THAT(AtMost("x + 1").Validate(ctx, 11), HasNoViolation());
     EXPECT_THAT(AtMost("x + 1").Validate(ctx, 10), HasNoViolation());
     EXPECT_THAT(AtMost("x + 1").Validate(ctx, 12),
-                HasViolation(HasSubstr("at most")));
+                HasViolation(HasSubstr("too large")));
   }
 }
 

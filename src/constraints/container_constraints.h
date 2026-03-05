@@ -324,7 +324,7 @@ ValidationResult DistinctElements::Validate(const std::vector<T>& value) const {
     if (!inserted) {
       return ValidationResult::Violation(
           std::format("array indices {} and {}", it->second, idx), elem,
-          "distinct elements");
+          librarian::Expected("distinct elements"));
     }
   }
   return ValidationResult::Ok();
@@ -355,7 +355,8 @@ ValidationResult Sorted<MElementType, Comp, Proj>::Validate(
     if (Compare(value[i], value[i - 1]))
       return ValidationResult::Violation(
           std::format("indices {} and {}", i - 1, i),
-          std::make_tuple(value[i - 1], value[i]), "elements must be sorted");
+          std::make_tuple(value[i - 1], value[i]),
+          librarian::Expected("sorted"));
   }
   return ValidationResult::Ok();
 }

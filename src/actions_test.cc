@@ -53,7 +53,7 @@ TEST(ValidateInputTest, InvalidVariableShouldFail) {
   EXPECT_THAT(SingleCall([&] {
                 ValidateInput(p).ReadInputUsing({.istream = input}).Run();
               }),
-              ThrowsMessage<IOError>(HasSubstr("between 1 and 10")));
+              ThrowsMessage<IOError>(HasSubstr("too large")));
 }
 
 TEST(ValidateInputTest, InvalidWhitespaceShouldFail) {
@@ -166,7 +166,7 @@ TEST(ValidateOutputTest, InvalidInputShouldFail) {
                     .ReadOutputUsing({.istream = output})
                     .Run();
               }),
-              ThrowsMessage<IOError>(HasSubstr("between 1 and 10")));
+              ThrowsMessage<IOError>(HasSubstr("too large")));
 }
 
 TEST(ValidateOutputTest, InvalidOutputShouldFail) {
@@ -182,7 +182,7 @@ TEST(ValidateOutputTest, InvalidOutputShouldFail) {
                     .ReadOutputUsing({.istream = output})
                     .Run();
               }),
-              ThrowsMessage<IOError>(HasSubstr("between 20 and 25")));
+              ThrowsMessage<IOError>(HasSubstr("too large")));
 }
 
 TEST(ValidateOutputTest, InvalidWhitespaceInOutputShouldRespectStrictness) {
@@ -321,7 +321,7 @@ TEST(ValidateOutputTest, OutputShouldHaveAccessToInputVariables) {
                                             WhitespaceStrictness::kFlexible})
                       .Run();
                 }),
-                ThrowsMessage<IOError>(HasSubstr("between 1 and N")));
+                ThrowsMessage<IOError>(HasSubstr("too large")));
   }
 }
 

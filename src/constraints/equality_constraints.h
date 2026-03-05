@@ -259,8 +259,9 @@ template <typename T>
 ValidationResult Exactly<T>::Validate(ConstraintContext ctx,
                                       const T& value) const {
   if (value == value_) return ValidationResult::Ok();
-  return ValidationResult::Violation(ctx.GetVariableName(), value,
-                                     moriarty_internal::ValuePrinter(value_));
+  return ValidationResult::Violation(
+      ctx.GetVariableName(), value,
+      librarian::Expected(moriarty_internal::ValuePrinter(value_)));
 }
 
 template <typename T>
@@ -369,7 +370,8 @@ ValidationResult OneOf<T>::Validate(ConstraintContext ctx,
 
   return ValidationResult::Violation(
       ctx.GetVariableName(), value,
-      std::format("one of {}", moriarty_internal::ValuePrinter(options_)));
+      librarian::Expected("one of {}",
+                          moriarty_internal::ValuePrinter(options_)));
 }
 
 template <typename T>

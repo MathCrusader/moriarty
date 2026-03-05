@@ -140,14 +140,26 @@ ValidationResult Between::Validate(ConstraintContext ctx, int64_t value) const {
   Real mini = GetRealValue(ctx, minimum_);
   Real maxi = GetRealValue(ctx, maximum_);
 
-  if (!(mini <= value && value <= maxi)) {
-    return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
-        std::format("between {} and {} ({}...{}){}", NumericToString(minimum_),
-                    NumericToString(maximum_), mini.ToString(), maxi.ToString(),
-                    (maxi < mini ? " (which is impossible)" : "")));
+  if (mini <= value && value <= maxi) return ValidationResult::Ok();
+
+  std::optional<librarian::Details> details;
+  if (maxi < mini) {
+    details = librarian::Details(
+        "minimum {} is greater than maximum {} (which is impossible to "
+        "satisfy)",
+        mini.ToString(), maxi.ToString());
+  } else if (value < mini) {
+    details = librarian::Details("too small");
+  } else if (value > maxi) {
+    details = librarian::Details("too large");
   }
-  return ValidationResult::Ok();
+  return ValidationResult::Violation(
+      ctx.GetVariableName(), value,
+      librarian::Expected("{} ≤ {} ≤ {}", NumericToString(minimum_),
+                          ctx.GetVariableName(), NumericToString(maximum_)),
+      librarian::Evaluated("{} ≤ {} ≤ {}", mini.ToString(),
+                           ctx.GetVariableName(), maxi.ToString()),
+      details);
 }
 
 ValidationResult Between::Validate(ConstraintContext ctx, int value) const {
@@ -158,14 +170,26 @@ ValidationResult Between::Validate(ConstraintContext ctx, double value) const {
   Real mini = GetRealValue(ctx, minimum_);
   Real maxi = GetRealValue(ctx, maximum_);
 
-  if (!(mini <= value && value <= maxi)) {
-    return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
-        std::format("between {} and {} ({}...{}){}", NumericToString(minimum_),
-                    NumericToString(maximum_), mini.ToString(), maxi.ToString(),
-                    (maxi < mini ? " (which is impossible)" : "")));
+  if (mini <= value && value <= maxi) return ValidationResult::Ok();
+
+  std::optional<librarian::Details> details;
+  if (maxi < mini) {
+    details = librarian::Details(
+        "minimum {} is greater than maximum {} (which is impossible to "
+        "satisfy)",
+        mini.ToString(), maxi.ToString());
+  } else if (value < mini) {
+    details = librarian::Details("too small");
+  } else if (value > maxi) {
+    details = librarian::Details("too large");
   }
-  return ValidationResult::Ok();
+  return ValidationResult::Violation(
+      ctx.GetVariableName(), value,
+      librarian::Expected("{} ≤ {} ≤ {}", NumericToString(minimum_),
+                          ctx.GetVariableName(), NumericToString(maximum_)),
+      librarian::Evaluated("{} ≤ {} ≤ {}", mini.ToString(),
+                           ctx.GetVariableName(), maxi.ToString()),
+      details);
 }
 
 std::vector<std::string> Between::GetDependencies() const {
@@ -196,13 +220,14 @@ std::string AtMost::ToString() const {
 ValidationResult AtMost::Validate(ConstraintContext ctx, int64_t value) const {
   Real maxi = GetRealValue(ctx, maximum_);
 
-  if (!(value <= maxi)) {
-    return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
-        std::format("at most {} ({})", NumericToString(maximum_),
-                    maxi.ToString()));
-  }
-  return ValidationResult::Ok();
+  if (value <= maxi) return ValidationResult::Ok();
+
+  return ValidationResult::Violation(
+      ctx.GetVariableName(), value,
+      librarian::Expected("{} ≤ {}", ctx.GetVariableName(),
+                          NumericToString(maximum_)),
+      librarian::Evaluated("{} ≤ {}", ctx.GetVariableName(), maxi.ToString()),
+      librarian::Details("too large"));
 }
 
 ValidationResult AtMost::Validate(ConstraintContext ctx, int value) const {
@@ -212,13 +237,14 @@ ValidationResult AtMost::Validate(ConstraintContext ctx, int value) const {
 ValidationResult AtMost::Validate(ConstraintContext ctx, double value) const {
   Real maxi = GetRealValue(ctx, maximum_);
 
-  if (!(value <= maxi)) {
-    return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
-        std::format("at most {} ({})", NumericToString(maximum_),
-                    maxi.ToString()));
-  }
-  return ValidationResult::Ok();
+  if (value <= maxi) return ValidationResult::Ok();
+
+  return ValidationResult::Violation(
+      ctx.GetVariableName(), value,
+      librarian::Expected("{} ≤ {}", ctx.GetVariableName(),
+                          NumericToString(maximum_)),
+      librarian::Evaluated("{} ≤ {}", ctx.GetVariableName(), maxi.ToString()),
+      librarian::Details("too large"));
 }
 
 std::vector<std::string> AtMost::GetDependencies() const {
@@ -249,13 +275,14 @@ std::string AtLeast::ToString() const {
 ValidationResult AtLeast::Validate(ConstraintContext ctx, int64_t value) const {
   Real mini = GetRealValue(ctx, minimum_);
 
-  if (!(mini <= value)) {
-    return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
-        std::format("at least {} ({})", NumericToString(minimum_),
-                    mini.ToString()));
-  }
-  return ValidationResult::Ok();
+  if (value >= mini) return ValidationResult::Ok();
+
+  return ValidationResult::Violation(
+      ctx.GetVariableName(), value,
+      librarian::Expected("{} ≥ {}", ctx.GetVariableName(),
+                          NumericToString(minimum_)),
+      librarian::Evaluated("{} ≥ {}", ctx.GetVariableName(), mini.ToString()),
+      librarian::Details("too small"));
 }
 
 ValidationResult AtLeast::Validate(ConstraintContext ctx, int value) const {
@@ -265,13 +292,14 @@ ValidationResult AtLeast::Validate(ConstraintContext ctx, int value) const {
 ValidationResult AtLeast::Validate(ConstraintContext ctx, double value) const {
   Real mini = GetRealValue(ctx, minimum_);
 
-  if (!(mini <= value)) {
-    return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
-        std::format("at least {} ({})", NumericToString(minimum_),
-                    mini.ToString()));
-  }
-  return ValidationResult::Ok();
+  if (value >= mini) return ValidationResult::Ok();
+
+  return ValidationResult::Violation(
+      ctx.GetVariableName(), value,
+      librarian::Expected("{} ≥ {}", ctx.GetVariableName(),
+                          NumericToString(minimum_)),
+      librarian::Evaluated("{} ≥ {}", ctx.GetVariableName(), mini.ToString()),
+      librarian::Details("too small"));
 }
 
 std::vector<std::string> AtLeast::GetDependencies() const {
@@ -309,25 +337,26 @@ std::string ExactlyNumeric::ToString() const {
 ValidationResult ExactlyNumeric::Validate(ConstraintContext ctx,
                                           int64_t value) const {
   if (std::holds_alternative<Expression>(value_)) {
-    int64_t expected = ctx.EvaluateExpression(std::get<Expression>(value_));
+    const Expression& expr = std::get<Expression>(value_);
+    int64_t expected = ctx.EvaluateExpression(expr);
     if (expected == value) return ValidationResult::Ok();
-    return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
-        std::format("{} ({})", std::get<Expression>(value_).ToString(),
-                    expected));
+    return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                       librarian::Expected(expr.ToString()),
+                                       librarian::Evaluated("{}", expected));
   }
 
   if (std::holds_alternative<int64_t>(value_)) {
-    if (std::get<int64_t>(value_) == value) return ValidationResult::Ok();
-    return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
-        std::format("{}", std::get<int64_t>(value_)));
+    int64_t expected = std::get<int64_t>(value_);
+    if (expected == value) return ValidationResult::Ok();
+    return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                       librarian::Expected("{}", expected));
   }
 
   if (std::holds_alternative<Real>(value_)) {
-    if (std::get<Real>(value_) == value) return ValidationResult::Ok();
-    return ValidationResult::Violation(ctx.GetVariableName(), value,
-                                       std::get<Real>(value_).ToString());
+    const Real& expected = std::get<Real>(value_);
+    if (expected == value) return ValidationResult::Ok();
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value, librarian::Expected(expected.ToString()));
   }
 
   throw std::logic_error(
@@ -342,28 +371,27 @@ ValidationResult ExactlyNumeric::Validate(ConstraintContext ctx,
 ValidationResult ExactlyNumeric::Validate(ConstraintContext ctx,
                                           double value) const {
   if (std::holds_alternative<Expression>(value_)) {
-    int64_t expected = ctx.EvaluateExpression(std::get<Expression>(value_));
+    const Expression& expr = std::get<Expression>(value_);
+    int64_t expected = ctx.EvaluateExpression(expr);
     if (CloseEnough(expected, value)) return ValidationResult::Ok();
-    return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
-        std::format("{} ({})", std::get<Expression>(value_).ToString(),
-                    expected));
+    return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                       librarian::Expected(expr.ToString()),
+                                       librarian::Evaluated("{}", expected));
   }
 
   if (std::holds_alternative<int64_t>(value_)) {
-    if (CloseEnough(std::get<int64_t>(value_), value))
-      return ValidationResult::Ok();
-    return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
-        std::format("{}", std::get<int64_t>(value_)));
+    int64_t expected = std::get<int64_t>(value_);
+    if (CloseEnough(expected, value)) return ValidationResult::Ok();
+    return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                       librarian::Expected("{}", expected));
   }
 
   if (std::holds_alternative<Real>(value_)) {
-    if (CloseEnough(std::get<Real>(value_).GetApproxValue(), value))
+    const Real& expected = std::get<Real>(value_);
+    if (CloseEnough(expected.GetApproxValue(), value))
       return ValidationResult::Ok();
     return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
-        std::format("{}", std::get<Real>(value_).ToString()));
+        ctx.GetVariableName(), value, librarian::Expected(expected.ToString()));
   }
 
   throw std::logic_error(
@@ -581,22 +609,31 @@ ValidationResult OneOfNumeric::Validate(ConstraintContext ctx,
                                         int64_t value) const {
   if (numeric_options_.HasBeenConstrained()) {
     if (!numeric_options_.HasOption(Real(value))) {
+      const std::vector<Real>& options = numeric_options_.GetOptions();
       return ValidationResult::Violation(
           ctx.GetVariableName(), value,
-          std::format("one of {}", moriarty_internal::ValuePrinter(
-                                       numeric_options_.GetOptions())));
+          librarian::Expected("one of {}", ctx.GetVariableName(),
+                              moriarty_internal::ValuePrinter(options)));
     }
   }
 
   for (const std::vector<Expression>& option_list : expr_options_) {
-    auto it = std::ranges::find_if(option_list, [&](const Expression& expr) {
-      return ctx.EvaluateExpression(expr) == value;
-    });
-    if (it == option_list.end()) {
+    std::vector<int64_t> evaluated_options;
+    evaluated_options.reserve(option_list.size());
+    for (const Expression& expr : option_list)
+      evaluated_options.push_back(ctx.EvaluateExpression(expr));
+
+    if (std::ranges::find(evaluated_options, value) ==
+        evaluated_options.end()) {
+      std::string expected_options;
+      AppendList(option_list, expected_options);
       return ValidationResult::Violation(
           ctx.GetVariableName(), value,
-          OptionString(expr_options_,
-                       numeric_options_));  // TODO: Migrate to ValuePrinter
+          librarian::Expected("one of {}", ctx.GetVariableName(),
+                              expected_options),
+          librarian::Evaluated(
+              "one of {}", ctx.GetVariableName(),
+              moriarty_internal::ValuePrinter(evaluated_options)));
     }
   }
   return ValidationResult::Ok();
@@ -614,21 +651,32 @@ ValidationResult OneOfNumeric::Validate(ConstraintContext ctx,
                            [&](const Real& option) {
                              return CloseEnough(option.GetApproxValue(), value);
                            }) == numeric_options_.GetOptions().end()) {
+    const std::vector<Real>& options = numeric_options_.GetOptions();
     return ValidationResult::Violation(
         ctx.GetVariableName(), value,
-        std::format("one of {}", moriarty_internal::ValuePrinter(
-                                     numeric_options_.GetOptions())));
+        librarian::Expected("one of {}", ctx.GetVariableName(),
+                            moriarty_internal::ValuePrinter(options)));
   }
 
   for (const std::vector<Expression>& option_list : expr_options_) {
-    auto it = std::ranges::find_if(option_list, [&](const Expression& expr) {
-      return CloseEnough(ctx.EvaluateExpression(expr), value);
+    std::vector<int64_t> evaluated_options;
+    evaluated_options.reserve(option_list.size());
+    for (const Expression& expr : option_list)
+      evaluated_options.push_back(ctx.EvaluateExpression(expr));
+
+    auto it = std::ranges::find_if(evaluated_options, [&](int64_t option) {
+      return CloseEnough(option, value);
     });
-    if (it == option_list.end()) {
+    if (it == evaluated_options.end()) {
+      std::string expected_options;
+      AppendList(option_list, expected_options);
       return ValidationResult::Violation(
           ctx.GetVariableName(), value,
-          std::format("one of {}",
-                      OptionString(expr_options_, numeric_options_)));
+          librarian::Expected("one of {}", ctx.GetVariableName(),
+                              expected_options),
+          librarian::Evaluated(
+              "one of {}", ctx.GetVariableName(),
+              moriarty_internal::ValuePrinter(evaluated_options)));
     }
   }
   return ValidationResult::Ok();

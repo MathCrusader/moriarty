@@ -42,7 +42,8 @@ using ::testing::Not;
 struct Even {
   ValidationResult Validate(ConstraintContext ctx, int value) const {
     if (value % 2 == 0) return ValidationResult::Ok();
-    return ValidationResult::Violation(ctx.GetVariableName(), value, "even");
+    return ValidationResult::Violation(ctx.GetVariableName(), value,
+                                       librarian::Expected("even"));
   }
   std::string ToString() const { return "is even"; }
   void ApplyTo(MInteger& other) const { throw "unimplemented"; }
@@ -52,7 +53,7 @@ struct Positive {
   ValidationResult Validate(ConstraintContext ctx, int value) const {
     if (value > 0) return ValidationResult::Ok();
     return ValidationResult::Violation(ctx.GetVariableName(), value,
-                                       "positive");
+                                       librarian::Expected("positive"));
   }
   std::string ToString() const { return "is positive"; }
   void ApplyTo(MInteger& other) const { throw "unimplemented"; }

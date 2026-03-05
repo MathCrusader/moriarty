@@ -24,12 +24,39 @@
 
 namespace moriarty {
 
-namespace moriarty_internal {
+namespace librarian {
+struct Expected {
+  std::string value;
+  explicit Expected(std::string s) : value(std::move(s)) {}
+  template <typename... Args>
+  explicit Expected(std::format_string<Args...> fmt, Args&&... args)
+      : value(std::format(fmt, std::forward<Args>(args)...)) {}
+};
 
+struct Evaluated {
+  std::string value;
+  explicit Evaluated(std::string s) : value(std::move(s)) {}
+  template <typename... Args>
+  explicit Evaluated(std::format_string<Args...> fmt, Args&&... args)
+      : value(std::format(fmt, std::forward<Args>(args)...)) {}
+};
+
+struct Details {
+  std::string value;
+  explicit Details(std::string s) : value(std::move(s)) {}
+  template <typename... Args>
+  explicit Details(std::format_string<Args...> fmt, Args&&... args)
+      : value(std::format(fmt, std::forward<Args>(args)...)) {}
+};
+
+}  // namespace librarian
+
+namespace moriarty_internal {
 struct ValidationResultNode {
   struct Details {
-    std::string expected;
-    std::optional<std::string> violation;
+    ::moriarty::librarian::Expected expected;
+    std::optional<::moriarty::librarian::Evaluated> evaluated;
+    std::optional<::moriarty::librarian::Details> details;
   };
   // Either the variable or sub-variable name ("length, "element 5", "A")
   std::string name;
@@ -50,16 +77,16 @@ class [[nodiscard]] ValidationResult {
   static ValidationResult Ok();
   // There is a direct constraint violation on this variable.
   template <typename T>
-  static ValidationResult Violation(std::string name, const T& value,
-                                    std::string expected);
-  // There is a direct constraint violation on this variable.
-  template <typename T>
-  static ValidationResult Violation(std::string name, const T& value,
-                                    std::string expected,
-                                    std::string violation);
+  static ValidationResult Violation(
+      std::string name, const T& value, librarian::Expected expected,
+      std::optional<librarian::Evaluated> evaluated = std::nullopt,
+      std::optional<librarian::Details> details = std::nullopt);
   // There is a direct constraint violation on this variable, but it doesn't
   // have a value.
-  static ValidationResult Violation(std::string name, std::string expected);
+  static ValidationResult Violation(
+      std::string name, librarian::Expected expected,
+      std::optional<librarian::Evaluated> evaluated = std::nullopt,
+      std::optional<librarian::Details> details = std::nullopt);
   // There is an indirect constraint violation on either this variable or the
   // sub-variable. The details from `details` will be nested under `name` and
   // `value` in the message.
@@ -102,21 +129,10 @@ struct DetailedValidationResult {
 //  Template implementations below
 
 template <typename T>
-ValidationResult ValidationResult::Violation(std::string name, const T& value,
-                                             std::string expected) {
-  return ValidationResult(
-      InternalConstructorTag{}, false,
-      std::make_unique<moriarty_internal::ValidationResultNode>(
-          moriarty_internal::ValidationResultNode{
-              std::move(name), moriarty_internal::ValuePrinter(value),
-              moriarty_internal::ValidationResultNode::Details{
-                  .expected = std::move(expected)}}));
-}
-
-template <typename T>
-ValidationResult ValidationResult::Violation(std::string name, const T& value,
-                                             std::string expected,
-                                             std::string violation) {
+ValidationResult ValidationResult::Violation(
+    std::string name, const T& value, librarian::Expected expected,
+    std::optional<librarian::Evaluated> evaluated,
+    std::optional<librarian::Details> details) {
   return ValidationResult(
       InternalConstructorTag{}, false,
       std::make_unique<moriarty_internal::ValidationResultNode>(
@@ -124,7 +140,8 @@ ValidationResult ValidationResult::Violation(std::string name, const T& value,
               std::move(name), moriarty_internal::ValuePrinter(value),
               moriarty_internal::ValidationResultNode::Details{
                   .expected = std::move(expected),
-                  .violation = std::move(violation)}}));
+                  .evaluated = std::move(evaluated),
+                  .details = std::move(details)}}));
 }
 
 template <typename T>

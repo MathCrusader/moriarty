@@ -519,18 +519,18 @@ TEST(MGraphTest, NodeLabelsAndEdgeLabelsValidate) {
   EXPECT_THAT(node_labels_ok.Validate(ctx, G), HasNoViolation());
 
   NodeLabels<MInteger> node_labels_fail(AtMost(15));
-  EXPECT_THAT(node_labels_fail.Validate(ctx, G),
-              HasViolation(
-                  AllOf(HasSubstr("node 1's label"), HasSubstr("at most 15"))));
+  EXPECT_THAT(
+      node_labels_fail.Validate(ctx, G),
+      HasViolation(AllOf(HasSubstr("node 1's label"), HasSubstr("too large"))));
 
   // Edge label constraints
   EdgeLabels<MInteger> edge_labels_ok(AtLeast(50));
   EXPECT_THAT(edge_labels_ok.Validate(ctx, G), HasNoViolation());
 
   EdgeLabels<MInteger> edge_labels_fail(AtMost(90));
-  EXPECT_THAT(edge_labels_fail.Validate(ctx, G),
-              HasViolation(
-                  AllOf(HasSubstr("edge 0's label"), HasSubstr("at most 90"))));
+  EXPECT_THAT(
+      edge_labels_fail.Validate(ctx, G),
+      HasViolation(AllOf(HasSubstr("edge 0's label"), HasSubstr("too large"))));
 }
 
 TEST(MGraphTest, NodeLabelsAndEdgeLabelsAreGenerated) {

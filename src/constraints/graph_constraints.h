@@ -333,9 +333,11 @@ template <typename EdgeLabel, typename NodeLabel>
 ValidationResult Connected::Validate(
     ConstraintContext ctx, const Graph<EdgeLabel, NodeLabel>& value) const {
   if (value.NumNodes() == 0)
-    return ValidationResult::Violation(ctx.GetVariableName(), value,
-                                       "graph must be connected (a graph with "
-                                       "0 nodes is not considered connected)");
+    return ValidationResult::Violation(
+        ctx.GetVariableName(), value, librarian::Expected("connected graph"),
+        std::nullopt,
+        librarian::Details("a graph with "
+                           "0 nodes is not considered connected"));
 
   class UnionFind {
    public:
@@ -364,8 +366,9 @@ ValidationResult Connected::Validate(
   for (int i = 1; i < value.NumNodes(); ++i)
     if (uf.find(i) != uf.find(0))
       return ValidationResult::Violation(
-          ctx.GetVariableName(), value, "connected graph",
-          std::format("no path from node 0 to node {}", i));
+          ctx.GetVariableName(), value, librarian::Expected("connected graph"),
+          std::nullopt,
+          librarian::Details(std::format("no path from node 0 to node {}", i)));
   return ValidationResult::Ok();
 }
 
@@ -380,12 +383,15 @@ ValidationResult NoParallelEdges::Validate(
   for (const auto& [u, v, _] : edges) {
     if (!seen.emplace(u, v).second)
       return ValidationResult::Violation(
-          ctx.GetVariableName(), value, "no parallel edges",
-          std::format("parallel edges between nodes {} and {}", u, v));
+          ctx.GetVariableName(), value,
+          librarian::Expected("no parallel edges"), std::nullopt,
+          librarian::Details(
+              std::format("parallel edges between nodes {} and {}", u, v)));
     if (u != v && !seen.emplace(v, u).second)
       return ValidationResult::Violation(
-          ctx.GetVariableName(), value, "no parallel edges",
-          std::format("parallel edges between nodes {} and {}", v, u));
+          ctx.GetVariableName(), value,
+          librarian::Expected("no parallel edges"), std::nullopt,
+          librarian::Details("parallel edges between nodes {} and {}", v, u));
   }
   return ValidationResult::Ok();
 }
@@ -398,8 +404,8 @@ ValidationResult Loopless::Validate(
   for (const auto& [u, v, _] : edges) {
     if (u == v) {
       return ValidationResult::Violation(
-          ctx.GetVariableName(), value, "no loops",
-          std::format("edge from node {} to itself", u));
+          ctx.GetVariableName(), value, librarian::Expected("no loops"),
+          std::nullopt, librarian::Details("edge from node {} to itself", u));
     }
   }
   return ValidationResult::Ok();

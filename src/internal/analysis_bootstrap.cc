@@ -54,8 +54,10 @@ std::vector<DetailedValidationResult> ValidateValues(
     if (!values.Contains(name)) {
       if (validation == ValidationStyle::kAllVariables ||
           validation == ValidationStyle::kEverything) {
-        violations.push_back({name, ValidationResult::Violation(
-                                        name, "should have a value assigned")});
+        violations.push_back(
+            {name,
+             ValidationResult::Violation(
+                 name, librarian::Expected("should have a value assigned"))});
       }
       continue;
     }
@@ -73,7 +75,7 @@ std::vector<DetailedValidationResult> ValidateValues(
 
       violations.push_back(
           {name, ValidationResult::Violation(
-                     name, std::format(
+                     name, librarian::Expected(
                                "no variable found with this name, but a value "
                                "was set for it",
                                name))});

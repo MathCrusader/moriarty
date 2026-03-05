@@ -222,7 +222,7 @@ TEST(MVariantTest, IsSatisfiedWithWorksForValid) {
 TEST(MVariantTest, IsSatisfiedWithWorksForInvalid) {
   auto constraints = MVariant(MInteger(Between(100, 111)), MString(Length(5)));
 
-  EXPECT_THAT(constraints, IsNotSatisfiedWith(0, "between"));
+  EXPECT_THAT(constraints, IsNotSatisfiedWith(0, "too small"));
   EXPECT_THAT(constraints, IsNotSatisfiedWith("toolong", "length"));
 }
 

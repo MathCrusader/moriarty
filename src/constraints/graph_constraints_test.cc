@@ -60,11 +60,11 @@ TEST(GraphConstraintsTest, UnsatisfiedReasonLooksReasonable) {
   ConstraintContext ctx("G", variables, values);
 
   EXPECT_THAT(NumNodes(Between(1, 10)).Validate(ctx, Graph(25)),
-              HasViolation(AllOf(HasSubstr("number of nodes"),
-                                 HasSubstr("expected: between 1 and 10"))));
+              HasViolation(
+                  AllOf(HasSubstr("number of nodes"), HasSubstr("too large"))));
   EXPECT_THAT(NumEdges(Between(1, 10)).Validate(ctx, Graph(25)),
-              HasViolation(AllOf(HasSubstr("number of edges"),
-                                 HasSubstr("expected: between 1 and 10"))));
+              HasViolation(
+                  AllOf(HasSubstr("number of edges"), HasSubstr("too small"))));
   EXPECT_THAT(Connected().Validate(ctx, Graph(25)),
               HasViolation("expected: connected graph"));
   EXPECT_THAT(
@@ -80,17 +80,17 @@ TEST(GraphConstraintsTest, UnsatisfiedReasonLooksReasonable) {
 
   Graph<NoEdgeLabel, int64_t> graph_with_node_labels(3);
   graph_with_node_labels.SetNodeLabels({5, 10, 15});
-  EXPECT_THAT(NodeLabels<MInteger>(Between(1, 10))
-                  .Validate(ctx, graph_with_node_labels),
-              HasViolation(AllOf(HasSubstr("node 2's label"),
-                                 HasSubstr("expected: between 1 and 10"))));
+  EXPECT_THAT(
+      NodeLabels<MInteger>(Between(1, 10))
+          .Validate(ctx, graph_with_node_labels),
+      HasViolation(AllOf(HasSubstr("node 2's label"), HasSubstr("too large"))));
 
   Graph<int64_t, NoNodeLabel> graph_with_edge_labels(3);
   graph_with_edge_labels.AddEdge(0, 1, 5).AddEdge(1, 2, 15);
-  EXPECT_THAT(EdgeLabels<MInteger>(Between(1, 10))
-                  .Validate(ctx, graph_with_edge_labels),
-              HasViolation(AllOf(HasSubstr("edge 1's label"),
-                                 HasSubstr("expected: between 1 and 10"))));
+  EXPECT_THAT(
+      EdgeLabels<MInteger>(Between(1, 10))
+          .Validate(ctx, graph_with_edge_labels),
+      HasViolation(AllOf(HasSubstr("edge 1's label"), HasSubstr("too large"))));
 }
 
 TEST(GraphConstraintsTest, NumNodesAndEdgesGetConstraintsAreCorrect) {

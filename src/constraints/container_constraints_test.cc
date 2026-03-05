@@ -60,11 +60,9 @@ TEST(ContainerConstraintsTest, LengthUnsatisfiedReasonWorks) {
 
   EXPECT_THAT(
       Length(Between(1, 10)).Validate(ctx, std::string("this string is long")),
-      HasViolation(
-          AllOf(HasSubstr("length"), HasSubstr("expected: between 1 and 10"))));
+      HasViolation(AllOf(HasSubstr("length"), HasSubstr("too large"))));
   EXPECT_THAT(Length(Between(3, 10)).Validate(ctx, std::vector<int>{1, 2}),
-              HasViolation(AllOf(HasSubstr("length"),
-                                 HasSubstr("expected: between 3 and 10"))));
+              HasViolation(AllOf(HasSubstr("length"), HasSubstr("too small"))));
 }
 
 TEST(ContainerConstraintsTest, LengthIsSatisfiedWithWorks) {
@@ -112,13 +110,11 @@ TEST(ContainerConstraintsTest, ElementsUnsatisfiedReasonWorks) {
 
   EXPECT_THAT(
       StronglyTypedElements<MInteger>(Between(1, 10)).Validate(ctx, {-1, 2, 3}),
-      HasViolation(AllOf(HasSubstr("index 0"),
-                         HasSubstr("expected: between 1 and 10"))));
+      HasViolation(AllOf(HasSubstr("index 0"), HasSubstr("too small"))));
   EXPECT_THAT(
       StronglyTypedElements<MString>(Length(Between(3, 10)))
           .Validate(ctx, std::vector<std::string>{"hello", "moto", "me"}),
-      HasViolation(AllOf(HasSubstr("index 2"),
-                         HasSubstr("expected: between 3 and 10"))));
+      HasViolation(AllOf(HasSubstr("index 2"), HasSubstr("too small"))));
 }
 
 TEST(ContainerConstraintsTest, ElementsIsSatisfiedWithWorks) {
@@ -155,14 +151,14 @@ TEST(ContainerConstraintsTest, ElementsIsSatisfiedWithWorks) {
                 HasViolation(HasSubstr("length")));
   }
   {
-    EXPECT_THAT(StronglyTypedElements<MInteger>(Between(1, 10))
-                    .Validate(ctx, std::vector<int64_t>{1, 2, 11}),
-                HasViolation(AllOf(HasSubstr("index 2"),
-                                   HasSubstr("between 1 and 10"))));
-    EXPECT_THAT(StronglyTypedElements<MInteger>(Between(1, "X"))
-                    .Validate(ctx, std::vector<int64_t>{1, 2, 11}),
-                HasViolation(
-                    AllOf(HasSubstr("index 2"), HasSubstr("between 1 and X"))));
+    EXPECT_THAT(
+        StronglyTypedElements<MInteger>(Between(1, 10))
+            .Validate(ctx, std::vector<int64_t>{1, 2, 11}),
+        HasViolation(AllOf(HasSubstr("index 2"), HasSubstr("too large"))));
+    EXPECT_THAT(
+        StronglyTypedElements<MInteger>(Between(1, "X"))
+            .Validate(ctx, std::vector<int64_t>{1, 2, 11}),
+        HasViolation(AllOf(HasSubstr("index 2"), HasSubstr("too large"))));
   }
 }
 
@@ -187,10 +183,10 @@ TEST(ContainerConstraintsTest, ElementUnsatisfiedReasonWorks) {
   ConstraintContext ctx("N", variables, values);
 
   EXPECT_THAT((Element<0, MInteger>(Between(1, 10)).Validate(ctx, -1)),
-              HasViolation("between 1 and 10"));
+              HasViolation("too small"));
   EXPECT_THAT(
       (Element<12, MString>(Length(Between(1, 3))).Validate(ctx, "hello")),
-      HasViolation(AllOf(HasSubstr("length"), HasSubstr("between 1 and 3"))));
+      HasViolation(AllOf(HasSubstr("length"), HasSubstr("too large"))));
 }
 
 TEST(ContainerConstraintsTest, ElementIsSatisfiedWithWorks) {

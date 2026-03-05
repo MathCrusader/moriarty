@@ -473,8 +473,7 @@ template <typename V>
 auto MVariable<V>::Read(ReadVariableContext ctx) const -> value_type {
   value_type value = ReadImpl(ctx);
   if (auto v = Validate(ConstraintContext(ctx), value); !v.IsOk()) {
-    ctx.ThrowIOErrorWithContext("value does not satisfy constraints",
-                                v.PrettyReason());
+    ctx.ThrowIOErrorWithContext("invalid value", v.PrettyReason());
   }
   return value;
 }

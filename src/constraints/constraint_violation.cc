@@ -41,13 +41,15 @@ std::string PrettyPrintValidationResult(const ValidationResultNode& node) {
   std::string result = std::format("└─ {}\n", node.name);
 
   if (std::holds_alternative<Dets>(node.details)) {
-    const auto& details = std::get<Dets>(node.details);
-    result += std::format("   │ expected: {}\n", details.expected);
+    const auto& d = std::get<Dets>(node.details);
+    result += std::format("   │ expected: {}\n", d.expected.value);
+    if (d.evaluated && d.evaluated->value != d.expected.value)
+      result += std::format("   │           = {}\n", d.evaluated->value);
     result += std::format("   │      got: {}\n", node.value);
-    if (details.violation)
-      result += std::format("   │  details: {}\n", *details.violation);
+    if (d.details)
+      result += std::format("   │  details: {}\n", d.details->value);
   } else {
-    result += std::format("   │ which is: {}\n", node.value);
+    result += std::format("   │    value: {}\n", node.value);
     result += PrettyPrintValidationResult(*std::get<Node>(node.details));
   }
   return result;
@@ -70,15 +72,19 @@ ValidationResult ValidationResult::Ok() {
                           nullptr);
 }
 
-ValidationResult ValidationResult::Violation(std::string name,
-                                             std::string expected) {
+ValidationResult ValidationResult::Violation(
+    std::string name, librarian::Expected expected,
+    std::optional<librarian::Evaluated> evaluated,
+    std::optional<librarian::Details> details) {
   return ValidationResult(
       ValidationResult::InternalConstructorTag{}, false,
       std::make_unique<moriarty_internal::ValidationResultNode>(
           moriarty_internal::ValidationResultNode{
               std::move(name), "(none)",
               moriarty_internal::ValidationResultNode::Details{
-                  .expected = std::move(expected)}}));
+                  .expected = std::move(expected),
+                  .evaluated = std::move(evaluated),
+                  .details = std::move(details)}}));
 }
 
 bool ValidationResult::IsOk() const { return ok_; }

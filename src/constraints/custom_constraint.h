@@ -107,7 +107,8 @@ ValidationResult CustomConstraint<T>::Validate(
     return ValidationResult::Ok();
   return ValidationResult::Violation(
       ctx.GetVariableName(), value,
-      std::format("value must satisfy the custom constraint `{}`", name_));
+      librarian::Expected("value must satisfy the custom constraint `{}`",
+                          name_));
 }
 
 template <typename T>

@@ -246,7 +246,7 @@ TEST(MStringTest, IsSatisfiedWithShouldCheckTheAlphabetIfSet) {
   EXPECT_THAT(MString(Alphabet("edbca")), IsSatisfiedWith("abcde"));
 
   EXPECT_THAT(MString(Alphabet("abcd")),
-              IsNotSatisfiedWith("abcde", "must be one of \"abcd\""));
+              IsNotSatisfiedWith("abcde", "one of \"abcd\""));
 }
 
 TEST(MStringTest, IsSatisfiedWithWithInvalidLengthShouldFail) {
