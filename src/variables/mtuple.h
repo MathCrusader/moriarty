@@ -317,7 +317,7 @@ MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
   };
 
   return [&]<size_t... I>(std::index_sequence<I...>) {
-    return tuple_value_type{generate_one.template operator()<I>()...};
+    return tuple_value_type { generate_one.template operator()<I>()... };
   }(std::index_sequence_for<T...>{});
 }
 
@@ -357,10 +357,11 @@ template <size_t I, typename MElementType>
 ValidationResult
 MTuple<T...>::ElementConstraintWrapper<I, MElementType>::Validate(
     ConstraintContext ctx, const tuple_value_type& value) const {
-  auto v = constraint_.Validate(ctx.ForSubVariable(std::format("index {}", I)),
+  auto index_name = [](int idx) { return std::format("index {}", idx); };
+  auto v = constraint_.Validate(ctx.ForIndexedSubVariable(index_name, I),
                                 std::get<I>(value));
   if (v.IsOk()) return ValidationResult::Ok();
-  return ValidationResult::Violation(ctx.GetVariableName(), value,
+  return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
                                      std::move(v));
 }
 

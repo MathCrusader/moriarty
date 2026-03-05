@@ -41,7 +41,7 @@ NameContext NameContext::ForIndexedSubVariable(
   return indexed_ctx;
 }
 
-std::string NameContext::GetVariableName() const {
+std::string NameContext::GetLocalVariableName() const {
   if (indexed_name_fn_) return indexed_name_fn_(indexed_name_fn_index_);
   return name_;
 }
@@ -52,11 +52,26 @@ std::vector<std::string> NameContext::GetVariableStack() const {
   while (current != nullptr) {
     std::cout << "N " << current->name_ << std::endl;
     std::cout << "# " << current->indexed_name_fn_index_ << std::endl;
-    stack.push_back(current->GetVariableName());
+    stack.push_back(current->GetLocalVariableName());
     current = current->parent_;
   }
   std::reverse(stack.begin(), stack.end());
   return stack;
+}
+
+// TODO: This is pretty hacky right now. See if we can figure out a
+// nice way to handle this.
+std::string NameContext::GetVariableNameHash() const {
+  if (parent_ == nullptr) return GetLocalVariableName();
+  size_t hash = 0;
+  std::hash<std::string> hasher;
+  const NameContext* current = this;
+  while (current != nullptr) {
+    hash ^= hasher(current->GetLocalVariableName()) + 0x9e3779b9 + (hash << 6) +
+            (hash >> 2);
+    current = current->parent_;
+  }
+  return std::to_string(hash);
 }
 
 }  // namespace moriarty_internal

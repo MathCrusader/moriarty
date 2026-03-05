@@ -153,7 +153,7 @@ Range::ExtremeValues<int64_t> MInteger::GetExtremeValues(
         return ctx.GenerateVariable<MInteger>(var);
       });
   if (!extremes) {
-    throw GenerationError(ctx.GetVariableName(),
+    throw GenerationError(ctx.GetLocalVariableName(),
                           std::format("No integer satisfies: {}", ToString()),
                           RetryPolicy::kAbort);
   }
@@ -206,7 +206,7 @@ int64_t HandleModdedGeneration(
   int64_t mod = ctx.ResolveExpression(m.modulus);
   if (mod <= 0) {
     throw GenerationError(
-        ctx.GetVariableName(),
+        ctx.GetLocalVariableName(),
         std::format("Mod value evaluated to non-negative: {}", mod),
         RetryPolicy::kAbort);
   }
@@ -233,7 +233,7 @@ int64_t HandleModdedGeneration(
     auto orig_extremes = clamp_extremes(original_extremes, mod, remainder);
     if (orig_extremes) return *orig_extremes;
 
-    throw GenerationError(ctx.GetVariableName(),
+    throw GenerationError(ctx.GetLocalVariableName(),
                           "Cannot find a value with the correct mod value",
                           RetryPolicy::kAbort);
   };
@@ -262,7 +262,7 @@ int64_t MInteger::GenerateImpl(librarian::GenerateVariableContext ctx) const {
       }
     }
     if (options.empty()) {
-      throw GenerationError(ctx.GetVariableName(), ToString(),
+      throw GenerationError(ctx.GetLocalVariableName(), ToString(),
                             RetryPolicy::kAbort);
     }
     return ctx.RandomElement(options);

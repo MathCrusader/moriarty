@@ -332,7 +332,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
         : reader_(std::move(reader)), ctx_(std::move(ctx)), values_(values) {}
     void ReadNext() override { reader_.ReadNext(ctx_); }
     void Finalize() && override {
-      values_.get().Set<VariableType>(ctx_.GetVariableName(),
+      values_.get().Set<VariableType>(ctx_.GetLocalVariableName(),
                                       std::move(reader_).Finalize());
     }
 
@@ -410,7 +410,7 @@ ValidationResult MVariable<V>::Validate(ConstraintContext ctx,
 
 template <typename V>
 auto MVariable<V>::Generate(GenerateVariableContext ctx) const -> value_type {
-  std::string name = ctx.GetVariableName();
+  std::string name = ctx.GetVariableNameHash();
 
   if (auto value = ctx.GetValueIfKnown<V>(name); value.has_value())
     return *value;
@@ -451,7 +451,7 @@ template <typename V>
 auto MVariable<V>::GetUniqueValue(AnalyzeVariableContext ctx) const
     -> std::optional<value_type> {
   std::optional<value_type> known =
-      ctx.GetValueIfKnown<V>(ctx.GetVariableName());
+      ctx.GetValueIfKnown<V>(ctx.GetLocalVariableName());
   if (known) return known;
   if (one_of_.GetUniqueValue()) return one_of_.GetUniqueValue();
   try {
@@ -606,7 +606,7 @@ typename MVariable<V>::value_type MVariable<V>::GenerateOnce(
 
   if (auto v = Validate(ConstraintContext(ctx), potential_value); !v.IsOk())
     throw moriarty::GenerationError(
-        ctx.GetVariableName(),
+        ctx.GetLocalVariableName(),
         std::format("Generated value does not satisfy constraints:\n{}",
                     v.PrettyReason()),
         RetryPolicy::kRetry);
@@ -624,8 +624,8 @@ void MVariable<V>::AssignValue(
   GenerateVariableContext ctx(variable_name, variables, values, engine,
                               handler);
 
-  if (ctx.ValueIsKnown(ctx.GetVariableName())) return;
-  ctx.SetValue<V>(ctx.GetVariableName(), Generate(ctx));
+  if (ctx.ValueIsKnown(ctx.GetLocalVariableName())) return;
+  ctx.SetValue<V>(ctx.GetLocalVariableName(), Generate(ctx));
 }
 
 template <typename V>
@@ -634,10 +634,10 @@ void MVariable<V>::AssignUniqueValue(
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<moriarty_internal::ValueSet> values) const {
   AssignVariableContext ctx(variable_name, variables, values);
-  if (ctx.ValueIsKnown(ctx.GetVariableName())) return;
+  if (ctx.ValueIsKnown(ctx.GetLocalVariableName())) return;
 
   std::optional<value_type> value = GetUniqueValue(ctx);
-  if (value) ctx.SetValue<V>(ctx.GetVariableName(), *value);
+  if (value) ctx.SetValue<V>(ctx.GetLocalVariableName(), *value);
 }
 
 template <typename V>
@@ -647,8 +647,8 @@ std::optional<int64_t> MVariable<V>::UniqueInteger(
     Ref<const moriarty_internal::ValueSet> values) const {
   if constexpr (std::same_as<value_type, int64_t>) {
     AnalyzeVariableContext ctx(variable_name, variables, values);
-    if (ctx.ValueIsKnown(ctx.GetVariableName())) {
-      return ctx.GetValue<V>(ctx.GetVariableName());
+    if (ctx.ValueIsKnown(ctx.GetLocalVariableName())) {
+      return ctx.GetValue<V>(ctx.GetLocalVariableName());
     }
 
     return GetUniqueValue(ctx);
@@ -662,7 +662,7 @@ void MVariable<V>::ReadValue(
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<moriarty_internal::ValueSet> values) const {
   ReadVariableContext ctx(variable_name, input, variables, values);
-  values.get().Set<V>(ctx.GetVariableName(), Read(ctx));
+  values.get().Set<V>(ctx.GetLocalVariableName(), Read(ctx));
 }
 
 template <typename V>
@@ -690,7 +690,7 @@ void MVariable<V>::WriteValue(
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values) const {
   WriteVariableContext ctx(variable_name, os, variables, values);
-  Write(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
+  Write(ctx, ctx.GetValue<V>(ctx.GetLocalVariableName()));
 }
 
 template <typename V>
@@ -699,7 +699,7 @@ ValidationResult MVariable<V>::Validate(
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values) const {
   ConstraintContext ctx(variable_name, variables, values);
-  return Validate(ctx, ctx.GetValue<V>(ctx.GetVariableName()));
+  return Validate(ctx, ctx.GetValue<V>(ctx.GetLocalVariableName()));
 }
 
 template <typename V>

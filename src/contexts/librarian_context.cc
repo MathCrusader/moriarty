@@ -16,6 +16,7 @@
 
 #include <ostream>
 #include <string_view>
+#include <utility>
 
 #include "src/contexts/internal/basic_istream_context.h"
 #include "src/contexts/internal/basic_ostream_context.h"
@@ -30,15 +31,33 @@
 namespace moriarty {
 namespace librarian {
 
+// ---------------------------------------------------
+// AnalyzeVariableContext
+
 AnalyzeVariableContext::AnalyzeVariableContext(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values)
     : NameContext(variable_name), ViewOnlyContext(variables, values) {}
 
-AnalyzeVariableContext::AnalyzeVariableContext(std::string_view name,
-                                               const ViewOnlyContext& other)
-    : NameContext(name), ViewOnlyContext(other) {}
+AnalyzeVariableContext::AnalyzeVariableContext(
+    const AnalyzeVariableContext& other, NameContext name)
+    : NameContext(std::move(name)), ViewOnlyContext(other) {}
+
+AnalyzeVariableContext AnalyzeVariableContext::ForSubVariable(
+    std::string_view sub_variable_name) const {
+  return AnalyzeVariableContext(*this,
+                                NameContext::ForSubVariable(sub_variable_name));
+}
+
+AnalyzeVariableContext AnalyzeVariableContext::ForIndexedSubVariable(
+    std::function<std::string(int)> indexed_name_fn, int index) const {
+  return AnalyzeVariableContext(
+  *this, NameContext::ForIndexedSubVariable(indexed_name_fn, index));
+}
+
+// ---------------------------------------------------
+// AssignVariableContext
 
 AssignVariableContext::AssignVariableContext(
     std::string_view variable_name,
@@ -48,6 +67,27 @@ AssignVariableContext::AssignVariableContext(
       ViewOnlyContext(variables, values),
       MutableValuesContext(values) {}
 
+AssignVariableContext::AssignVariableContext(
+    const AssignVariableContext& other, NameContext new_name)
+    : NameContext(std::move(new_name)),
+      ViewOnlyContext(other),
+      MutableValuesContext(other) {}
+
+AssignVariableContext AssignVariableContext::ForSubVariable(
+    std::string_view sub_variable_name) const {
+  return AssignVariableContext(*this,
+                               NameContext::ForSubVariable(sub_variable_name));
+}
+
+AssignVariableContext AssignVariableContext::ForIndexedSubVariable(
+    std::function<std::string(int)> indexed_name_fn, int index) const {
+  return AssignVariableContext(
+      *this, NameContext::ForIndexedSubVariable(indexed_name_fn, index));
+}
+
+// ---------------------------------------------------
+// WriteVariableContext
+
 WriteVariableContext::WriteVariableContext(
     std::string_view variable_name, Ref<std::ostream> os,
     Ref<const moriarty_internal::VariableSet> variables,
@@ -56,6 +96,27 @@ WriteVariableContext::WriteVariableContext(
       ViewOnlyContext(variables, values),
       BasicOStreamContext(os) {}
 
+WriteVariableContext::WriteVariableContext(
+    const WriteVariableContext& other, NameContext new_name)
+    : NameContext(std::move(new_name)),
+      ViewOnlyContext(other),
+      BasicOStreamContext(other) {}
+
+WriteVariableContext WriteVariableContext::ForSubVariable(
+    std::string_view sub_variable_name) const {
+  return WriteVariableContext(*this,
+                              NameContext::ForSubVariable(sub_variable_name));
+}
+
+WriteVariableContext WriteVariableContext::ForIndexedSubVariable(
+    std::function<std::string(int)> indexed_name_fn, int index) const {
+  return WriteVariableContext(
+      *this, NameContext::ForIndexedSubVariable(indexed_name_fn, index));
+}
+
+// ---------------------------------------------------
+// ReadVariableContext
+
 ReadVariableContext::ReadVariableContext(
     std::string_view variable_name, Ref<InputCursor> input,
     Ref<const moriarty_internal::VariableSet> variables,
@@ -63,6 +124,27 @@ ReadVariableContext::ReadVariableContext(
     : NameContext(variable_name),
       ViewOnlyContext(variables, values),
       BasicIStreamContext(input) {}
+
+ReadVariableContext::ReadVariableContext(const ReadVariableContext& other,
+                                         NameContext new_name)
+    : NameContext(std::move(new_name)),
+      ViewOnlyContext(other),
+      BasicIStreamContext(other) {}
+
+ReadVariableContext ReadVariableContext::ForSubVariable(
+    std::string_view sub_variable_name) const {
+  return ReadVariableContext(*this,
+                             NameContext::ForSubVariable(sub_variable_name));
+}
+
+ReadVariableContext ReadVariableContext::ForIndexedSubVariable(
+    std::function<std::string(int)> indexed_name_fn, int index) const {
+  return ReadVariableContext(
+      *this, NameContext::ForIndexedSubVariable(indexed_name_fn, index));
+}
+
+// ---------------------------------------------------
+// GenerateVariableContext
 
 GenerateVariableContext::GenerateVariableContext(
     std::string_view variable_name,
@@ -81,17 +163,29 @@ GenerateVariableContext::GenerateVariableContext(
       engine_(engine),
       handler_(handler) {}
 
-GenerateVariableContext GenerateVariableContext::ForVariable(
-    std::string_view new_name) const {
-  return GenerateVariableContext(new_name, variables_, values_, engine_,
-                                 handler_);
-}
+GenerateVariableContext::GenerateVariableContext(
+    const GenerateVariableContext& other, NameContext new_name)
+    : NameContext(std::move(new_name)),
+      ViewOnlyContext(other),
+      MutableValuesContext(other),
+      ResolveValuesContext(other),
+      BasicRandomContext(other),
+      GenerationOrchestrationContext(other),
+      variables_(other.variables_),
+      values_(other.values_),
+      engine_(other.engine_),
+      handler_(other.handler_) {}
 
 GenerateVariableContext GenerateVariableContext::ForSubVariable(
-    std::string_view new_name) const {
+    std::string_view sub_variable_name) const {
+  return GenerateVariableContext(*this,
+                                 NameContext::ForSubVariable(sub_variable_name));
+}
+
+GenerateVariableContext GenerateVariableContext::ForIndexedSubVariable(
+    std::function<std::string(int)> indexed_name_fn, int index) const {
   return GenerateVariableContext(
-      std::format("{}.{}", GetVariableName(), new_name), variables_, values_,
-      engine_, handler_);
+      *this, NameContext::ForIndexedSubVariable(indexed_name_fn, index));
 }
 
 }  // namespace librarian

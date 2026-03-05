@@ -216,7 +216,7 @@ ValidationResult Length::Validate(ConstraintContext ctx,
                                   const Container& value) const {
   auto v = length_.Validate(ctx.ForSubVariable("length"), value.size());
   if (v.IsOk()) return ValidationResult::Ok();
-  return ValidationResult::Violation(ctx.GetVariableName(), value,
+  return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
                                      std::move(v));
 }
 
@@ -261,12 +261,13 @@ template <typename MElementType>
 ValidationResult StronglyTypedElements<MElementType>::Validate(
     ConstraintContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
+  auto index_name = [](int idx) { return std::format("index {}", idx); };
   for (int idx = -1; const auto& elem : value) {
     idx++;
     if (auto v = element_constraints_.Validate(
-            ctx.ForSubVariable(std::format("index {}", idx)), elem);
+            ctx.ForIndexedSubVariable(index_name, idx), elem);
         !v.IsOk()) {
-      return ValidationResult::Violation(ctx.GetVariableName(), value,
+      return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
                                          std::move(v));
     }
   }

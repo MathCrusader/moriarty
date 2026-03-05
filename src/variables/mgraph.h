@@ -445,12 +445,12 @@ MGraph<MEdgeLabel, MNodeLabel>::GenerateImpl(
   // TODO: These checks are too strong when we constrain in other ways (simple,
   // tree, connected, planar, etc)
   if (!core_constraints_.NumNodesConstrained()) {
-    throw GenerationError(ctx.GetVariableName(),
+    throw GenerationError(ctx.GetLocalVariableName(),
                           "Need NumNodes() to generate a graph",
                           RetryPolicy::kAbort);
   }
   if (!core_constraints_.NumEdgesConstrained()) {
-    throw GenerationError(ctx.GetVariableName(),
+    throw GenerationError(ctx.GetLocalVariableName(),
                           "Need NumEdges() to generate a graph",
                           RetryPolicy::kAbort);
   }
@@ -473,7 +473,7 @@ MGraph<MEdgeLabel, MNodeLabel>::GenerateImpl(
   int64_t num_edges = edge_con.Generate(ctx.ForSubVariable("num_edges"));
 
   if (num_nodes == 0 && num_edges > 0) {
-    throw GenerationError(ctx.GetVariableName(),
+    throw GenerationError(ctx.GetLocalVariableName(),
                           "Cannot generate a graph with 0 nodes and >0 edges",
                           RetryPolicy::kAbort);
   }
@@ -514,11 +514,12 @@ MGraph<MEdgeLabel, MNodeLabel>::GenerateImpl(
   }
 
   if constexpr (HasNodeLabels<MNodeLabel>) {
+    auto node_name = [](int idx) { return std::format("node_label_{}", idx); };
     std::vector<typename MNodeLabel::value_type> node_labels;
     node_labels.reserve(num_nodes);
     for (int64_t i = 0; i < num_nodes; ++i) {
       auto node_label = core_constraints_.NodeLabels().Generate(
-          ctx.ForSubVariable(std::format("node_label_{}", i)));
+          ctx.ForIndexedSubVariable(node_name, i));
       node_labels.push_back(node_label);
     }
     G.SetNodeLabels(node_labels);

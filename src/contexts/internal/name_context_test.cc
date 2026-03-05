@@ -26,20 +26,20 @@ using ::testing::ElementsAre;
 
 TEST(NameContextTest, GetVariableNameShouldReturnCorrectName) {
   NameContext ctx("X");
-  EXPECT_EQ(ctx.GetVariableName(), "X");
+  EXPECT_EQ(ctx.GetLocalVariableName(), "X");
 }
 
 TEST(NameContextTest, ForSubVariableShouldReturnCorrectName) {
   NameContext ctx("X");
   NameContext sub_ctx = ctx.ForSubVariable("Y");
-  EXPECT_EQ(sub_ctx.GetVariableName(), "Y");
+  EXPECT_EQ(sub_ctx.GetLocalVariableName(), "Y");
 }
 
 TEST(NameContextTest, ForIndexedSubVariableShouldReturnCorrectName) {
   NameContext ctx("X");
   NameContext indexed_ctx = ctx.ForIndexedSubVariable(
       [](int index) { return "index " + std::to_string(index); }, 2);
-  EXPECT_EQ(indexed_ctx.GetVariableName(), "index 2");
+  EXPECT_EQ(indexed_ctx.GetLocalVariableName(), "index 2");
 }
 
 TEST(NameContextTest, GetVariableStackShouldReturnCorrectStack) {

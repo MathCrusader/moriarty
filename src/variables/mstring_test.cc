@@ -137,9 +137,9 @@ TEST(MStringTest, RepeatedLengthCallsShouldBeIntersectedTogether) {
 
 TEST(MStringTest, InvalidLengthShouldFail) {
   EXPECT_THAT(MString(Length(-1), Alphabet("a")),
-              GenerateThrowsGenerationError(".length", Context()));
+              GenerateThrowsGenerationError("length", Context()));
   EXPECT_THAT(MString(Length(AtMost(10), AtLeast(20)), Alphabet("a")),
-              GenerateThrowsGenerationError(".length", Context()));
+              GenerateThrowsGenerationError("length", Context()));
 }
 
 TEST(MStringTest, LengthZeroProcudesTheEmptyString) {
@@ -171,7 +171,7 @@ TEST(MStringTest, MergeFromCorrectlyMergesOnLength) {
                                  get_str(8, 8)));  // Singleton range
 
   EXPECT_THAT(get_str(1, 6).MergeFrom(get_str(10, 20)),
-              GenerateThrowsGenerationError(".length", Context()));
+              GenerateThrowsGenerationError("length", Context()));
 }
 
 TEST(MStringTest, MergeFromCorrectlyMergesOnAlphabet) {
@@ -272,7 +272,7 @@ TEST(MStringTest, DistinctCharactersWorksInTheSimpleCase) {
 TEST(MStringTest, DistinctCharactersRequiresAShortLength) {
   EXPECT_THAT(
       MString(Length(Between(5, 5)), Alphabet("abc"), DistinctCharacters()),
-      GenerateThrowsGenerationError(".length", Context()));
+      GenerateThrowsGenerationError("length", Context()));
 
   // Most of the range is too large, the only way to succeed is for it to make a
   // string of length 10.

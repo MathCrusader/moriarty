@@ -392,7 +392,7 @@ auto MArray<MElementType>::GenerateImpl(
         [&](int n) { return ctx.RandomInteger(n); });
 
   if (!core_constraints_.LengthConstrained()) {
-    throw GenerationError(ctx.GetVariableName(),
+    throw GenerationError(ctx.GetLocalVariableName(),
                           "Attempting to generate an array with no "
                           "length parameter given.",
                           RetryPolicy::kAbort);
@@ -410,9 +410,10 @@ auto MArray<MElementType>::GenerateImpl(
     res = GenerateNDistinctImpl(ctx, length);
   } else {
     res.reserve(length);
+    auto elem_name = [](int idx) { return std::format("elem[{}]", idx); };
     for (int i = 0; i < length; i++) {
       res.push_back(core_constraints_.Elements().Generate(
-          ctx.ForSubVariable("elem[" + std::to_string(i) + "]")));
+          ctx.ForIndexedSubVariable(elem_name, i)));
     }
   }
 
@@ -453,7 +454,7 @@ auto MArray<MElementType>::GenerateUnseenElement(
   }
 
   // TODO: We may want to not retry if we can prove it will always fail.
-  throw GenerationError(ctx.GetVariableName(),
+  throw GenerationError(ctx.GetLocalVariableName(),
                         "Cannot generate enough distinct values for array.",
                         RetryPolicy::kRetry);
 }

@@ -79,8 +79,8 @@ class LastDigit : public moriarty::MConstraint {
     auto v =
         digit_.Validate(ctx.ForSubVariable("last digit"), value.value % 10);
     if (v.IsOk()) return moriarty::ValidationResult::Ok();
-    return moriarty::ValidationResult::Violation(ctx.GetVariableName(), value,
-                                                 std::move(v));
+    return moriarty::ValidationResult::Violation(ctx.GetLocalVariableName(),
+                                                 value, std::move(v));
   }
   std::vector<std::string> GetDependencies() const {
     return digit_.GetDependencies();
@@ -104,8 +104,8 @@ class NumberOfDigits : public moriarty::MConstraint {
     auto v = num_digits_.Validate(ctx.ForSubVariable("number of digits"),
                                   std::to_string(value.value).size());
     if (v.IsOk()) return moriarty::ValidationResult::Ok();
-    return moriarty::ValidationResult::Violation(ctx.GetVariableName(), value,
-                                                 std::move(v));
+    return moriarty::ValidationResult::Violation(ctx.GetLocalVariableName(),
+                                                 value, std::move(v));
   }
   std::vector<std::string> GetDependencies() const {
     return num_digits_.GetDependencies();

@@ -65,7 +65,7 @@ ValidationResult Alphabet::Validate(ConstraintContext ctx,
     idx++;
     if (alphabet_.find(c) == std::string::npos) {
       return ValidationResult::Violation(
-          ctx.GetVariableName(), value,
+          ctx.GetLocalVariableName(), value,
           ValidationResult::Violation(
               std::format("index {}", idx), c,
               librarian::Expected("one of {}",
@@ -92,7 +92,7 @@ ValidationResult DistinctCharacters::Validate(ConstraintContext ctx,
     idx++;
     if (seen[static_cast<int>(c)] != -1) {
       return ValidationResult::Violation(
-          ctx.GetVariableName(), value,
+          ctx.GetLocalVariableName(), value,
           ValidationResult::Violation(
               std::format("index {}", idx), c,
               librarian::Expected("distinct characters"), std::nullopt,
@@ -121,7 +121,7 @@ ValidationResult SimplePattern::Validate(ConstraintContext ctx,
   };
   if (pattern_.Matches(value, lookup)) return ValidationResult::Ok();
   return ValidationResult::Violation(
-      ctx.GetVariableName(), value,
+      ctx.GetLocalVariableName(), value,
       librarian::Expected("match the simple pattern {}",
                           moriarty_internal::ValuePrinter(pattern_.Pattern())));
 }

@@ -260,7 +260,7 @@ ValidationResult Exactly<T>::Validate(ConstraintContext ctx,
                                       const T& value) const {
   if (value == value_) return ValidationResult::Ok();
   return ValidationResult::Violation(
-      ctx.GetVariableName(), value,
+      ctx.GetLocalVariableName(), value,
       librarian::Expected(moriarty_internal::ValuePrinter(value_)));
 }
 
@@ -369,7 +369,7 @@ ValidationResult OneOf<T>::Validate(ConstraintContext ctx,
     return ValidationResult::Ok();
 
   return ValidationResult::Violation(
-      ctx.GetVariableName(), value,
+      ctx.GetLocalVariableName(), value,
       librarian::Expected("one of {}",
                           moriarty_internal::ValuePrinter(options_)));
 }

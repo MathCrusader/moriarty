@@ -66,7 +66,7 @@ ValidationResult Mod::Validate(ConstraintContext ctx, int64_t value) const {
   if (actual < 0) actual += M;
   if (actual != R) {
     return ValidationResult::Violation(
-        ctx.GetVariableName(), value,
+        ctx.GetLocalVariableName(), value,
         librarian::Expected("{} (mod {})", remainder_.ToString(),
                             modulus_.ToString()),
         librarian::Evaluated("{} (mod {})", R, M),

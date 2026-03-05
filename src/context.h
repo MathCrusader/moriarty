@@ -218,14 +218,16 @@ class ConstraintContext : public moriarty_internal::NameContext,
   ConstraintContext(std::string_view variable_name,
                     Ref<const moriarty_internal::VariableSet> variables,
                     Ref<const moriarty_internal::ValueSet> values);
-  ConstraintContext(std::string_view name, const ViewOnlyContext& other);
+  ConstraintContext(const ConstraintContext& other, NameContext new_name);
   template <typename T>
   explicit ConstraintContext(const T& other)
-      : NameContext(other.GetVariableName()), ViewOnlyContext(other) {}
+      : NameContext(other), ViewOnlyContext(other) {}
 
-  ConstraintContext ForSubVariable(std::string_view sub_variable_name) const {
-    return ConstraintContext(sub_variable_name, *this);
-  }
+  [[nodiscard]] ConstraintContext ForSubVariable(
+      std::string_view sub_variable_name) const;
+
+  [[nodiscard]] ConstraintContext ForIndexedSubVariable(
+      std::function<std::string(int)> indexed_name_fn, int index) const;
 
   // ********************************************
   // ** See parent classes for more functions. **

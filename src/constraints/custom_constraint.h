@@ -24,7 +24,6 @@
 #include "src/constraints/base_constraints.h"
 #include "src/constraints/constraint_violation.h"
 #include "src/context.h"
-#include "src/contexts/librarian_context.h"
 
 namespace moriarty {
 
@@ -102,10 +101,9 @@ std::string CustomConstraint<T>::GetName() const {
 template <typename T>
 ValidationResult CustomConstraint<T>::Validate(
     ConstraintContext ctx, const T::value_type& value) const {
-  if (constraint_(ConstraintContext(ctx.GetVariableName(), ctx), value))
-    return ValidationResult::Ok();
+  if (constraint_(ctx, value)) return ValidationResult::Ok();
   return ValidationResult::Violation(
-      ctx.GetVariableName(), value,
+      ctx.GetLocalVariableName(), value,
       librarian::Expected("value must satisfy the custom constraint `{}`",
                           name_));
 }

@@ -40,7 +40,7 @@ using ::testing::Not;
 struct Even {
   ValidationResult Validate(ConstraintContext ctx, int value) const {
     if (value % 2 == 0) return ValidationResult::Ok();
-    return ValidationResult::Violation(ctx.GetVariableName(), value,
+    return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
                                        librarian::Expected("even"));
   }
   std::string ToString() const { return "is even"; }
@@ -50,7 +50,7 @@ struct Even {
 struct Positive {
   ValidationResult Validate(ConstraintContext ctx, int value) const {
     if (value > 0) return ValidationResult::Ok();
-    return ValidationResult::Violation(ctx.GetVariableName(), value,
+    return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
                                        librarian::Expected("positive"));
   }
   std::string ToString() const { return "is positive"; }

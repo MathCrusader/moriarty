@@ -14,6 +14,8 @@
 
 #include "src/context.h"
 
+#include <utility>
+
 #include "src/contexts/internal/basic_istream_context.h"
 #include "src/contexts/internal/basic_random_context.h"
 #include "src/contexts/internal/variable_random_context.h"
@@ -72,9 +74,21 @@ ConstraintContext::ConstraintContext(
     Ref<const moriarty_internal::ValueSet> values)
     : NameContext(variable_name), ViewOnlyContext(variables, values) {}
 
-ConstraintContext::ConstraintContext(std::string_view name,
-                                     const ViewOnlyContext& other)
-    : NameContext(name), ViewOnlyContext(other) {}
+ConstraintContext::ConstraintContext(const ConstraintContext& other,
+                                     NameContext new_name)
+    : NameContext(std::move(new_name)), ViewOnlyContext(other) {}
+
+ConstraintContext ConstraintContext::ForSubVariable(
+    std::string_view sub_variable_name) const {
+  return ConstraintContext(*this,
+                           NameContext::ForSubVariable(sub_variable_name));
+}
+
+ConstraintContext ConstraintContext::ForIndexedSubVariable(
+    std::function<std::string(int)> indexed_name_fn, int index) const {
+  return ConstraintContext(
+      *this, NameContext::ForIndexedSubVariable(indexed_name_fn, index));
+}
 
 AnalyzeContext::AnalyzeContext(
     Ref<const moriarty_internal::VariableSet> variables,

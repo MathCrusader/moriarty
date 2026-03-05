@@ -416,8 +416,10 @@ MVariant<T...>::variant_value_type MVariant<T...>::GenerateImpl(
     (
         [&] {
           if (idx == I) {
-            generated_value = variant_value_type{
-                std::in_place_index<I>, generate_one.template operator()<I>()};
+            generated_value = variant_value_type {
+              std::in_place_index<I>,
+              generate_one.template operator()<I>()
+            };
           }
         }(),
         ...);
@@ -425,7 +427,7 @@ MVariant<T...>::variant_value_type MVariant<T...>::GenerateImpl(
 
   if (!generated_value.has_value()) {
     throw GenerationError(
-        ctx.GetVariableName(),
+        ctx.GetLocalVariableName(),
         std::format("Failed to generate a value for {}. This is likely a bug "
                     "in Moriarty. Please report this to the developers.",
                     this->Typename()),
@@ -441,7 +443,7 @@ void MVariant<T...>::WriteImpl(librarian::WriteVariableContext ctx,
   if (idx == std::variant_npos) {
     throw WriteError(std::format(
         "Attempting to write an invalid std::variant value for {} ({}).",
-        ctx.GetVariableName(), this->Typename()));
+        ctx.GetLocalVariableName(), this->Typename()));
   }
 
   auto write_one = [&]<std::size_t I>() {
@@ -515,11 +517,10 @@ ValidationResult
 MVariant<T...>::ElementConstraintWrapper<I, MAlternativeType>::Validate(
     ConstraintContext ctx, const variant_value_type& value) const {
   if (value.index() != I) return ValidationResult::Ok();
-  // Note that we don't make a subvariable here.
   auto v = constraint_.Validate(ctx.ForSubVariable(std::format("index {}", I)),
                                 std::get<I>(value));
   if (v.IsOk()) return ValidationResult::Ok();
-  return ValidationResult::Violation(ctx.GetVariableName(), value,
+  return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
                                      std::move(v));
 }
 

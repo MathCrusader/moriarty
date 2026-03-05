@@ -144,7 +144,7 @@ double MReal::GenerateImpl(librarian::GenerateVariableContext ctx) const {
           });
   if (!extremes) {
     throw GenerationError(
-        ctx.GetVariableName(),
+        ctx.GetLocalVariableName(),
         std::format("No real number satisfies: {}", ToString()),
         RetryPolicy::kAbort);
   }

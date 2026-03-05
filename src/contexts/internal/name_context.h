@@ -51,10 +51,12 @@ class NameContext {
   [[nodiscard]] NameContext ForIndexedSubVariable(
       std::function<std::string(int index)> indexed_name_fn, int index) const;
 
-  // GetVariableName()
+  // GetLocalVariableName()
   //
-  // Returns the name of the variable currently being operated on.
-  [[nodiscard]] std::string GetVariableName() const;
+  // Returns the name of the variable currently being operated on. This does not
+  // include the names of parent variables. For example, if the current variable
+  // is "X[2].Y", this would return "Y".
+  [[nodiscard]] std::string GetLocalVariableName() const;
 
   // GetVariableStack()
   //
@@ -62,6 +64,12 @@ class NameContext {
   // leading to the current variable. For example, if the current variable is
   // "X[2].Y", this might return ["X", "index 2", "Y"].
   [[nodiscard]] std::vector<std::string> GetVariableStack() const;
+
+  // GetVariableNameHash()
+  //
+  // Returns the hash of the full variable name stack. This is used for caching
+  // purposes.
+  [[nodiscard]] std::string GetVariableNameHash() const;
 
  private:
   std::string name_;

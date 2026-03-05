@@ -242,13 +242,14 @@ template <typename EdgeLabel>
 ValidationResult NodeLabels<MLabelType>::Validate(
     ConstraintContext ctx,
     const Graph<EdgeLabel, typename MLabelType::value_type>& value) const {
+  auto node_name = [](int idx) { return std::format("node {}'s label", idx); };
   int idx = -1;
   for (const auto& label : value.GetNodeLabels()) {
     idx++;
     if (auto v = label_constraints_.Validate(
-            ctx.ForSubVariable(std::format("node {}'s label", idx)), label);
+            ctx.ForIndexedSubVariable(node_name, idx), label);
         !v.IsOk()) {
-      return ValidationResult::Violation(ctx.GetVariableName(), value,
+      return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
                                          std::move(v));
     }
   }
@@ -283,13 +284,14 @@ template <typename NodeLabel>
 ValidationResult EdgeLabels<MLabelType>::Validate(
     ConstraintContext ctx,
     const Graph<typename MLabelType::value_type, NodeLabel>& value) const {
+  auto edge_name = [](int idx) { return std::format("edge {}'s label", idx); };
   int idx = -1;
   for (const auto& edge : value.GetEdges()) {
     idx++;
     if (auto v = label_constraints_.Validate(
-            ctx.ForSubVariable(std::format("edge {}'s label", idx)), edge.e);
+            ctx.ForIndexedSubVariable(edge_name, idx), edge.e);
         !v.IsOk()) {
-      return ValidationResult::Violation(ctx.GetVariableName(), value,
+      return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
                                          std::move(v));
     }
   }
@@ -313,7 +315,7 @@ ValidationResult NumNodes::Validate(
   auto v = num_nodes_.Validate(ctx.ForSubVariable("number of nodes"),
                                static_cast<int64_t>(value.NumNodes()));
   if (v.IsOk()) return ValidationResult::Ok();
-  return ValidationResult::Violation(ctx.GetVariableName(), value,
+  return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
                                      std::move(v));
 }
 
@@ -324,7 +326,7 @@ ValidationResult NumEdges::Validate(
   auto v = num_edges_.Validate(ctx.ForSubVariable("number of edges"),
                                value.NumEdges());
   if (v.IsOk()) return ValidationResult::Ok();
-  return ValidationResult::Violation(ctx.GetVariableName(), value,
+  return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
                                      std::move(v));
 }
 
@@ -334,8 +336,8 @@ ValidationResult Connected::Validate(
     ConstraintContext ctx, const Graph<EdgeLabel, NodeLabel>& value) const {
   if (value.NumNodes() == 0)
     return ValidationResult::Violation(
-        ctx.GetVariableName(), value, librarian::Expected("connected graph"),
-        std::nullopt,
+        ctx.GetLocalVariableName(), value,
+        librarian::Expected("connected graph"), std::nullopt,
         librarian::Details("a graph with "
                            "0 nodes is not considered connected"));
 
@@ -366,8 +368,8 @@ ValidationResult Connected::Validate(
   for (int i = 1; i < value.NumNodes(); ++i)
     if (uf.find(i) != uf.find(0))
       return ValidationResult::Violation(
-          ctx.GetVariableName(), value, librarian::Expected("connected graph"),
-          std::nullopt,
+          ctx.GetLocalVariableName(), value,
+          librarian::Expected("connected graph"), std::nullopt,
           librarian::Details(std::format("no path from node 0 to node {}", i)));
   return ValidationResult::Ok();
 }
@@ -383,13 +385,13 @@ ValidationResult NoParallelEdges::Validate(
   for (const auto& [u, v, _] : edges) {
     if (!seen.emplace(u, v).second)
       return ValidationResult::Violation(
-          ctx.GetVariableName(), value,
+          ctx.GetLocalVariableName(), value,
           librarian::Expected("no parallel edges"), std::nullopt,
           librarian::Details(
               std::format("parallel edges between nodes {} and {}", u, v)));
     if (u != v && !seen.emplace(v, u).second)
       return ValidationResult::Violation(
-          ctx.GetVariableName(), value,
+          ctx.GetLocalVariableName(), value,
           librarian::Expected("no parallel edges"), std::nullopt,
           librarian::Details("parallel edges between nodes {} and {}", v, u));
   }
@@ -404,7 +406,7 @@ ValidationResult Loopless::Validate(
   for (const auto& [u, v, _] : edges) {
     if (u == v) {
       return ValidationResult::Violation(
-          ctx.GetVariableName(), value, librarian::Expected("no loops"),
+          ctx.GetLocalVariableName(), value, librarian::Expected("no loops"),
           std::nullopt, librarian::Details("edge from node {} to itself", u));
     }
   }

@@ -162,9 +162,9 @@ TEST(MArrayTest, RepeatedLengthCallsShouldBeIntersectedTogether) {
 
 TEST(MArrayTest, InvalidLengthShouldFail) {
   EXPECT_THAT(MArray<MInteger>(Length(-1)),
-              GenerateThrowsGenerationError(".length", Context()));
+              GenerateThrowsGenerationError("length", Context()));
   EXPECT_THAT(MArray<MInteger>(Length(AtMost(10), AtLeast(21))),
-              GenerateThrowsGenerationError(".length", Context()));
+              GenerateThrowsGenerationError("length", Context()));
 }
 
 TEST(MArrayTest, LengthZeroProducesTheEmptyArray) {
@@ -190,7 +190,7 @@ TEST(MArrayTest, MergeFromCorrectlyMergesOnLength) {
                                  get_arr(8, 8)));  // Singleton range
 
   EXPECT_THAT(get_arr(1, 6).MergeFrom(get_arr(10, 20)),
-              GenerateThrowsGenerationError(".length", Context()));
+              GenerateThrowsGenerationError("length", Context()));
 }
 
 TEST(MArrayTest, MergeFromCorrectlyMergesElementConstraints) {
@@ -202,7 +202,7 @@ TEST(MArrayTest, MergeFromCorrectlyMergesElementConstraints) {
                                  int_array(6, 10)));
 
   EXPECT_THAT(int_array(1, 6).MergeFrom(int_array(10, 20)),
-              GenerateThrowsGenerationError(".elem[0]", Context()));
+              GenerateThrowsGenerationError("elem[0]", Context()));
 }
 
 TEST(MArrayTest, LengthIsSatisfied) {

@@ -145,14 +145,14 @@ std::string MString::GenerateImpl(
   if (!core_constraints_.SimplePatternsConstrained() &&
       !core_constraints_.AlphabetConstrained()) {
     throw GenerationError(
-        ctx.GetVariableName(),
+        ctx.GetLocalVariableName(),
         "Need either Alphabet() or SimplePattern() to generate a string",
         RetryPolicy::kAbort);
   }
   if (!core_constraints_.SimplePatternsConstrained() &&
       !core_constraints_.LengthConstrained()) {
     throw GenerationError(
-        ctx.GetVariableName(),
+        ctx.GetLocalVariableName(),
         "Need either Length() or SimplePattern() to generate a string",
         RetryPolicy::kAbort);
   }
@@ -198,7 +198,7 @@ std::string MString::GenerateSimplePattern(
         maybe_alphabet, lookup, rand);
   } catch (const SimplePatternEvaluationError& e) {
     throw GenerationError(
-        ctx.GetVariableName(),
+        ctx.GetLocalVariableName(),
         std::format("Failed to generate SimplePattern: ", e.what()),
         RetryPolicy::kAbort);
   }

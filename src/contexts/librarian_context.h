@@ -49,10 +49,17 @@ class AnalyzeVariableContext : public moriarty_internal::NameContext,
   AnalyzeVariableContext(std::string_view variable_name,
                          Ref<const moriarty_internal::VariableSet> variables,
                          Ref<const moriarty_internal::ValueSet> values);
-  AnalyzeVariableContext(std::string_view name, const ViewOnlyContext& other);
+  AnalyzeVariableContext(const AnalyzeVariableContext& other,
+                         NameContext new_name);
   template <typename T>
   AnalyzeVariableContext(const T& other)
-      : NameContext(other.GetVariableName()), ViewOnlyContext(other) {}
+      : NameContext(other), ViewOnlyContext(other) {}
+
+  [[nodiscard]] AnalyzeVariableContext ForSubVariable(
+      std::string_view sub_variable_name) const;
+
+  [[nodiscard]] AnalyzeVariableContext ForIndexedSubVariable(
+      std::function<std::string(int)> indexed_name_fn, int index) const;
 
   // ********************************************
   // ** See parent classes for more functions. **
@@ -69,6 +76,14 @@ class AssignVariableContext : public moriarty_internal::NameContext,
   AssignVariableContext(std::string_view variable_name,
                         Ref<const moriarty_internal::VariableSet> variables,
                         Ref<moriarty_internal::ValueSet> values);
+  AssignVariableContext(const AssignVariableContext& other,
+                        NameContext new_name);
+
+  [[nodiscard]] AssignVariableContext ForSubVariable(
+      std::string_view sub_variable_name) const;
+
+  [[nodiscard]] AssignVariableContext ForIndexedSubVariable(
+      std::function<std::string(int)> indexed_name_fn, int index) const;
 
   // ********************************************
   // ** See parent classes for more functions. **
@@ -85,6 +100,13 @@ class WriteVariableContext : public moriarty_internal::NameContext,
   WriteVariableContext(std::string_view variable_name, Ref<std::ostream> os,
                        Ref<const moriarty_internal::VariableSet> variables,
                        Ref<const moriarty_internal::ValueSet> values);
+  WriteVariableContext(const WriteVariableContext& other, NameContext new_name);
+
+  [[nodiscard]] WriteVariableContext ForSubVariable(
+      std::string_view sub_variable_name) const;
+
+  [[nodiscard]] WriteVariableContext ForIndexedSubVariable(
+      std::function<std::string(int)> indexed_name_fn, int index) const;
 
   // ********************************************
   // ** See parent classes for more functions. **
@@ -101,6 +123,13 @@ class ReadVariableContext : public moriarty_internal::NameContext,
   ReadVariableContext(std::string_view variable_name, Ref<InputCursor> input,
                       Ref<const moriarty_internal::VariableSet> variables,
                       Ref<const moriarty_internal::ValueSet> values);
+  ReadVariableContext(const ReadVariableContext& other, NameContext new_name);
+
+  [[nodiscard]] ReadVariableContext ForSubVariable(
+      std::string_view sub_variable_name) const;
+
+  [[nodiscard]] ReadVariableContext ForIndexedSubVariable(
+      std::function<std::string(int)> indexed_name_fn, int index) const;
 
   // ********************************************
   // ** See parent classes for more functions. **
@@ -123,22 +152,14 @@ class GenerateVariableContext
                           Ref<moriarty_internal::ValueSet> values,
                           Ref<moriarty_internal::RandomEngine> engine,
                           Ref<moriarty_internal::GenerationHandler> handler);
+  GenerateVariableContext(const GenerateVariableContext& other,
+                          NameContext new_name);
 
-  // ForVariable()
-  //
-  // Creates a copy of this context, except the variable name is replaced with
-  // `variable_name`.
-  [[nodiscard]] GenerateVariableContext ForVariable(
-      std::string_view new_name) const;
-
-  // ForSubVariable()
-  //
-  // Creates a copy of this context, except the variable name is replaced with
-  // the name of a subvariable of the current one. (E.g., if the current
-  // variable is A, then ForSubVariable("length") will set the new variable to
-  // be "A.length")
   [[nodiscard]] GenerateVariableContext ForSubVariable(
-      std::string_view new_name) const;
+      std::string_view sub_variable_name) const;
+
+  [[nodiscard]] GenerateVariableContext ForIndexedSubVariable(
+      std::function<std::string(int)> indexed_name_fn, int index) const;
 
   // ********************************************
   // ** See parent classes for more functions. **
