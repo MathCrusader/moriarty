@@ -15,6 +15,7 @@
 #ifndef MORIARTY_CONTEXTS_INTERNAL_NAME_CONTEXT_H_
 #define MORIARTY_CONTEXTS_INTERNAL_NAME_CONTEXT_H_
 
+#include <algorithm>
 #include <functional>
 #include <string>
 #include <string_view>
