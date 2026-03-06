@@ -361,8 +361,7 @@ MTuple<T...>::ElementConstraintWrapper<I, MElementType>::Validate(
   auto v = constraint_.Validate(ctx.ForIndexedSubVariable(index_name, I),
                                 std::get<I>(value));
   if (v.IsOk()) return ValidationResult::Ok();
-  return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
-                                     std::move(v));
+  return ctx.Violation(value, std::move(v));
 }
 
 template <typename... T>

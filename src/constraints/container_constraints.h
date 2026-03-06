@@ -164,7 +164,8 @@ class DistinctElements : public BasicMConstraint {
 
   // Determines if the container's elements satisfy all constraints.
   template <typename T>
-  ValidationResult Validate(const std::vector<T>& value) const;
+  ValidationResult Validate(ConstraintContext ctx,
+                            const std::vector<T>& value) const;
 };
 
 // Constraint stating that the elements of a container must be sorted.
@@ -180,6 +181,7 @@ class Sorted : public BasicMConstraint {
 
   // Determines if the container is sorted.
   ValidationResult Validate(
+      ConstraintContext ctx,
       const std::vector<typename MElementType::value_type>& value) const;
 
   // Compares two elements using the provided comparator and projection.
@@ -216,8 +218,7 @@ ValidationResult Length::Validate(ConstraintContext ctx,
                                   const Container& value) const {
   auto v = length_.Validate(ctx.ForSubVariable("length"), value.size());
   if (v.IsOk()) return ValidationResult::Ok();
-  return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
-                                     std::move(v));
+  return ctx.Violation(value, std::move(v));
 }
 
 // ====== Elements ======
@@ -267,8 +268,7 @@ ValidationResult StronglyTypedElements<MElementType>::Validate(
     if (auto v = element_constraints_.Validate(
             ctx.ForIndexedSubVariable(index_name, idx), elem);
         !v.IsOk()) {
-      return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
-                                         std::move(v));
+      return ctx.Violation(value, std::move(v));
     }
   }
   return ValidationResult::Ok();
@@ -316,15 +316,17 @@ std::vector<std::string> Element<I, MElementType>::GetDependencies() const {
 
 // ====== DistinctElements ======
 template <typename T>
-ValidationResult DistinctElements::Validate(const std::vector<T>& value) const {
+ValidationResult DistinctElements::Validate(ConstraintContext ctx,
+                                            const std::vector<T>& value) const {
   absl::flat_hash_map<T, int> seen;
   for (int idx = -1; const auto& elem : value) {
     idx++;
     auto [it, inserted] = seen.insert({elem, idx});
     if (!inserted) {
-      return ValidationResult::Violation(
-          std::format("array indices {} and {}", it->second, idx), elem,
-          librarian::Expected("distinct elements"));
+      return ctx.Violation(
+          value, ValidationResult::Violation(
+                     std::format("indices {} and {}", it->second, idx), elem,
+                     librarian::Expected("distinct elements")));
     }
   }
   return ValidationResult::Ok();
@@ -350,13 +352,16 @@ Sorted<MElementType, Comp, Proj>::GetComparator() const {
 
 template <typename MElementType, typename Comp, typename Proj>
 ValidationResult Sorted<MElementType, Comp, Proj>::Validate(
+    ConstraintContext ctx,
     const std::vector<typename MElementType::value_type>& value) const {
   for (size_t i = 1; i < value.size(); ++i) {
-    if (Compare(value[i], value[i - 1]))
-      return ValidationResult::Violation(
-          std::format("indices {} and {}", i - 1, i),
-          std::make_tuple(value[i - 1], value[i]),
-          librarian::Expected("sorted"));
+    if (Compare(value[i], value[i - 1])) {
+      return ctx.Violation(value,
+                           ValidationResult::Violation(
+                               std::format("indices {} and {}", i - 1, i),
+                               std::make_tuple(value[i - 1], value[i]),
+                               librarian::Expected("sorted")));
+    }
   }
   return ValidationResult::Ok();
 }

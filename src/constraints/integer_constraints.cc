@@ -65,12 +65,13 @@ ValidationResult Mod::Validate(ConstraintContext ctx, int64_t value) const {
   int64_t actual = value % M;
   if (actual < 0) actual += M;
   if (actual != R) {
-    return ValidationResult::Violation(
-        ctx.GetLocalVariableName(), value,
-        librarian::Expected("{} (mod {})", remainder_.ToString(),
-                            modulus_.ToString()),
-        librarian::Evaluated("{} (mod {})", R, M),
-        librarian::Details("{} ≡ {} (mod {})", value, actual, M));
+    return ctx.Violation(
+        value, {
+                   .expected = std::format("{} (mod {})", remainder_.ToString(),
+                                           modulus_.ToString()),
+                   .evaluated = std::format("{} (mod {})", R, M),
+                   .details = std::format("{} ≡ {} (mod {})", value, actual, M),
+               });
   }
   return ValidationResult::Ok();
 }

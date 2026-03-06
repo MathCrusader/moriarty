@@ -229,6 +229,20 @@ class ConstraintContext : public moriarty_internal::NameContext,
   [[nodiscard]] ConstraintContext ForIndexedSubVariable(
       std::function<std::string(int)> indexed_name_fn, int index) const;
 
+  struct Evidence {
+    std::string expected;
+    std::string evaluated;
+    std::string details;
+  };
+
+  template <typename T>
+  [[nodiscard]] ValidationResult Violation(const T& value,
+                                           Evidence evidence) const;
+
+  template <typename T>
+  [[nodiscard]] ValidationResult Violation(
+      const T& value, ValidationResult&& subvariable_violation) const;
+
   // ********************************************
   // ** See parent classes for more functions. **
   // ********************************************
@@ -249,6 +263,28 @@ class AnalyzeContext : public moriarty_internal::ViewOnlyContext {
   // ** See parent classes for more functions. **
   // ********************************************
 };
+
+// ----------------------------------------------------------------------------
+// Template implementation below
+
+template <typename T>
+ValidationResult ConstraintContext::Violation(
+    const T& value, ValidationResult&& subvariable_violation) const {
+  return ValidationResult::Violation(GetLocalVariableName(), value,
+                                     std::move(subvariable_violation));
+}
+
+template <typename T>
+ValidationResult ConstraintContext::Violation(const T& value,
+                                              Evidence evidence) const {
+  std::optional<librarian::Evaluated> e;
+  if (!evidence.evaluated.empty()) e = librarian::Evaluated(evidence.evaluated);
+  std::optional<librarian::Details> d;
+  if (!evidence.details.empty()) d = librarian::Details(evidence.details);
+  return ValidationResult::Violation(GetLocalVariableName(), value,
+                                     librarian::Expected(evidence.expected), e,
+                                     d);
+}
 
 }  // namespace moriarty
 

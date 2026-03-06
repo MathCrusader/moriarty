@@ -520,8 +520,7 @@ MVariant<T...>::ElementConstraintWrapper<I, MAlternativeType>::Validate(
   auto v = constraint_.Validate(ctx.ForSubVariable(std::format("index {}", I)),
                                 std::get<I>(value));
   if (v.IsOk()) return ValidationResult::Ok();
-  return ValidationResult::Violation(ctx.GetLocalVariableName(), value,
-                                     std::move(v));
+  return ctx.Violation(value, std::move(v));
 }
 
 template <typename... T>

@@ -102,10 +102,9 @@ template <typename T>
 ValidationResult CustomConstraint<T>::Validate(
     ConstraintContext ctx, const T::value_type& value) const {
   if (constraint_(ctx, value)) return ValidationResult::Ok();
-  return ValidationResult::Violation(
-      ctx.GetLocalVariableName(), value,
-      librarian::Expected("value must satisfy the custom constraint `{}`",
-                          name_));
+  return ctx.Violation(
+      value, {.expected = std::format(
+                  "value must satisfy the custom constraint `{}`", name_)});
 }
 
 template <typename T>

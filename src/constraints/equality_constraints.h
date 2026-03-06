@@ -259,9 +259,8 @@ template <typename T>
 ValidationResult Exactly<T>::Validate(ConstraintContext ctx,
                                       const T& value) const {
   if (value == value_) return ValidationResult::Ok();
-  return ValidationResult::Violation(
-      ctx.GetLocalVariableName(), value,
-      librarian::Expected(moriarty_internal::ValuePrinter(value_)));
+  return ctx.Violation(value,
+                       {.expected = moriarty_internal::ValuePrinter(value_)});
 }
 
 template <typename T>
@@ -368,10 +367,9 @@ ValidationResult OneOf<T>::Validate(ConstraintContext ctx,
   if (std::ranges::find(options_, value) != options_.end())
     return ValidationResult::Ok();
 
-  return ValidationResult::Violation(
-      ctx.GetLocalVariableName(), value,
-      librarian::Expected("one of {}",
-                          moriarty_internal::ValuePrinter(options_)));
+  return ctx.Violation(
+      value, {.expected = std::format(
+                  "one of {}", moriarty_internal::ValuePrinter(options_))});
 }
 
 template <typename T>

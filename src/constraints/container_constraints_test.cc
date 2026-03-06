@@ -221,60 +221,69 @@ TEST(ContainerConstraintsTest, DistinctElementsToStringWorks) {
 }
 
 TEST(ContainerConstraintsTest, DistinctElementsUnsatisfiedReasonWorks) {
-  EXPECT_THAT(DistinctElements().Validate(std::vector{11, 22, 11}),
-              HasViolation(AllOf(HasSubstr("array indices 0 and 2"),
+  Context context;
+  ConstraintContext ctx("N", context.Variables(), context.Values());
+  EXPECT_THAT(DistinctElements().Validate(ctx, std::vector{11, 22, 11}),
+              HasViolation(AllOf(HasSubstr("indices 0 and 2"),
                                  HasSubstr("distinct elements"))));
-  EXPECT_THAT(DistinctElements().Validate(
-                  std::vector<std::string>{"hello", "hell", "help", "hell"}),
-              HasViolation(AllOf(HasSubstr("array indices 1 and 3"),
-                                 HasSubstr("distinct elements"))));
-  EXPECT_THAT(DistinctElements().Validate(std::vector{1, 2, 3, 2, 2, 3}),
-              HasViolation(AllOf(HasSubstr("array indices 1 and 3"),
+  EXPECT_THAT(
+      DistinctElements().Validate(
+          ctx, std::vector<std::string>{"hello", "hell", "help", "hell"}),
+      HasViolation(
+          AllOf(HasSubstr("indices 1 and 3"), HasSubstr("distinct elements"))));
+  EXPECT_THAT(DistinctElements().Validate(ctx, std::vector{1, 2, 3, 2, 2, 3}),
+              HasViolation(AllOf(HasSubstr("indices 1 and 3"),
                                  HasSubstr("distinct elements"))));
 }
 
 TEST(ContainerConstraintsTest, DistinctElementsIsSatisfiedWithWorks) {
+  Context context;
+  ConstraintContext ctx("N", context.Variables(), context.Values());
   {
-    EXPECT_THAT(DistinctElements().Validate(std::vector<std::string>{}),
+    EXPECT_THAT(DistinctElements().Validate(ctx, std::vector<std::string>{}),
                 HasNoViolation());
-    EXPECT_THAT(
-        DistinctElements().Validate(std::vector<std::string>{"hello", "moto"}),
-        HasNoViolation());
+    EXPECT_THAT(DistinctElements().Validate(
+                    ctx, std::vector<std::string>{"hello", "moto"}),
+                HasNoViolation());
   }
   {
-    EXPECT_THAT(DistinctElements().Validate(std::vector<std::string>{"a", "a"}),
-                HasViolation(AllOf(HasSubstr("array indices 0 and 1"),
-                                   HasSubstr("distinct elements"))));
     EXPECT_THAT(
-        DistinctElements().Validate(std::vector<std::string>{"a", "ba", "ba"}),
-        HasViolation(AllOf(HasSubstr("array indices 1 and 2"),
+        DistinctElements().Validate(ctx, std::vector<std::string>{"a", "a"}),
+        HasViolation(AllOf(HasSubstr("indices 0 and 1"),
                            HasSubstr("distinct elements"))));
+    EXPECT_THAT(DistinctElements().Validate(
+                    ctx, std::vector<std::string>{"a", "ba", "ba"}),
+                HasViolation(AllOf(HasSubstr("indices 1 and 2"),
+                                   HasSubstr("distinct elements"))));
   }
 }
 
 TEST(ContainerConstraintsTest, SortedWorks) {
+  Context context;
+  ConstraintContext ctx("N", context.Variables(), context.Values());
   {
-    EXPECT_THAT(Sorted<MString>().Validate(std::vector<std::string>{}),
+    EXPECT_THAT(Sorted<MString>().Validate(ctx, std::vector<std::string>{}),
                 HasNoViolation());
     EXPECT_THAT((Sorted<MString, std::greater<>>().Validate(
-                    std::vector<std::string>{"moto", "hello"})),
+                    ctx, std::vector<std::string>{"moto", "hello"})),
                 HasNoViolation());
     EXPECT_THAT(
         (Sorted<MString, std::greater<>, std::function<char(std::string)>>(
              std::greater{}, [](std::string s) { return s[1]; })
-             .Validate(std::vector<std::string>{"axc", "zby"})),
+             .Validate(ctx, std::vector<std::string>{"axc", "zby"})),
         HasNoViolation());
   }
   {
-    EXPECT_THAT((Sorted<MInteger>().Validate({1, 2, 3, 3, 4})),
+    EXPECT_THAT((Sorted<MInteger>().Validate(ctx, {1, 2, 3, 3, 4})),
                 HasNoViolation());
-    EXPECT_THAT((Sorted<MInteger, std::greater<>>().Validate({1, 1, 1, 1})),
-                HasNoViolation());
+    EXPECT_THAT(
+        (Sorted<MInteger, std::greater<>>().Validate(ctx, {1, 1, 1, 1})),
+        HasNoViolation());
   }
   {
-    EXPECT_THAT((Sorted<MInteger>().Validate({4, 3, 2, 1})),
+    EXPECT_THAT((Sorted<MInteger>().Validate(ctx, {4, 3, 2, 1})),
                 HasViolation(HasSubstr("sorted")));
-    EXPECT_THAT((Sorted<MInteger>().Validate({2, 2, 2, 2, 1})),
+    EXPECT_THAT((Sorted<MInteger>().Validate(ctx, {2, 2, 2, 2, 1})),
                 HasViolation(HasSubstr("sorted")));
   }
 }
