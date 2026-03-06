@@ -75,7 +75,7 @@ int64_t BasicIStreamContext::ReadInteger() {
   std::from_chars_result result = std::from_chars(
       token.data(), token.data() + token.size(), value, /* base = */ 10);
   if (result.ec != std::errc{} || result.ptr != token.data() + token.size()) {
-    ThrowIOError(std::format("Expected an integer, but got '{}'.",
+    ThrowIOError(std::format("Expected an integer, but got {}.",
                              moriarty_internal::ValuePrinter(read_token)));
   }
 

@@ -487,6 +487,10 @@ auto MVariable<V>::Read(ReadVariableContext ctx) const -> value_type {
                   : std::format("{}╰─ {}\n", std::string(3 * (i - 1), ' '),
                                 full_name[i]));
     }
+    if (full_name.size() == 1)
+      throw e.WithAddedContext(
+          std::format("Error reading variable: {}", variable_name));
+
     throw e.WithAddedContext(
         std::format("Error reading variable:\n{}", variable_name));
   }

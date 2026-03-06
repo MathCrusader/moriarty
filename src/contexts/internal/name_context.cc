@@ -15,7 +15,6 @@
 #include "src/contexts/internal/name_context.h"
 
 #include <functional>
-#include <iostream>
 #include <string>
 #include <string_view>
 
@@ -50,8 +49,6 @@ std::vector<std::string> NameContext::GetVariableStack() const {
   std::vector<std::string> stack;
   const NameContext* current = this;
   while (current != nullptr) {
-    std::cout << "N " << current->name_ << std::endl;
-    std::cout << "# " << current->indexed_name_fn_index_ << std::endl;
     stack.push_back(current->GetLocalVariableName());
     current = current->parent_;
   }
