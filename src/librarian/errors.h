@@ -225,6 +225,10 @@ class IOError : public GenericMoriartyError {
   explicit IOError(std::string_view message)
       : GenericMoriartyError(std::string(message)), message_(message) {}
 
+  [[nodiscard]] IOError WithAddedContext(std::string_view added_context) const {
+    return IOError(std::format("{}\n{}", added_context, message_));
+  }
+
   const std::string& Message() const { return message_; }
 
  private:

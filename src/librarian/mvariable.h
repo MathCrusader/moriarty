@@ -471,11 +471,25 @@ void MVariable<V>::Write(WriteVariableContext ctx,
 
 template <typename V>
 auto MVariable<V>::Read(ReadVariableContext ctx) const -> value_type {
-  value_type value = ReadImpl(ctx);
-  if (auto v = Validate(ConstraintContext(ctx), value); !v.IsOk()) {
-    ctx.ThrowIOErrorWithContext("invalid value", v.PrettyReason());
+  try {
+    value_type value = ReadImpl(ctx);
+
+    if (auto v = Validate(ConstraintContext(ctx), value); !v.IsOk()) {
+      ctx.ThrowIOErrorWithContext("violates constraint", v.PrettyReason());
+    }
+    return value;
+  } catch (const moriarty::IOError& e) {
+    auto full_name = ctx.GetVariableStack();
+    std::string variable_name;
+    for (int i = 0; i < full_name.size(); ++i) {
+      variable_name +=
+          (i == 0 ? std::format("{}\n", full_name[i])
+                  : std::format("{}╰─ {}\n", std::string(3 * (i - 1), ' '),
+                                full_name[i]));
+    }
+    throw e.WithAddedContext(
+        std::format("Error reading variable:\n{}", variable_name));
   }
-  return value;
 }
 
 template <typename V>
