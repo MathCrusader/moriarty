@@ -273,10 +273,11 @@ TEST(InputCursorErrorMessageTest,
   InputCursor cursor(ss, WhitespaceStrictness::kFlexible);
 
   EXPECT_EQ(cursor.ReadToken(), "A");
+  // TODO: Note: I am not happy with where this caret is.
   EXPECT_THAT(SingleCall([&] { cursor.ReadEof(); }),
               ThrowsMessage<IOError>(Eq(
                   R"(Line 2, token 1 (col 2): Expected EOF, but got more input.
- B
+\tB
  ^)")));
 }
 

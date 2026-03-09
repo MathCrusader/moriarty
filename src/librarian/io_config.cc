@@ -18,9 +18,36 @@
 #include <format>
 #include <stdexcept>
 
+#include "src/internal/value_printer.h"
 #include "src/librarian/errors.h"
+#include "src/librarian/policies.h"
+#include "src/librarian/util/ref.h"
 
 namespace moriarty {
+
+char WhitespaceAsChar(Whitespace whitespace) {
+  switch (whitespace) {
+    case Whitespace::kNewline:
+      return '\n';
+    case Whitespace::kTab:
+      return '\t';
+    case Whitespace::kSpace:
+      return ' ';
+  }
+  throw std::logic_error("Invalid whitespace enum value");
+}
+
+std::string PrettyPrintValue(Whitespace whitespace) {
+  switch (whitespace) {
+    case Whitespace::kSpace:
+      return " ";
+    case Whitespace::kTab:
+      return "\\t";
+    case Whitespace::kNewline:
+      return "\\n";
+  }
+  throw std::logic_error("Invalid whitespace enum value");
+}
 
 InputCursor InputCursor::CreatePreciseStrictness(Ref<std::istream> is) {
   return InputCursor(is, WhitespaceStrictness::kPrecise,
@@ -60,9 +87,10 @@ std::string InputCursor::ReadToken() {
     int c = is.peek();
     if (c == EOF || !std::isprint(static_cast<unsigned char>(c)) ||
         std::isspace(static_cast<unsigned char>(c))) {
-      ThrowIOError(std::format("Expected a token, but got '{}'.",
-                               ReadableChar(static_cast<char>(c))),
-                   ErrorSnippetCaretPosition::kAtCursor);
+      ThrowIOError(
+          std::format("Expected a token, but got {}.",
+                      moriarty_internal::ValuePrinter(static_cast<char>(c))),
+          ErrorSnippetCaretPosition::kAtCursor);
     }
   }
 
@@ -150,23 +178,25 @@ void InputCursor::ReadWhitespace(Whitespace whitespace) {
   std::istream& is = is_.get();
 
   if (IsEOF()) {
-    ThrowIOError(std::format("Expected '{}', but got EOF.",
-                             ReadableChar(WhitespaceAsChar(whitespace))),
+    ThrowIOError(std::format("Expected {}, but got EOF.",
+                             moriarty_internal::ValuePrinter(
+                                 WhitespaceAsChar(whitespace))),
                  ErrorSnippetCaretPosition::kAtCursor);
   }
 
   char c = static_cast<char>(is.peek());
 
   if (!std::isspace(static_cast<unsigned char>(c))) {
-    ThrowIOError(
-        std::format("Expected whitespace, but got '{}'.", ReadableChar(c)),
-        ErrorSnippetCaretPosition::kAtCursor);
+    ThrowIOError(std::format("Expected whitespace, but got {}.",
+                             moriarty_internal::ValuePrinter(c)),
+                 ErrorSnippetCaretPosition::kAtCursor);
   }
 
   if (c != WhitespaceAsChar(whitespace)) {
-    ThrowIOError(std::format("Expected '{}', but got '{}'.",
-                             ReadableChar(WhitespaceAsChar(whitespace)),
-                             ReadableChar(c)),
+    ThrowIOError(std::format("Expected {}, but got {}.",
+                             moriarty_internal::ValuePrinter(
+                                 WhitespaceAsChar(whitespace)),
+                             moriarty_internal::ValuePrinter(c)),
                  ErrorSnippetCaretPosition::kAtCursor);
   }
 
@@ -233,13 +263,20 @@ std::string InputCursor::GetErrorContextSnippet(
       lookahead_trimmed)
     right_trimmed = true;
 
-  std::string rendered = RenderForSnippet(std::string_view(full_line).substr(
-      snippet_start_col, snippet_end_col - snippet_start_col));
+  std::string rendered =
+      moriarty_internal::ValuePrinter(std::string_view(full_line).substr(
+          snippet_start_col, snippet_end_col - snippet_start_col));
+  if (rendered.size() >= 2 && rendered.front() == '"' && rendered.back() == '"')
+    rendered = rendered.substr(1, rendered.size() - 2);
 
   std::string line;
   if (left_trimmed) line += "...";
   line += rendered;
   if (right_trimmed) line += "...";
+
+  // TODO: The caret location is wrong if there are non-printable characters
+  // since they may take up multiple fields (e.g., "\\t"). I think this is rare
+  // enough that I'm not too concerned, but is technically a bug.
 
   int rendered_caret_col =
       (caret_col - snippet_start_col) + (left_trimmed ? 3 : 0);
@@ -259,44 +296,6 @@ std::string InputCursor::GetErrorContextSnippet(
   }
 
   return std::format("{}\n{}", line, marker);
-}
-
-char InputCursor::WhitespaceAsChar(Whitespace whitespace) {
-  switch (whitespace) {
-    case Whitespace::kNewline:
-      return '\n';
-    case Whitespace::kTab:
-      return '\t';
-    case Whitespace::kSpace:
-      return ' ';
-  }
-  throw std::logic_error("Invalid whitespace enum value");
-}
-
-std::string InputCursor::ReadableChar(char c) {
-  switch (c) {
-    case '\n':
-      return "\\n";
-    case '\t':
-      return "\\t";
-    case '\r':
-      return "\\r";
-  }
-  if (std::isprint(static_cast<unsigned char>(c))) return std::string(1, c);
-  return "ASCII=" + std::to_string(static_cast<unsigned char>(c));
-}
-
-char InputCursor::RenderChar(char c) {
-  if (c == '\t') return ' ';
-  if (std::isprint(static_cast<unsigned char>(c))) return c;
-  return '?';
-}
-
-std::string InputCursor::RenderForSnippet(std::string_view raw) {
-  std::string rendered;
-  rendered.reserve(raw.size());
-  for (char c : raw) rendered.push_back(RenderChar(c));
-  return rendered;
 }
 
 [[noreturn]] void InputCursor::ThrowIOError(
@@ -391,7 +390,7 @@ std::pair<std::string, bool> InputCursor::ReadLookAhead(int max_chars) const {
     if (next == EOF) break;
     char c = static_cast<char>(next);
     if (c == '\n' || c == '\r') break;
-    right.push_back(RenderChar(c));
+    right.push_back(c);
   }
 
   bool right_trimmed = false;

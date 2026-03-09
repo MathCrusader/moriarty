@@ -29,6 +29,7 @@
 
 #include "src/constraints/numeric_constraints.h"
 #include "src/context.h"
+#include "src/internal/value_printer.h"
 #include "src/librarian/errors.h"
 #include "src/test_case.h"
 #include "src/variables/minteger.h"
@@ -248,7 +249,9 @@ void ReadLiteral(ReadContext ctx, const StringLiteral& literal) {
   std::string read_token = ctx.ReadToken();
   std::string expected = std::string(literal);
   if (read_token != expected) {
-    ctx.ThrowIOError("Expected '{}', but got '{}'.", expected, read_token);
+    ctx.ThrowIOError("Expected {}, but got {}.",
+                     moriarty_internal::ValuePrinter(expected),
+                     moriarty_internal::ValuePrinter(read_token));
   }
 }
 

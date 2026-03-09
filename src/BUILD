@@ -109,6 +109,7 @@ cc_library(
         "//src:test_case",
         "//src/constraints:numeric_constraints",
         "//src/internal:expressions",
+        "//src/internal:value_printer",
         "//src/librarian:errors",
         "//src/variables:minteger",
     ],

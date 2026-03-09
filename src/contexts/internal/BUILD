@@ -29,7 +29,6 @@ cc_library(
     hdrs = ["basic_istream_context.h"],
     deps = [
         "//src/internal:value_printer",
-        "//src/librarian:errors",
         "//src/librarian:io_config",
         "//src/librarian:policies",
         "//src/librarian/util:ref",

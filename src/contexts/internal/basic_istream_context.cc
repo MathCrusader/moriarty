@@ -25,7 +25,6 @@
 #include <string_view>
 
 #include "src/internal/value_printer.h"
-#include "src/librarian/errors.h"
 #include "src/librarian/io_config.h"
 #include "src/librarian/policies.h"
 #include "src/librarian/util/ref.h"
@@ -172,11 +171,11 @@ double BasicIStreamContext::ReadReal(int num_digits) {
   auto [ptr, ec] =
       std::from_chars(token.data(), token.data() + token.size(), result);
   if (ec != std::errc{} || ptr != token.data() + token.size()) {
-    ThrowIOError("Expected a real number, but got '{}'.",
+    ThrowIOError("Expected a real number, but got {}.",
                  moriarty_internal::ValuePrinter(read_token));
   }
   if (std::isinf(result) || std::isnan(result)) {
-    ThrowIOError("Expected a real number, but got '{}'.",
+    ThrowIOError("Expected a real number, but got {}.",
                  moriarty_internal::ValuePrinter(read_token));
   }
 

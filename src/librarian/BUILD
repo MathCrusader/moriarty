@@ -58,6 +58,7 @@ cc_library(
     srcs = ["io_config.cc"],
     hdrs = ["io_config.h"],
     deps = [
+        "//src/internal:value_printer",
         "//src/librarian:errors",
         "//src/librarian:policies",
         "//src/librarian/util:ref",

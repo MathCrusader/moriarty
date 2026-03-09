@@ -29,6 +29,13 @@ namespace moriarty {
 // Various kinds of whitespace characters.
 enum class Whitespace { kSpace, kTab, kNewline };
 
+// Return the character corresponding to the given whitespace.
+char WhitespaceAsChar(Whitespace whitespace);
+
+// Return a human-readable representation of the given whitespace for error
+// messages.
+std::string PrettyPrintValue(Whitespace whitespace);
+
 // Information about where the input cursor is in the input stream.
 struct InputCursor {
   enum class ErrorSnippetCaretPosition {
@@ -84,11 +91,6 @@ struct InputCursor {
   [[nodiscard]] std::string GetErrorContextSnippet(
       int chars_before, int chars_after,
       ErrorSnippetCaretPosition caret_position) const;
-
-  static char WhitespaceAsChar(Whitespace whitespace);
-  static std::string ReadableChar(char c);
-  static char RenderChar(char c);
-  static std::string RenderForSnippet(std::string_view raw);
 
   void RegisterReadChar(char c);
   ErrorMessageMetadata ResolveErrorMessageMetadata(

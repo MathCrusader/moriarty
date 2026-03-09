@@ -468,9 +468,10 @@ MVariant<T...>::variant_value_type MVariant<T...>::ReadImpl(
   auto it =
       std::ranges::find(Format().GetDiscriminatorOptions(), discriminator);
   if (it == Format().GetDiscriminatorOptions().end()) {
-    ctx.ThrowIOError(std::format(
-        "Invalid discriminator '{}'. Expected one of: {}.", discriminator,
-        absl::StrJoin(Format().GetDiscriminatorOptions(), ", ")));
+    ctx.ThrowIOError(
+        "Invalid discriminator {}. Expected one of: {}.",
+        moriarty_internal::ValuePrinter(discriminator),
+        moriarty_internal::ValuePrinter(Format().GetDiscriminatorOptions()));
   }
 
   size_t idx = std::distance(Format().GetDiscriminatorOptions().begin(), it);
