@@ -38,13 +38,13 @@ cc_static_library(
         "//visibility:public",
     ],
     deps = [
-        "//src:actions",
-        "//src:context",
-        "//src:problem",
-        "//src:simple_io",
-        "//src:test_case",
-        "//src/constraints:all_mconstraints",
-        "//src/variables:all_mvariables",
+        "//moriarty:actions",
+        "//moriarty:context",
+        "//moriarty:problem",
+        "//moriarty:simple_io",
+        "//moriarty:test_case",
+        "//moriarty/constraints:all_mconstraints",
+        "//moriarty/variables:all_mvariables",
     ],
 )
 

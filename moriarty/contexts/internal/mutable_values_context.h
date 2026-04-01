@@ -1,0 +1,61 @@
+// Copyright 2025 Darcy Best
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef MORIARTY_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_
+#define MORIARTY_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_
+
+#include <string_view>
+
+#include "moriarty/internal/abstract_variable.h"
+#include "moriarty/internal/value_set.h"
+#include "moriarty/librarian/util/ref.h"
+
+namespace moriarty {
+namespace moriarty_internal {
+
+// MutableValuesContext
+//
+// Allows you to update the values currently stored.
+class MutableValuesContext {
+ public:
+  explicit MutableValuesContext(Ref<ValueSet> values);
+
+  // SetValue()
+  //
+  // Sets the value of `variable_name` to be `value`.
+  template <MoriartyVariable T>
+  void SetValue(std::string_view variable_name, T::value_type value);
+
+  // EraseValue()
+  //
+  // Removes `variable_name` from the set of known values.
+  void EraseValue(std::string_view variable_name);
+
+ private:
+  Ref<ValueSet> values_;
+};
+
+// -----------------------------------------------------------------------------
+//  Template implementation below
+
+template <MoriartyVariable T>
+void MutableValuesContext::SetValue(std::string_view variable_name,
+                                    T::value_type value) {
+  values_.get().Set<T>(variable_name, std::move(value));
+}
+
+}  // namespace moriarty_internal
+}  // namespace moriarty
+
+#endif  // MORIARTY_CONTEXTS_INTERNAL_MUTABLE_VALUES_CONTEXT_H_

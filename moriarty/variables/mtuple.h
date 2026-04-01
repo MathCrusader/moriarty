@@ -1,0 +1,458 @@
+// Copyright 2025 Darcy Best
+// Copyright 2024 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef MORIARTY_VARIABLES_MTUPLE_H_
+#define MORIARTY_VARIABLES_MTUPLE_H_
+
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
+#include <format>
+#include <string>
+#include <tuple>
+#include <utility>
+#include <vector>
+
+#include "absl/strings/str_join.h"
+#include "moriarty/constraints/base_constraints.h"
+#include "moriarty/constraints/constraint_violation.h"
+#include "moriarty/constraints/container_constraints.h"
+#include "moriarty/context.h"
+#include "moriarty/contexts/librarian_context.h"
+#include "moriarty/internal/abstract_variable.h"
+#include "moriarty/librarian/errors.h"
+#include "moriarty/librarian/io_config.h"
+#include "moriarty/librarian/mvariable.h"
+#include "moriarty/librarian/util/ref.h"
+
+namespace moriarty {
+
+template <typename... MElementTypes>
+class MTuple;
+namespace librarian {
+template <typename... MElementTypes>
+struct MVariableValueTypeTrait<MTuple<MElementTypes...>> {
+  using type = std::tuple<typename MElementTypes::value_type...>;
+};
+}  // namespace librarian
+
+// MTupleFormat
+//
+// How to format an MTuple when reading/writing.
+class MTupleFormat {
+ public:
+  // Sets the whitespace to be used between elements of the tuple.
+  //
+  // Default: kSpace
+  MTupleFormat& WithSeparator(Whitespace separator);
+  // Returns the separator used between elements of the tuple.
+  Whitespace GetSeparator() const;
+
+  // Sets the tuple to be space-separated.
+  MTupleFormat& SpaceSeparated();
+  // Sets the tuple to be newline-separated.
+  MTupleFormat& NewlineSeparated();
+
+  // Take any non-defaults in `other` and apply them to this format.
+  void Merge(const MTupleFormat& other);
+
+ private:
+  Whitespace separator_ = Whitespace::kSpace;
+};
+
+// MTuple<>
+//
+// Describes constraints placed on an ordered tuple of objects. All objects in
+// the tuple must have a corresponding MVariable.
+//
+// This can hold as many objects as you'd like. For example:
+//
+//    MTuple<MInteger, MInteger>
+// or
+//    MTuple<
+//          MArray<MInteger>,
+//          MArray<MTuple<MInteger, MInteger, MString>>,
+//          MTuple<MInteger, MString>
+//         >
+template <typename... MElementTypes>
+class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
+ public:
+  using tuple_value_type = std::tuple<typename MElementTypes::value_type...>;
+  class Reader;  // Forward declaration
+  using chunked_reader_type = Reader;
+
+  // Create an MTuple from a set of constraints. Logically equivalent to
+  // calling AddConstraint() for each constraint.
+  //
+  // E.g.,
+  //     MTuple<MInteger, MInteger>(
+  //          Element<0, MInteger>(Between(1, 10)),
+  //          Element<1, MString>(Length(15)));
+  template <typename... Constraints>
+    requires(ConstraintFor<MTuple, Constraints> && ...)
+  explicit MTuple(Constraints&&... constraints);
+
+  // Create an MTuple by specifying the MVariables directly.
+  //
+  // E.g.,
+  //     MTuple(MInteger(Between(1, 10)), MString(Length(15)));
+  explicit MTuple(MElementTypes... values);
+
+  ~MTuple() override = default;
+
+  // Typename()
+  //
+  // Returns a string representing the name of this type (for example,
+  // "MTuple<MInteger, MInteger, MString>"). This is mostly used for
+  // debugging/error messages.
+  [[nodiscard]] std::string Typename() const override;
+
+  using librarian::MVariable<MTuple>::AddConstraint;  // Custom constraints
+
+  MTuple& AddConstraint(Exactly<tuple_value_type> constraint);
+  MTuple& AddConstraint(OneOf<tuple_value_type> constraint);
+
+  MTuple& AddConstraint(MTupleFormat constraint);
+  MTupleFormat& Format();
+  MTupleFormat Format() const;
+
+  template <size_t I, typename MElementType>
+  MTuple& AddConstraint(Element<I, MElementType> constraint);
+
+  // MTuple::CoreConstraints
+  //
+  // A base set of constraints for `MTuple` that are used during generation.
+  // Note: Returned references are invalidated after any non-const call to this
+  // class or the corresponding `MTuple`.
+  class CoreConstraints {
+   public:
+    bool ElementsConstrained() const;
+    const std::tuple<MElementTypes...>& Elements() const;
+
+   private:
+    friend class MTuple;
+    enum Flags : uint32_t {
+      kElements = 1 << 0,
+    };
+    struct Data {  // Must be public since MTuple is a templated class.
+      std::underlying_type_t<Flags> touched = 0;
+      std::tuple<MElementTypes...> elements;
+    };
+    librarian::CowPtr<Data> data_;
+    bool IsSet(Flags flag) const;
+  };
+  [[nodiscard]] CoreConstraints GetCoreConstraints() const {
+    return core_constraints_;
+  }
+
+  // MTuple::Reader
+  //
+  // An object that can read in an MTuple in chunks. One element at a time.
+  // Whitespace must be handled outside of this.
+  class Reader {
+   public:
+    explicit Reader(librarian::ReadVariableContext ctx, int num_chunks,
+                    Ref<const MTuple> variable);
+    void ReadNext(librarian::ReadVariableContext ctx);
+    tuple_value_type Finalize() &&;
+
+   private:
+    std::size_t current_index_ = 0;
+    tuple_value_type values_;
+    Ref<const MTuple> variable_;
+
+    template <std::size_t... Is>
+    void ReadCurrentIndex(librarian::ReadVariableContext ctx,
+                          std::index_sequence<Is...>);
+  };
+
+ private:
+  CoreConstraints core_constraints_;
+  MTupleFormat format_;
+
+  // ---------------------------------------------------------------------------
+  //  MVariable overrides
+  tuple_value_type GenerateImpl(
+      librarian::GenerateVariableContext ctx) const override;
+  tuple_value_type ReadImpl(librarian::ReadVariableContext ctx) const override;
+  void WriteImpl(librarian::WriteVariableContext ctx,
+                 const tuple_value_type& value) const override;
+  // ---------------------------------------------------------------------------
+
+  template <size_t I, typename MElementType>
+  struct ElementConstraintWrapper {
+   public:
+    explicit ElementConstraintWrapper(Element<I, MElementType> constraint);
+    ValidationResult Validate(ConstraintContext ctx,
+                              const tuple_value_type& value) const;
+    std::string ToString() const;
+    std::vector<std::string> GetDependencies() const;
+    void ApplyTo(MTuple& other) const;
+
+   private:
+    Element<I, MElementType> constraint_;
+  };
+};
+
+// Class template argument deduction (CTAD). Allows for `MTuple(MInteger(),
+// MString())` instead of `MTuple<MInteger, MString>()`.
+template <typename... MElementTypes>
+MTuple(MElementTypes...) -> MTuple<MElementTypes...>;
+
+// -----------------------------------------------------------------------------
+//  Template Implementation Below
+
+template <typename... T>
+MTuple<T...>::MTuple(T... values) {
+  static_assert(
+      (MoriartyVariable<T> && ...),
+      "MTuple<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
+      "MString).");
+  static_assert(sizeof...(T) > 0, "MTuple must have at least one element.");
+
+  auto apply_one = [&]<std::size_t I>() {
+    this->AddConstraint(
+        Element<I, typename std::tuple_element_t<I, std::tuple<T...>>>(
+            std::get<I>(std::tuple{values...})));
+  };
+
+  [&]<size_t... I>(std::index_sequence<I...>) {
+    (apply_one.template operator()<I>(), ...);
+  }(std::index_sequence_for<T...>{});
+}
+
+template <typename... T>
+template <typename... Constraints>
+  requires(ConstraintFor<MTuple<T...>, Constraints> && ...)
+MTuple<T...>::MTuple(Constraints&&... constraints) {
+  static_assert(
+      (MoriartyVariable<T> && ...),
+      "MTuple<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
+      "MString).");
+  (AddConstraint(std::forward<Constraints>(constraints)), ...);
+}
+
+namespace moriarty_internal {
+
+template <size_t I>
+std::string TupleSubVariable() {
+  return std::format("<{}>", I);
+}
+
+}  // namespace moriarty_internal
+
+template <typename... T>
+std::string MTuple<T...>::Typename() const {
+  std::tuple typenames = std::apply(
+      [](auto&&... elem) { return std::make_tuple(elem.Typename()...); },
+      core_constraints_.Elements());
+  return std::format("MTuple<{}>", absl::StrJoin(typenames, ", "));
+}
+
+template <typename... T>
+MTuple<T...>& MTuple<T...>::AddConstraint(
+    Exactly<tuple_value_type> constraint) {
+  return this->InternalAddExactlyConstraint(std::move(constraint));
+}
+
+template <typename... T>
+MTuple<T...>& MTuple<T...>::AddConstraint(OneOf<tuple_value_type> constraint) {
+  return this->InternalAddOneOfConstraint(std::move(constraint));
+}
+
+template <typename... T>
+MTuple<T...>& MTuple<T...>::AddConstraint(MTupleFormat constraint) {
+  Format().Merge(constraint);
+  return *this;
+}
+
+template <typename... T>
+MTupleFormat& MTuple<T...>::Format() {
+  return format_;
+}
+
+template <typename... T>
+MTupleFormat MTuple<T...>::Format() const {
+  return format_;
+}
+
+template <typename... T>
+template <size_t I, typename MElementType>
+MTuple<T...>& MTuple<T...>::AddConstraint(Element<I, MElementType> constraint) {
+  static_assert(
+      std::same_as<MElementType,
+                   typename std::tuple_element_t<I, std::tuple<T...>>>,
+      "Element I in the tuple does not match the type passed in the "
+      "constraint");
+  auto& constraints = core_constraints_.data_.Mutable();
+  constraints.touched |= CoreConstraints::Flags::kElements;
+
+  std::get<I>(constraints.elements).MergeFrom(constraint.GetConstraints());
+  return this->InternalAddConstraint(
+      ElementConstraintWrapper(std::move(constraint)));
+}
+
+template <typename... T>
+MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
+    librarian::GenerateVariableContext ctx) const {
+  if (this->GetOneOf().HasBeenConstrained())
+    return this->GetOneOf().SelectOneOf(
+        [&](int n) { return ctx.RandomInteger(n); });
+
+  auto generate_one = [&]<std::size_t I>() {
+    return std::get<I>(core_constraints_.Elements())
+        .Generate(ctx.ForSubVariable(moriarty_internal::TupleSubVariable<I>()));
+  };
+
+  return [&]<size_t... I>(std::index_sequence<I...>) {
+    return tuple_value_type { generate_one.template operator()<I>()... };
+  }(std::index_sequence_for<T...>{});
+}
+
+template <typename... T>
+void MTuple<T...>::WriteImpl(librarian::WriteVariableContext ctx,
+                             const tuple_value_type& value) const {
+  auto write_one = [&]<std::size_t I>() {
+    if (I > 0) ctx.WriteWhitespace(Format().GetSeparator());
+    std::get<I>(core_constraints_.Elements()).Write(ctx, std::get<I>(value));
+  };
+
+  [&]<size_t... I>(std::index_sequence<I...>) {
+    (write_one.template operator()<I>(), ...);
+  }(std::index_sequence_for<T...>{});
+}
+
+template <typename... T>
+MTuple<T...>::tuple_value_type MTuple<T...>::ReadImpl(
+    librarian::ReadVariableContext ctx) const {
+  MTuple<T...>::Reader reader = MTuple<T...>::Reader(ctx, sizeof...(T), *this);
+
+  for (size_t i = 0; i < sizeof...(T); ++i) {
+    if (i > 0) ctx.ReadWhitespace(Format().GetSeparator());
+    reader.ReadNext(ctx);
+  }
+  return std::move(reader).Finalize();
+}
+
+template <typename... T>
+template <size_t I, typename MElementType>
+MTuple<T...>::ElementConstraintWrapper<I, MElementType>::
+    ElementConstraintWrapper(Element<I, MElementType> constraint)
+    : constraint_(std::move(constraint)){};
+
+template <typename... T>
+template <size_t I, typename MElementType>
+ValidationResult
+MTuple<T...>::ElementConstraintWrapper<I, MElementType>::Validate(
+    ConstraintContext ctx, const tuple_value_type& value) const {
+  auto index_name = [](int idx) { return std::format("index {}", idx); };
+  auto v = constraint_.Validate(ctx.ForIndexedSubVariable(index_name, I),
+                                std::get<I>(value));
+  if (v.IsOk()) return ValidationResult::Ok();
+  return ctx.Violation(value, std::move(v));
+}
+
+template <typename... T>
+template <size_t I, typename MElementType>
+std::string MTuple<T...>::ElementConstraintWrapper<I, MElementType>::ToString()
+    const {
+  return constraint_.ToString();
+}
+
+template <typename... T>
+template <size_t I, typename MElementType>
+std::vector<std::string> MTuple<T...>::ElementConstraintWrapper<
+    I, MElementType>::GetDependencies() const {
+  return constraint_.GetDependencies();
+}
+
+template <typename... T>
+template <size_t I, typename MElementType>
+void MTuple<T...>::ElementConstraintWrapper<I, MElementType>::ApplyTo(
+    MTuple& other) const {
+  other.AddConstraint(constraint_);
+}
+
+template <typename... MElementTypes>
+const std::tuple<MElementTypes...>&
+MTuple<MElementTypes...>::CoreConstraints::Elements() const {
+  return data_->elements;
+}
+
+template <typename... MElementTypes>
+bool MTuple<MElementTypes...>::CoreConstraints::ElementsConstrained() const {
+  return IsSet(Flags::kElements);
+}
+
+template <typename... MElementTypes>
+bool MTuple<MElementTypes...>::CoreConstraints::IsSet(Flags flag) const {
+  return (data_->touched & static_cast<uint32_t>(flag)) != 0;
+}
+
+template <typename... MElementTypes>
+MTuple<MElementTypes...>::Reader::Reader(librarian::ReadVariableContext ctx,
+                                         int num_chunks,
+                                         Ref<const MTuple> variable)
+    : variable_(std::move(variable)) {
+  if (num_chunks != sizeof...(MElementTypes)) {
+    throw ConfigurationError(
+        "MTuple::Reader",
+        std::format(
+            "Asked to read {} elements, but there are {} elements in {}.",
+            num_chunks, sizeof...(MElementTypes),
+            MTuple<MElementTypes...>().Typename()));
+  }
+}
+
+template <typename... MElementTypes>
+void MTuple<MElementTypes...>::Reader::ReadNext(
+    librarian::ReadVariableContext ctx) {
+  if (current_index_ >= sizeof...(MElementTypes)) {
+    ctx.ThrowIOError(
+        "{}: Attempting to read more elements than exist in tuple.",
+        MTuple<MElementTypes...>().Typename());
+  }
+  ReadCurrentIndex(ctx, std::index_sequence_for<MElementTypes...>{});
+  current_index_++;
+}
+
+template <typename... MElementTypes>
+MTuple<MElementTypes...>::tuple_value_type
+MTuple<MElementTypes...>::Reader::Finalize() && {
+  return std::move(values_);
+}
+
+template <typename... MElementTypes>
+template <std::size_t... Is>
+void MTuple<MElementTypes...>::Reader::ReadCurrentIndex(
+    librarian::ReadVariableContext ctx, std::index_sequence<Is...>) {
+  auto read_element = [&]<std::size_t I>() {
+    if constexpr (I < sizeof...(Is)) {
+      if (current_index_ == I) {
+        std::get<I>(values_) =
+            std::get<I>(variable_.get().GetCoreConstraints().Elements())
+                .Read(ctx);
+        return true;
+      }
+    }
+    return false;
+  };
+
+  (... || read_element.template operator()<Is>());
+}
+
+}  // namespace moriarty
+
+#endif  // MORIARTY_VARIABLES_MTUPLE_H_

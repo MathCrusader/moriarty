@@ -1,0 +1,291 @@
+// Copyright 2025 Darcy Best
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef MORIARTY_CONTEXT_H_
+#define MORIARTY_CONTEXT_H_
+
+#include <iostream>
+#include <optional>
+#include <span>
+#include <vector>
+
+#include "moriarty/contexts/internal/basic_istream_context.h"
+#include "moriarty/contexts/internal/basic_ostream_context.h"
+#include "moriarty/contexts/internal/basic_random_context.h"
+#include "moriarty/contexts/internal/name_context.h"
+#include "moriarty/contexts/internal/variable_istream_context.h"
+#include "moriarty/contexts/internal/variable_ostream_context.h"
+#include "moriarty/contexts/internal/variable_random_context.h"
+#include "moriarty/contexts/internal/view_only_context.h"
+#include "moriarty/internal/value_set.h"
+#include "moriarty/librarian/io_config.h"
+#include "moriarty/librarian/policies.h"
+#include "moriarty/librarian/util/ref.h"
+#include "moriarty/test_case.h"
+
+namespace moriarty {
+
+enum class ValidationStyle {
+  kNone,              // No validation
+  kOnlySetVariables,  // Ensure every variable that has a value set is valid
+  kOnlySetValues,     // Ensure every value that is set is valid
+  kAllVariables,      // Ensure every variable has a value that is valid
+  kEverything,  // Ensure the set of values and variables are identical and
+                // all of them are valid
+};
+
+// -----------------------------------------------------------------------------
+//  Generate
+
+// GenerateContext
+//
+// All context that Generators have access to.
+class GenerateContext : public moriarty_internal::ViewOnlyContext,
+                        public moriarty_internal::BasicRandomContext,
+                        public moriarty_internal::VariableRandomContext {
+ public:
+  // Created by Moriarty and passed to you; no need to instantiate.
+  GenerateContext(Ref<const moriarty_internal::VariableSet> variables,
+                  Ref<const moriarty_internal::ValueSet> values,
+                  Ref<moriarty_internal::RandomEngine> rng);
+
+  // *****************************************************
+  // ** See parent classes for all available functions. **
+  // *****************************************************
+};
+
+// The function signature for a generator.
+using GenerateFn = std::function<std::vector<MTestCase>(GenerateContext)>;
+
+// Possible future additions:
+//  - Make some generations non-fatal (aka, if they fail, it's okay)
+//  - GenerateUntil (aka, we'll keep generating until g(x) is true)
+struct GenerateOptions {
+  // The descriptive name of this generator.
+  std::string name;
+
+  // How many times to call the generator.
+  int num_calls = 1;
+
+  // The seed to be passed to this generator. This will be combined with
+  // Moriarty's general seed. If empty, a seed will be auto-generated.
+  std::optional<std::string> seed;
+
+  // Only auto-generate values for these variables (and any variables they
+  // depend on). If empty, all variables will be generated.  If this is set,
+  // then only these variables count as "all variables" for the purposes of
+  // ValidationStyle.
+  std::vector<std::string> variables_to_generate;
+
+  // After generation is complete, how should we validate the test cases?
+  ValidationStyle validation = ValidationStyle::kAllVariables;
+};
+
+// -----------------------------------------------------------------------------
+//  Readers
+
+// ReadContext
+//
+// All context that Readers have access to.
+class ReadContext : public moriarty_internal::ViewOnlyContext,
+                    public moriarty_internal::BasicIStreamContext,
+                    public moriarty_internal::VariableIStreamContext {
+ public:
+  // Created by Moriarty and passed to you; no need to instantiate.
+  ReadContext(Ref<const moriarty_internal::VariableSet> variables,
+              Ref<InputCursor> input);
+  ReadContext(Ref<const moriarty_internal::VariableSet> variables,
+              Ref<const moriarty_internal::ValueSet> external_values,
+              Ref<InputCursor> input);
+
+  // *****************************************************
+  // ** See parent classes for all available functions. **
+  // *****************************************************
+
+  // ExternalKnownValues()
+  //
+  // Returns a TestCase containing all currently known variable values prior to
+  // starting the current read. For example, when reading the output, this will
+  // contain all input values.
+  //
+  // TODO: Consider if this should be an `Unsafe` function. We don't want people
+  // to be confused as to which function they should call. If you're using
+  // SimpleIO, it will add these values to the TestCase you're creating. If
+  // you're not using SimpleIO, it is up to you to handle where different values
+  // come from.
+  TestCase ExternalKnownValues() const;
+
+ private:
+  // TODO: In the future, these values will be the testset-wide values.
+  moriarty_internal::ValueSet values_;
+};
+
+// The function signature for a reader.
+using ReaderFn = std::function<std::vector<TestCase>(ReadContext)>;
+
+struct ReadOptions {
+  // The input stream to read from.
+  Ref<std::istream> istream = std::cin;
+
+  // How strict the reader should be about whitespace.
+  WhitespaceStrictness whitespace_strictness = WhitespaceStrictness::kPrecise;
+
+  // After reading is complete, how should we validate the test cases?
+  ValidationStyle validation = ValidationStyle::kAllVariables;
+};
+
+// -----------------------------------------------------------------------------
+//  Writers
+
+// WriteContext
+//
+// All context that Writers have access to.
+class WriteContext : public moriarty_internal::ViewOnlyContext,
+                     public moriarty_internal::BasicOStreamContext,
+                     public moriarty_internal::VariableOStreamContext {
+ public:
+  // Created by Moriarty and passed to you; no need to instantiate.
+  WriteContext(Ref<std::ostream> os,
+               Ref<const moriarty_internal::VariableSet> variables,
+               Ref<const moriarty_internal::ValueSet> values);
+  WriteContext(WriteContext ctx, Ref<std::ostream> os);
+
+  // *****************************************************
+  // ** See parent classes for all available functions. **
+  // *****************************************************
+};
+
+// The function signature for a writer.
+using WriterFn = std::function<void(WriteContext, std::span<const TestCase>)>;
+
+struct WriteOptions {
+  // The output stream to write to.
+  Ref<std::ostream> ostream = std::cout;
+};
+
+// -----------------------------------------------------------------------------
+//  Validate
+
+// ValidationResults
+//
+// The results of a validation operation.
+class [[nodiscard]] ValidationResults {
+ public:
+  // Adds a failure for the given test case number with the given reason.
+  void AddFailure(int test_case_num, std::string reason);
+
+  // Returns true if there were no failures.
+  [[nodiscard]] bool IsValid() const;
+
+  // Returns a string describing all failures. If there are no failures, returns
+  // an empty string. (Note: empty string does not necessarily mean valid.)
+  [[nodiscard]] std::string DescribeFailures() const;
+
+ private:
+  std::vector<std::pair<int, std::string>> failures_;
+};
+
+struct ValidateOptions {
+  // How should we validate the test cases?
+  ValidationStyle validation = ValidationStyle::kAllVariables;
+
+  // Which variables to validate. If empty, all variables will be validated. If
+  // this is set, then only these variables count as "all variables" for the
+  // purposes of ValidationStyle.
+  std::vector<std::string> variables_to_validate;
+};
+
+// -----------------------------------------------------------------------------
+//  Custom Constraints
+
+// ConstraintContext
+//
+// All context that Constraints (including CustomConstraints) have access to.
+class ConstraintContext : public moriarty_internal::NameContext,
+                          public moriarty_internal::ViewOnlyContext {
+ public:
+  ConstraintContext(std::string_view variable_name,
+                    Ref<const moriarty_internal::VariableSet> variables,
+                    Ref<const moriarty_internal::ValueSet> values);
+  ConstraintContext(const ConstraintContext& other, NameContext new_name);
+  template <typename T>
+  explicit ConstraintContext(const T& other)
+      : NameContext(other), ViewOnlyContext(other) {}
+
+  [[nodiscard]] ConstraintContext ForSubVariable(
+      std::string_view sub_variable_name) const;
+
+  [[nodiscard]] ConstraintContext ForIndexedSubVariable(
+      std::function<std::string(int)> indexed_name_fn, int index) const;
+
+  struct Evidence {
+    std::string expected;
+    std::string evaluated;
+    std::string details;
+  };
+
+  template <typename T>
+  [[nodiscard]] ValidationResult Violation(const T& value,
+                                           Evidence evidence) const;
+
+  template <typename T>
+  [[nodiscard]] ValidationResult Violation(
+      const T& value, ValidationResult&& subvariable_violation) const;
+
+  // ********************************************
+  // ** See parent classes for more functions. **
+  // ********************************************
+};
+
+// -----------------------------------------------------------------------------
+//  Analyzers
+
+// AnalyzeContext
+//
+// All context that Analyzers have access to.
+class AnalyzeContext : public moriarty_internal::ViewOnlyContext {
+ public:
+  AnalyzeContext(Ref<const moriarty_internal::VariableSet> variables,
+                 Ref<const moriarty_internal::ValueSet> values);
+
+  // ********************************************
+  // ** See parent classes for more functions. **
+  // ********************************************
+};
+
+// ----------------------------------------------------------------------------
+// Template implementation below
+
+template <typename T>
+ValidationResult ConstraintContext::Violation(
+    const T& value, ValidationResult&& subvariable_violation) const {
+  return ValidationResult::Violation(GetLocalVariableName(), value,
+                                     std::move(subvariable_violation));
+}
+
+template <typename T>
+ValidationResult ConstraintContext::Violation(const T& value,
+                                              Evidence evidence) const {
+  std::optional<librarian::Evaluated> e;
+  if (!evidence.evaluated.empty()) e = librarian::Evaluated(evidence.evaluated);
+  std::optional<librarian::Details> d;
+  if (!evidence.details.empty()) d = librarian::Details(evidence.details);
+  return ValidationResult::Violation(GetLocalVariableName(), value,
+                                     librarian::Expected(evidence.expected), e,
+                                     d);
+}
+
+}  // namespace moriarty
+
+#endif  // MORIARTY_CONTEXT_H_

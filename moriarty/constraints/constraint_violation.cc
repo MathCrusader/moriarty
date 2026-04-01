@@ -1,0 +1,130 @@
+// Copyright 2026 Darcy Best
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "moriarty/constraints/constraint_violation.h"
+
+#include <format>
+#include <iostream>
+#include <memory>
+#include <string>
+#include <string_view>
+#include <variant>
+
+namespace moriarty {
+namespace moriarty_internal {
+
+/*
+strings: ["a", "bb", "ccc", "dddd", "eeeee", "abcdefghijklmn", ...]
+╰─ index 5: "abcdefghijklmn"
+   ╰─ length: 14
+      ╰─ expected: 1 ≤ length ≤ 3 * N + 1
+         which is: 1 ≤ length ≤ 13
+          details: too large
+*/
+
+namespace {
+
+using Dets = moriarty_internal::ValidationResultNode::Details;
+using Node = std::unique_ptr<moriarty_internal::ValidationResultNode>;
+
+void AppendValidationResultTree(std::string& result,
+                                const ValidationResultNode& node,
+                                std::string_view prefix, bool is_root) {
+  result +=
+      (is_root ? std::format("{}: {}\n", node.name, node.value)
+               : std::format("{}╰─ {}: {}\n", prefix, node.name, node.value));
+
+  if (std::holds_alternative<Dets>(node.details)) {
+    const auto& d = std::get<Dets>(node.details);
+
+    const std::string child_prefix =
+        is_root ? std::string(prefix) : std::format("{}   ", prefix);
+
+    result +=
+        std::format("{}╰─ expected: {}\n", child_prefix, d.expected.value);
+
+    const bool has_evaluated =
+        d.evaluated && d.evaluated->value != d.expected.value;
+    if (has_evaluated) {
+      result +=
+          std::format("{}   which is: {}\n", child_prefix, d.evaluated->value);
+    }
+
+    if (d.details) {
+      // Keep one leading space so labels align: expected / which is / details.
+      result += std::format("{}   {}: {}\n", child_prefix, " details",
+                            d.details->value);
+    }
+    return;
+  }
+
+  const std::string child_prefix =
+      is_root ? std::string(prefix) : std::format("{}   ", prefix);
+  AppendValidationResultTree(result, *std::get<Node>(node.details),
+                             child_prefix, false);
+}
+
+}  // namespace
+
+std::string PrettyPrintValidationResult(const ValidationResultNode& node) {
+  std::string result;
+  AppendValidationResultTree(result, node, "", true);
+  return result;
+}
+
+}  // namespace moriarty_internal
+
+ValidationResult::ValidationResult(
+    InternalConstructorTag, bool ok,
+    std::unique_ptr<moriarty_internal::ValidationResultNode> details)
+    : ok_(ok), details_(std::move(details)) {
+  if (details_ != nullptr && ok_) {
+    throw std::logic_error(
+        "ValidationResult cannot be Ok and have details at the same time");
+  }
+}
+
+ValidationResult ValidationResult::Ok() {
+  return ValidationResult(ValidationResult::InternalConstructorTag{}, true,
+                          nullptr);
+}
+
+ValidationResult ValidationResult::Violation(
+    std::string name, librarian::Expected expected,
+    std::optional<librarian::Evaluated> evaluated,
+    std::optional<librarian::Details> details) {
+  return ValidationResult(
+      ValidationResult::InternalConstructorTag{}, false,
+      std::make_unique<moriarty_internal::ValidationResultNode>(
+          moriarty_internal::ValidationResultNode{
+              std::move(name), "(none)",
+              moriarty_internal::ValidationResultNode::Details{
+                  .expected = std::move(expected),
+                  .evaluated = std::move(evaluated),
+                  .details = std::move(details)}}));
+}
+
+bool ValidationResult::IsOk() const { return ok_; }
+
+std::string ValidationResult::PrettyReason() const {
+  if (ok_ || details_ == nullptr) return "";
+  return moriarty_internal::PrettyPrintValidationResult(*details_);
+}
+
+std::ostream& operator<<(std::ostream& os, const ValidationResult& validation) {
+  if (validation.IsOk()) return os << "Constraint is satisfied";
+  return os << validation.PrettyReason();
+}
+
+}  // namespace moriarty

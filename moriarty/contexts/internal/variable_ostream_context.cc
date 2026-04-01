@@ -1,0 +1,37 @@
+#include "moriarty/contexts/internal/variable_ostream_context.h"
+
+#include <ostream>
+#include <string_view>
+
+#include "moriarty/internal/abstract_variable.h"
+#include "moriarty/internal/value_set.h"
+#include "moriarty/internal/variable_set.h"
+#include "moriarty/librarian/util/ref.h"
+#include "moriarty/test_case.h"
+
+namespace moriarty {
+namespace moriarty_internal {
+
+VariableOStreamContext::VariableOStreamContext(Ref<std::ostream> os,
+                                               Ref<const VariableSet> variables,
+                                               Ref<const ValueSet> values)
+    : variables_(variables), values_(values), os_(os) {}
+
+void VariableOStreamContext::WriteVariable(std::string_view variable_name) {
+  const AbstractVariable* variable =
+      variables_.get().GetAnonymousVariable(variable_name);
+
+  variable->WriteValue(variable_name, os_, variables_, values_);
+}
+
+void VariableOStreamContext::WriteVariableFrom(std::string_view variable_name,
+                                               const TestCase& test_case) {
+  const AbstractVariable* variable =
+      variables_.get().GetAnonymousVariable(variable_name);
+
+  variable->WriteValue(variable_name, os_, variables_,
+                       test_case.UnsafeGetValues());
+}
+
+}  // namespace moriarty_internal
+}  // namespace moriarty

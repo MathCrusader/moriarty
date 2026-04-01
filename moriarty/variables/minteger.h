@@ -1,0 +1,175 @@
+// Copyright 2025 Darcy Best
+// Copyright 2024 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#ifndef MORIARTY_VARIABLES_MINTEGER_H_
+#define MORIARTY_VARIABLES_MINTEGER_H_
+
+#include <cstdint>
+#include <optional>
+#include <string>
+#include <vector>
+
+#include "moriarty/constraints/equality_constraints.h"
+#include "moriarty/constraints/integer_constraints.h"
+#include "moriarty/constraints/numeric_constraints.h"
+#include "moriarty/constraints/size_constraints.h"
+#include "moriarty/contexts/librarian_context.h"
+#include "moriarty/internal/range.h"
+#include "moriarty/librarian/mvariable.h"
+#include "moriarty/librarian/size_property.h"
+#include "moriarty/librarian/util/cow_ptr.h"
+
+namespace moriarty {
+
+class MInteger;
+namespace librarian {
+template <>
+struct MVariableValueTypeTrait<MInteger> {
+  using type = int64_t;
+};
+}  // namespace librarian
+
+// MInteger
+//
+// Describes constraints placed on an integer. We mean a "mathematical" integer,
+// not a "computer science" integer. As such, we intentionally do not have an
+// MVariable for 32-bit integers.
+class MInteger : public librarian::MVariable<MInteger> {
+ public:
+  // Create an MInteger from a set of constraints. Logically equivalent to
+  // calling AddConstraint() for each constraint.
+  //
+  // E.g., MInteger(Between(1, "3 * N + 1"), SizeCategory::Small())
+  template <typename... Constraints>
+    requires(ConstraintFor<MInteger, Constraints> && ...)
+  explicit MInteger(Constraints&&... constraints);
+
+  ~MInteger() override = default;
+
+  using MVariable<MInteger>::AddConstraint;  // Custom constraints
+
+  // ---------------------------------------------------------------------------
+  //  Constrain the value to a specific set of values
+
+  // The integer must be exactly this value.
+  MInteger& AddConstraint(Exactly<int64_t> constraint);
+  // The integer must be exactly this integer expression (e.g., "3 * N + 1").
+  MInteger& AddConstraint(Exactly<std::string> constraint);
+  // The integer must be exactly this value.
+  MInteger& AddConstraint(librarian::ExactlyNumeric constraint);
+
+  // The integer must be one of these values.
+  MInteger& AddConstraint(OneOf<int64_t> constraint);
+  // The integer must be one of these integer expressions (e.g., "3 * N + 1").
+  MInteger& AddConstraint(OneOf<std::string> constraint);
+  // The integer must be one of these values.
+  MInteger& AddConstraint(librarian::OneOfNumeric constraint);
+
+  // ---------------------------------------------------------------------------
+  //  Constrain the interval of values that the integer can be in
+
+  // The integer must be in this inclusive range.
+  MInteger& AddConstraint(Between constraint);
+  // The integer must be this value or smaller.
+  MInteger& AddConstraint(AtMost constraint);
+  // The integer must be this value or larger.
+  MInteger& AddConstraint(AtLeast constraint);
+
+  // ---------------------------------------------------------------------------
+  //  Constrain the mod-value of the integer
+
+  // The integer must satisfy `x % mod == remainder`. E.g., Mod(2, 4)
+  MInteger& AddConstraint(Mod constraint);
+
+  // ---------------------------------------------------------------------------
+  //  Pseudo-constraints on size
+
+  // The integer should be approximately this size.
+  MInteger& AddConstraint(SizeCategory constraint);
+
+  [[nodiscard]] std::string Typename() const override { return "MInteger"; }
+
+  // MInteger::CoreConstraints
+  //
+  // A base set of constraints for `MInteger` that are used during generation.
+  // Note: Returned references are invalidated after any non-const call to this
+  // class or the corresponding `MInteger`.
+  class CoreConstraints {
+   public:
+    bool BoundsConstrained() const;
+    const Range& Bounds() const;
+
+    bool ModConstrained() const;
+    Mod::Equation ModConstraints() const;
+
+   private:
+    friend class MInteger;
+    enum Flags : uint32_t {
+      kBounds = 1 << 0,
+      kMod = 1 << 1,
+    };
+    struct Data {
+      std::underlying_type_t<Flags> touched = 0;
+      Range bounds;
+      Mod::Equation mod = {Expression("0"), Expression("1")};
+    };
+    librarian::CowPtr<Data> data_;
+    bool IsSet(Flags flag) const;
+  };
+  [[nodiscard]] CoreConstraints GetCoreConstraints() const {
+    return core_constraints_;
+  }
+
+ private:
+  CoreConstraints core_constraints_;
+  librarian::CowPtr<librarian::OneOfNumeric> numeric_one_of_;
+  librarian::CowPtr<librarian::SizeHandler> size_handler_;
+
+  // Computes and returns the minimum and maximum of `bounds_`. Throws if the
+  // range is empty. The `GenerateVariableContext` version may generate other
+  // dependent variables if needed along the way, but the
+  // `AnalyzeVariableContext` version won't. std::nullopt means that the bounds
+  // cannot be determined without generating some values.
+  std::optional<Range::ExtremeValues<int64_t>> GetExtremeValues(
+      librarian::AnalyzeVariableContext ctx) const;
+  Range::ExtremeValues<int64_t> GetExtremeValues(
+      librarian::GenerateVariableContext ctx) const;
+
+  // ---------------------------------------------------------------------------
+  //  MVariable overrides
+  int64_t GenerateImpl(librarian::GenerateVariableContext ctx) const override;
+  int64_t ReadImpl(librarian::ReadVariableContext ctx) const override;
+  void WriteImpl(librarian::WriteVariableContext ctx,
+                 const int64_t& value) const override;
+  std::vector<MInteger> ListEdgeCasesImpl(
+      librarian::AnalyzeVariableContext ctx) const override;
+  std::optional<int64_t> GetUniqueValueImpl(
+      librarian::AnalyzeVariableContext ctx) const override;
+  // ---------------------------------------------------------------------------
+};
+
+// -----------------------------------------------------------------------------
+//  Implementation details
+// -----------------------------------------------------------------------------
+
+template <typename... Constraints>
+  requires(ConstraintFor<MInteger, Constraints> && ...)
+MInteger::MInteger(Constraints&&... constraints) {
+  (AddConstraint(std::forward<Constraints>(constraints)), ...);
+}
+
+}  // namespace moriarty
+
+#endif  // MORIARTY_VARIABLES_MINTEGER_H_
