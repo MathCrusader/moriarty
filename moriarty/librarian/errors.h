@@ -184,6 +184,12 @@ class GenerationError : public GenericMoriartyError {
         message_(message),
         retryable_(retryable) {}
 
+  explicit GenerationError(std::string_view message, RetryPolicy retryable)
+      : GenericMoriartyError(std::string(message)),
+        variable_name_(""),
+        message_(message),
+        retryable_(retryable) {}
+
   const std::string& VariableName() const { return variable_name_; }
   const std::string& Message() const { return message_; }
   RetryPolicy IsRetryable() const { return retryable_; }

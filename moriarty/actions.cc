@@ -216,7 +216,8 @@ std::vector<TestCase> GenerateBuilder::Run() const {
 
       moriarty_internal::ValueSet values;
       moriarty_internal::RandomEngine rng(seed, "v0.1");
-      GenerateContext ctx(problem_.UnsafeGetVariables(), values, rng);
+      GenerateContext ctx(problem_.UnsafeGetVariables(), values, rng,
+                          options.args);
 
       std::vector<TestCase> generated_cases;
       if (std::holds_alternative<NamedGenerator::ToTestCase>(generator)) {

@@ -24,6 +24,18 @@ package(
 licenses(["notice"])
 
 cc_library(
+    name = "arg_context",
+    srcs = ["arg_context.cc"],
+    hdrs = ["arg_context.h"],
+    deps = [
+        "//moriarty/librarian:errors",
+        "//moriarty/librarian:policies",
+        "//moriarty/librarian/util:ref",
+    ],
+)
+
+
+cc_library(
     name = "basic_istream_context",
     srcs = ["basic_istream_context.cc"],
     hdrs = ["basic_istream_context.h"],
@@ -154,6 +166,16 @@ cc_library(
         "//moriarty/internal:variable_set",
         "//moriarty/librarian:errors",
         "//moriarty/librarian/util:ref",
+    ],
+)
+
+cc_test(
+    name = "arg_context_test",
+    srcs = ["arg_context_test.cc"],
+    deps = [
+        ":arg_context",
+        "//moriarty/librarian:errors",
+        "@googletest//:gtest_main",
     ],
 )
 

@@ -14,6 +14,7 @@
 
 #include "moriarty/context.h"
 
+#include <unordered_map>
 #include <utility>
 
 #include "moriarty/contexts/internal/basic_istream_context.h"
@@ -31,10 +32,12 @@ namespace moriarty {
 GenerateContext::GenerateContext(
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values,
-    Ref<moriarty_internal::RandomEngine> rng)
+    Ref<moriarty_internal::RandomEngine> rng,
+    Ref<const std::unordered_map<std::string, std::string>> args)
     : ViewOnlyContext(variables, values),
       BasicRandomContext(rng),
-      VariableRandomContext(variables, values, rng) {}
+      VariableRandomContext(variables, values, rng),
+      ArgContext(args) {}
 
 ReadContext::ReadContext(Ref<const moriarty_internal::VariableSet> variables,
                          Ref<InputCursor> input)

@@ -1,3 +1,4 @@
+// Copyright 2026 Darcy Best
 // Copyright 2024 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,6 +15,7 @@
 
 #include "moriarty/generators/combinatorial_generator.h"
 
+#include <unordered_map>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -69,7 +71,8 @@ TEST(CombinatorialCoverage, GenerateShouldCreateCasesFromCoveringArray) {
       Context().WithVariable("X", MTestType()).WithVariable("Y", MTestType());
 
   moriarty_internal::RandomEngine rng({1, 2, 3, 4}, "v0.1");
-  GenerateContext ctx(context.Variables(), context.Values(), rng);
+  std::unordered_map<std::string, std::string> args;
+  GenerateContext ctx(context.Variables(), context.Values(), rng, args);
 
   std::vector<MTestCase> test_cases = CombinatorialCoverage(ctx);
   std::vector<ValueSet> generated_cases;

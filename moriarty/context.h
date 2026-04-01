@@ -18,8 +18,10 @@
 #include <iostream>
 #include <optional>
 #include <span>
+#include <unordered_map>
 #include <vector>
 
+#include "moriarty/contexts/internal/arg_context.h"
 #include "moriarty/contexts/internal/basic_istream_context.h"
 #include "moriarty/contexts/internal/basic_ostream_context.h"
 #include "moriarty/contexts/internal/basic_random_context.h"
@@ -53,12 +55,14 @@ enum class ValidationStyle {
 // All context that Generators have access to.
 class GenerateContext : public moriarty_internal::ViewOnlyContext,
                         public moriarty_internal::BasicRandomContext,
-                        public moriarty_internal::VariableRandomContext {
+                        public moriarty_internal::VariableRandomContext,
+                        public moriarty_internal::ArgContext {
  public:
   // Created by Moriarty and passed to you; no need to instantiate.
   GenerateContext(Ref<const moriarty_internal::VariableSet> variables,
                   Ref<const moriarty_internal::ValueSet> values,
-                  Ref<moriarty_internal::RandomEngine> rng);
+                  Ref<moriarty_internal::RandomEngine> rng,
+                  Ref<const std::unordered_map<std::string, std::string>> args);
 
   // *****************************************************
   // ** See parent classes for all available functions. **
@@ -82,14 +86,14 @@ struct GenerateOptions {
   // Moriarty's general seed. If empty, a seed will be auto-generated.
   std::optional<std::string> seed;
 
-  // Only auto-generate values for these variables (and any variables they
-  // depend on). If empty, all variables will be generated.  If this is set,
-  // then only these variables count as "all variables" for the purposes of
-  // ValidationStyle.
-  std::vector<std::string> variables_to_generate;
-
-  // After generation is complete, how should we validate the test cases?
-  ValidationStyle validation = ValidationStyle::kAllVariables;
+  // Arguments that can be accessed by the generator. This is useful for when
+  // you want to use the same generator with different parameters. For example,
+  // you may want to have a generator that generates a tree of a certain size,
+  // and you can specify the size in `args`.
+  //
+  // Access via `ctx.Arg<int>("name")` or `ctx.Arg<std::string>("name")` in the
+  // generator.
+  std::unordered_map<std::string, std::string> args;
 };
 
 // -----------------------------------------------------------------------------

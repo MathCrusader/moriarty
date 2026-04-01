@@ -527,6 +527,31 @@ TEST(GenerateTest, CallingRunWithNoGeneratorsShouldThrow) {
       ThrowsMessage<ConfigurationError>(HasSubstr("No generators specified")));
 }
 
+TEST(GenerateTest, GeneratorsShouldHaveAccessToArgs) {
+  Problem p(Variables(Var("N", MInteger(Between(1, 10000)))), Seed("test_seed"),
+            OutputFormat(Line("N")));
+
+  std::ostringstream output;
+  auto test_cases = Generate(p)
+                        .Using("TestGenerator",
+                               [](GenerateContext ctx) {
+                                 return MTestCase().SetValue<MInteger>(
+                                     "N", ctx.Arg<int>("value"));
+                               },
+                               {.num_calls = 3, .args = {{"value", "42"}}})
+                        .WriteOutputUsing({.ostream = output})
+                        .Run();
+
+  EXPECT_THAT(test_cases, SizeIs(3));
+
+  std::istringstream output_stream(output.str());
+  for (int i = 0; i < 3; i++) {
+    int n;
+    output_stream >> n;
+    EXPECT_EQ(n, 42);
+  }
+}
+
 TEST(AnalyzeTest, CallingRunWithNoAnalyzersShouldThrow) {
   Problem p(Variables(Var("N", MInteger(Between(1, 10)))), Seed("test_seed"),
             InputFormat(Line("N")));

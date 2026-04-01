@@ -47,6 +47,7 @@ cc_library(
     hdrs = ["context.h"],
     deps = [
         ":test_case",
+        "//moriarty/contexts/internal:arg_context",
         "//moriarty/contexts/internal:basic_istream_context",
         "//moriarty/contexts/internal:basic_ostream_context",
         "//moriarty/contexts/internal:basic_random_context",
