@@ -40,7 +40,6 @@ cc_static_library(
     deps = [
         "//src:actions",
         "//src:context",
-        "//src:moriarty",
         "//src:problem",
         "//src:simple_io",
         "//src:test_case",

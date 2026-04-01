@@ -65,29 +65,6 @@ cc_library(
 )
 
 cc_library(
-    name = "moriarty",
-    srcs = [
-        "moriarty.cc",
-    ],
-    hdrs = [
-        "moriarty.h",
-    ],
-    deps = [
-        ":context",
-        ":test_case",
-        "//src/internal:abstract_variable",
-        "//src/internal:analysis_bootstrap",
-        "//src/internal:generation_bootstrap",
-        "//src/internal:random_engine",
-        "//src/internal:value_set",
-        "//src/internal:variable_name_utils",
-        "//src/internal:variable_set",
-        "//src/librarian:errors",
-        "//src/librarian:io_config",
-    ],
-)
-
-cc_library(
     name = "problem",
     srcs = ["problem.cc"],
     hdrs = ["problem.h"],
@@ -142,29 +119,6 @@ cc_test(
         "//src/librarian:policies",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "moriarty_test",
-    size = "small",
-    srcs = [
-        "moriarty_test.cc",
-    ],
-    deps = [
-        ":context",
-        ":moriarty",
-        ":test_case",
-        "//src/constraints:container_constraints",
-        "//src/constraints:numeric_constraints",
-        "//src/librarian:errors",
-        "//src/librarian:io_config",
-        "//src/librarian/testing:gtest_helpers",
-        "//src/librarian/testing:mtest_type",
-        "//src/variables:marray",
-        "//src/variables:minteger",
-        "//src/variables:mstring",
         "@googletest//:gtest_main",
     ],
 )
