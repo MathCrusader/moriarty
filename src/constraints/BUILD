@@ -34,7 +34,6 @@ cc_library(
         ":custom_constraint",
         ":equality_constraints",
         ":graph_constraints",
-        ":io_constraints",
         ":numeric_constraints",
         ":size_constraints",
         ":string_constraints",
@@ -114,17 +113,6 @@ cc_library(
         "//src:context",
         "//src/internal:expressions",
         "//src/librarian:errors",
-    ],
-)
-
-cc_library(
-    name = "io_constraints",
-    srcs = ["io_constraints.cc"],
-    hdrs = ["io_constraints.h"],
-    deps = [
-        ":base_constraints",
-        ":constraint_violation",
-        "//src/librarian:io_config",
     ],
 )
 
@@ -230,16 +218,6 @@ cc_test(
         "//src:context",
         "//src/librarian/testing:gtest_helpers",
         "//src/variables:minteger",
-        "@googletest//:gtest_main",
-    ],
-)
-
-cc_test(
-    name = "io_constraints_test",
-    srcs = ["io_constraints_test.cc"],
-    deps = [
-        ":io_constraints",
-        "//src/librarian:io_config",
         "@googletest//:gtest_main",
     ],
 )
