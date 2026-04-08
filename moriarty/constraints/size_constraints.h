@@ -68,7 +68,9 @@ class SizeCategory : public MConstraint {
 
   // Determines if the container's elements satisfy all constraints.
   template <typename T>
-  ValidationResult Validate(const T& value) const {
+  ValidationResult Validate(auto ctx, const T& value) const {
+    // Note that auto here is to hide a circular dependency. We don't actually
+    // care about the type of ctx since this is just a generation hint.
     // Size is a suggestion, not a strict requirement.
     return ValidationResult::Ok();
   }

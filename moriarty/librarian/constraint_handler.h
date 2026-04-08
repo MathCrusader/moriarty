@@ -26,12 +26,6 @@
 namespace moriarty {
 namespace librarian {
 
-template <typename ConstraintType, typename ValueType>
-concept ConstraintHasSimplifiedValidateFn =
-    requires(const ConstraintType& c, const ValueType& v) {
-      { c.Validate(v) } -> std::same_as<ValidationResult>;
-    };
-
 template <typename ConstraintType, typename VariableType>
 concept ConstraintHasCustomApplyToFn =
     requires(const ConstraintType& c, VariableType& v) {
@@ -87,11 +81,7 @@ class ConstraintHandler {
         : constraint_(std::move(constraint)) {}
     auto Validate(ConstraintContext ctx, const ValueType& value) const
         -> ValidationResult override {
-      if constexpr (ConstraintHasSimplifiedValidateFn<U, ValueType>) {
-        return constraint_.Validate(value);
-      } else {
-        return constraint_.Validate(ctx, value);
-      }
+      return constraint_.Validate(ctx, value);
     }
     auto ToString() const -> std::string override {
       return constraint_.ToString();

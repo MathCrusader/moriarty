@@ -152,13 +152,6 @@ class MVariable : public moriarty_internal::AbstractVariable {
   //
   // Adds multiple constraints at once.
   template <typename... Constraints>
-    requires(sizeof...(Constraints) > 0)
-  VariableType& AddConstraints(Constraints&&... constraints);
-
-  // AddConstraints()
-  //
-  // Adds multiple constraints at once.
-  template <typename... Constraints>
   VariableType& AddConstraints(std::tuple<Constraints...> constraints);
 
   // Validate()
