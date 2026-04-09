@@ -46,6 +46,15 @@ cc_library(
 )
 
 cc_library(
+    name = "dependencies",
+    srcs = ["dependencies.cc"],
+    hdrs = ["dependencies.h"],
+    deps = [
+        "//moriarty/librarian/util:cow_ptr",
+    ],
+)
+
+cc_library(
     name = "errors",
     hdrs = ["errors.h"],
     deps = [
@@ -120,6 +129,15 @@ cc_test(
         "//moriarty/librarian/testing:gtest_helpers",
         "//moriarty/variables:minteger",
         "//moriarty/variables:mstring",
+        "@googletest//:gtest_main",
+    ],
+)
+
+cc_test(
+    name = "dependencies_test",
+    srcs = ["dependencies_test.cc"],
+    deps = [
+        ":dependencies",
         "@googletest//:gtest_main",
     ],
 )
