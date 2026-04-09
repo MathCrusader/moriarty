@@ -93,6 +93,11 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
   class Reader;  // Forward declaration
   using chunked_reader_type = Reader;
 
+  static_assert(
+      (MoriartyVariable<MElementTypes> && ...),
+      "MTuple<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
+      "MString).");
+
   // Create an MTuple from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
   //
@@ -216,12 +221,6 @@ MTuple(MElementTypes...) -> MTuple<MElementTypes...>;
 
 template <typename... T>
 MTuple<T...>::MTuple(T... values) {
-  static_assert(
-      (MoriartyVariable<T> && ...),
-      "MTuple<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
-      "MString).");
-  static_assert(sizeof...(T) > 0, "MTuple must have at least one element.");
-
   auto apply_one = [&]<std::size_t I>() {
     this->AddConstraint(
         Element<I, typename std::tuple_element_t<I, std::tuple<T...>>>(
@@ -237,10 +236,6 @@ template <typename... T>
 template <typename... Constraints>
   requires(ConstraintFor<MTuple<T...>, Constraints> && ...)
 MTuple<T...>::MTuple(Constraints&&... constraints) {
-  static_assert(
-      (MoriartyVariable<T> && ...),
-      "MTuple<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
-      "MString).");
   (AddConstraint(std::forward<Constraints>(constraints)), ...);
 }
 
@@ -317,7 +312,7 @@ MTuple<T...>::tuple_value_type MTuple<T...>::GenerateImpl(
   };
 
   return [&]<size_t... I>(std::index_sequence<I...>) {
-    return tuple_value_type { generate_one.template operator()<I>()... };
+    return tuple_value_type{generate_one.template operator()<I>()...};
   }(std::index_sequence_for<T...>{});
 }
 
@@ -350,7 +345,7 @@ template <typename... T>
 template <size_t I, typename MElementType>
 MTuple<T...>::ElementConstraintWrapper<I, MElementType>::
     ElementConstraintWrapper(Element<I, MElementType> constraint)
-    : constraint_(std::move(constraint)){};
+    : constraint_(std::move(constraint)) {};
 
 template <typename... T>
 template <size_t I, typename MElementType>

@@ -94,6 +94,11 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
   using comparator_type =
       std::function<bool(const element_value_type&, const element_value_type&)>;
 
+  static_assert(
+      MoriartyVariable<MElementType>,
+      "The T used in MArray<T> must be a Moriarty variable. For example, "
+      "MArray<MInteger> or MArray<MCustomType>.");
+
   // Create an MArray from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
   //
@@ -302,10 +307,6 @@ template <typename T>
 template <typename... Constraints>
   requires(ConstraintFor<MArray<T>, Constraints> && ...)
 MArray<T>::MArray(Constraints&&... constraints) {
-  static_assert(
-      MoriartyVariable<T>,
-      "The T used in MArray<T> must be a Moriarty variable. For example, "
-      "MArray<MInteger> or MArray<MCustomType>.");
   (AddConstraint(std::forward<Constraints>(constraints)), ...);
 }
 

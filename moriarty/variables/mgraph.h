@@ -144,6 +144,11 @@ class MGraph : public librarian::MVariable<MGraph<MEdgeLabel, MNodeLabel>> {
   class Reader;  // Forward declaration
   using chunked_reader_type = Reader;
 
+  static_assert(MoriartyVariable<MEdgeLabel> && MoriartyVariable<MNodeLabel>,
+                "The T and U used in MGraph<T, U> must be a Moriarty variable. "
+                "For example, "
+                "MGraph<MInteger, MString> or MGraph<MCustomType, MNone>.");
+
   // Create an MGraph from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
   //
@@ -333,10 +338,6 @@ template <typename MEdgeLabel, typename MNodeLabel>
 template <typename... Constraints>
   requires(ConstraintFor<MGraph<MEdgeLabel, MNodeLabel>, Constraints> && ...)
 MGraph<MEdgeLabel, MNodeLabel>::MGraph(Constraints&&... constraints) {
-  static_assert(MoriartyVariable<MEdgeLabel> && MoriartyVariable<MNodeLabel>,
-                "The T and U used in MGraph<T, U> must be a Moriarty variable. "
-                "For example, "
-                "MGraph<MInteger, MString> or MGraph<MCustomType, MNone>.");
   (this->AddConstraint(std::forward<Constraints>(constraints)), ...);
 }
 

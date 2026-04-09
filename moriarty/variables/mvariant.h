@@ -150,6 +150,11 @@ class MVariant : public librarian::MVariable<MVariant<MAlternativeTypes...>> {
   using variant_value_type =
       std::variant<typename MAlternativeTypes::value_type...>;
 
+  static_assert(
+      (MoriartyVariable<MAlternativeTypes> && ...),
+      "MVariant<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
+      "MString).");
+
   // Create an MVariant from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
   //
@@ -278,11 +283,6 @@ MVariant(MAlternativeTypes...) -> MVariant<MAlternativeTypes...>;
 
 template <typename... T>
 MVariant<T...>::MVariant(T... values) {
-  static_assert(
-      (MoriartyVariable<T> && ...),
-      "MVariant<T1, T2> requires T1 and T2 to be MVariables (E.g., MInteger or "
-      "MString).");
-
   auto apply_one = [&]<std::size_t I>() {
     this->AddConstraint(
         Element<I, typename std::tuple_element_t<I, std::tuple<T...>>>(
@@ -416,10 +416,8 @@ MVariant<T...>::variant_value_type MVariant<T...>::GenerateImpl(
     (
         [&] {
           if (idx == I) {
-            generated_value = variant_value_type {
-              std::in_place_index<I>,
-              generate_one.template operator()<I>()
-            };
+            generated_value = variant_value_type{
+                std::in_place_index<I>, generate_one.template operator()<I>()};
           }
         }(),
         ...);
@@ -510,7 +508,7 @@ template <typename... T>
 template <size_t I, typename MAlternativeType>
 MVariant<T...>::ElementConstraintWrapper<I, MAlternativeType>::
     ElementConstraintWrapper(Element<I, MAlternativeType> constraint)
-    : constraint_(std::move(constraint)){};
+    : constraint_(std::move(constraint)) {};
 
 template <typename... T>
 template <size_t I, typename MAlternativeType>
