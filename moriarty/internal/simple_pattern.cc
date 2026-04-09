@@ -212,21 +212,11 @@ RepeatedCharSet ParseCharacterSetBody(std::string_view chars) {
   return char_set;
 }
 
-std::vector<std::string> RepeatedCharSet::GetDependencies() const {
-  std::vector<std::string> dependencies;
-  if (min_) {
-    auto min_deps = min_->GetDependencies();
-    dependencies.insert(dependencies.end(),
-                        std::make_move_iterator(min_deps.begin()),
-                        std::make_move_iterator(min_deps.end()));
-  }
-  if (max_) {
-    auto max_deps = max_->GetDependencies();
-    dependencies.insert(dependencies.end(),
-                        std::make_move_iterator(max_deps.begin()),
-                        std::make_move_iterator(max_deps.end()));
-  }
-  return dependencies;
+Dependencies RepeatedCharSet::GetDependencies() const {
+  Dependencies deps;
+  if (min_) deps.Merge(min_->GetDependencies());
+  if (max_) deps.Merge(max_->GetDependencies());
+  return deps;
 }
 
 int RepetitionPrefixLength(std::string_view pattern) {
@@ -553,21 +543,12 @@ std::string GeneratePatternNode(
   return result;
 }
 
-std::vector<std::string> ExtractDependencies(const PatternNode& node) {
-  std::vector<std::string> dependencies;
-  for (const PatternNode& subpattern : node.subpatterns) {
-    std::vector<std::string> sub_dependencies = ExtractDependencies(subpattern);
-    dependencies.insert(dependencies.end(),
-                        std::make_move_iterator(sub_dependencies.begin()),
-                        std::make_move_iterator(sub_dependencies.end()));
-  }
-  if (node.repeated_character_set) {
-    std::vector<std::string> deps =
-        node.repeated_character_set->GetDependencies();
-    dependencies.insert(dependencies.end(),
-                        std::make_move_iterator(deps.begin()),
-                        std::make_move_iterator(deps.end()));
-  }
+Dependencies ExtractDependencies(const PatternNode& node) {
+  Dependencies dependencies;
+  for (const PatternNode& subpattern : node.subpatterns)
+    dependencies.Merge(ExtractDependencies(subpattern));
+  if (node.repeated_character_set)
+    dependencies.Merge(node.repeated_character_set->GetDependencies());
 
   return dependencies;
 }
@@ -586,11 +567,8 @@ std::string SimplePattern::GenerateWithRestrictions(
   return GeneratePatternNode(pattern_node_, restricted_alphabet, lookup, rand);
 }
 
-std::vector<std::string> SimplePattern::GetDependencies() const {
-  std::vector<std::string> deps = ExtractDependencies(pattern_node_);
-  std::ranges::sort(deps);
-  deps.erase(std::unique(deps.begin(), deps.end()), deps.end());
-  return deps;
+Dependencies SimplePattern::GetDependencies() const {
+  return ExtractDependencies(pattern_node_);
 }
 
 }  // namespace moriarty_internal

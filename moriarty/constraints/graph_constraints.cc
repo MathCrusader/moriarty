@@ -20,6 +20,7 @@
 #include <vector>
 
 #include "moriarty/constraints/equality_constraints.h"
+#include "moriarty/librarian/dependencies.h"
 #include "moriarty/variables/minteger.h"
 
 namespace moriarty {
@@ -37,7 +38,7 @@ std::string NumNodes::ToString() const {
                      num_nodes_.ToString());
 }
 
-std::vector<std::string> NumNodes::GetDependencies() const {
+Dependencies NumNodes::GetDependencies() const {
   return num_nodes_.GetDependencies();
 }
 
@@ -54,7 +55,7 @@ std::string NumEdges::ToString() const {
                      num_edges_.ToString());
 }
 
-std::vector<std::string> NumEdges::GetDependencies() const {
+Dependencies NumEdges::GetDependencies() const {
   return num_edges_.GetDependencies();
 }
 

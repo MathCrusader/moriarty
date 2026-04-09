@@ -43,6 +43,9 @@ cc_library(
 cc_library(
     name = "base_constraints",
     hdrs = ["base_constraints.h"],
+    deps = [
+        "//moriarty/librarian:dependencies",
+    ],
 )
 
 cc_library(
@@ -73,7 +76,6 @@ cc_library(
         ":base_constraints",
         ":constraint_violation",
         "//moriarty:context",
-        "//moriarty/contexts:librarian_context",
     ],
 )
 
@@ -98,6 +100,7 @@ cc_library(
         ":constraint_violation",
         ":equality_constraints",
         "//moriarty:context",
+        "//moriarty/librarian:dependencies",
         "//moriarty/types:graph",
         "//moriarty/variables:minteger",
     ],
@@ -191,6 +194,7 @@ cc_test(
         "//moriarty:context",
         "//moriarty/internal:value_set",
         "//moriarty/internal:variable_set",
+        "//moriarty/librarian:dependencies",
         "//moriarty/librarian/testing:gtest_helpers",
         "//moriarty/variables:minteger",
         "@googletest//:gtest_main",

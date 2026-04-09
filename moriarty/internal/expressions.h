@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "absl/numeric/int128.h"
+#include "moriarty/librarian/dependencies.h"
 
 namespace moriarty::moriarty_internal {
 class ExpressionProgram;
@@ -45,7 +46,7 @@ class Expression {
 
   [[nodiscard]] std::string ToString() const;
 
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
   [[nodiscard]] bool operator==(const Expression& other) const;
 
@@ -64,7 +65,7 @@ class ExpressionProgram {
 
   [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const;
   [[nodiscard]] std::string_view ExpressionString() const;
-  [[nodiscard]] const std::vector<std::string>& Dependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
   static std::shared_ptr<const ExpressionProgram> Parse(
       std::string_view expression);
 
@@ -139,7 +140,7 @@ class ExpressionProgram {
   std::string expression_;
   std::vector<Node> nodes_;
   size_t root_index_;
-  std::vector<std::string> dependencies_;
+  Dependencies dependencies_;
 };
 
 }  // namespace moriarty_internal

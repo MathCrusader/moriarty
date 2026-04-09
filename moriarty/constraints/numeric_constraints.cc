@@ -82,9 +82,8 @@ Between::Between(IntegerExpression minimum, int64_t maximum)
 
 Between::Between(IntegerExpression minimum, IntegerExpression maximum)
     : minimum_(Expression(minimum)), maximum_(Expression(maximum)) {
-  dependencies_ = std::get<Expression>(minimum_).GetDependencies();
-  auto max_deps = std::get<Expression>(maximum_).GetDependencies();
-  dependencies_.insert(dependencies_.end(), max_deps.begin(), max_deps.end());
+  dependencies_.Merge(std::get<Expression>(minimum_).GetDependencies());
+  dependencies_.Merge(std::get<Expression>(maximum_).GetDependencies());
 }
 
 Between::Between(IntegerExpression minimum, Real maximum)
@@ -181,9 +180,7 @@ ValidationResult Between::Validate(ConstraintContext ctx, double value) const {
                                    : "too large"});
 }
 
-std::vector<std::string> Between::GetDependencies() const {
-  return dependencies_;
-}
+Dependencies Between::GetDependencies() const { return dependencies_; }
 
 // -----------------------------------------------------------------------------
 //  AtMost
@@ -236,9 +233,7 @@ ValidationResult AtMost::Validate(ConstraintContext ctx, double value) const {
               .details = "too large"});
 }
 
-std::vector<std::string> AtMost::GetDependencies() const {
-  return dependencies_;
-}
+Dependencies AtMost::GetDependencies() const { return dependencies_; }
 
 // -----------------------------------------------------------------------------
 //  AtLeast
@@ -291,9 +286,7 @@ ValidationResult AtLeast::Validate(ConstraintContext ctx, double value) const {
               .details = "too small"});
 }
 
-std::vector<std::string> AtLeast::GetDependencies() const {
-  return dependencies_;
-}
+Dependencies AtLeast::GetDependencies() const { return dependencies_; }
 
 namespace librarian {
 
@@ -383,9 +376,7 @@ ValidationResult ExactlyNumeric::Validate(ConstraintContext ctx,
       "ExactlyNumeric::CheckIntegerValue: unexpected value type");
 }
 
-std::vector<std::string> ExactlyNumeric::GetDependencies() const {
-  return dependencies_;
-}
+Dependencies ExactlyNumeric::GetDependencies() const { return dependencies_; }
 
 // -----------------------------------------------------------------------------
 //  OneOfNumeric
@@ -393,21 +384,15 @@ std::vector<std::string> ExactlyNumeric::GetDependencies() const {
 OneOfNumeric::OneOfNumeric(std::span<const std::string> options)
     : expr_options_(std::vector<std::vector<Expression>>(
           1, std::vector<Expression>(options.begin(), options.end()))) {
-  for (const auto& expr : expr_options_.front()) {
-    auto deps_for_option = expr.GetDependencies();
-    dependencies_.insert(dependencies_.end(), deps_for_option.begin(),
-                         deps_for_option.end());
-  }
+  for (const auto& expr : expr_options_.front())
+    dependencies_.Merge(expr.GetDependencies());
 }
 
 OneOfNumeric::OneOfNumeric(std::span<const IntegerExpression> options)
     : expr_options_(std::vector<std::vector<Expression>>(
           1, std::vector<Expression>(options.begin(), options.end()))) {
-  for (const auto& expr : expr_options_.front()) {
-    auto deps_for_option = expr.GetDependencies();
-    dependencies_.insert(dependencies_.end(), deps_for_option.begin(),
-                         deps_for_option.end());
-  }
+  for (const auto& expr : expr_options_.front())
+    dependencies_.Merge(expr.GetDependencies());
 }
 
 OneOfNumeric::OneOfNumeric(std::span<const Real> options) {
@@ -435,11 +420,7 @@ bool OneOfNumeric::ConstrainOptions(Real other) {
 bool OneOfNumeric::ConstrainOptions(const OneOfNumeric& other) {
   expr_options_.insert(expr_options_.end(), other.expr_options_.begin(),
                        other.expr_options_.end());
-  dependencies_.insert(dependencies_.end(), other.dependencies_.begin(),
-                       other.dependencies_.end());
-  std::ranges::sort(dependencies_);
-  dependencies_.erase(std::unique(dependencies_.begin(), dependencies_.end()),
-                      dependencies_.end());
+  dependencies_.Merge(other.dependencies_);
 
   if (other.numeric_options_.HasBeenConstrained()) {
     if (!numeric_options_.ConstrainOptions(
@@ -661,9 +642,7 @@ ValidationResult OneOfNumeric::Validate(ConstraintContext ctx,
   return ValidationResult::Ok();
 }
 
-std::vector<std::string> OneOfNumeric::GetDependencies() const {
-  return dependencies_;
-}
+Dependencies OneOfNumeric::GetDependencies() const { return dependencies_; }
 
 bool OneOfNumeric::HasBeenConstrained() const {
   return numeric_options_.HasBeenConstrained() || !expr_options_.empty();

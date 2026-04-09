@@ -32,6 +32,7 @@
 #include "moriarty/internal/generation_handler.h"
 #include "moriarty/internal/value_set.h"
 #include "moriarty/internal/variable_set.h"
+#include "moriarty/librarian/dependencies.h"
 #include "moriarty/librarian/errors.h"
 #include "moriarty/librarian/policies.h"
 
@@ -40,7 +41,7 @@ namespace moriarty_internal {
 
 namespace {
 
-using DependencyMap = std::unordered_map<std::string, std::vector<std::string>>;
+using DependencyMap = std::unordered_map<std::string, Dependencies>;
 using Heap = std::priority_queue<std::string, std::vector<std::string>,
                                  std::greater<std::string>>;
 

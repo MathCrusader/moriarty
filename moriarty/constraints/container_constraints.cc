@@ -33,7 +33,7 @@ std::string Length::ToString() const {
   return std::format("has length that {}", length_.ToString());
 }
 
-std::vector<std::string> Length::GetDependencies() const {
+Dependencies Length::GetDependencies() const {
   return length_.GetDependencies();
 }
 

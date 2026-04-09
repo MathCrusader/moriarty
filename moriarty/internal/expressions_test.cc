@@ -571,8 +571,7 @@ TEST(ExpressionsTest, MissingVariablesFails) {
 }
 
 TEST(ExpressionsTest, DependenciesShouldWork) {
-  auto needed_vars =
-      [](std::string_view expression) -> std::vector<std::string> {
+  auto needed_vars = [](std::string_view expression) -> Dependencies {
     Expression expr(expression);
     return expr.GetDependencies();
   };

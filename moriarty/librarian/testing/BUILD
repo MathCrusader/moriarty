@@ -36,6 +36,7 @@ cc_library(
         "//moriarty/constraints:base_constraints",
         "//moriarty/constraints:constraint_violation",
         "//moriarty/contexts:librarian_context",
+        "//moriarty/librarian:dependencies",
         "//moriarty/librarian:mvariable",
         "//moriarty/variables:minteger",
     ],

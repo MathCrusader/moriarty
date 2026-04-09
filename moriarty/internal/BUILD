@@ -33,6 +33,7 @@ cc_library(
     ],
     deps = [
         "//moriarty/constraints:constraint_violation",
+        "//moriarty/librarian:dependencies",
         "//moriarty/librarian:io_config",
         "//moriarty/librarian/util:ref",
     ],
@@ -67,6 +68,7 @@ cc_library(
         "expressions.h",
     ],
     deps = [
+        "//moriarty/librarian:dependencies",
         "//moriarty/librarian:errors",
         "@abseil-cpp//absl/numeric:int128",
         "@abseil-cpp//absl/strings",
@@ -118,6 +120,7 @@ cc_library(
     deps = [
         "//moriarty/internal:expressions",
         "//moriarty/internal:value_printer",
+        "//moriarty/librarian:dependencies",
         "//moriarty/librarian:errors",
         "@abseil-cpp//absl/strings",
     ],
@@ -302,6 +305,7 @@ cc_library(
         ":value_set",
         ":variable_set",
         "//moriarty/constraints:constraint_violation",
+        "//moriarty/librarian:dependencies",
         "//moriarty/librarian:errors",
         "//moriarty/librarian:policies",
     ],

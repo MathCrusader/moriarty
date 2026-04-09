@@ -25,6 +25,7 @@
 #include "moriarty/context.h"
 #include "moriarty/internal/abstract_variable.h"
 #include "moriarty/internal/variable_set.h"
+#include "moriarty/librarian/dependencies.h"
 #include "moriarty/simple_io.h"
 
 namespace moriarty {
@@ -106,15 +107,14 @@ template <typename T>
 concept MoriartyFormat = requires(T t) {
   { t.Reader() } -> std::same_as<ReaderFn>;
   { t.Writer() } -> std::same_as<WriterFn>;
-  { t.GetDependencies() } -> std::same_as<std::vector<std::string>>;
+  { t.GetDependencies() } -> std::same_as<Dependencies>;
 };
 
 namespace moriarty_internal {
 
 class Format {
  public:
-  Format(ReaderFn reader, WriterFn writer,
-         std::vector<std::string> dependencies)
+  Format(ReaderFn reader, WriterFn writer, Dependencies dependencies)
       : reader_(std::move(reader)),
         writer_(std::move(writer)),
         dependencies_(std::move(dependencies)) {}
@@ -126,12 +126,12 @@ class Format {
 
   ReaderFn Reader() const { return reader_; }
   WriterFn Writer() const { return writer_; }
-  std::vector<std::string> GetDependencies() const { return dependencies_; }
+  Dependencies GetDependencies() const { return dependencies_; }
 
  private:
   ReaderFn reader_;
   WriterFn writer_;
-  std::vector<std::string> dependencies_;
+  Dependencies dependencies_;
 };
 
 }  // namespace moriarty_internal
@@ -164,7 +164,7 @@ class InputFormat {
 
   ReaderFn Reader() const;
   WriterFn Writer() const;
-  std::vector<std::string> GetDependencies() const;
+  Dependencies GetDependencies() const;
 
   [[nodiscard]] moriarty_internal::Format UnsafeGetFormat() const;
 
@@ -200,7 +200,7 @@ class OutputFormat {
 
   ReaderFn Reader() const;
   WriterFn Writer() const;
-  std::vector<std::string> GetDependencies() const;
+  Dependencies GetDependencies() const;
 
   [[nodiscard]] moriarty_internal::Format UnsafeGetFormat() const;
 
@@ -281,10 +281,10 @@ class Problem {
   std::optional<Seed> GetSeed() const;
   std::optional<ReaderFn> GetInputReader() const;
   std::optional<WriterFn> GetInputWriter() const;
-  std::optional<std::vector<std::string>> GetInputDependencies() const;
+  std::optional<Dependencies> GetInputDependencies() const;
   std::optional<ReaderFn> GetOutputReader() const;
   std::optional<WriterFn> GetOutputWriter() const;
-  std::optional<std::vector<std::string>> GetOutputDependencies() const;
+  std::optional<Dependencies> GetOutputDependencies() const;
 
   [[nodiscard]] std::vector<int64_t> BaseSeedForGenerator(
       std::string_view generator_seed) const;
@@ -296,10 +296,10 @@ class Problem {
   std::optional<Seed> seed_;
   std::optional<ReaderFn> input_reader_;
   std::optional<WriterFn> input_writer_;
-  std::optional<std::vector<std::string>> input_dependencies_;
+  std::optional<Dependencies> input_dependencies_;
   std::optional<ReaderFn> output_reader_;
   std::optional<WriterFn> output_writer_;
-  std::optional<std::vector<std::string>> output_dependencies_;
+  std::optional<Dependencies> output_dependencies_;
 
   void Apply(Title title);
   void Apply(Variables vars);

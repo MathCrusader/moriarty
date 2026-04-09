@@ -27,6 +27,8 @@ namespace moriarty {
 // Represents a set of variables that an object depends on.
 class Dependencies {
  public:
+  using value_type = std::string;
+  using const_iterator = std::vector<std::string>::const_iterator;
   using VariableName = std::string;
 
   // Creates an empty set of dependencies.
@@ -34,11 +36,18 @@ class Dependencies {
   // Creates a set of dependencies from a list of variable names.
   explicit Dependencies(std::vector<VariableName> dependencies);
 
+  void AddDependency(const VariableName& dependency);
+
   // Merges another set of dependencies into this one.
   void Merge(const Dependencies& other);
 
-  // Returns the list of variable names that we depend on.
-  const std::vector<VariableName>& GetDependencies() const;
+  const std::string* data() const { return deps_->data(); }
+  size_t size() const { return deps_->size(); }
+
+  auto begin() const { return deps_->begin(); }
+  auto end() const { return deps_->end(); }
+
+  bool empty() const { return deps_->empty(); }
 
  private:
   librarian::CowPtr<std::vector<VariableName>> deps_;

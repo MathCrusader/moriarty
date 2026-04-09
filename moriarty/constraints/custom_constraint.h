@@ -43,7 +43,7 @@ class CustomConstraint : public MConstraint {
   // messages. This constraint depends on the variables in `dependencies`. Their
   // values must be generated before this constraint is checked.
   explicit CustomConstraint(
-      std::string_view name, std::vector<std::string> dependencies,
+      std::string_view name, Dependencies dependencies,
       std::function<bool(ConstraintContext, const typename T::value_type&)>
           checker);
 
@@ -58,13 +58,13 @@ class CustomConstraint : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   std::string name_;
   std::function<bool(ConstraintContext, const typename T::value_type&)>
       constraint_;
-  std::vector<std::string> dependencies_;
+  Dependencies dependencies_;
 };
 
 // ----------------------------------------------------------------------------
@@ -81,7 +81,7 @@ CustomConstraint<T>::CustomConstraint(
 
 template <typename T>
 CustomConstraint<T>::CustomConstraint(
-    std::string_view name, std::vector<std::string> dependencies,
+    std::string_view name, Dependencies dependencies,
     std::function<bool(ConstraintContext, const typename T::value_type&)>
         checker)
     : name_(std::string(name)),
@@ -89,7 +89,7 @@ CustomConstraint<T>::CustomConstraint(
       dependencies_(std::move(dependencies)) {}
 
 template <typename T>
-std::vector<std::string> CustomConstraint<T>::GetDependencies() const {
+Dependencies CustomConstraint<T>::GetDependencies() const {
   return dependencies_;
 }
 

@@ -406,7 +406,7 @@ bool SameAsL(AnalyzeVariableContext ctx, const TestType& value) {
 TEST(MVariableTest, CustomConstraintWithDependentVariablesShouldWork) {
   EXPECT_THAT(MTestType()
                   .AddConstraint(LastDigit(MInteger(Exactly(2))))
-                  .AddCustomConstraint("Custom1", {"A"}, SameAsA),
+                  .AddCustomConstraint("Custom1", Dependencies({"A"}), SameAsA),
               GeneratedValuesAre(
                   AnyOf(2, 12, 22, 32, 42, 52, 62, 72, 82, 92),
                   Context().WithVariable(
@@ -417,7 +417,7 @@ TEST(MVariableTest, CustomConstraintWithDependentVariablesShouldWork) {
 TEST(MVariableTest, UnsatisfiableCustomConstraintShouldThrow) {
   EXPECT_THAT(MTestType()
                   .AddConstraint(LastDigit(MInteger(Exactly(1))))
-                  .AddCustomConstraint("Custom1", {"A"}, SameAsA),
+                  .AddCustomConstraint("Custom1", Dependencies({"A"}), SameAsA),
               GenerateThrowsGenerationError(
                   "", Context().WithVariable(
                           "A", MTestType(LastDigit(MInteger(Exactly(2)))))));

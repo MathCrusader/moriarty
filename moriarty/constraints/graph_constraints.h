@@ -56,7 +56,7 @@ class NumNodes : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   MInteger num_nodes_;
@@ -91,7 +91,7 @@ class NumEdges : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   MInteger num_edges_;
@@ -173,7 +173,7 @@ class NodeLabels : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   MLabelType label_constraints_;
@@ -203,7 +203,7 @@ class EdgeLabels : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   MLabelType label_constraints_;
@@ -261,7 +261,7 @@ std::string NodeLabels<MLabelType>::ToString() const {
 }
 
 template <typename MLabelType>
-std::vector<std::string> NodeLabels<MLabelType>::GetDependencies() const {
+Dependencies NodeLabels<MLabelType>::GetDependencies() const {
   return label_constraints_.GetDependencies();
 }
 
@@ -302,7 +302,7 @@ std::string EdgeLabels<MLabelType>::ToString() const {
 }
 
 template <typename MLabelType>
-std::vector<std::string> EdgeLabels<MLabelType>::GetDependencies() const {
+Dependencies EdgeLabels<MLabelType>::GetDependencies() const {
   return label_constraints_.GetDependencies();
 }
 

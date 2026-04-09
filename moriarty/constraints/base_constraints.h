@@ -20,6 +20,8 @@
 #include <string_view>
 #include <vector>
 
+#include "moriarty/librarian/dependencies.h"
+
 namespace moriarty {
 
 // Base class for all constraints in Moriarty.
@@ -37,7 +39,7 @@ class MConstraint {
 class BasicMConstraint : public MConstraint {
  public:
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const { return {}; }
+  [[nodiscard]] Dependencies GetDependencies() const { return {}; }
 
   // Returns a human-readable representation of this constraint.
   [[nodiscard]] std::string ToString() const { return description_; }

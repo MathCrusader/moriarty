@@ -37,6 +37,7 @@ cc_library(
         "//moriarty/internal:analysis_bootstrap",
         "//moriarty/internal:generation_bootstrap",
         "//moriarty/internal:random_engine",
+        "//moriarty/librarian:dependencies",
         "//moriarty/librarian:errors",
     ],
 )
@@ -74,6 +75,7 @@ cc_library(
         ":simple_io",
         "//moriarty/internal:abstract_variable",
         "//moriarty/internal:variable_set",
+        "//moriarty/librarian:dependencies",
         "//moriarty/librarian:errors",
     ],
 )
@@ -88,6 +90,7 @@ cc_library(
         "//moriarty/constraints:numeric_constraints",
         "//moriarty/internal:expressions",
         "//moriarty/internal:value_printer",
+        "//moriarty/librarian:dependencies",
         "//moriarty/librarian:errors",
         "//moriarty/variables:minteger",
     ],

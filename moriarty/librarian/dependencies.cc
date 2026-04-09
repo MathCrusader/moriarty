@@ -28,6 +28,12 @@ Dependencies::Dependencies(std::vector<VariableName> dependencies)
   deps.erase(last.begin(), last.end());
 }
 
+void Dependencies::AddDependency(const VariableName& dependency) {
+  auto& deps = deps_.Mutable();
+  auto it = std::ranges::lower_bound(deps, dependency);
+  if (it == deps.end() || *it != dependency) deps.insert(it, dependency);
+}
+
 void Dependencies::Merge(const Dependencies& other) {
   // We expect these lists to be very small.
   auto& deps = deps_.Mutable();
@@ -35,11 +41,6 @@ void Dependencies::Merge(const Dependencies& other) {
   std::ranges::sort(deps);
   auto last = std::ranges::unique(deps);
   deps.erase(last.begin(), last.end());
-}
-
-const std::vector<Dependencies::VariableName>& Dependencies::GetDependencies()
-    const {
-  return *deps_;
 }
 
 }  // namespace moriarty

@@ -265,7 +265,7 @@ class MVariant : public librarian::MVariable<MVariant<MAlternativeTypes...>> {
     ValidationResult Validate(ConstraintContext ctx,
                               const variant_value_type& value) const;
     std::string ToString() const;
-    std::vector<std::string> GetDependencies() const;
+    Dependencies GetDependencies() const;
     void ApplyTo(MVariant& other) const;
 
    private:
@@ -531,7 +531,7 @@ std::string MVariant<T...>::ElementConstraintWrapper<
 
 template <typename... T>
 template <size_t I, typename MAlternativeType>
-std::vector<std::string> MVariant<T...>::ElementConstraintWrapper<
+Dependencies MVariant<T...>::ElementConstraintWrapper<
     I, MAlternativeType>::GetDependencies() const {
   return constraint_.GetDependencies();
 }

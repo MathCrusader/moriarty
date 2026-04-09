@@ -21,6 +21,7 @@
 #include "moriarty/internal/analysis_bootstrap.h"
 #include "moriarty/internal/generation_bootstrap.h"
 #include "moriarty/internal/random_engine.h"
+#include "moriarty/librarian/dependencies.h"
 #include "moriarty/librarian/errors.h"
 #include "moriarty/problem.h"
 #include "moriarty/test_case.h"
@@ -205,6 +206,11 @@ std::vector<TestCase> GenerateBuilder::Run() const {
   }
 
   std::vector<TestCase> all_test_cases;
+  std::span<const std::string> input_deps;
+  if (problem_.GetInputDependencies()) {
+    const auto& deps = *problem_.GetInputDependencies();
+    input_deps = {deps.data(), deps.size()};
+  }
 
   for (const auto& [name, generator, options] : generators_) {
     std::vector<int64_t> seed =
@@ -230,10 +236,10 @@ std::vector<TestCase> GenerateBuilder::Run() const {
               TestCase(moriarty_internal::GenerateAllValues(
                   problem_.UnsafeGetVariables(), test_case.UnsafeGetVariables(),
                   test_case.UnsafeGetValues(),
-                  {.random_engine = rng,
-                   .variables_to_generate =
-                       problem_.GetInputDependencies().value_or(
-                           std::vector<std::string>{})})));
+                  {
+                      .random_engine = rng,
+                      .variables_to_generate = input_deps,
+                  })));
         }
       }
 

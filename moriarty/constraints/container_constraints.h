@@ -63,7 +63,7 @@ class Length : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   MInteger length_;
@@ -122,7 +122,7 @@ class StronglyTypedElements : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   MElementType element_constraints_;
@@ -151,7 +151,7 @@ class Element : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   MElementType element_constraints_;
@@ -280,8 +280,7 @@ std::string StronglyTypedElements<MElementType>::ToString() const {
 }
 
 template <typename MElementType>
-std::vector<std::string> StronglyTypedElements<MElementType>::GetDependencies()
-    const {
+Dependencies StronglyTypedElements<MElementType>::GetDependencies() const {
   return element_constraints_.GetDependencies();
 }
 
@@ -310,7 +309,7 @@ std::string Element<I, MElementType>::ToString() const {
 }
 
 template <size_t I, typename MElementType>
-std::vector<std::string> Element<I, MElementType>::GetDependencies() const {
+Dependencies Element<I, MElementType>::GetDependencies() const {
   return element_constraints_.GetDependencies();
 }
 

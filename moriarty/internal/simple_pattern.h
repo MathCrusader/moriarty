@@ -26,6 +26,7 @@
 #include <vector>
 
 #include "moriarty/internal/expressions.h"
+#include "moriarty/librarian/dependencies.h"
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -63,7 +64,7 @@ class RepeatedCharSet {
   [[nodiscard]] std::vector<char> ValidCharacters() const;
 
   // Returns the dependencies of the expression.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   std::bitset<128> valid_chars_;  // We only support non-negative signed char.
@@ -212,7 +213,7 @@ class SimplePattern {
   // GetDependencies()
   //
   // Returns all variables that pattern depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   std::string pattern_;

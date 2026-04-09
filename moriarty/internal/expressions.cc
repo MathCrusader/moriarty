@@ -164,7 +164,7 @@ std::string_view ExpressionProgram::ExpressionString() const {
   return expression_;
 }
 
-const std::vector<std::string>& ExpressionProgram::Dependencies() const {
+Dependencies ExpressionProgram::GetDependencies() const {
   return dependencies_;
 }
 
@@ -251,15 +251,13 @@ size_t ExpressionProgram::AddFunctionNode(std::string_view fn_name_span,
 
 void ExpressionProgram::Finalize(size_t root_index) {
   root_index_ = root_index;
-  dependencies_.clear();
+  dependencies_ = Dependencies();
   for (const Node& node : nodes_) {
     if (node.kind == NodeKind::kVariable) {
-      dependencies_.push_back(std::get<Node::VariableData>(node.payload).name);
+      dependencies_.AddDependency(
+          std::get<Node::VariableData>(node.payload).name);
     }
   }
-  std::ranges::sort(dependencies_);
-  auto it = std::ranges::unique(dependencies_);
-  dependencies_.erase(std::ranges::begin(it), std::ranges::end(dependencies_));
 }
 
 std::string_view ExpressionProgram::NodeSpan(size_t index) const {
@@ -761,8 +759,8 @@ std::shared_ptr<const ExpressionProgram> ExpressionProgram::Parse(
 
 }  // namespace moriarty_internal
 
-std::vector<std::string> Expression::GetDependencies() const {
-  return program_->Dependencies();
+Dependencies Expression::GetDependencies() const {
+  return program_->GetDependencies();
 }
 
 std::string Expression::ToString() const {

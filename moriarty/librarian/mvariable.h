@@ -43,6 +43,7 @@
 #include "moriarty/internal/variable_set.h"
 #include "moriarty/librarian/constraint_handler.h"
 #include "moriarty/librarian/conversions.h"
+#include "moriarty/librarian/dependencies.h"
 #include "moriarty/librarian/errors.h"
 #include "moriarty/librarian/io_config.h"
 #include "moriarty/librarian/one_of_handler.h"
@@ -139,7 +140,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // `AddCustomConstraint` depends on the value of other variables. (E.g., at
   // least X, larger than the average of the elements in A, etc).
   VariableType& AddCustomConstraint(
-      std::string_view name, std::vector<std::string> dependencies,
+      std::string_view name, Dependencies dependencies,
       std::function<bool(ConstraintContext, const value_type&)> checker);
 
   // AddConstraint()
@@ -200,7 +201,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Returns the list of names of the variables that this variable depends
   // on, this includes direct dependencies and the recursive child
   // dependencies.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const override;
+  [[nodiscard]] Dependencies GetDependencies() const override;
 
   // MergeFromAnonymous()
   //
@@ -256,7 +257,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
  private:
   ConstraintHandler<VariableType, value_type> constraints_;
   OneOfHandler<value_type> one_of_;
-  std::vector<std::string> dependencies_;
+  Dependencies dependencies_;
 
   // Helper function that casts *this to `VariableType`.
   [[nodiscard]] VariableType& UnderlyingVariableType();
@@ -307,7 +308,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
     ValidationResult Validate(ConstraintContext ctx,
                               const value_type& value) const;
     std::string ToString() const;
-    std::vector<std::string> GetDependencies() const;
+    Dependencies GetDependencies() const;
     void ApplyTo(VariableType& other) const;
 
    private:
@@ -372,7 +373,7 @@ V& MVariable<V>::AddCustomConstraint(
 
 template <typename V>
 V& MVariable<V>::AddCustomConstraint(
-    std::string_view name, std::vector<std::string> dependencies,
+    std::string_view name, Dependencies dependencies,
     std::function<bool(ConstraintContext, const value_type&)> checker) {
   return AddConstraint(
       CustomConstraint<V>(name, std::move(dependencies), std::move(checker)));
@@ -503,7 +504,7 @@ auto MVariable<V>::ListEdgeCases(AnalyzeVariableContext ctx) const
 }
 
 template <typename V>
-std::vector<std::string> MVariable<V>::GetDependencies() const {
+Dependencies MVariable<V>::GetDependencies() const {
   return dependencies_;
 }
 
@@ -550,14 +551,7 @@ auto MVariable<V>::GetUniqueValueImpl(AnalyzeVariableContext ctx) const
 template <typename V>
 template <typename Constraint>
 V& MVariable<V>::InternalAddConstraint(Constraint c) {
-  std::vector<std::string> deps = c.GetDependencies();
-  dependencies_.insert(dependencies_.end(),
-                       std::make_move_iterator(deps.begin()),
-                       std::make_move_iterator(deps.end()));
-  std::ranges::sort(dependencies_);
-  auto end = std::unique(dependencies_.begin(), dependencies_.end());
-  dependencies_.erase(end, dependencies_.end());
-
+  dependencies_.Merge(c.GetDependencies());
   constraints_.AddConstraint(std::move(c));
   return UnderlyingVariableType();
 }
@@ -746,8 +740,7 @@ std::string MVariable<V>::CustomConstraintWrapper::ToString() const {
 }
 
 template <typename V>
-std::vector<std::string>
-MVariable<V>::CustomConstraintWrapper::GetDependencies() const {
+Dependencies MVariable<V>::CustomConstraintWrapper::GetDependencies() const {
   return constraint_.GetDependencies();
 }
 

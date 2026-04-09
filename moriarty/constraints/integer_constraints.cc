@@ -76,14 +76,10 @@ ValidationResult Mod::Validate(ConstraintContext ctx, int64_t value) const {
   return ValidationResult::Ok();
 }
 
-std::vector<std::string> Mod::GetDependencies() const {
-  std::vector<std::string> deps;
-  auto rem_deps = remainder_.GetDependencies();
-  deps.insert(deps.end(), std::make_move_iterator(rem_deps.begin()),
-              std::make_move_iterator(rem_deps.end()));
-  auto mod_deps = modulus_.GetDependencies();
-  deps.insert(deps.end(), std::make_move_iterator(mod_deps.begin()),
-              std::make_move_iterator(mod_deps.end()));
+Dependencies Mod::GetDependencies() const {
+  Dependencies deps;
+  deps.Merge(remainder_.GetDependencies());
+  deps.Merge(modulus_.GetDependencies());
   return deps;
 }
 

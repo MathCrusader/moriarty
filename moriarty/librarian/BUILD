@@ -93,6 +93,7 @@ cc_library(
         "//moriarty/contexts/internal:view_only_context",
         "//moriarty/internal:abstract_variable",
         "//moriarty/internal:variable_set",
+        "//moriarty/librarian:dependencies",
         "//moriarty/librarian/util:ref",
     ],
 )

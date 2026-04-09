@@ -203,7 +203,7 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
     ValidationResult Validate(ConstraintContext ctx,
                               const tuple_value_type& value) const;
     std::string ToString() const;
-    std::vector<std::string> GetDependencies() const;
+    Dependencies GetDependencies() const;
     void ApplyTo(MTuple& other) const;
 
    private:
@@ -368,7 +368,7 @@ std::string MTuple<T...>::ElementConstraintWrapper<I, MElementType>::ToString()
 
 template <typename... T>
 template <size_t I, typename MElementType>
-std::vector<std::string> MTuple<T...>::ElementConstraintWrapper<
+Dependencies MTuple<T...>::ElementConstraintWrapper<
     I, MElementType>::GetDependencies() const {
   return constraint_.GetDependencies();
 }

@@ -87,12 +87,12 @@ class Between : public MConstraint {
   ValidationResult Validate(ConstraintContext ctx, double value) const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   std::variant<int64_t, Expression, Real> minimum_;
   std::variant<int64_t, Expression, Real> maximum_;
-  std::vector<std::string> dependencies_;
+  Dependencies dependencies_;
 };
 
 // Constraint stating that the numeric value must be this value or smaller.
@@ -128,11 +128,11 @@ class AtMost : public MConstraint {
   ValidationResult Validate(ConstraintContext ctx, double value) const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   std::variant<int64_t, Expression, Real> maximum_;
-  std::vector<std::string> dependencies_;
+  Dependencies dependencies_;
 };
 
 // Constraint stating that the numeric value must be this value or larger.
@@ -168,11 +168,11 @@ class AtLeast : public MConstraint {
   ValidationResult Validate(ConstraintContext ctx, double value) const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   std::variant<int64_t, Expression, Real> minimum_;
-  std::vector<std::string> dependencies_;
+  Dependencies dependencies_;
 };
 
 namespace librarian {
@@ -192,13 +192,13 @@ class ExactlyNumeric : public MConstraint {
   ValidationResult Validate(ConstraintContext ctx, int64_t value) const;
   ValidationResult Validate(ConstraintContext ctx, int value) const;
   ValidationResult Validate(ConstraintContext ctx, double value) const;
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
   std::variant<int64_t, Expression, Real> GetValue() const;
 
  private:
   std::variant<int64_t, Expression, Real> value_;
-  std::vector<std::string> dependencies_;
+  Dependencies dependencies_;
 };
 
 // Constraint stating that the variable must be one of these values. This allows
@@ -240,7 +240,7 @@ class OneOfNumeric : public MConstraint {
   [[nodiscard]] std::vector<Real> GetOptions(
       librarian::AnalyzeVariableContext ctx) const;
   [[nodiscard]] std::string ToString() const;
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
  private:
   OneOfHandler<Real> numeric_options_;
@@ -249,7 +249,7 @@ class OneOfNumeric : public MConstraint {
   // from. We must handle it like this since we do not know the value of
   // variables.
   std::vector<std::vector<Expression>> expr_options_;
-  std::vector<std::string> dependencies_;
+  Dependencies dependencies_;
 };
 
 }  // namespace librarian

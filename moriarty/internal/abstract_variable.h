@@ -22,6 +22,7 @@
 #include <vector>
 
 #include "moriarty/constraints/constraint_violation.h"
+#include "moriarty/librarian/dependencies.h"
 #include "moriarty/librarian/io_config.h"
 #include "moriarty/librarian/util/ref.h"
 
@@ -207,7 +208,7 @@ class AbstractVariable {
   // GetDependencies() [pure virtual]
   //
   // Returns a list of variable names that this variable depends on.
-  virtual std::vector<std::string> GetDependencies() const = 0;
+  virtual Dependencies GetDependencies() const = 0;
 };
 
 }  // namespace moriarty_internal

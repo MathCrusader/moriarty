@@ -338,9 +338,9 @@ TEST(SimpleIOTest, DependenciesShouldReturnAllVariablesUsed) {
                     .AddMultilineSection("2 * N + M", "D", "E")
                     .AddFooterLine(StringLiteral("F"), "G");
 
-  std::vector<std::string> vars = io.GetDependencies();
-  EXPECT_THAT(vars, UnorderedElementsAre("H1", "H2", "N", "M", "A", "B", "D",
-                                         "E", "G"));
+  EXPECT_THAT(
+      io.GetDependencies(),
+      UnorderedElementsAre("H1", "H2", "N", "M", "A", "B", "D", "E", "G"));
 }
 
 }  // namespace

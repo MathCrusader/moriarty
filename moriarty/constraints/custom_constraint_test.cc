@@ -19,6 +19,7 @@
 #include "moriarty/context.h"
 #include "moriarty/internal/value_set.h"
 #include "moriarty/internal/variable_set.h"
+#include "moriarty/librarian/dependencies.h"
 #include "moriarty/librarian/testing/gtest_helpers.h"
 #include "moriarty/variables/minteger.h"
 
@@ -52,10 +53,11 @@ TEST(CustomConstraintTest, BasicGettersWork) {
     values.Set<MInteger>("N", 10);
     ConstraintContext ctx("X", variables, values);
 
-    CustomConstraint<MInteger> constraint(
-        "bigger_than_N", {"N"}, [](ConstraintContext ctx, int64_t x) {
-          return x > ctx.GetValue<MInteger>("N");
-        });
+    CustomConstraint<MInteger> constraint("bigger_than_N", Dependencies({"N"}),
+                                          [](ConstraintContext ctx, int64_t x) {
+                                            return x >
+                                                   ctx.GetValue<MInteger>("N");
+                                          });
     EXPECT_EQ(constraint.GetName(), "bigger_than_N");
     EXPECT_THAT(constraint.GetDependencies(), ElementsAre("N"));
     EXPECT_EQ(constraint.ToString(), "[CustomConstraint] bigger_than_N");
@@ -86,10 +88,11 @@ TEST(CustomConstraintTest, ValidateShouldWork) {
     values.Set<MInteger>("N", 10);
     ConstraintContext ctx("X", variables, values);
 
-    CustomConstraint<MInteger> constraint(
-        "bigger_than_N", {"N"}, [](ConstraintContext ctx, int64_t x) {
-          return x > ctx.GetValue<MInteger>("N");
-        });
+    CustomConstraint<MInteger> constraint("bigger_than_N", Dependencies({"N"}),
+                                          [](ConstraintContext ctx, int64_t x) {
+                                            return x >
+                                                   ctx.GetValue<MInteger>("N");
+                                          });
     EXPECT_THAT(constraint.Validate(ctx, 11), HasNoViolation());
     EXPECT_THAT(constraint.Validate(ctx, 10),
                 HasViolation(HasSubstr("bigger_than_N")));

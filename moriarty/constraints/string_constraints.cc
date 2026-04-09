@@ -80,7 +80,7 @@ std::string Alphabet::ToString() const {
                      moriarty_internal::ValuePrinter(alphabet_));
 }
 
-std::vector<std::string> Alphabet::GetDependencies() const { return {}; }
+Dependencies Alphabet::GetDependencies() const { return {}; }
 
 // ====== DistinctCharacters ======
 
@@ -129,7 +129,7 @@ std::string SimplePattern::ToString() const {
                      moriarty_internal::ValuePrinter(pattern_.Pattern()));
 }
 
-std::vector<std::string> SimplePattern::GetDependencies() const {
+Dependencies SimplePattern::GetDependencies() const {
   return pattern_.GetDependencies();
 }
 

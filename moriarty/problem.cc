@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 
+#include "moriarty/librarian/dependencies.h"
 #include "moriarty/librarian/errors.h"
 
 namespace moriarty {
@@ -38,7 +39,7 @@ ReaderFn InputFormat::Reader() const { return format_.Reader(); }
 
 WriterFn InputFormat::Writer() const { return format_.Writer(); }
 
-std::vector<std::string> InputFormat::GetDependencies() const {
+Dependencies InputFormat::GetDependencies() const {
   return format_.GetDependencies();
 }
 
@@ -46,7 +47,7 @@ ReaderFn OutputFormat::Reader() const { return format_.Reader(); }
 
 WriterFn OutputFormat::Writer() const { return format_.Writer(); }
 
-std::vector<std::string> OutputFormat::GetDependencies() const {
+Dependencies OutputFormat::GetDependencies() const {
   return format_.GetDependencies();
 }
 
@@ -66,7 +67,7 @@ std::optional<WriterFn> Problem::GetInputWriter() const {
   return input_writer_;
 }
 
-std::optional<std::vector<std::string>> Problem::GetInputDependencies() const {
+std::optional<Dependencies> Problem::GetInputDependencies() const {
   return input_dependencies_;
 }
 
@@ -78,7 +79,7 @@ std::optional<WriterFn> Problem::GetOutputWriter() const {
   return output_writer_;
 }
 
-std::optional<std::vector<std::string>> Problem::GetOutputDependencies() const {
+std::optional<Dependencies> Problem::GetOutputDependencies() const {
   return output_dependencies_;
 }
 

@@ -26,6 +26,7 @@
 #include "moriarty/constraints/constraint_violation.h"
 #include "moriarty/context.h"
 #include "moriarty/contexts/librarian_context.h"
+#include "moriarty/librarian/dependencies.h"
 #include "moriarty/librarian/mvariable.h"
 #include "moriarty/variables/minteger.h"
 
@@ -81,7 +82,7 @@ class LastDigit : public moriarty::MConstraint {
     if (v.IsOk()) return moriarty::ValidationResult::Ok();
     return ctx.Violation(value, std::move(v));
   }
-  std::vector<std::string> GetDependencies() const {
+  moriarty::Dependencies GetDependencies() const {
     return digit_.GetDependencies();
   }
 
@@ -105,7 +106,7 @@ class NumberOfDigits : public moriarty::MConstraint {
     if (v.IsOk()) return moriarty::ValidationResult::Ok();
     return ctx.Violation(value, std::move(v));
   }
-  std::vector<std::string> GetDependencies() const {
+  moriarty::Dependencies GetDependencies() const {
     return num_digits_.GetDependencies();
   }
 

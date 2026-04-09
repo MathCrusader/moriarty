@@ -23,10 +23,10 @@ namespace {
 using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 
-TEST(DependenciesTest, GetDependenciesReturnsInitialDependencies) {
+TEST(DependenciesTest, ListDependenciesReturnsInitialDependencies) {
   Dependencies deps({"a", "b", "c"});
-  EXPECT_THAT(deps.GetDependencies(), ElementsAre("a", "b", "c"));
-  EXPECT_THAT(Dependencies().GetDependencies(), IsEmpty());
+  EXPECT_THAT(deps, ElementsAre("a", "b", "c"));
+  EXPECT_THAT(Dependencies(), IsEmpty());
 }
 
 TEST(DependenciesTest, MergeCombinesDependencies) {
@@ -34,9 +34,17 @@ TEST(DependenciesTest, MergeCombinesDependencies) {
   Dependencies deps2({"b", "c"});
   Dependencies deps3 = deps1;
   deps1.Merge(deps2);
-  EXPECT_THAT(deps1.GetDependencies(), ElementsAre("a", "b", "c"));
-  EXPECT_THAT(deps2.GetDependencies(), ElementsAre("b", "c"));
-  EXPECT_THAT(deps3.GetDependencies(), ElementsAre("a", "b"));
+  EXPECT_THAT(deps1, ElementsAre("a", "b", "c"));
+  EXPECT_THAT(deps2, ElementsAre("b", "c"));
+  EXPECT_THAT(deps3, ElementsAre("a", "b"));
+}
+
+TEST(DependenciesTest, AddDependencyAddsDependency) {
+  Dependencies deps;
+  deps.AddDependency("a");
+  deps.AddDependency("b");
+  deps.AddDependency("a");
+  EXPECT_THAT(deps, ElementsAre("a", "b"));
 }
 
 }  // namespace

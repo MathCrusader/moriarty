@@ -30,6 +30,7 @@
 #include "moriarty/constraints/numeric_constraints.h"
 #include "moriarty/context.h"
 #include "moriarty/internal/value_printer.h"
+#include "moriarty/librarian/dependencies.h"
 #include "moriarty/librarian/errors.h"
 #include "moriarty/test_case.h"
 #include "moriarty/variables/minteger.h"
@@ -49,6 +50,7 @@ void WriteTestCases(WriteContext ctx, SimpleIO simple_io,
 SimpleIO& SimpleIO::AddLine(std::span<const std::string> tokens) {
   lines_per_test_case_.push_back(
       {std::vector<SimpleIOToken>(tokens.begin(), tokens.end())});
+  AddLineDependencies(lines_per_test_case_.back());
   return *this;
 }
 
@@ -58,19 +60,36 @@ SimpleIO& SimpleIO::AddMultilineSection(
   lines_per_test_case_.push_back(
       {std::vector<SimpleIOToken>(tokens.begin(), tokens.end()),
        Expression(number_of_lines_expression)});
+  AddLineDependencies(lines_per_test_case_.back());
   return *this;
 }
 
 SimpleIO& SimpleIO::AddHeaderLine(std::span<const std::string> tokens) {
   lines_in_header_.push_back(
       {std::vector<SimpleIOToken>(tokens.begin(), tokens.end())});
+  AddLineDependencies(lines_in_header_.back());
   return *this;
 }
 
 SimpleIO& SimpleIO::AddFooterLine(std::span<const std::string> tokens) {
   lines_in_footer_.push_back(
       {std::vector<SimpleIOToken>(tokens.begin(), tokens.end())});
+  AddLineDependencies(lines_in_footer_.back());
   return *this;
+}
+
+void SimpleIO::AddLineDependencies(const Line& line) {
+  for (const SimpleIOToken& token : line.tokens) {
+    if (std::holds_alternative<std::string>(token)) {
+      deps_.AddDependency(std::get<std::string>(token));
+    }
+  }
+
+  if (line.num_lines) {
+    for (std::string_view var : line.num_lines->GetDependencies()) {
+      deps_.AddDependency(std::string(var));
+    }
+  }
 }
 
 std::vector<SimpleIO::Line> SimpleIO::LinesInHeader() const {
@@ -106,32 +125,7 @@ ReaderFn SimpleIO::Reader(int number_of_test_cases) const {
   };
 }
 
-std::vector<std::string> SimpleIO::GetDependencies() const {
-  std::vector<std::string> vars;
-  auto add_tokens = [&](std::span<const Line> lines) {
-    for (const Line& line : lines) {
-      for (const SimpleIOToken& token : line.tokens) {
-        if (std::holds_alternative<std::string>(token)) {
-          std::string var = std::get<std::string>(token);
-          if (std::ranges::find(vars, var) == vars.end()) vars.push_back(var);
-        }
-      }
-
-      if (line.num_lines) {
-        for (std::string_view var : line.num_lines->GetDependencies()) {
-          if (std::ranges::find(vars, var) == vars.end())
-            vars.push_back(std::string(var));
-        }
-      }
-    }
-  };
-
-  add_tokens(lines_in_header_);
-  add_tokens(lines_per_test_case_);
-  add_tokens(lines_in_footer_);
-
-  return vars;
-}
+Dependencies SimpleIO::GetDependencies() const { return deps_; }
 
 namespace {
 

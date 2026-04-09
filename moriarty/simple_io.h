@@ -26,6 +26,7 @@
 
 #include "moriarty/context.h"
 #include "moriarty/internal/expressions.h"
+#include "moriarty/librarian/dependencies.h"
 
 namespace moriarty {
 
@@ -159,7 +160,7 @@ class SimpleIO {
   // Returns the list of variable names used in this SimpleIO. Either as
   // something that will be printed or something needed to determine line count.
   // Transitive dependencies are not included.
-  [[nodiscard]] std::vector<std::string> GetDependencies() const;
+  [[nodiscard]] Dependencies GetDependencies() const;
 
   // Access the lines
   struct Line {
@@ -172,6 +173,7 @@ class SimpleIO {
   [[nodiscard]] bool HasNumberOfTestCasesInHeader() const;
 
  private:
+  Dependencies deps_;
   std::vector<Line> lines_in_header_;
   std::vector<Line> lines_per_test_case_;
   std::vector<Line> lines_in_footer_;
@@ -180,6 +182,8 @@ class SimpleIO {
 
   template <typename... Tokens>
   std::vector<SimpleIOToken> GetTokens(Tokens&&... token);
+
+  void AddLineDependencies(const Line& line);
 };
 
 // -----------------------------------------------------------------------------
@@ -197,6 +201,7 @@ template <typename... Tokens>
   requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
 SimpleIO& SimpleIO::AddLine(Tokens&&... token) {
   lines_per_test_case_.push_back({GetTokens(std::forward<Tokens>(token)...)});
+  AddLineDependencies(lines_per_test_case_.back());
   return *this;
 }
 
@@ -206,6 +211,7 @@ SimpleIO& SimpleIO::AddMultilineSection(
     std::string_view number_of_lines_expression, Tokens&&... token) {
   lines_per_test_case_.push_back({GetTokens(std::forward<Tokens>(token)...),
                                   Expression(number_of_lines_expression)});
+  AddLineDependencies(lines_per_test_case_.back());
   return *this;
 }
 
@@ -213,6 +219,7 @@ template <typename... Tokens>
   requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
 SimpleIO& SimpleIO::AddHeaderLine(Tokens&&... token) {
   lines_in_header_.push_back({GetTokens(std::forward<Tokens>(token)...)});
+  AddLineDependencies(lines_in_header_.back());
   return *this;
 }
 
@@ -220,6 +227,7 @@ template <typename... Tokens>
   requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
 SimpleIO& SimpleIO::AddFooterLine(Tokens&&... token) {
   lines_in_footer_.push_back({GetTokens(std::forward<Tokens>(token)...)});
+  AddLineDependencies(lines_in_footer_.back());
   return *this;
 }
 
