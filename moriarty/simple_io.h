@@ -160,7 +160,7 @@ class SimpleIO {
   // Returns the list of variable names used in this SimpleIO. Either as
   // something that will be printed or something needed to determine line count.
   // Transitive dependencies are not included.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
   // Access the lines
   struct Line {

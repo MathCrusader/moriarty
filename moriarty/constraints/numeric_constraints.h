@@ -87,7 +87,7 @@ class Between : public MConstraint {
   ValidationResult Validate(ConstraintContext ctx, double value) const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   std::variant<int64_t, Expression, Real> minimum_;
@@ -128,7 +128,7 @@ class AtMost : public MConstraint {
   ValidationResult Validate(ConstraintContext ctx, double value) const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   std::variant<int64_t, Expression, Real> maximum_;
@@ -168,7 +168,7 @@ class AtLeast : public MConstraint {
   ValidationResult Validate(ConstraintContext ctx, double value) const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   std::variant<int64_t, Expression, Real> minimum_;
@@ -192,7 +192,7 @@ class ExactlyNumeric : public MConstraint {
   ValidationResult Validate(ConstraintContext ctx, int64_t value) const;
   ValidationResult Validate(ConstraintContext ctx, int value) const;
   ValidationResult Validate(ConstraintContext ctx, double value) const;
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
   std::variant<int64_t, Expression, Real> GetValue() const;
 
@@ -240,7 +240,7 @@ class OneOfNumeric : public MConstraint {
   [[nodiscard]] std::vector<Real> GetOptions(
       librarian::AnalyzeVariableContext ctx) const;
   [[nodiscard]] std::string ToString() const;
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   OneOfHandler<Real> numeric_options_;

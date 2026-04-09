@@ -63,7 +63,7 @@ class Length : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   MInteger length_;
@@ -122,7 +122,7 @@ class StronglyTypedElements : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   MElementType element_constraints_;
@@ -151,7 +151,7 @@ class Element : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   MElementType element_constraints_;

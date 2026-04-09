@@ -201,7 +201,7 @@ class MVariable : public moriarty_internal::AbstractVariable {
   // Returns the list of names of the variables that this variable depends
   // on, this includes direct dependencies and the recursive child
   // dependencies.
-  [[nodiscard]] Dependencies GetDependencies() const override;
+  Dependencies GetDependencies() const override;
 
   // MergeFromAnonymous()
   //

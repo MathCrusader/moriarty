@@ -58,7 +58,7 @@ class CustomConstraint : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   std::string name_;

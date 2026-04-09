@@ -46,7 +46,7 @@ class Expression {
 
   [[nodiscard]] std::string ToString() const;
 
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
   [[nodiscard]] bool operator==(const Expression& other) const;
 
@@ -65,7 +65,7 @@ class ExpressionProgram {
 
   [[nodiscard]] absl::int128 Evaluate(const LookupFn& fn) const;
   [[nodiscard]] std::string_view ExpressionString() const;
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
   static std::shared_ptr<const ExpressionProgram> Parse(
       std::string_view expression);
 

@@ -25,7 +25,7 @@ namespace moriarty {
 // Dependencies
 //
 // Represents a set of variables that an object depends on.
-class Dependencies {
+class [[nodiscard]] Dependencies {
  public:
   using value_type = std::string;
   using const_iterator = std::vector<std::string>::const_iterator;

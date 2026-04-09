@@ -87,7 +87,7 @@ class Exactly : public MConstraint {
   ValidationResult Validate(ConstraintContext ctx, const T& value) const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   T value_;
@@ -146,7 +146,7 @@ class OneOf : public MConstraint {
   ValidationResult Validate(ConstraintContext ctx, const T& value) const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   std::vector<T> options_;

@@ -64,7 +64,7 @@ class RepeatedCharSet {
   [[nodiscard]] std::vector<char> ValidCharacters() const;
 
   // Returns the dependencies of the expression.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   std::bitset<128> valid_chars_;  // We only support non-negative signed char.
@@ -213,7 +213,7 @@ class SimplePattern {
   // GetDependencies()
   //
   // Returns all variables that pattern depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   std::string pattern_;

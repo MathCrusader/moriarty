@@ -56,7 +56,7 @@ class NumNodes : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   MInteger num_nodes_;
@@ -91,7 +91,7 @@ class NumEdges : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   MInteger num_edges_;
@@ -173,7 +173,7 @@ class NodeLabels : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   MLabelType label_constraints_;
@@ -203,7 +203,7 @@ class EdgeLabels : public MConstraint {
   [[nodiscard]] std::string ToString() const;
 
   // Returns all variables that this constraint depends on.
-  [[nodiscard]] Dependencies GetDependencies() const;
+  Dependencies GetDependencies() const;
 
  private:
   MLabelType label_constraints_;
