@@ -183,11 +183,31 @@ class GenerateBuilder {
   GenerateBuilder& Using(std::string name, Generator generator,
                          GenerateOptions options = {});
 
-  // Specifies where/how to write the inputs of the test cases (optional).
-  GenerateBuilder& WriteInputUsing(WriteOptions opts);
+  using FilenamePattern = std::string;
 
-  // Specifies where/how to write the outputs of the test cases (optional).
-  GenerateBuilder& WriteOutputUsing(WriteOptions opts);
+  using WriteOptions = std::variant<FilenamePattern, WriteStreams>;
+
+  // [Experimental]
+  // Specifies where to write the generated test cases (optional).
+  //
+  // NOTE: These are expected to change in the future once we implement
+  // GroupBy(). In particular, we will likely have {subtask}, {group}, {batch},
+  // {idx}.
+  //
+  // If a filename pattern is provided, then the following replacements will
+  // occur:
+  // * {gen}  -> the generator name
+  // * {call} -> if the generator is called multiple times, which call to the
+  //             generator it is (0-indexed)
+  // * {idx}  -> if the generator returns multiple test cases, then which test
+  //             case it is (0-indexed)
+  //
+  // Note that the output will only be printed if (1) an output stream is
+  // provided or a filename is chosen, (2) OutputFormat is specified
+  // in `problem`, and (3) all variables in the OutputFormat are also in the
+  // InputFormat, then the output will be printed to this stream as well.
+  // Otherwise, this is ignored.
+  GenerateBuilder& WriteTo(WriteOptions opts);
 
   // Generates the test cases, writes them (if requested), and returns them.
   std::vector<TestCase> Run() const;
@@ -208,8 +228,7 @@ class GenerateBuilder {
     GenerateOptions options;
   };
   std::vector<NamedGenerator> generators_;
-  std::optional<WriteOptions> input_writer_;
-  std::optional<WriteOptions> output_writer_;
+  std::optional<WriteOptions> write_options_;
 };
 
 // Generate

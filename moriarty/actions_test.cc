@@ -14,11 +14,15 @@
 
 #include "moriarty/actions.h"
 
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <span>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "moriarty/constraints/numeric_constraints.h"
+#include "moriarty/context.h"
 #include "moriarty/librarian/errors.h"
 #include "moriarty/librarian/policies.h"
 #include "moriarty/librarian/testing/gtest_helpers.h"
@@ -459,7 +463,7 @@ TEST(GenerateTest, WritingInputShouldWork) {
                         .Using("TestGenerator",
                                [](GenerateContext ctx) { return MTestCase(); },
                                {.num_calls = 3})
-                        .WriteInputUsing({.ostream = output})
+                        .WriteTo(WriteStreams{.input = output})
                         .Run();
 
   EXPECT_THAT(test_cases, SizeIs(3));
@@ -475,14 +479,15 @@ TEST(GenerateTest, WritingInputShouldWork) {
 
 TEST(GenerateTest, WritingOutputShouldWork) {
   Problem p(Variables(Var("N", MInteger(Between(1, 10)))), Seed("test_seed"),
-            OutputFormat(Line("N")));
+            InputFormat(), OutputFormat(Line("N")));
 
+  std::ostringstream input;
   std::ostringstream output;
   auto test_cases = Generate(p)
                         .Using("TestGenerator",
                                [](GenerateContext ctx) { return MTestCase(); },
                                {.num_calls = 3})
-                        .WriteOutputUsing({.ostream = output})
+                        .WriteTo(WriteStreams{.input = input, .output = output})
                         .Run();
 
   EXPECT_THAT(test_cases, SizeIs(3));
@@ -496,6 +501,137 @@ TEST(GenerateTest, WritingOutputShouldWork) {
   }
 }
 
+TEST(GenerateTest, WritingToFilenamePatternShouldCreateFiles) {
+  const char* test_tmpdir = std::getenv("TEST_TMPDIR");
+  ASSERT_NE(test_tmpdir, nullptr);
+
+  namespace fs = std::filesystem;
+  fs::path base_path =
+      fs::path(test_tmpdir) / "WritingToFilenamePatternShouldCreateFiles";
+  fs::path output_pattern = base_path / "{gen}_{call}_{idx}";
+
+  Problem p(Variables(Var("N", MInteger(Between(1, 10)))), Seed("test_seed"),
+            InputFormat(Line("N")), OutputFormat(Line("N")));
+
+  auto test_cases = Generate(p)
+                        .Using("TestGenerator",
+                               [](GenerateContext ctx) { return MTestCase(); },
+                               {.num_calls = 2})
+                        .Using("AnotherGenerator",
+                               [](GenerateContext ctx) {
+                                 return MTestCase().ConstrainVariable(
+                                     "N", MInteger(Exactly(4)));
+                               },
+                               {.num_calls = 2})
+                        .WriteTo(output_pattern.string())
+                        .Run();
+
+  EXPECT_THAT(test_cases, SizeIs(4));
+
+  for (int call = 0; call < 2; call++) {
+    fs::path input_path1 =
+        base_path / std::format("TestGenerator_{}_1.in", call);
+    fs::path output_path1 =
+        base_path / std::format("TestGenerator_{}_1.ans", call);
+    fs::path input_path2 =
+        base_path / std::format("AnotherGenerator_{}_1.in", call);
+    fs::path output_path2 =
+        base_path / std::format("AnotherGenerator_{}_1.ans", call);
+
+    EXPECT_TRUE(fs::exists(input_path1));
+    EXPECT_TRUE(fs::exists(output_path1));
+    EXPECT_TRUE(fs::exists(input_path2));
+    EXPECT_TRUE(fs::exists(output_path2));
+
+    std::ifstream input_file1(input_path1);
+    std::ifstream output_file1(output_path1);
+    std::ifstream input_file2(input_path2);
+    std::ifstream output_file2(output_path2);
+    ASSERT_TRUE(input_file1.is_open());
+    ASSERT_TRUE(output_file1.is_open());
+    ASSERT_TRUE(input_file2.is_open());
+    ASSERT_TRUE(output_file2.is_open());
+
+    int input_value;
+    int output_value;
+    ASSERT_TRUE(input_file1 >> input_value);
+    ASSERT_TRUE(output_file1 >> output_value);
+    EXPECT_GE(input_value, 1);
+    EXPECT_LE(input_value, 10);
+    EXPECT_EQ(output_value, input_value);
+
+    ASSERT_TRUE(input_file2 >> input_value);
+    ASSERT_TRUE(output_file2 >> output_value);
+    EXPECT_EQ(input_value, 4);
+    EXPECT_EQ(output_value, input_value);
+  }
+}
+
+TEST(GenerateTest, WritingWithoutOutputFormatShouldOnlyCreateInputFiles) {
+  const char* test_tmpdir = std::getenv("TEST_TMPDIR");
+  ASSERT_NE(test_tmpdir, nullptr);
+
+  namespace fs = std::filesystem;
+  fs::path base_path = fs::path(test_tmpdir) /
+                       "WritingWithoutOutputFormatShouldOnlyCreateInputFiles";
+  fs::path output_pattern = base_path / "{gen}_{call}_{idx}";
+
+  Problem p(Variables(Var("N", MInteger(Between(1, 10)))), Seed("test_seed"),
+            InputFormat(Line("N")));
+
+  auto test_cases = Generate(p)
+                        .Using("TestGenerator",
+                               [](GenerateContext ctx) { return MTestCase(); },
+                               {.num_calls = 2})
+                        .WriteTo(output_pattern.string())
+                        .Run();
+
+  EXPECT_THAT(test_cases, SizeIs(2));
+
+  for (int call = 0; call < 2; call++) {
+    fs::path input_path =
+        base_path / std::format("TestGenerator_{}_1.in", call);
+    fs::path output_path =
+        base_path / std::format("TestGenerator_{}_1.ans", call);
+
+    EXPECT_TRUE(fs::exists(input_path));
+    EXPECT_TRUE(!fs::exists(output_path));
+  }
+}
+
+TEST(GenerateTest, WritingWithoutAllOutputVariablesShouldOnlyCreateInputFiles) {
+  const char* test_tmpdir = std::getenv("TEST_TMPDIR");
+  ASSERT_NE(test_tmpdir, nullptr);
+
+  namespace fs = std::filesystem;
+  fs::path base_path =
+      fs::path(test_tmpdir) /
+      "WritingWithoutAllOutputVariablesShouldOnlyCreateInputFiles";
+  fs::path output_pattern = base_path / "{gen}_{call}_{idx}";
+
+  Problem p(Variables(Var("N", MInteger(Between(1, 10))), Var("X", MInteger())),
+            Seed("test_seed"), InputFormat(Line("N")), OutputFormat(Line("X")));
+
+  auto test_cases = Generate(p)
+                        .Using("TestGenerator",
+                               [](GenerateContext ctx) { return MTestCase(); },
+                               {.num_calls = 2})
+                        .WriteTo(output_pattern.string())
+                        .Run();
+
+  EXPECT_THAT(test_cases, SizeIs(2));
+
+  for (int call = 0; call < 2; call++) {
+    fs::path input_path =
+        base_path / std::format("TestGenerator_{}_1.in", call);
+    fs::path output_path =
+        base_path / std::format("TestGenerator_{}_1.ans", call);
+
+    EXPECT_TRUE(fs::exists(input_path));
+    EXPECT_TRUE(!fs::exists(output_path));
+  }
+}
+
 TEST(GenerateTest, WritingWithoutCorrespondingFormatShouldThrow) {
   Problem p(Variables(Var("N", MInteger(Between(1, 10)))), Seed("test_seed"));
 
@@ -503,20 +639,23 @@ TEST(GenerateTest, WritingWithoutCorrespondingFormatShouldThrow) {
                 Generate(p)
                     .Using("TestGenerator",
                            [](GenerateContext ctx) { return MTestCase(); })
-                    .WriteInputUsing({.ostream = std::cout})
+                    .WriteTo(WriteStreams{.input = std::cout})
                     .Run();
               }),
               ThrowsMessage<ConfigurationError>(
                   HasSubstr("No InputFormat specified in Problem")));
-  EXPECT_THAT(SingleCall([&] {
-                Generate(p)
-                    .Using("TestGenerator",
-                           [](GenerateContext ctx) { return MTestCase(); })
-                    .WriteOutputUsing({.ostream = std::cout})
-                    .Run();
-              }),
-              ThrowsMessage<ConfigurationError>(
-                  HasSubstr("No OutputFormat specified in Problem")));
+
+  // TODO: Consider if this is an error or if we're safe to ignore.
+  // EXPECT_THAT(
+  //     SingleCall([&] {
+  //       Generate(p)
+  //           .Using("TestGenerator",
+  //                  [](GenerateContext ctx) { return MTestCase(); })
+  //           .WriteTo(WriteStreams{.input = std::cout, .output = std::cerr})
+  //           .Run();
+  //     }),
+  //     ThrowsMessage<ConfigurationError>(
+  //         HasSubstr("No OutputFormat specified in Problem")));
 }
 
 TEST(GenerateTest, CallingRunWithNoGeneratorsShouldThrow) {
@@ -529,18 +668,19 @@ TEST(GenerateTest, CallingRunWithNoGeneratorsShouldThrow) {
 
 TEST(GenerateTest, GeneratorsShouldHaveAccessToArgs) {
   Problem p(Variables(Var("N", MInteger(Between(1, 10000)))), Seed("test_seed"),
-            OutputFormat(Line("N")));
+            InputFormat(), OutputFormat(Line("N")));
 
   std::ostringstream output;
-  auto test_cases = Generate(p)
-                        .Using("TestGenerator",
-                               [](GenerateContext ctx) {
-                                 return MTestCase().SetValue<MInteger>(
-                                     "N", ctx.Arg<int>("value"));
-                               },
-                               {.num_calls = 3, .args = {{"value", "42"}}})
-                        .WriteOutputUsing({.ostream = output})
-                        .Run();
+  auto test_cases =
+      Generate(p)
+          .Using("TestGenerator",
+                 [](GenerateContext ctx) {
+                   return MTestCase().SetValue<MInteger>("N",
+                                                         ctx.Arg<int>("value"));
+                 },
+                 {.num_calls = 3, .args = {{"value", "42"}}})
+          .WriteTo(WriteStreams{.input = output, .output = output})
+          .Run();
 
   EXPECT_THAT(test_cases, SizeIs(3));
 

@@ -118,6 +118,7 @@ cc_test(
         ":actions",
         ":problem",
         ":simple_io",
+        "//moriarty:context",
         "//moriarty/constraints:numeric_constraints",
         "//moriarty/librarian:errors",
         "//moriarty/librarian:policies",

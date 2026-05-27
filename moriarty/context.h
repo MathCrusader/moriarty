@@ -173,9 +173,13 @@ class WriteContext : public moriarty_internal::ViewOnlyContext,
 // The function signature for a writer.
 using WriterFn = std::function<void(WriteContext, std::span<const TestCase>)>;
 
-struct WriteOptions {
-  // The output stream to write to.
-  Ref<std::ostream> ostream = std::cout;
+// Streams to write test cases to.
+struct WriteStreams {
+  // Where to print the input of a test case.
+  Ref<std::ostream> input;
+
+  // Where to print the output of a test case.
+  std::optional<Ref<std::ostream>> output;
 };
 
 // -----------------------------------------------------------------------------

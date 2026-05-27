@@ -39,8 +39,7 @@ int main() {
     .Using("CornerCaseGenerator", CornerCaseGenerator)
     .Using("SmallExamples", SmallCases, {.num_calls = 10})
     .Using("PureRandom", Random, {.num_calls = 20})
-    .WriteInputUsing({.ostream = std::cout})
-    .WriteOutputUsing({.ostream = std::cerr})
+    .WriteTo(WriteStreams{.input = std::cout, .output = std::cerr})
     .Run();
 }
 ```
