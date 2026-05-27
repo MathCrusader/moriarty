@@ -73,12 +73,28 @@ class Line {
   std::vector<std::string> tokens_;
 };
 
+// NumLines
+//
+// Specifies exactly how many lines a multiline section has. Use in Multiline.
+// For example,
+//   Multiline(NumLines("3 * N"), "X")
+// states that the multiline section has 3*N lines.
+class NumLines {
+ public:
+  explicit NumLines(std::string expression)
+      : number_of_lines_expression_(std::move(expression)) {}
+
+  const std::string& ToString() const { return number_of_lines_expression_; }
+
+ private:
+  std::string number_of_lines_expression_;
+};
+
 // Multiline
 //
 // A multiline section of input or output. Use in InputFormat and OutputFormat.
 // The first parameter specifies how many lines are in the section. Then, every
-// variable listed will be read/written over the next
-// <number_of_lines_expression> lines.
+// variable listed will be read/written over the next <number_of_lines> lines.
 //
 // The variables will be zipped together. For example, if the variables are
 // `X` and `Y`, and the number of lines is 3, then the input will be in the
@@ -90,16 +106,16 @@ class Multiline {
  public:
   template <typename... Tokens>
     requires(std::convertible_to<Tokens, std::string> && ...)
-  Multiline(std::string_view number_of_lines_expression, Tokens&&... tokens)
-      : number_of_lines_expression_(number_of_lines_expression),
+  Multiline(NumLines number_of_lines, Tokens&&... tokens)
+      : num_lines_(std::move(number_of_lines)),
         tokens_{std::forward<Tokens>(tokens)...} {};
 
   void ApplyTo(SimpleIO& io) const {
-    io.AddMultilineSection(number_of_lines_expression_.ToString(), tokens_);
+    io.AddMultilineSection(num_lines_.ToString(), tokens_);
   }
 
  private:
-  Expression number_of_lines_expression_;
+  NumLines num_lines_;
   std::vector<std::string> tokens_;
 };
 
@@ -145,8 +161,10 @@ class Format {
 //   InputFormat(
 //     Line("N", "S"),  // A single line with `N` and `S` separated by a space.
 //     Line("A"),       // A single line with `A`.
-//     Multiline("3 * N", "X"),  // 3*N lines, each with one element of X.
-//     Multiline("N", "P", "Q")  // N lines, each with an element of P and Q.
+//     Multiline(NumLines("3 * N"), "X"),  // 3*N lines, each with one element
+//                                         // of X.
+//     Multiline(NumLines("N"), "P", "Q")  // N lines, each with an element of P
+//                                         // and Q.
 //   );
 //
 // However, if you need something more complex, any type that has `Reader()`,
@@ -181,8 +199,10 @@ class InputFormat {
 //   OutputFormat(
 //     Line("N", "S"),  // A single line with `N` and `S` separated by a space.
 //     Line("A"),       // A single line with `A`.
-//     Multiline("3 * N", "X"),  // 3*N lines, each with one element of X.
-//     Multiline("N", "P", "Q")  // N lines, each with an element of P and Q.
+//     Multiline(NumLines("3 * N"), "X"),  // 3*N lines, each with one element
+//                                         // of X.
+//     Multiline(NumLines("N"), "P", "Q")  // N lines, each with an element of P
+//                                         // and Q.
 //   );
 //
 // However, if you need something more complex, any type that has `Reader()`,
@@ -266,7 +286,7 @@ class Variables {
 //     Seed("example_seed"),
 //     InputFormat(
 //       Line("N", "S"),
-//       Multiline("N", "A")  // N lines, each with one element of A.
+//       Multiline(NumLines("N"), "A")  // N lines, each with one element of A.
 //     ),
 //     OutputFormat(
 //       Line("X")

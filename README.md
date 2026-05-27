@@ -28,7 +28,7 @@ int main() {
     ),
     InputFormat(
       Line("N", "S"),             // Single line with N and S on it.
-      Multiline("N+1", "A", "B")  // N+1 lines; i-th line contains A[i] and B[i].
+      Multiline(NumLines("N+1"), "A", "B")  // N+1 lines; i-th line contains A[i] and B[i].
     ),
     OutputFormat(
       Line("X")
