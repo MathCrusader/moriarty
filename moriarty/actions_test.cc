@@ -616,7 +616,40 @@ TEST(GenerateTest, WritingWithoutOutputFormatShouldOnlyCreateInputFiles) {
         base_path / std::format("TestGenerator_{}_1.ans", call);
 
     EXPECT_TRUE(fs::exists(input_path));
-    EXPECT_TRUE(!fs::exists(output_path));
+    EXPECT_FALSE(fs::exists(output_path));
+  }
+}
+
+TEST(GenerateTest, WritingWithTrivialOutputFormatShouldOnlyCreateInputFiles) {
+  const char* test_tmpdir = std::getenv("TEST_TMPDIR");
+  ASSERT_NE(test_tmpdir, nullptr);
+
+  namespace fs = std::filesystem;
+  fs::path base_path =
+      fs::path(test_tmpdir) /
+      "WritingWithTrivialOutputFormatShouldOnlyCreateInputFiles";
+  fs::path output_pattern = base_path / "{gen}_{call}_{idx}";
+
+  Problem p(Variables(Var("N", MInteger(Between(1, 10)))), Seed("test_seed"),
+            InputFormat(Line("N")), OutputFormat());
+
+  auto test_cases = Generate(p)
+                        .Using("TestGenerator",
+                               [](GenerateContext ctx) { return MTestCase(); },
+                               {.num_calls = 2})
+                        .WriteTo(output_pattern.string())
+                        .Run();
+
+  EXPECT_THAT(test_cases, SizeIs(2));
+
+  for (int call = 0; call < 2; call++) {
+    fs::path input_path =
+        base_path / std::format("TestGenerator_{}_1.in", call);
+    fs::path output_path =
+        base_path / std::format("TestGenerator_{}_1.ans", call);
+
+    EXPECT_TRUE(fs::exists(input_path));
+    EXPECT_FALSE(fs::exists(output_path));
   }
 }
 
@@ -649,7 +682,7 @@ TEST(GenerateTest, WritingWithoutAllOutputVariablesShouldOnlyCreateInputFiles) {
         base_path / std::format("TestGenerator_{}_1.ans", call);
 
     EXPECT_TRUE(fs::exists(input_path));
-    EXPECT_TRUE(!fs::exists(output_path));
+    EXPECT_FALSE(fs::exists(output_path));
   }
 }
 

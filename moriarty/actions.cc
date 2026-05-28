@@ -401,6 +401,9 @@ std::vector<TestCase> GenerateBuilder::Run() const {
       return false;
 
     const auto& output_deps = *problem_.GetOutputDependencies();
+    // FIXME: This is technically not true, since the output may be printing a
+    // static output, but that's low priority to support.
+    if (output_deps.empty()) return false;
     for (const auto& var_name : output_deps) {
       if (!test_case.test_case.UnsafeGetValues().Contains(var_name)) {
         return false;
