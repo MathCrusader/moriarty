@@ -23,7 +23,6 @@
 #include <utility>
 #include <vector>
 
-#include "absl/log/absl_check.h"
 #include "moriarty/constraints/container_constraints.h"
 #include "moriarty/constraints/equality_constraints.h"
 #include "moriarty/constraints/numeric_constraints.h"
@@ -178,7 +177,10 @@ std::string MString::GenerateImpl(
 
 std::string MString::GenerateSimplePattern(
     librarian::GenerateVariableContext ctx) const {
-  ABSL_CHECK(core_constraints_.SimplePatternsConstrained());
+  if (!core_constraints_.SimplePatternsConstrained()) {
+    throw ConfigurationError("GenerateSimplePattern",
+                             "SimplePatterns must be constrained");
+  }
 
   std::optional<std::string> maybe_alphabet =
       [&]() -> std::optional<std::string> {
@@ -199,7 +201,7 @@ std::string MString::GenerateSimplePattern(
   } catch (const SimplePatternEvaluationError& e) {
     throw GenerationError(
         ctx.GetLocalVariableName(),
-        std::format("Failed to generate SimplePattern: ", e.what()),
+        std::format("Failed to generate SimplePattern: {}", e.what()),
         RetryPolicy::kAbort);
   }
 }

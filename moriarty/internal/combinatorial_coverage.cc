@@ -22,8 +22,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include "absl/log/absl_check.h"
-
 namespace moriarty {
 
 namespace {
@@ -206,15 +204,16 @@ std::vector<ColumnSet> InitializeColumnSets(
 std::vector<CoveringArrayTestCase> GenerateCoveringArray(
     std::vector<int> dimension_sizes, int strength,
     std::function<int(int)> rand) {
-  ABSL_CHECK_GT(strength, 0) << "Strength must be > 0";
-  ABSL_CHECK_LE(strength, dimension_sizes.size())
-      << "Strength must be <= #dims";
+  if (strength <= 0) throw std::invalid_argument("Strength must be > 0");
+  if (strength > dimension_sizes.size())
+    throw std::invalid_argument("Strength must be <= #dims");
 
   for (int size : dimension_sizes) {
-    ABSL_CHECK_GT(size, 0) << "Dimension sizes must be > 0";
+    if (size <= 0) throw std::invalid_argument("Dimension sizes must be > 0");
   }
-  ABSL_CHECK_LE(dimension_sizes.size(), 62)
-      << "Number of dimensions must be <= 62 for the bitmasks to work.";
+  if (dimension_sizes.size() > 62)
+    throw std::invalid_argument(
+        "Number of dimensions must be <= 62 for the bitmasks to work.");
 
   int n = dimension_sizes.size();
   std::vector<ColumnSet> column_sets =

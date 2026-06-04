@@ -382,6 +382,20 @@ class ExpressionEvaluationError : public GenericMoriartyError {
   std::string message_;
 };
 
+// InternalError
+//
+// Thrown when there is an error in the internal logic of Moriarty.
+class InternalError : public GenericMoriartyError {
+ public:
+  explicit InternalError(std::string_view message)
+      : GenericMoriartyError(std::string(message)), message_(message) {}
+
+  const std::string& Message() const { return message_; }
+
+ private:
+  std::string message_;
+};
+
 }  // namespace moriarty
 
 #endif  // MORIARTY_LIBRARIAN_ERRORS_H_

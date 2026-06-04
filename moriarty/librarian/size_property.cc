@@ -24,8 +24,8 @@
 #include <utility>
 #include <vector>
 
-#include "absl/log/absl_check.h"
 #include "moriarty/internal/range.h"
+#include "moriarty/librarian/errors.h"
 
 namespace moriarty {
 namespace librarian {
@@ -71,7 +71,7 @@ moriarty::Range GetRange(CommonSize size, int64_t N) {
     case CommonSize::kHuge:
       return GetHugeRange(N);
     default:
-      ABSL_CHECK(false) << "Unknown size";
+      throw InternalError(std::format("Unknown size: {}", ToString(size)));
   }
 }
 
@@ -175,7 +175,8 @@ std::string ToString(CommonSize size) {
     case CommonSize::kHuge:
       return "huge";
     default:
-      ABSL_CHECK(false) << "Unknown size";
+      throw InternalError(
+          std::format("Unknown size: {}", static_cast<int>(size)));
   }
 }
 
@@ -199,9 +200,9 @@ void SizeHandler::ConstrainSize(CommonSize size) {
   } else {
     auto merged_size = MergeSizes(*size_, size);
     if (!merged_size) {
-      throw std::runtime_error(
-          std::format("A variable cannot be both {} and {}", ToString(*size_),
-                      ToString(size)));
+      throw ConfigurationError(
+          "size", std::format("A variable cannot be both {} and {}",
+                              ToString(*size_), ToString(size)));
     }
     size_ = *merged_size;
   }

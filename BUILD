@@ -66,9 +66,6 @@ make_cc_meta_deviations(
         "@abseil-cpp//absl/container:flat_hash_set": {"exports": [
             "absl/container/flat_hash_set.h",
         ]},
-        "@abseil-cpp//absl/log:absl_check": {"exports": [
-            "absl/log/absl_check.h",
-        ]},
         "@abseil-cpp//absl/numeric:int128": {"exports": [
             "absl/numeric/int128.h",
         ]},
