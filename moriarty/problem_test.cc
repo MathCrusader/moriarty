@@ -19,15 +19,23 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "moriarty/librarian/testing/gtest_helpers.h"
 #include "moriarty/variables/minteger.h"
+#include "moriarty/variables/mstring.h"
 
 namespace moriarty {
 namespace {
 
+using ::moriarty_testing::GeneratedValuesAre;
 using ::testing::_;
+using ::testing::AllOf;
 using ::testing::ElementsAre;
+using ::testing::Ge;
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
+using ::testing::Le;
 using ::testing::Optional;
+using ::testing::ThrowsMessage;
 using ::testing::TypedEq;
 
 TEST(ProblemTest, TitleShouldWork) {
@@ -55,6 +63,39 @@ TEST(ProblemTest, VariablesShouldWork) {
   EXPECT_TRUE(problem_vars.Contains("X"));
   EXPECT_TRUE(problem_vars.Contains("Y"));
   EXPECT_FALSE(problem_vars.Contains("Z"));
+}
+
+TEST(ProblemTest, AddingAdditionalConstraintsShouldWork) {
+  Problem problem(Variables(Var("X", MInteger(Between(10, 20))),
+                            Var("Y", MInteger(Exactly(20)))));
+  Problem problem2 =
+      problem.WithAdditionalConstraints(Var("X", MInteger(Between(5, 15))));
+  const auto& problem_vars = problem2.UnsafeGetVariables();
+
+  EXPECT_THAT((problem_vars.GetVariable<MInteger>("X")),
+              GeneratedValuesAre(AllOf(Ge(10), Le(15))));
+
+  EXPECT_TRUE(problem_vars.Contains("X"));
+  EXPECT_TRUE(problem_vars.Contains("Y"));
+}
+
+TEST(ProblemTest, AddingAdditionalConstraintsWithWrongTypeShouldFail) {
+  Problem problem(Variables(Var("X", MInteger(Between(10, 20))),
+                            Var("Y", MInteger(Exactly(20)))));
+  EXPECT_THAT([&] { problem.WithAdditionalConstraints(Var("X", MString())); },
+              ThrowsMessage<ConfigurationError>(
+                  HasSubstr("Type mismatch for variable 'X'")));
+}
+
+TEST(ProblemTest, AddingAdditionalConstraintsWithANewVariableShouldFail) {
+  Problem problem(Variables(Var("X", MInteger(Between(10, 20))),
+                            Var("Y", MInteger(Exactly(20)))));
+  EXPECT_THAT(
+      [&] {
+        problem.WithAdditionalConstraints(Var("Z", MInteger(Exactly(30))));
+      },
+      ThrowsMessage<ConfigurationError>(
+          HasSubstr("Cannot add new variables in WithAdditionalConstraints")));
 }
 
 TEST(ProblemTest, InputFormatShouldWork) {

@@ -136,6 +136,8 @@ cc_test(
     deps = [
         ":problem",
         "//moriarty/variables:minteger",
+        "//moriarty/variables:mstring",
+        "//moriarty/librarian/testing:gtest_helpers",
         "@googletest//:gtest_main",
     ],
 )

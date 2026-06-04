@@ -15,6 +15,7 @@
 #ifndef MORIARTY_PROBLEM_H_
 #define MORIARTY_PROBLEM_H_
 
+#include <format>
 #include <memory>
 #include <optional>
 #include <string>
@@ -297,6 +298,26 @@ class Problem {
   template <typename... T>
   explicit Problem(T... args);
 
+  // WithAdditionalConstraints()
+  //
+  // Creates a new Problem that is the same as this Problem, except that
+  // `additional_constraints` are added to the variables. The constraints are
+  // *merged* with the existing constraints, they do not overwrite them.
+  //
+  // It is an error if the variable did not exist or if it is a different type
+  // than the existing variable in the original Problem.
+  //
+  // Example usage:
+  //   Problem p(...);
+  //   Problem p2 = p.WithAdditionalConstraints(
+  //     Var("N", MInteger(Between(50, 70))),
+  //     Var("S", MString(Alphabet("ab")))
+  //   );
+  template <typename... Vars>
+    requires(std::same_as<std::decay_t<Vars>, Var> && ...)
+  [[nodiscard]] Problem WithAdditionalConstraints(
+      Vars&&... additional_constraints) const;
+
   std::optional<Title> GetTitle() const;
   std::optional<Seed> GetSeed() const;
   std::optional<ReaderFn> GetInputReader() const;
@@ -334,6 +355,34 @@ class Problem {
 template <typename... T>
 Problem::Problem(T... args) {
   (Apply(std::move(args)), ...);
+}
+
+template <typename... Vars>
+  requires(std::same_as<std::decay_t<Vars>, Var> && ...)
+[[nodiscard]] Problem Problem::WithAdditionalConstraints(
+    Vars&&... additional_constraints) const {
+  Problem new_problem = *this;
+  auto merge = [&](const Var& var) {
+    if (!new_problem.variables_.Contains(var.GetName())) {
+      throw ConfigurationError(
+          "WithAdditionalConstraints",
+          std::format("{} is not a variable in the Problem. Cannot add new "
+                      "variables in WithAdditionalConstraints.",
+                      var.GetName()));
+    }
+    try {
+      new_problem.variables_.AddOrMergeVariable(var.GetName(),
+                                                var.GetVariable());
+    } catch (const MVariableTypeMismatch& e) {
+      throw ConfigurationError(
+          "WithAdditionalConstraints",
+          std::format("Type mismatch for variable '{}': {} vs {}",
+                      var.GetName(), e.ConvertingFrom(), e.ConvertingTo()));
+    }
+  };
+
+  (merge(additional_constraints), ...);
+  return new_problem;
 }
 
 template <typename... Lines>
