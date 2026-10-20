@@ -30,13 +30,13 @@ namespace moriarty {
 namespace {
 
 template <typename Action>
-std::string CaptureIOErrorMessage(Action&& action) {
+std::string CaptureReadErrorMessage(Action&& action) {
   try {
     action();
-  } catch (const IOError& e) {
+  } catch (const ReadError& e) {
     return e.Message();
   }
-  ADD_FAILURE() << "Expected IOError to be thrown.";
+  ADD_FAILURE() << "Expected ReadError to be thrown.";
   return "";
 }
 
@@ -72,7 +72,7 @@ TEST(InputCursorProcessingTest, ReadTokenShouldRespectWhitespaceStrictness) {
   {
     std::istringstream strict_stream(" hello");
     InputCursor strict(strict_stream, WhitespaceStrictness::kPrecise);
-    EXPECT_THROW((void)strict.ReadToken(), IOError);
+    EXPECT_THROW((void)strict.ReadToken(), ReadError);
   }
 
   {
@@ -141,7 +141,7 @@ TEST(InputCursorProcessingTest, ReadWhitespaceShouldHandleEofByStrictness) {
   {
     std::istringstream ss("");
     InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
-    EXPECT_THROW(cursor.ReadWhitespace(Whitespace::kSpace), IOError);
+    EXPECT_THROW(cursor.ReadWhitespace(Whitespace::kSpace), ReadError);
   }
 
   {
@@ -166,7 +166,7 @@ TEST(InputCursorProcessingTest, ReadEofShouldRespectWhitespaceStrictness) {
     InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
     EXPECT_EQ(cursor.ReadToken(), "abc");
-    EXPECT_THROW(cursor.ReadEof(), IOError);
+    EXPECT_THROW(cursor.ReadEof(), ReadError);
   }
 }
 
@@ -185,7 +185,7 @@ TEST(InputCursorErrorMessageTest, ReadTokenShouldReportEOFClearly) {
 
   EXPECT_THAT(
       SingleCall([&] { (void)cursor.ReadToken(); }),
-      ThrowsMessage<IOError>(HasSubstr("Expected a token, but got EOF.")));
+      ThrowsMessage<ReadError>(HasSubstr("Expected a token, but got EOF.")));
 }
 
 TEST(InputCursorErrorMessageTest,
@@ -195,7 +195,7 @@ TEST(InputCursorErrorMessageTest,
 
   EXPECT_THAT(
       SingleCall([&] { (void)cursor.ReadToken(); }),
-      ThrowsMessage<IOError>(HasSubstr("Expected a token, but got '\\t'.")));
+      ThrowsMessage<ReadError>(HasSubstr("Expected a token, but got '\\t'.")));
 }
 
 TEST(InputCursorErrorMessageTest,
@@ -204,7 +204,7 @@ TEST(InputCursorErrorMessageTest,
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_THAT(SingleCall([&] { cursor.ReadWhitespace(Whitespace::kSpace); }),
-              ThrowsMessage<IOError>(Eq(
+              ThrowsMessage<ReadError>(Eq(
                   R"(Line 1, token 1 (col 1): Expected ' ', but got '\n'.
 
 ^)")));
@@ -217,7 +217,7 @@ TEST(InputCursorErrorMessageTest,
 
   EXPECT_THAT(
       SingleCall([&] { cursor.ReadWhitespace(Whitespace::kSpace); }),
-      ThrowsMessage<IOError>(HasSubstr("Expected whitespace, but got 'A'.")));
+      ThrowsMessage<ReadError>(HasSubstr("Expected whitespace, but got 'A'.")));
 }
 
 TEST(InputCursorErrorMessageTest,
@@ -227,7 +227,7 @@ TEST(InputCursorErrorMessageTest,
 
   EXPECT_THAT(
       SingleCall([&] { cursor.ReadWhitespace(Whitespace::kTab); }),
-      ThrowsMessage<IOError>(HasSubstr("Expected '\\t', but got EOF.")));
+      ThrowsMessage<ReadError>(HasSubstr("Expected '\\t', but got EOF.")));
 }
 
 TEST(InputCursorErrorMessageTest, ReadEofShouldReportMessageInStrictMode) {
@@ -235,7 +235,7 @@ TEST(InputCursorErrorMessageTest, ReadEofShouldReportMessageInStrictMode) {
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_THAT(SingleCall([&] { cursor.ReadEof(); }),
-              ThrowsMessage<IOError>(Eq(
+              ThrowsMessage<ReadError>(Eq(
                   R"(Line 1, token 1 (col 1): Expected EOF, but got more input.
 x
 ^)")));
@@ -248,7 +248,7 @@ TEST(InputCursorErrorMessageTest,
 
   EXPECT_EQ(cursor.ReadToken(), "A");
   EXPECT_THAT(SingleCall([&] { cursor.ReadEof(); }),
-              ThrowsMessage<IOError>(Eq(
+              ThrowsMessage<ReadError>(Eq(
                   R"(Line 1, token 2 (col 2): Expected EOF, but got more input.
 A B
  ^)")));
@@ -261,7 +261,7 @@ TEST(InputCursorErrorMessageTest, ReadEofInPreciseModeShouldPointAtNextToken) {
   EXPECT_EQ(cursor.ReadToken(), "A");
   cursor.ReadWhitespace(Whitespace::kSpace);
   EXPECT_THAT(SingleCall([&] { cursor.ReadEof(); }),
-              ThrowsMessage<IOError>(Eq(
+              ThrowsMessage<ReadError>(Eq(
                   R"(Line 1, token 2 (col 3): Expected EOF, but got more input.
 A B
   ^)")));
@@ -275,38 +275,39 @@ TEST(InputCursorErrorMessageTest,
   EXPECT_EQ(cursor.ReadToken(), "A");
   // TODO: Note: I am not happy with where this caret is.
   EXPECT_THAT(SingleCall([&] { cursor.ReadEof(); }),
-              ThrowsMessage<IOError>(Eq(
+              ThrowsMessage<ReadError>(Eq(
                   R"(Line 2, token 1 (col 2): Expected EOF, but got more input.
 \tB
  ^)")));
 }
 
-TEST(InputCursorErrorMessageTest, ThrowIOErrorShouldUseAtCursorCaretPosition) {
+TEST(InputCursorErrorMessageTest,
+     ThrowReadErrorShouldUseAtCursorCaretPosition) {
   std::istringstream ss("Hello world");
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.ReadToken(), "Hello");
   EXPECT_THAT(SingleCall([&] {
-                cursor.ThrowIOError(
+                cursor.ThrowReadError(
                     "boom", InputCursor::ErrorSnippetCaretPosition::kAtCursor);
               }),
-              ThrowsMessage<IOError>(Eq(
+              ThrowsMessage<ReadError>(Eq(
                   R"(Line 1, token 2 (col 6): boom
 Hello world
      ^)")));
 }
 
-TEST(InputCursorErrorMessageTest, ThrowIOErrorShouldSupportMultilinePrefix) {
+TEST(InputCursorErrorMessageTest, ThrowReadErrorShouldSupportMultilinePrefix) {
   std::istringstream ss("Hello world");
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.ReadToken(), "Hello");
   EXPECT_THAT(SingleCall([&] {
-                cursor.ThrowIOError(
+                cursor.ThrowReadError(
                     "boom", InputCursor::ErrorSnippetCaretPosition::kAtCursor,
                     "Extra context:\n- detail one\n- detail two");
               }),
-              ThrowsMessage<IOError>(Eq(
+              ThrowsMessage<ReadError>(Eq(
                   R"(Extra context:
 - detail one
 - detail two
@@ -317,25 +318,25 @@ Hello world
 }
 
 TEST(InputCursorErrorMessageTest,
-     ThrowIOErrorShouldUseBeforePreviousReadCaretPosition) {
+     ThrowReadErrorShouldUseBeforePreviousReadCaretPosition) {
   std::istringstream ss("Hello world");
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.ReadToken(), "Hello");
   EXPECT_THAT(
       SingleCall([&] {
-        cursor.ThrowIOError(
+        cursor.ThrowReadError(
             "boom",
             InputCursor::ErrorSnippetCaretPosition::kBeforePreviousRead);
       }),
-      ThrowsMessage<IOError>(Eq(
+      ThrowsMessage<ReadError>(Eq(
           R"(Line 1, token 1 (col 1): boom
 Hello world
 ^~~~~)")));
 }
 
 TEST(InputCursorErrorMessageTest,
-     ThrowIOErrorShouldTreatWhitespaceAsPreviousRead) {
+     ThrowReadErrorShouldTreatWhitespaceAsPreviousRead) {
   std::istringstream ss("Hello world");
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
@@ -343,18 +344,18 @@ TEST(InputCursorErrorMessageTest,
   cursor.ReadWhitespace(Whitespace::kSpace);
   EXPECT_THAT(
       SingleCall([&] {
-        cursor.ThrowIOError(
+        cursor.ThrowReadError(
             "boom",
             InputCursor::ErrorSnippetCaretPosition::kBeforePreviousRead);
       }),
-      ThrowsMessage<IOError>(Eq(
+      ThrowsMessage<ReadError>(Eq(
           R"(Line 1, token 2 (col 6): boom
 Hello world
      ^)")));
 }
 
 TEST(InputCursorErrorMessageTest,
-     ThrowIOErrorShouldHighlightMultilineTokensAtA_D_E_H) {
+     ThrowReadErrorShouldHighlightMultilineTokensAtA_D_E_H) {
   std::string multiline = "A BB CCC\nDDDD EEEEE\nFFFFFF GGGGGGG HHHHHHHH";
 
   {
@@ -364,11 +365,11 @@ TEST(InputCursorErrorMessageTest,
     EXPECT_EQ(cursor.ReadToken(), "A");
     EXPECT_THAT(
         SingleCall([&] {
-          cursor.ThrowIOError(
+          cursor.ThrowReadError(
               "boom",
               InputCursor::ErrorSnippetCaretPosition::kBeforePreviousRead);
         }),
-        ThrowsMessage<IOError>(Eq(
+        ThrowsMessage<ReadError>(Eq(
             R"(Line 1, token 1 (col 1): boom
 A BB CCC
 ^)")));
@@ -387,11 +388,11 @@ A BB CCC
     EXPECT_EQ(cursor.ReadToken(), "DDDD");
     EXPECT_THAT(
         SingleCall([&] {
-          cursor.ThrowIOError(
+          cursor.ThrowReadError(
               "boom",
               InputCursor::ErrorSnippetCaretPosition::kBeforePreviousRead);
         }),
-        ThrowsMessage<IOError>(Eq(
+        ThrowsMessage<ReadError>(Eq(
             R"(Line 2, token 1 (col 1): boom
 DDDD EEEEE
 ^~~~)")));
@@ -412,11 +413,11 @@ DDDD EEEEE
     EXPECT_EQ(cursor.ReadToken(), "EEEEE");
     EXPECT_THAT(
         SingleCall([&] {
-          cursor.ThrowIOError(
+          cursor.ThrowReadError(
               "boom",
               InputCursor::ErrorSnippetCaretPosition::kBeforePreviousRead);
         }),
-        ThrowsMessage<IOError>(Eq(
+        ThrowsMessage<ReadError>(Eq(
             R"(Line 2, token 2 (col 6): boom
 DDDD EEEEE
      ^~~~~)")));
@@ -443,11 +444,11 @@ DDDD EEEEE
     EXPECT_EQ(cursor.ReadToken(), "HHHHHHHH");
     EXPECT_THAT(
         SingleCall([&] {
-          cursor.ThrowIOError(
+          cursor.ThrowReadError(
               "boom",
               InputCursor::ErrorSnippetCaretPosition::kBeforePreviousRead);
         }),
-        ThrowsMessage<IOError>(Eq(
+        ThrowsMessage<ReadError>(Eq(
             R"(Line 3, token 3 (col 16): boom
 FFFFFF GGGGGGG HHHHHHHH
                ^~~~~~~~)")));
@@ -461,7 +462,7 @@ TEST(InputCursorErrorMessageTest,
 
   EXPECT_EQ(cursor.ReadToken(), "A");
   EXPECT_THAT(SingleCall([&] { cursor.ReadWhitespace(Whitespace::kNewline); }),
-              ThrowsMessage<IOError>(Eq(
+              ThrowsMessage<ReadError>(Eq(
                   R"(Line 1, token 2 (col 2): Expected '\n', but got ' '.
 A BB CCC
  ^)")));
@@ -478,7 +479,7 @@ TEST(InputCursorErrorMessageTest,
   cursor.ReadWhitespace(Whitespace::kSpace);
   EXPECT_EQ(cursor.ReadToken(), "CCC");
   EXPECT_THAT(SingleCall([&] { cursor.ReadWhitespace(Whitespace::kSpace); }),
-              ThrowsMessage<IOError>(Eq(
+              ThrowsMessage<ReadError>(Eq(
                   R"(Line 1, token 4 (col 9): Expected ' ', but got '\n'.
 A BB CCC
         ^)")));
@@ -501,7 +502,7 @@ TEST(InputCursorErrorMessageTest,
     EXPECT_EQ(cursor.ReadToken(), "EEEEE");
     EXPECT_THAT(
         SingleCall([&] { cursor.ReadEof(); }),
-        ThrowsMessage<IOError>(Eq(
+        ThrowsMessage<ReadError>(Eq(
             R"(Line 2, token 3 (col 11): Expected EOF, but got more input.
 DDDD EEEEE
           ^)")));
@@ -517,7 +518,7 @@ DDDD EEEEE
     EXPECT_EQ(cursor.ReadToken(), "EEEEE");
     EXPECT_THAT(
         SingleCall([&] { cursor.ReadEof(); }),
-        ThrowsMessage<IOError>(Eq(
+        ThrowsMessage<ReadError>(Eq(
             R"(Line 3, token 1 (col 1): Expected EOF, but got more input.
 FFFFFF GGGGGGG HHHHHHHH
 ^)")));
@@ -532,7 +533,7 @@ TEST(InputCursorErrorMessageTest,
     InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
     EXPECT_EQ(cursor.ReadToken(), massive_token);
-    std::string message = CaptureIOErrorMessage([&] { cursor.ReadEof(); });
+    std::string message = CaptureReadErrorMessage([&] { cursor.ReadEof(); });
     ExpectMaxMessageLineWidth(message, 100);
   }
   {
@@ -540,7 +541,7 @@ TEST(InputCursorErrorMessageTest,
     std::istringstream ss(massive_token + " B");
     InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
-    std::string message = CaptureIOErrorMessage(
+    std::string message = CaptureReadErrorMessage(
         [&] { cursor.ReadWhitespace(Whitespace::kSpace); });
     ExpectMaxMessageLineWidth(message, 100);
   }
@@ -563,7 +564,7 @@ TEST(InputCursorErrorMessageTest,
     cursor.ReadWhitespace(Whitespace::kSpace);
   }
 
-  std::string message = CaptureIOErrorMessage([&] { cursor.ReadEof(); });
+  std::string message = CaptureReadErrorMessage([&] { cursor.ReadEof(); });
   ExpectMaxMessageLineWidth(message, 100);
 }
 

@@ -199,6 +199,7 @@ cc_test(
     deps = [
         ":size_property",
         "//moriarty/internal:range",
+        "//moriarty/librarian:errors",
         "@googletest//:gtest_main",
     ],
 )

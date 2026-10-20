@@ -489,10 +489,10 @@ auto MVariable<V>::Read(ReadVariableContext ctx) const -> value_type {
     value_type value = ReadImpl(ctx);
 
     if (auto v = Validate(ConstraintContext(ctx), value); !v.IsOk()) {
-      ctx.ThrowIOErrorWithContext("violates constraint", v.PrettyReason());
+      ctx.ThrowReadErrorWithContext("violates constraint", v.PrettyReason());
     }
     return value;
-  } catch (const moriarty::IOError& e) {
+  } catch (const moriarty::ReadError& e) {
     auto full_name = ctx.GetVariableStack();
     std::string variable_name;
     for (int i = 0; i < full_name.size(); ++i) {

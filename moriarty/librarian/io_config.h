@@ -60,9 +60,9 @@ struct InputCursor {
   [[nodiscard]] std::optional<std::string> PeekToken();
   void ReadEof();
   void ReadWhitespace(Whitespace whitespace);
-  [[noreturn]] void ThrowIOError(std::string_view message,
-                                 ErrorSnippetCaretPosition caret_position,
-                                 std::string_view multiline_prefix = "");
+  [[noreturn]] void ThrowReadError(std::string_view message,
+                                   ErrorSnippetCaretPosition caret_position,
+                                   std::string_view multiline_prefix = "");
   bool IsEOF();
 
  private:
@@ -84,7 +84,7 @@ struct InputCursor {
     int highlight_length = 1;
   };
 
-  [[nodiscard]] std::string FormatIOErrorMessage(
+  [[nodiscard]] std::string FormatReadErrorMessage(
       std::string_view message, ErrorSnippetCaretPosition caret_position,
       std::string_view multiline_prefix) const;
 

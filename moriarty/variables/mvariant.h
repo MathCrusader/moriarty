@@ -470,7 +470,7 @@ MVariant<T...>::variant_value_type MVariant<T...>::ReadImpl(
   auto it =
       std::ranges::find(Format().GetDiscriminatorOptions(), discriminator);
   if (it == Format().GetDiscriminatorOptions().end()) {
-    ctx.ThrowIOError(
+    ctx.ThrowReadError(
         "Invalid discriminator {}. Expected one of: {}.",
         moriarty_internal::ValuePrinter(discriminator),
         moriarty_internal::ValuePrinter(Format().GetDiscriminatorOptions()));
@@ -498,11 +498,9 @@ MVariant<T...>::variant_value_type MVariant<T...>::ReadImpl(
   }(std::index_sequence_for<T...>{});
 
   if (!read_value.has_value()) {
-    ctx.ThrowIOError(
-        std::format("Failed to read a value for {} after reading the "
-                    "discriminator. This is likely a bug in Moriarty. Please "
-                    "report this to the developers.",
-                    this->Typename()));
+    ctx.ThrowReadError(
+        "No variant alternative is configured for discriminator {} in {}.",
+        moriarty_internal::ValuePrinter(discriminator), this->Typename());
   }
 
   return *read_value;

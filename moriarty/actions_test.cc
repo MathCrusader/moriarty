@@ -66,7 +66,7 @@ TEST(ValidateInputTest, ValidateInputWithMultilineFormatShouldWork) {
     EXPECT_THAT(
         SingleCall(
             [&] { ValidateInput(p).ReadInputUsing({.istream = input}).Run(); }),
-        ThrowsMessage<IOError>(HasSubstr("Expected '\\n', but got ' '")));
+        ThrowsMessage<ReadError>(HasSubstr("Expected '\\n', but got ' '")));
   }
 }
 
@@ -78,7 +78,7 @@ TEST(ValidateInputTest, InvalidVariableShouldFail) {
   EXPECT_THAT(SingleCall([&] {
                 ValidateInput(p).ReadInputUsing({.istream = input}).Run();
               }),
-              ThrowsMessage<IOError>(HasSubstr("too large")));
+              ThrowsMessage<ReadError>(HasSubstr("too large")));
 }
 
 TEST(ValidateInputTest, InvalidWhitespaceShouldFail) {
@@ -90,21 +90,21 @@ TEST(ValidateInputTest, InvalidWhitespaceShouldFail) {
     EXPECT_THAT(
         SingleCall(
             [&] { ValidateInput(p).ReadInputUsing({.istream = input}).Run(); }),
-        ThrowsMessage<IOError>(HasSubstr("Expected a token, but got ' '")));
+        ThrowsMessage<ReadError>(HasSubstr("Expected a token, but got ' '")));
   }
   {
     std::istringstream input("5");
     EXPECT_THAT(
         SingleCall(
             [&] { ValidateInput(p).ReadInputUsing({.istream = input}).Run(); }),
-        ThrowsMessage<IOError>(HasSubstr("Expected '\\n', but got EOF")));
+        ThrowsMessage<ReadError>(HasSubstr("Expected '\\n', but got EOF")));
   }
   {
     std::istringstream input("");
     EXPECT_THAT(
         SingleCall(
             [&] { ValidateInput(p).ReadInputUsing({.istream = input}).Run(); }),
-        ThrowsMessage<IOError>(HasSubstr("Expected a token, but got EOF")));
+        ThrowsMessage<ReadError>(HasSubstr("Expected a token, but got EOF")));
   }
 }
 
@@ -136,7 +136,7 @@ TEST(ValidateInputTest, InvalidMultipleTestCasesShouldFail) {
     EXPECT_THAT(
         SingleCall(
             [&] { ValidateInput(p).ReadInputUsing({.istream = input}).Run(); }),
-        ThrowsMessage<IOError>(HasSubstr("Expected a token, but got EOF")));
+        ThrowsMessage<ReadError>(HasSubstr("Expected a token, but got EOF")));
   }
   {
     std::istringstream input(R"(2
@@ -144,10 +144,11 @@ TEST(ValidateInputTest, InvalidMultipleTestCasesShouldFail) {
 1 22
 5 25
 )");
-    EXPECT_THAT(
-        SingleCall(
-            [&] { ValidateInput(p).ReadInputUsing({.istream = input}).Run(); }),
-        ThrowsMessage<IOError>(HasSubstr("Expected EOF, but got more input")));
+    EXPECT_THAT(SingleCall([&] {
+                  ValidateInput(p).ReadInputUsing({.istream = input}).Run();
+                }),
+                ThrowsMessage<ReadError>(
+                    HasSubstr("Expected EOF, but got more input")));
   }
 }
 
@@ -191,7 +192,7 @@ TEST(ValidateOutputTest, InvalidInputShouldFail) {
                     .ReadOutputUsing({.istream = output})
                     .Run();
               }),
-              ThrowsMessage<IOError>(HasSubstr("too large")));
+              ThrowsMessage<ReadError>(HasSubstr("too large")));
 }
 
 TEST(ValidateOutputTest, InvalidOutputShouldFail) {
@@ -207,7 +208,7 @@ TEST(ValidateOutputTest, InvalidOutputShouldFail) {
                     .ReadOutputUsing({.istream = output})
                     .Run();
               }),
-              ThrowsMessage<IOError>(HasSubstr("too large")));
+              ThrowsMessage<ReadError>(HasSubstr("too large")));
 }
 
 TEST(ValidateOutputTest, InvalidWhitespaceInOutputShouldRespectStrictness) {
@@ -225,7 +226,7 @@ TEST(ValidateOutputTest, InvalidWhitespaceInOutputShouldRespectStrictness) {
               .ReadOutputUsing({.istream = output})
               .Run();
         }),
-        ThrowsMessage<IOError>(HasSubstr("Expected '\\n', but got ' '")));
+        ThrowsMessage<ReadError>(HasSubstr("Expected '\\n', but got ' '")));
   }
   {  // Missing newline in output
     std::istringstream input("5\n");
@@ -237,7 +238,7 @@ TEST(ValidateOutputTest, InvalidWhitespaceInOutputShouldRespectStrictness) {
               .ReadOutputUsing({.istream = output})
               .Run();
         }),
-        ThrowsMessage<IOError>(HasSubstr("Expected '\\n', but got EOF")));
+        ThrowsMessage<ReadError>(HasSubstr("Expected '\\n', but got EOF")));
   }
   {  // Missing newline in input
     std::istringstream input("5");
@@ -249,7 +250,7 @@ TEST(ValidateOutputTest, InvalidWhitespaceInOutputShouldRespectStrictness) {
               .ReadOutputUsing({.istream = output})
               .Run();
         }),
-        ThrowsMessage<IOError>(HasSubstr("Expected '\\n', but got EOF")));
+        ThrowsMessage<ReadError>(HasSubstr("Expected '\\n', but got EOF")));
   }
   {  // Extra space in output, but with flexible whitespace strictness
     std::istringstream input("5\n");
@@ -291,32 +292,32 @@ TEST(ValidateOutputTest, ExtraContentAtEOFShouldFail) {
   {
     std::istringstream input("5\n");
     std::istringstream output("21\nextra\n");
-    EXPECT_THAT(
-        SingleCall([&]() {
-          ValidateOutput(p)
-              .ReadInputUsing({.istream = input})
-              .ReadOutputUsing(
-                  {.istream = output,
-                   .whitespace_strictness = WhitespaceStrictness::kFlexible})
-              .Run();
-        }),
-        ThrowsMessage<IOError>(HasSubstr("Expected EOF, but got more input")));
+    EXPECT_THAT(SingleCall([&]() {
+                  ValidateOutput(p)
+                      .ReadInputUsing({.istream = input})
+                      .ReadOutputUsing({.istream = output,
+                                        .whitespace_strictness =
+                                            WhitespaceStrictness::kFlexible})
+                      .Run();
+                }),
+                ThrowsMessage<ReadError>(
+                    HasSubstr("Expected EOF, but got more input")));
   }
   {
     std::istringstream input("5\nextra\n");
     std::istringstream output("21\n");
-    EXPECT_THAT(
-        SingleCall([&]() {
-          ValidateOutput(p)
-              .ReadInputUsing(
-                  {.istream = input,
-                   .whitespace_strictness = WhitespaceStrictness::kFlexible})
-              .ReadOutputUsing(
-                  {.istream = output,
-                   .whitespace_strictness = WhitespaceStrictness::kFlexible})
-              .Run();
-        }),
-        ThrowsMessage<IOError>(HasSubstr("Expected EOF, but got more input")));
+    EXPECT_THAT(SingleCall([&]() {
+                  ValidateOutput(p)
+                      .ReadInputUsing({.istream = input,
+                                       .whitespace_strictness =
+                                           WhitespaceStrictness::kFlexible})
+                      .ReadOutputUsing({.istream = output,
+                                        .whitespace_strictness =
+                                            WhitespaceStrictness::kFlexible})
+                      .Run();
+                }),
+                ThrowsMessage<ReadError>(
+                    HasSubstr("Expected EOF, but got more input")));
   }
 }
 
@@ -346,7 +347,7 @@ TEST(ValidateOutputTest, OutputShouldHaveAccessToInputVariables) {
                                             WhitespaceStrictness::kFlexible})
                       .Run();
                 }),
-                ThrowsMessage<IOError>(HasSubstr("too large")));
+                ThrowsMessage<ReadError>(HasSubstr("too large")));
   }
 }
 

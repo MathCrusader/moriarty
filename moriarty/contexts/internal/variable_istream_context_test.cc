@@ -84,7 +84,7 @@ TEST(VariableIStreamContextTest, ReadNamedVariableShouldRespectWhitespace) {
     std::istringstream ss("11    22");
     InputCursor cr(ss, WhitespaceStrictness::kPrecise);
     VariableIStreamContext ctx(cr, context.Variables(), context.Values());
-    EXPECT_THROW({ (void)ctx.ReadVariable<MArray<MInteger>>("A"); }, IOError);
+    EXPECT_THROW({ (void)ctx.ReadVariable<MArray<MInteger>>("A"); }, ReadError);
   }
 }
 
@@ -131,7 +131,7 @@ TEST(VariableIStreamContextTest, ReadUnnamedVariableShouldRespectWhitespace) {
     VariableIStreamContext ctx(cr, context.Variables(), context.Values());
     EXPECT_THROW(
         { (void)ctx.ReadVariable(MArray<MInteger>(Length(2)), "test"); },
-        IOError);
+        ReadError);
   }
 }
 
@@ -199,7 +199,7 @@ TEST(VariableIStreamContextTest, ReadVariableToShouldRespectWhitespace) {
     InputCursor cr(ss, WhitespaceStrictness::kPrecise);
     VariableIStreamContext ctx(cr, context.Variables(), context.Values());
     TestCase test_case;
-    EXPECT_THROW({ ctx.ReadVariableTo("A", test_case); }, IOError);
+    EXPECT_THROW({ ctx.ReadVariableTo("A", test_case); }, ReadError);
   }
 }
 

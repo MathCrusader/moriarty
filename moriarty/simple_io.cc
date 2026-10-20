@@ -252,24 +252,18 @@ void ReadLiteral(ReadContext ctx, const StringLiteral& literal) {
   std::string read_token = ctx.ReadToken();
   std::string expected = std::string(literal);
   if (read_token != expected) {
-    ctx.ThrowIOError("Expected {}, but got {}.",
-                     moriarty_internal::ValuePrinter(expected),
-                     moriarty_internal::ValuePrinter(read_token));
+    ctx.ThrowReadError("Expected {}, but got {}.",
+                       moriarty_internal::ValuePrinter(expected),
+                       moriarty_internal::ValuePrinter(read_token));
   }
 }
 
 void ReadToken(ReadContext ctx, const SimpleIOToken& token,
                TestCase& test_case) {
-  try {
-    if (std::holds_alternative<std::string>(token))
-      ctx.ReadVariableTo(std::get<std::string>(token), test_case);
-    else
-      ReadLiteral(ctx, std::get<StringLiteral>(token));
-  } catch (const IOError& e) {
-    throw;
-  } catch (const GenericMoriartyError& e) {
-    ctx.ThrowIOError(e.what());
-  }
+  if (std::holds_alternative<std::string>(token))
+    ctx.ReadVariableTo(std::get<std::string>(token), test_case);
+  else
+    ReadLiteral(ctx, std::get<StringLiteral>(token));
 }
 
 void ReadLine(ReadContext ctx, const SimpleIO::Line& line,

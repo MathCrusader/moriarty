@@ -35,14 +35,14 @@ namespace moriarty_internal {
 BasicIStreamContext::BasicIStreamContext(Ref<InputCursor> input)
     : input_(input) {}
 
-void BasicIStreamContext::ThrowIOError(std::string_view message) const {
-  input_.get().ThrowIOError(
+void BasicIStreamContext::ThrowReadError(std::string_view message) const {
+  input_.get().ThrowReadError(
       message, InputCursor::ErrorSnippetCaretPosition::kBeforePreviousRead);
 }
 
-void BasicIStreamContext::ThrowIOErrorWithContext(
+void BasicIStreamContext::ThrowReadErrorWithContext(
     std::string_view message, std::string_view context) const {
-  input_.get().ThrowIOError(
+  input_.get().ThrowReadError(
       message, InputCursor::ErrorSnippetCaretPosition::kBeforePreviousRead,
       context);
 }
@@ -74,22 +74,22 @@ int64_t BasicIStreamContext::ReadInteger() {
   std::from_chars_result result = std::from_chars(
       token.data(), token.data() + token.size(), value, /* base = */ 10);
   if (result.ec != std::errc{} || result.ptr != token.data() + token.size()) {
-    ThrowIOError(std::format("Expected an integer, but got {}.",
-                             moriarty_internal::ValuePrinter(read_token)));
+    ThrowReadError(std::format("Expected an integer, but got {}.",
+                               moriarty_internal::ValuePrinter(read_token)));
   }
 
   if (GetNumericStrictness() == NumericStrictness::kPrecise) {
     if (value == 0 && read_token.size() != 1) {
-      ThrowIOError("Expected a (strict) integer, but got {}.",
-                   moriarty_internal::ValuePrinter(read_token));
+      ThrowReadError("Expected a (strict) integer, but got {}.",
+                     moriarty_internal::ValuePrinter(read_token));
     }
     if (value != 0 && read_token[0] == '0') {
-      ThrowIOError("Expected a (strict) integer, but got {}.",
-                   moriarty_internal::ValuePrinter(read_token));
+      ThrowReadError("Expected a (strict) integer, but got {}.",
+                     moriarty_internal::ValuePrinter(read_token));
     }
     if (value != 0 && (read_token[0] == '-' && read_token[1] == '0')) {
-      ThrowIOError("Expected a (strict) integer, but got {}.",
-                   moriarty_internal::ValuePrinter(read_token));
+      ThrowReadError("Expected a (strict) integer, but got {}.",
+                     moriarty_internal::ValuePrinter(read_token));
     }
   }
 
@@ -151,7 +151,7 @@ double BasicIStreamContext::ReadReal(int num_digits) {
   if (GetNumericStrictness() == NumericStrictness::kPrecise) {
     std::optional<double> result = ParseStrictReal(read_token, num_digits);
     if (!result.has_value()) {
-      ThrowIOError(
+      ThrowReadError(
           "Expected a real number with {} digits after the decimal point, "
           "but got {}.",
           num_digits, moriarty_internal::ValuePrinter(read_token));
@@ -171,12 +171,12 @@ double BasicIStreamContext::ReadReal(int num_digits) {
   auto [ptr, ec] =
       std::from_chars(token.data(), token.data() + token.size(), result);
   if (ec != std::errc{} || ptr != token.data() + token.size()) {
-    ThrowIOError("Expected a real number, but got {}.",
-                 moriarty_internal::ValuePrinter(read_token));
+    ThrowReadError("Expected a real number, but got {}.",
+                   moriarty_internal::ValuePrinter(read_token));
   }
   if (std::isinf(result) || std::isnan(result)) {
-    ThrowIOError("Expected a real number, but got {}.",
-                 moriarty_internal::ValuePrinter(read_token));
+    ThrowReadError("Expected a real number, but got {}.",
+                   moriarty_internal::ValuePrinter(read_token));
   }
 
   return result;

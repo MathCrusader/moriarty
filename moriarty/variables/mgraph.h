@@ -536,8 +536,10 @@ MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(
     librarian::ReadVariableContext ctx) const {
   std::optional<int64_t> num_nodes =
       core_constraints_.NumNodes().GetUniqueValue(ctx);
-  if (!num_nodes)
-    ctx.ThrowIOError("Cannot determine the number of nodes before read.");
+  if (!num_nodes) {
+    throw ConfigurationError(
+        "MGraph::Read", "Cannot determine the number of nodes before read.");
+  }
 
   if (Format().IsAdjacencyMatrix()) {
     MGraph::Reader reader(ctx, *num_nodes, *this);
@@ -549,8 +551,10 @@ MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(
   }
   std::optional<int64_t> num_edges =
       core_constraints_.NumEdges().GetUniqueValue(ctx);
-  if (!num_edges)
-    ctx.ThrowIOError("Cannot determine the number of edges before read.");
+  if (!num_edges) {
+    throw ConfigurationError(
+        "MGraph::Read", "Cannot determine the number of edges before read.");
+  }
 
   if (Format().IsEdgeList()) {
     MGraph::Reader reader(ctx, *num_edges, *this);
@@ -561,7 +565,7 @@ MGraph<MEdgeLabel, MNodeLabel>::ReadImpl(
     return std::move(reader).Finalize();
   }
 
-  ctx.ThrowIOError("Unsupported MGraph format for reading.");
+  ctx.ThrowReadError("Unsupported MGraph format for reading.");
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
@@ -580,8 +584,8 @@ void MGraph<MEdgeLabel, MNodeLabel>::WriteImpl(
         if constexpr (HasNodeLabels<MNodeLabel>) {
           core_constraints_.NodeLabels().Write(ctx, node_labels[node]);
         } else {
-          // FIXME: This should be an IOError.
-          throw std::runtime_error(
+          throw ConfigurationError(
+              "MGraph::Write",
               "Cannot write node labels when MNodeLabel is MNone.");
         }
       } else {
@@ -627,8 +631,7 @@ void MGraph<MEdgeLabel, MNodeLabel>::WriteImpl(
       for (const auto& row : adjacency_list) {
         for (auto [u, v, w] : row) {
           if (matrix[u][v].has_value()) {
-            // FIXME: This should be an IOError.
-            throw std::runtime_error(
+            throw WriteError(
                 "Cannot write adjacency matrix with multiple edges "
                 "between nodes when edge labels are present.");
           }
@@ -726,8 +729,10 @@ MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(
     : G_(0), variable_(variable) {
   const CoreConstraints& constraints = variable_.get().GetCoreConstraints();
   std::optional<int64_t> num_nodes = constraints.NumNodes().GetUniqueValue(ctx);
-  if (!num_nodes)
-    ctx.ThrowIOError("Cannot determine the number of nodes before read.");
+  if (!num_nodes) {
+    throw ConfigurationError(
+        "MGraph::Reader", "Cannot determine the number of nodes before read.");
+  }
 
   if (variable_.get().Format().IsAdjacencyMatrix()) {
     if constexpr (!HasEdgeLabels<MEdgeLabel>) {
@@ -742,13 +747,17 @@ MGraph<MEdgeLabel, MNodeLabel>::Reader::Reader(
   if (variable_.get().Format().IsEdgeList()) {
     std::optional<int64_t> num_edges =
         constraints.NumEdges().GetUniqueValue(ctx);
-    if (!num_edges)
-      ctx.ThrowIOError(
+    if (!num_edges) {
+      throw ConfigurationError(
+          "MGraph::Reader",
           "Cannot determine the number of edges before reading edge list.");
+    }
 
     if (*num_edges != num_chunks) {
-      ctx.ThrowIOError("MGraph::Reader expected to read {} chunks, but got {}.",
-                       *num_edges, num_chunks);
+      throw ConfigurationError(
+          "MGraph::Reader",
+          std::format("Expected to read {} chunks, but got {}.", *num_edges,
+                      num_chunks));
     }
   }
 
@@ -763,7 +772,7 @@ auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
   if (format.IsZeroBased()) {
     int64_t node_idx = ctx.ReadInteger();
     if (!(0 <= node_idx && node_idx < G_.NumNodes())) {
-      ctx.ThrowIOError(
+      ctx.ThrowReadError(
           "Invalid (0-based) node index {} for graph with {} nodes.", node_idx,
           G_.NumNodes());
     }
@@ -773,7 +782,7 @@ auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
   if (format.IsOneBased()) {
     int64_t node_idx = ctx.ReadInteger() - 1;
     if (!(0 <= node_idx && node_idx < G_.NumNodes())) {
-      ctx.ThrowIOError(
+      ctx.ThrowReadError(
           "Invalid (1-based) node index {} for graph with {} nodes.",
           node_idx + 1, G_.NumNodes());
     }
@@ -782,9 +791,10 @@ auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
 
   if (format.IsNodeLabelsStyle()) {
     if constexpr (!HasNodeLabels<MNodeLabel>) {
-      ctx.ThrowIOError(
-          "MGraph::Reader attempted to read a node label, but node labels "
-          "are not defined for this graph.");
+      throw ConfigurationError(
+          "MGraph::Reader",
+          "Attempted to read a node label, but node labels are not defined "
+          "for this graph.");
     }
     const std::optional<MNodeLabel>& node_label =
         variable_.get().GetCoreConstraints().NodeLabels();
@@ -792,7 +802,7 @@ auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNodeLabel(
     return G_.GetOrAddNodeIndex(label);
   }
 
-  ctx.ThrowIOError(
+  ctx.ThrowReadError(
       "MGraph::Reader does not support NonExhaustiveList node style.");
 }
 
@@ -800,7 +810,7 @@ template <typename MEdgeLabel, typename MNodeLabel>
 auto MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadEdgeLabel(
     librarian::ReadVariableContext ctx) -> MEdgeLabel::value_type {
   if constexpr (!HasEdgeLabels<MEdgeLabel>) {
-    ctx.ThrowIOError(
+    ctx.ThrowReadError(
         "MGraph::Reader attempted to read an edge label, but edge labels "
         "are not defined for this graph.");
   }
@@ -841,7 +851,7 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
       auto edge_label = ReadEdgeLabel(ctx);
 
       if (u > v && adj[v][u] != edge_label) {
-        ctx.ThrowIOError(
+        ctx.ThrowReadError(
             "Asymmetric adjacency matrix entries at ({}, {}) = "
             "{} and ({}, {}) = {}",
             u, v, moriarty_internal::ValuePrinter(edge_label), v, u,
@@ -853,11 +863,11 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNextAdjacencyMatrix(
       auto& adj = std::get<IMtxIdx>(adjacency_matrix_);
       int64_t edge_count = ctx.ReadInteger();
       if (edge_count < 0) {
-        ctx.ThrowIOError("Number of edges between {} and {} is negative ({})",
-                         u, v, edge_count);
+        ctx.ThrowReadError("Number of edges between {} and {} is negative ({})",
+                           u, v, edge_count);
       }
       if (u > v && adj[v][u] != edge_count) {
-        ctx.ThrowIOError(
+        ctx.ThrowReadError(
             "Asymmetric adjacency matrix entries at ({}, {}) = {} "
             "and ({}, {}) = {}",
             u, v, adj[v][u], v, u, edge_count);
@@ -885,7 +895,7 @@ void MGraph<MEdgeLabel, MNodeLabel>::Reader::ReadNext(
     return;
   }
 
-  ctx.ThrowIOError(
+  ctx.ThrowReadError(
       "MGraph::Reader does not support NonExhaustiveList edge style.");
 }
 

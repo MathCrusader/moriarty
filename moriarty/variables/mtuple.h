@@ -417,9 +417,10 @@ template <typename... MElementTypes>
 void MTuple<MElementTypes...>::Reader::ReadNext(
     librarian::ReadVariableContext ctx) {
   if (current_index_ >= sizeof...(MElementTypes)) {
-    ctx.ThrowIOError(
-        "{}: Attempting to read more elements than exist in tuple.",
-        MTuple<MElementTypes...>().Typename());
+    throw ConfigurationError(
+        "MTuple::Reader",
+        std::format("{}: Attempting to read more elements than exist in tuple.",
+                    MTuple<MElementTypes...>().Typename()));
   }
   ReadCurrentIndex(ctx, std::index_sequence_for<MElementTypes...>{});
   current_index_++;

@@ -22,6 +22,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "moriarty/internal/range.h"
+#include "moriarty/librarian/errors.h"
 
 namespace moriarty {
 namespace librarian {
@@ -312,7 +313,7 @@ TEST(SizeHandlerTest, ConstrainSizeShouldThrowOnInvalidMerge) {
   librarian::SizeHandler handler;
   handler.ConstrainSize(CommonSize::kSmall);
   EXPECT_THAT([&]() { handler.ConstrainSize(CommonSize::kHuge); },
-              Throws<std::runtime_error>());
+              Throws<ConfigurationError>());
 }
 
 TEST(SizeHandlerTest, IsSatisfiedWithShouldWork) {

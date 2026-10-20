@@ -71,11 +71,11 @@ TEST(MStringTest, InputWithTokenWithWhitespaceAfterShouldReadToken) {
 }
 
 TEST(MStringTest, ReadATokenWithLeadingWhitespaceShouldFail) {
-  EXPECT_THROW((void)Read(MString(), " spacebefore"), IOError);
+  EXPECT_THROW((void)Read(MString(), " spacebefore"), ReadError);
 }
 
 TEST(MStringTest, ReadAtEofShouldFail) {
-  EXPECT_THROW((void)Read(MString(), ""), IOError);
+  EXPECT_THROW((void)Read(MString(), ""), ReadError);
 }
 
 TEST(MStringTest, IsSatisfiedWithShouldAcceptAllMStringsForDefault) {

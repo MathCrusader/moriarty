@@ -97,7 +97,7 @@ TEST(MArrayTest, TypicalWriteCaseWorks) {
 }
 
 TEST(MArrayTest, ReadingTheWrongLengthOfMArrayShouldFail) {
-  EXPECT_THROW((void)Read(MArray<MInteger>(Length(6)), "1 2 3 4"), IOError);
+  EXPECT_THROW((void)Read(MArray<MInteger>(Length(6)), "1 2 3 4"), ReadError);
 }
 
 TEST(MArrayTest, SimpleGenerateCaseWorks) {
@@ -345,7 +345,7 @@ TEST(MArrayTest, LengthPrefixedFormatReadsAndWritesArrays) {
 
   EXPECT_EQ(Write(array, {1, 2}), "2\n1 2");
   EXPECT_THAT(Read(array, "2\n1 2"), ElementsAre(1, 2));
-  EXPECT_THROW((void)Read(array, "2 1 2"), IOError);
+  EXPECT_THROW((void)Read(array, "2 1 2"), ReadError);
 }
 
 TEST(MArrayTest, EmptyLengthPrefixedArrayDoesNotConsumeFollowingWhitespace) {
@@ -415,7 +415,7 @@ TEST(MArrayTest, WhitespaceSeparatorShouldAffectRead) {
   EXPECT_THROW(
       (void)Read(MArray<MInteger>(MArrayFormat().NewlineSeparated(), Length(6)),
                  "1\n2\n3 4\n5\n6"),
-      IOError);
+      ReadError);
 }
 
 TEST(MArrayTest, WhitespaceSeparatorWithMultipleSameTypesPasses) {
@@ -452,11 +452,11 @@ TEST(MArrayTest,
 
   EXPECT_THROW(
       [] { (void)Read(MArray<MInteger>(Length(Between(2, 3))), "1 2 3"); }(),
-      IOError);
+      ConfigurationError);
 
   EXPECT_THROW(
       [] { (void)Read(MArray<MInteger>(Length(Between(3, 4))), "1 2 3"); }(),
-      IOError);
+      ConfigurationError);
 }
 
 TEST(MArrayTest, DirectlyUsingChunkedReaderShouldWork) {

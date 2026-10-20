@@ -524,13 +524,15 @@ MArray<MoriartyElementType>::ReadImpl(
   std::optional<int64_t> length;
   if (auto after_length = Format().GetLengthPrefixSeparator()) {
     length = ctx.ReadInteger();
-    if (*length < 0) ctx.ThrowIOError("Array length cannot be negative.");
+    if (*length < 0) ctx.ThrowReadError("Array length cannot be negative.");
     if (*length > 0) ctx.ReadWhitespace(*after_length);
   } else {
     length = core_constraints_.Length().GetUniqueValue(ctx);
   }
-  if (!length)
-    ctx.ThrowIOError("Cannot determine the length of array before read.");
+  if (!length) {
+    throw ConfigurationError(
+        "MArray::Read", "Cannot determine the length of array before read.");
+  }
 
   vector_value_type res;
   res.reserve(*length);

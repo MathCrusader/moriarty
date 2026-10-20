@@ -222,17 +222,17 @@ class ValidationError : public GenericMoriartyError {
   std::string message_;
 };
 
-// FIXME: Rename to ReadError (and change any writing errors to WriteError).
-// IOError
+// ReadError
 //
-// Thrown when the I/O is invalid.
-class IOError : public GenericMoriartyError {
+// Thrown when input cannot be read or does not match the expected format.
+class ReadError : public GenericMoriartyError {
  public:
-  explicit IOError(std::string_view message)
+  explicit ReadError(std::string_view message)
       : GenericMoriartyError(std::string(message)), message_(message) {}
 
-  [[nodiscard]] IOError WithAddedContext(std::string_view added_context) const {
-    return IOError(std::format("{}\n{}", added_context, message_));
+  [[nodiscard]] ReadError WithAddedContext(
+      std::string_view added_context) const {
+    return ReadError(std::format("{}\n{}", added_context, message_));
   }
 
   const std::string& Message() const { return message_; }
@@ -241,6 +241,9 @@ class IOError : public GenericMoriartyError {
   std::string message_;
 };
 
+// WriteError
+//
+// Thrown when a value cannot be written in the requested format.
 class WriteError : public GenericMoriartyError {
  public:
   explicit WriteError(std::string_view message)

@@ -282,7 +282,16 @@ TEST(SimpleIOReaderTest, ReadWrongTokenFails) {
   Context context;
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
-  EXPECT_THROW({ reader(ctx); }, IOError);
+  EXPECT_THROW({ reader(ctx); }, ReadError);
+}
+
+TEST(SimpleIOReaderTest, UnknownVariableKeepsItsErrorType) {
+  std::stringstream ss("1\n");
+  ReaderFn reader = SimpleIO().AddLine("missing").Reader();
+  Context context;
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ReadContext ctx(context.Variables(), cursor);
+  EXPECT_THROW((void)reader(ctx), VariableNotFound);
 }
 
 TEST(SimpleIOReaderTest, ReadWrongWhitespaceFails) {
@@ -294,7 +303,7 @@ TEST(SimpleIOReaderTest, ReadWrongWhitespaceFails) {
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
-  EXPECT_THROW({ reader(ctx); }, IOError);
+  EXPECT_THROW({ reader(ctx); }, ReadError);
 }
 
 TEST(SimpleIOReaderTest, ReadWithNumberOfTestCasesInHeaderShouldWork) {
@@ -327,7 +336,7 @@ TEST(SimpleIOReaderTest,
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
-  EXPECT_THROW({ reader(ctx); }, IOError);
+  EXPECT_THROW({ reader(ctx); }, ReadError);
 }
 
 TEST(SimpleIOReaderTest,
@@ -341,7 +350,7 @@ TEST(SimpleIOReaderTest,
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
-  EXPECT_THROW({ reader(ctx); }, IOError);
+  EXPECT_THROW({ reader(ctx); }, ReadError);
 }
 
 TEST(SimpleIOReaderTest, ReadWithNumberOfTestCasesInHeaderFailsOnNonInteger) {
@@ -354,7 +363,7 @@ TEST(SimpleIOReaderTest, ReadWithNumberOfTestCasesInHeaderFailsOnNonInteger) {
 
   InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
-  EXPECT_THROW({ reader(ctx); }, IOError);
+  EXPECT_THROW({ reader(ctx); }, ReadError);
 }
 
 TEST(SimpleIOReaderTest, MultilineSectionShouldWork) {
@@ -416,7 +425,7 @@ TEST(SimpleIOReaderTest, ZeroLineSectionReadsNothing) {
   std::stringstream extra_blank_line("0\n\n7\n");
   InputCursor bad_cursor(extra_blank_line, WhitespaceStrictness::kPrecise);
   ReadContext bad_ctx(context.Variables(), bad_cursor);
-  EXPECT_THROW(reader(bad_ctx), IOError);
+  EXPECT_THROW(reader(bad_ctx), ReadError);
 }
 
 TEST(SimpleIOReaderTest, MultilineSectionRejectsMissingRows) {
@@ -437,7 +446,7 @@ TEST(SimpleIOReaderTest, MultilineSectionRejectsMissingRows) {
                         .AddLine("M")
                         .Reader();
 
-  EXPECT_THROW(reader(ctx), IOError);
+  EXPECT_THROW(reader(ctx), ReadError);
 }
 
 TEST(SimpleIOTest, DependenciesShouldReturnAllVariablesUsed) {

@@ -120,20 +120,20 @@ TEST(MRealTest, ReadWithTokensAfterwardsIsFine) {
 
 TEST(MRealTest, InvalidReadShouldFail) {
   // EOF
-  EXPECT_THROW({ (void)Read(MReal(), ""); }, IOError);
+  EXPECT_THROW({ (void)Read(MReal(), ""); }, ReadError);
   // EOF with whitespace
-  EXPECT_THROW({ (void)Read(MReal(), " "); }, IOError);
+  EXPECT_THROW({ (void)Read(MReal(), " "); }, ReadError);
   // Double negative
-  EXPECT_THROW({ (void)Read(MReal(), "--123"); }, IOError);
+  EXPECT_THROW({ (void)Read(MReal(), "--123"); }, ReadError);
   // Invalid character start/middle/end
-  EXPECT_THROW({ (void)Read(MReal(), "c123"); }, IOError);
-  EXPECT_THROW({ (void)Read(MReal(), "12c3"); }, IOError);
-  EXPECT_THROW({ (void)Read(MReal(), "123c"); }, IOError);
+  EXPECT_THROW({ (void)Read(MReal(), "c123"); }, ReadError);
+  EXPECT_THROW({ (void)Read(MReal(), "12c3"); }, ReadError);
+  EXPECT_THROW({ (void)Read(MReal(), "123c"); }, ReadError);
   // Multiple decimals
-  EXPECT_THROW({ (void)Read(MReal(), "123.45.67"); }, IOError);
+  EXPECT_THROW({ (void)Read(MReal(), "123.45.67"); }, ReadError);
   EXPECT_THROW(
       { (void)Read(MReal(), "123.45e0.7", Context().WithFlexibleMode()); },
-      IOError);
+      ReadError);
 }
 
 TEST(MRealTest, BetweenShouldRestrictTheRangeProperly) {

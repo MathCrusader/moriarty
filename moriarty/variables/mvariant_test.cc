@@ -155,40 +155,40 @@ TEST(MVariantTest, ReadWithIncorrectSeparatorShouldFail) {
   auto newline_constraints = MVariant<MInteger, MString>(
       MVariantFormat().Discriminator({"int", "str"}).NewlineSeparated());
 
-  EXPECT_THROW((void)Read(tab_constraints, "int 22"), IOError);
-  EXPECT_THROW((void)Read(newline_constraints, "str twotwo"), IOError);
+  EXPECT_THROW((void)Read(tab_constraints, "int 22"), ReadError);
+  EXPECT_THROW((void)Read(newline_constraints, "str twotwo"), ReadError);
 }
 
 TEST(MVariantTest, ReadingTheWrongTypeShouldFail) {
   auto constraints = MVariant<MInteger, MString>(
       MVariantFormat().Discriminator({"int", "str"}));
 
-  EXPECT_THROW((void)Read(constraints, "int two"), IOError);
-  EXPECT_THROW((void)Read(constraints, "str"), IOError);
-  EXPECT_THROW((void)Read(constraints, "bad 5"), IOError);
+  EXPECT_THROW((void)Read(constraints, "int two"), ReadError);
+  EXPECT_THROW((void)Read(constraints, "str"), ReadError);
+  EXPECT_THROW((void)Read(constraints, "bad 5"), ReadError);
 }
 
 TEST(MVariantTest, ReadWithMissingDiscriminatorShouldFail) {
   auto constraints = MVariant<MInteger, MString>(
       MVariantFormat().Discriminator({"int", "str"}));
 
-  EXPECT_THROW((void)Read(constraints, "22"), IOError);
-  EXPECT_THROW((void)Read(constraints, "twotwo"), IOError);
+  EXPECT_THROW((void)Read(constraints, "22"), ReadError);
+  EXPECT_THROW((void)Read(constraints, "twotwo"), ReadError);
 }
 
 TEST(MVariantTest, ReadWithInvalidDiscriminatorShouldFail) {
   auto constraints = MVariant<MInteger, MString>(
       MVariantFormat().Discriminator({"int", "str"}));
 
-  EXPECT_THROW((void)Read(constraints, "num 22"), IOError);
-  EXPECT_THROW((void)Read(constraints, "string twotwo"), IOError);
+  EXPECT_THROW((void)Read(constraints, "num 22"), ReadError);
+  EXPECT_THROW((void)Read(constraints, "string twotwo"), ReadError);
 }
 
 TEST(MVariantTest, ReadWithIncorrectDiscriminatorShouldFail) {
   auto constraints = MVariant<MInteger, MString>(
       MVariantFormat().Discriminator({"int", "str"}));
 
-  EXPECT_THROW((void)Read(constraints, "int twotwo"), IOError);
+  EXPECT_THROW((void)Read(constraints, "int twotwo"), ReadError);
   EXPECT_THAT(Read(constraints, "str 22"), VariantWith<std::string>("22"));
 }
 

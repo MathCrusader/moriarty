@@ -96,6 +96,27 @@ TEST(MGraphTest, WriteShouldSucceed) {
   EXPECT_EQ(Write(MGraph(), Graph<NoEdgeLabel, NoNodeLabel>(0)), "");
 }
 
+TEST(MGraphTest, WriteErrorsDistinguishFormatFromValue) {
+  EXPECT_THROW(
+      (void)Write(MGraph<>(MGraphFormat().NodeLabelsStyle()), Graph1()),
+      ConfigurationError);
+
+  Graph<int64_t> graph(2);
+  graph.AddEdge(0, 1, 5);
+  graph.AddEdge(0, 1, 6);
+  EXPECT_THROW(
+      (void)Write(MGraph<MInteger>(MGraphFormat().AdjacencyMatrix()), graph),
+      WriteError);
+}
+
+TEST(MGraphTest, MissingNodeCountIsConfigurationError) {
+  EXPECT_THROW((void)Read(MGraph(NumEdges(1)), "0 1\n"), ConfigurationError);
+  EXPECT_THROW((void)Read(MGraph<>(NumNodes(2), NumEdges(1),
+                                   MGraphFormat().NodeLabelsStyle()),
+                          "a b\n"),
+               ConfigurationError);
+}
+
 TEST(MGraphTest, ReadShouldSucceed) {
   EXPECT_EQ(Read(MGraph(NumNodes(3), NumEdges(3)), Graph1String()), Graph1());
   EXPECT_EQ(Read(MGraph(NumNodes(4), NumEdges(5)), Graph2String()), Graph2());
@@ -449,13 +470,13 @@ TEST(MGraphTest, ReadEdgeListWithNodeLabelsShouldSucceed) {
 TEST(MGraphTest, ReadShouldFailOnInvalidInput) {
   EXPECT_THROW(
       { (void)Read(MGraph(NumNodes(2), NumEdges(3)), "0 1\n1 2\n2 1\n"); },
-      IOError);
+      ReadError);
   EXPECT_THROW(
       {
         (void)Read(MGraph(NumNodes(4), NumEdges(6)),
                    "2 1\n0 1\n1 2\n2 3\n3 0\n");
       },
-      IOError);
+      ReadError);
 }
 
 MATCHER_P(NumNodesIs, matcher, "has the correct number of nodes") {

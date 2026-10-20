@@ -90,15 +90,15 @@ TEST(MIntegerTest, ReadWithTokensAfterwardsIsFine) {
 
 TEST(MIntegerTest, InvalidReadShouldFail) {
   // EOF
-  EXPECT_THROW({ (void)Read(MInteger(), ""); }, IOError);
+  EXPECT_THROW({ (void)Read(MInteger(), ""); }, ReadError);
   // EOF with whitespace
-  EXPECT_THROW({ (void)Read(MInteger(), " "); }, IOError);
+  EXPECT_THROW({ (void)Read(MInteger(), " "); }, ReadError);
   // Double negative
-  EXPECT_THROW({ (void)Read(MInteger(), "--123"); }, IOError);
+  EXPECT_THROW({ (void)Read(MInteger(), "--123"); }, ReadError);
   // Invalid character start/middle/end
-  EXPECT_THROW({ (void)Read(MInteger(), "c123"); }, IOError);
-  EXPECT_THROW({ (void)Read(MInteger(), "12c3"); }, IOError);
-  EXPECT_THROW({ (void)Read(MInteger(), "123c"); }, IOError);
+  EXPECT_THROW({ (void)Read(MInteger(), "c123"); }, ReadError);
+  EXPECT_THROW({ (void)Read(MInteger(), "12c3"); }, ReadError);
+  EXPECT_THROW({ (void)Read(MInteger(), "123c"); }, ReadError);
 }
 
 TEST(MIntegerTest, ListEdgeCasesIncludesManyInterestingValues) {
@@ -402,25 +402,25 @@ TEST(MIntegerTest, WithSizeBehavesWithMergeFrom) {
   }
 
   EXPECT_THAT([&] { return small.MergeFrom(large); },
-              Throws<std::runtime_error>());
+              Throws<ConfigurationError>());
 }
 
 TEST(MIntegerTest, InvalidSizeCombinationsShouldThrow) {
   EXPECT_THAT(
       [] { return MInteger(SizeCategory::Small(), SizeCategory::Large()); },
-      Throws<std::runtime_error>());
+      Throws<ConfigurationError>());
   EXPECT_THAT(
       [] { return MInteger(SizeCategory::Small(), SizeCategory::Max()); },
-      Throws<std::runtime_error>());
+      Throws<ConfigurationError>());
   EXPECT_THAT(
       [] {
         return MInteger(SizeCategory::Small(), SizeCategory::Tiny())
             .MergeFrom(MInteger(SizeCategory::Huge()));
       },
-      Throws<std::runtime_error>());
+      Throws<ConfigurationError>());
   EXPECT_THAT(
       [] { return MInteger(SizeCategory::Tiny(), SizeCategory::Medium()); },
-      Throws<std::runtime_error>());
+      Throws<ConfigurationError>());
 }
 
 TEST(MIntegerTest, InvalidExpressionsShouldFail) {

@@ -112,24 +112,24 @@ TEST(MTupleTest, ReadWithProperSeparatorShouldSucceed) {
 
 TEST(MTupleTest, ReadWithIncorrectSeparatorShouldFail) {
   EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(), "1\t22\t333"),
-               IOError);
+               ReadError);
   EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(
                               MTupleFormat().NewlineSeparated()),
                           "1 22 333"),
-               IOError);
+               ReadError);
   EXPECT_THROW((void)Read(MTuple<MInteger, MString, MInteger>(
                               MTupleFormat().WithSeparator(Whitespace::kTab)),
                           "1\ttwotwo 333"),
-               IOError);
+               ReadError);
 }
 
 TEST(MTupleTest, ReadingTheWrongTypeShouldFail) {
   // MString where MInteger should be
   EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(), "1 two 3"),
-               IOError);
+               ReadError);
   // Not enough input
   EXPECT_THROW((void)Read(MTuple<MInteger, MInteger, MInteger>(), "1 22"),
-               IOError);
+               ReadError);
 }
 
 TEST(MTupleTest, SimpleGenerateCaseWorks) {

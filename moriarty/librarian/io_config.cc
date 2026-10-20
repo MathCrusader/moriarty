@@ -77,9 +77,10 @@ std::string InputCursor::ReadToken() {
   if (whitespace_strictness_ == WhitespaceStrictness::kFlexible)
     StripLeadingWhitespace();
 
-  if (IsEOF())
-    ThrowIOError("Expected a token, but got EOF.",
-                 ErrorSnippetCaretPosition::kAtCursor);
+  if (IsEOF()) {
+    ThrowReadError("Expected a token, but got EOF.",
+                   ErrorSnippetCaretPosition::kAtCursor);
+  }
 
   std::istream& is = is_.get();
 
@@ -87,7 +88,7 @@ std::string InputCursor::ReadToken() {
     int c = is.peek();
     if (c == EOF || !std::isprint(static_cast<unsigned char>(c)) ||
         std::isspace(static_cast<unsigned char>(c))) {
-      ThrowIOError(
+      ThrowReadError(
           std::format("Expected a token, but got {}.",
                       moriarty_internal::ValuePrinter(static_cast<char>(c))),
           ErrorSnippetCaretPosition::kAtCursor);
@@ -95,8 +96,8 @@ std::string InputCursor::ReadToken() {
   }
 
   if (!is) {
-    ThrowIOError("Failed to read from the input stream.",
-                 ErrorSnippetCaretPosition::kAtCursor);
+    ThrowReadError("Failed to read from the input stream.",
+                   ErrorSnippetCaretPosition::kAtCursor);
   }
 
   int token_start_line = cursor_metadata_.line_num;
@@ -110,8 +111,8 @@ std::string InputCursor::ReadToken() {
   is >> token;
 
   if (!is) {
-    ThrowIOError("Failed to read from the input stream.",
-                 ErrorSnippetCaretPosition::kAtCursor);
+    ThrowReadError("Failed to read from the input stream.",
+                   ErrorSnippetCaretPosition::kAtCursor);
   }
 
   RegisterReadSnapshot(token_start_line, token_start_col,
@@ -167,9 +168,10 @@ std::optional<std::string> InputCursor::PeekToken() {
 void InputCursor::ReadEof() {
   if (whitespace_strictness_ == WhitespaceStrictness::kFlexible)
     StripLeadingWhitespace();
-  if (!IsEOF())
-    ThrowIOError("Expected EOF, but got more input.",
-                 ErrorSnippetCaretPosition::kAtCursor);
+  if (!IsEOF()) {
+    ThrowReadError("Expected EOF, but got more input.",
+                   ErrorSnippetCaretPosition::kAtCursor);
+  }
 }
 
 void InputCursor::ReadWhitespace(Whitespace whitespace) {
@@ -178,26 +180,26 @@ void InputCursor::ReadWhitespace(Whitespace whitespace) {
   std::istream& is = is_.get();
 
   if (IsEOF()) {
-    ThrowIOError(std::format("Expected {}, but got EOF.",
-                             moriarty_internal::ValuePrinter(
-                                 WhitespaceAsChar(whitespace))),
-                 ErrorSnippetCaretPosition::kAtCursor);
+    ThrowReadError(std::format("Expected {}, but got EOF.",
+                               moriarty_internal::ValuePrinter(
+                                   WhitespaceAsChar(whitespace))),
+                   ErrorSnippetCaretPosition::kAtCursor);
   }
 
   char c = static_cast<char>(is.peek());
 
   if (!std::isspace(static_cast<unsigned char>(c))) {
-    ThrowIOError(std::format("Expected whitespace, but got {}.",
-                             moriarty_internal::ValuePrinter(c)),
-                 ErrorSnippetCaretPosition::kAtCursor);
+    ThrowReadError(std::format("Expected whitespace, but got {}.",
+                               moriarty_internal::ValuePrinter(c)),
+                   ErrorSnippetCaretPosition::kAtCursor);
   }
 
   if (c != WhitespaceAsChar(whitespace)) {
-    ThrowIOError(std::format("Expected {}, but got {}.",
-                             moriarty_internal::ValuePrinter(
-                                 WhitespaceAsChar(whitespace)),
-                             moriarty_internal::ValuePrinter(c)),
-                 ErrorSnippetCaretPosition::kAtCursor);
+    ThrowReadError(std::format("Expected {}, but got {}.",
+                               moriarty_internal::ValuePrinter(
+                                   WhitespaceAsChar(whitespace)),
+                               moriarty_internal::ValuePrinter(c)),
+                   ErrorSnippetCaretPosition::kAtCursor);
   }
 
   RegisterReadSnapshot(cursor_metadata_.line_num, cursor_metadata_.col_num,
@@ -207,7 +209,7 @@ void InputCursor::ReadWhitespace(Whitespace whitespace) {
   RegisterReadChar(read);
 }
 
-std::string InputCursor::FormatIOErrorMessage(
+std::string InputCursor::FormatReadErrorMessage(
     std::string_view message, ErrorSnippetCaretPosition caret_position,
     std::string_view multiline_prefix) const {
   ErrorMessageMetadata metadata = ResolveErrorMessageMetadata(caret_position);
@@ -298,11 +300,11 @@ std::string InputCursor::GetErrorContextSnippet(
   return std::format("{}\n{}", line, marker);
 }
 
-[[noreturn]] void InputCursor::ThrowIOError(
+[[noreturn]] void InputCursor::ThrowReadError(
     std::string_view message, ErrorSnippetCaretPosition caret_position,
     std::string_view multiline_prefix) {
-  throw IOError(
-      FormatIOErrorMessage(message, caret_position, multiline_prefix));
+  throw ReadError(
+      FormatReadErrorMessage(message, caret_position, multiline_prefix));
 }
 
 void InputCursor::RegisterReadChar(char c) {
