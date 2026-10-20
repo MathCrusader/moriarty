@@ -170,9 +170,17 @@ void WriteLine(WriteContext ctx, const SimpleIO::Line& line,
     if (lines.empty() || lines.back() != '\n') lines += '\n';
     int newlines = std::ranges::count(lines, '\n');
     if (newlines != line_count) {
-      throw std::runtime_error(std::format(
-          "Expected {} lines in writeout of variable {}, but got {}",
-          line_count, std::get<std::string>(token), newlines));
+      if (newlines == 1) {
+        throw WriteError(std::format(
+            "Expected variable `{}` to print {} lines, but it printed 1. "
+            "The line was {}.",
+            std::get<std::string>(token), line_count,
+            moriarty_internal::ValuePrinter(
+                std::string_view(lines).substr(0, lines.size() - 1))));
+      }
+      throw WriteError(std::format(
+          "Expected variable `{}` to print {} lines, but it printed {}.",
+          std::get<std::string>(token), line_count, newlines));
     }
 
     std::string line;

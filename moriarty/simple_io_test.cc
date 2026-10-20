@@ -17,7 +17,6 @@
 
 #include <cstdint>
 #include <sstream>
-#include <stdexcept>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -39,6 +38,7 @@ using ::moriarty_testing::Context;
 using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::StrEq;
+using ::testing::ThrowsMessage;
 using ::testing::UnorderedElementsAre;
 
 // -----------------------------------------------------------------------------
@@ -202,7 +202,10 @@ TEST(SimpleIOWriterTest, MultilineSectionRejectsMissingRows) {
                         .AddMultilineSection("N", "A", "B")
                         .AddLine("M")
                         .Writer();
-  EXPECT_THROW(writer(ctx, test_cases), std::runtime_error);
+  EXPECT_THAT([&] { writer(ctx, test_cases); },
+              ThrowsMessage<WriteError>(StrEq(
+                  "Expected variable `A` to print 3 lines, but it printed 1. "
+                  "The line was \"7\".")));
 }
 
 // -----------------------------------------------------------------------------
