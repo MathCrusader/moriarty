@@ -16,6 +16,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -31,6 +32,7 @@
 #include "moriarty/librarian/testing/gtest_helpers.h"
 #include "moriarty/variables/marray.h"
 #include "moriarty/variables/minteger.h"
+#include "moriarty/variables/mnone.h"
 #include "moriarty/variables/mstring.h"
 
 namespace moriarty {
@@ -198,6 +200,42 @@ TEST(MVariantTest, ReadWithMNoneShouldNotReadTheWhitespace) {
 
   EXPECT_THAT(Read(constraints, "none"), VariantWith<NoType>(NoType{}));
   EXPECT_THAT(Read(constraints, "int 12"), VariantWith<int64_t>(12));
+}
+
+TEST(MVariantTest, PushPopOperationsCanBeReadWrittenAndValidated) {
+  using Operation = MVariant<MInteger, MNone>;
+  MArray<Operation> operations(
+      Operation(MVariantFormat().Discriminator({"PUSH", "POP"})),
+      MArrayFormat().LengthPrefixed(Whitespace::kNewline).NewlineSeparated());
+  operations.AddCustomConstraint(
+      "never pop an empty stack",
+      [](const std::vector<Operation::value_type>& values) {
+        int depth = 0;
+        for (const auto& value : values) {
+          if (std::holds_alternative<NoType>(value)) {
+            if (depth == 0) return false;
+            --depth;
+          } else {
+            ++depth;
+          }
+        }
+        return true;
+      });
+
+  constexpr std::string_view input = "5\nPUSH 3\nPUSH 445\nPOP\nPUSH 1\nPOP";
+  auto parsed = Read(operations, input);
+  EXPECT_THAT(
+      parsed,
+      ElementsAre(VariantWith<int64_t>(3), VariantWith<int64_t>(445),
+                  VariantWith<NoType>(NoType{}), VariantWith<int64_t>(1),
+                  VariantWith<NoType>(NoType{})));
+  EXPECT_EQ(Write(operations, parsed), input);
+  EXPECT_THROW((void)Read(operations, "1\nPOP"), ReadError);
+}
+
+TEST(MVariantTest, MNoneAlternativeCanBeGenerated) {
+  EXPECT_THAT(MVariant<MNone>(MNone{}),
+              GeneratedValuesAre(VariantWith<NoType>(NoType{})));
 }
 
 TEST(MVariantTest, SimpleGenerateCaseWorks) {

@@ -409,10 +409,17 @@ MVariant<T...>::variant_value_type MVariant<T...>::GenerateImpl(
 
   int idx = ctx.RandomInteger(sizeof...(T));
 
-  auto generate_one = [&]<std::size_t I>() {
-    return std::get<I>(core_constraints_.Elements())
-        .Generate(
-            ctx.ForSubVariable(moriarty_internal::VariantSubVariable<I>()));
+  auto generate_one = [&]<std::size_t I>() -> variant_value_type {
+    if constexpr (std::same_as<std::tuple_element_t<I, std::tuple<T...>>,
+                               MNone>) {
+      return variant_value_type{std::in_place_index<I>};
+    } else {
+      return variant_value_type{
+          std::in_place_index<I>,
+          std::get<I>(core_constraints_.Elements())
+              .Generate(ctx.ForSubVariable(
+                  moriarty_internal::VariantSubVariable<I>()))};
+    }
   };
 
   std::optional<variant_value_type> generated_value;
@@ -420,8 +427,7 @@ MVariant<T...>::variant_value_type MVariant<T...>::GenerateImpl(
     (
         [&] {
           if (idx == I) {
-            generated_value = variant_value_type{
-                std::in_place_index<I>, generate_one.template operator()<I>()};
+            generated_value = generate_one.template operator()<I>();
           }
         }(),
         ...);
@@ -454,8 +460,8 @@ void MVariant<T...>::WriteImpl(librarian::WriteVariableContext ctx,
     if constexpr (!std::same_as<std::tuple_element_t<I, std::tuple<T...>>,
                                 MNone>) {
       ctx.WriteWhitespace(Format().GetSeparator());
+      std::get<I>(core_constraints_.Elements()).Write(ctx, std::get<I>(value));
     }
-    std::get<I>(core_constraints_.Elements()).Write(ctx, std::get<I>(value));
   };
 
   [&]<size_t... I>(std::index_sequence<I...>) {
