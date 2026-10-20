@@ -35,8 +35,19 @@ MArrayFormat& MArrayFormat::NewlineSeparated() {
   return WithSeparator(Whitespace::kNewline);
 }
 
+MArrayFormat& MArrayFormat::LengthPrefixed(Whitespace after_length) {
+  length_prefix_separator_ = after_length;
+  return *this;
+}
+
+std::optional<Whitespace> MArrayFormat::GetLengthPrefixSeparator() const {
+  return length_prefix_separator_;
+}
+
 void MArrayFormat::Merge(const MArrayFormat& other) {
   if (other.separator_) separator_ = other.separator_;
+  if (other.length_prefix_separator_)
+    length_prefix_separator_ = other.length_prefix_separator_;
 }
 
 }  // namespace moriarty

@@ -69,11 +69,20 @@ class MArrayFormat {
   // Sets the array to be newline-separated.
   MArrayFormat& NewlineSeparated();
 
+  // Reads/writes the array length before its elements. The given whitespace
+  // separates the length from the first element, and is omitted for an empty
+  // array. By default, the length is not included in the format.
+  MArrayFormat& LengthPrefixed(Whitespace after_length);
+  // Returns the whitespace used to separate the length prefix from the first
+  // element, if any.
+  std::optional<Whitespace> GetLengthPrefixSeparator() const;
+
   // Apply fields explicitly set in `other` to this format.
   void Merge(const MArrayFormat& other);
 
  private:
   std::optional<Whitespace> separator_;  // Default: Whitespace::kSpace
+  std::optional<Whitespace> length_prefix_separator_;  // Default: no prefix
 };
 
 // MArray<>
@@ -498,6 +507,10 @@ int MArray<MElementType>::GetNumberOfRetriesForDistinctElements(int n) {
 template <typename MoriartyElementType>
 void MArray<MoriartyElementType>::WriteImpl(
     librarian::WriteVariableContext ctx, const vector_value_type& value) const {
+  if (auto after_length = Format().GetLengthPrefixSeparator()) {
+    ctx.WriteToken(std::to_string(value.size()));
+    if (value.size() > 0) ctx.WriteWhitespace(*after_length);
+  }
   for (int i = 0; i < value.size(); i++) {
     if (i > 0) ctx.WriteWhitespace(Format().GetSeparator());
     core_constraints_.Elements().Write(ctx, value[i]);
@@ -508,8 +521,14 @@ template <typename MoriartyElementType>
 MArray<MoriartyElementType>::vector_value_type
 MArray<MoriartyElementType>::ReadImpl(
     librarian::ReadVariableContext ctx) const {
-  std::optional<int64_t> length =
-      core_constraints_.Length().GetUniqueValue(ctx);
+  std::optional<int64_t> length;
+  if (auto after_length = Format().GetLengthPrefixSeparator()) {
+    length = ctx.ReadInteger();
+    if (*length < 0) ctx.ThrowIOError("Array length cannot be negative.");
+    if (*length > 0) ctx.ReadWhitespace(*after_length);
+  } else {
+    length = core_constraints_.Length().GetUniqueValue(ctx);
+  }
   if (!length)
     ctx.ThrowIOError("Cannot determine the length of array before read.");
 

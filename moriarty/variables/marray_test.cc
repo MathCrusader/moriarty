@@ -339,6 +339,32 @@ TEST(MArrayTest, WhitespaceSeparatorShouldAffectWrite) {
       "1\n2\n3");  // Note no newline after
 }
 
+TEST(MArrayTest, LengthPrefixedFormatReadsAndWritesArrays) {
+  MArray<MInteger> array(
+      MArrayFormat().LengthPrefixed(Whitespace::kNewline).SpaceSeparated());
+
+  EXPECT_EQ(Write(array, {1, 2}), "2\n1 2");
+  EXPECT_THAT(Read(array, "2\n1 2"), ElementsAre(1, 2));
+  EXPECT_THROW((void)Read(array, "2 1 2"), IOError);
+}
+
+TEST(MArrayTest, EmptyLengthPrefixedArrayDoesNotConsumeFollowingWhitespace) {
+  MArray<MInteger> array(MArrayFormat().LengthPrefixed(Whitespace::kNewline));
+  std::istringstream input("0\n7");
+
+  EXPECT_EQ(Write(array, {}), "0");
+  EXPECT_THAT(Read(array, input), IsEmpty());
+  EXPECT_EQ(input.get(), '\n');
+}
+
+TEST(MArrayTest, NestedLengthPrefixedArrayKeepsItsFormat) {
+  MArray<MInteger> inner(MArrayFormat().LengthPrefixed(Whitespace::kNewline));
+  MArray<MArray<MInteger>> outer(inner, Length(2));
+
+  EXPECT_EQ(Write(outer, {{}, {7}}), "0 1\n7");
+  EXPECT_THAT(Read(outer, "0 1\n7"), ElementsAre(IsEmpty(), ElementsAre(7)));
+}
+
 TEST(MArrayTest, ConfiguredNestedArrayKeepsItsOwnSeparator) {
   MArray<MInteger> inner(Length(2), MArrayFormat().NewlineSeparated());
   MArray<MArray<MInteger>> outer(inner, Length(2));
@@ -362,6 +388,17 @@ TEST(MArrayTest, MergeFromPreservesAndOverridesExplicitSeparator) {
 
   array.MergeFrom(MArray<MInteger>(MArrayFormat().SpaceSeparated()));
   EXPECT_EQ(Write(array, {1, 2}), "1 2");
+}
+
+TEST(MArrayTest, MergeFromCombinesLengthPrefixAndElementSeparator) {
+  MArray<MInteger> array(MArrayFormat().NewlineSeparated());
+  array.MergeFrom(
+      MArray<MInteger>(MArrayFormat().LengthPrefixed(Whitespace::kSpace)));
+  EXPECT_EQ(Write(array, {1, 2}), "2 1\n2");
+
+  array.MergeFrom(
+      MArray<MInteger>(MArrayFormat().LengthPrefixed(Whitespace::kTab)));
+  EXPECT_EQ(Write(array, {1, 2}), "2\t1\n2");
 }
 
 TEST(MArrayTest, WhitespaceSeparatorShouldAffectRead) {
