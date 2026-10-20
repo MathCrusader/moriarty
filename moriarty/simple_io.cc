@@ -166,6 +166,7 @@ void WriteLine(WriteContext ctx, const SimpleIO::Line& line,
     std::stringstream ss;
     WriteToken(WriteContext(ctx, ss), token, test_case);
     std::string lines = ss.str();
+    if (line_count == 0 && lines.empty()) continue;
     if (lines.empty() || lines.back() != '\n') lines += '\n';
     int newlines = std::ranges::count(lines, '\n');
     if (newlines != line_count) {

@@ -80,15 +80,17 @@ class SimpleIO {
     requires(std::convertible_to<Tokens, SimpleIOToken> && ...)
   SimpleIO& AddLine(Tokens&&... token);
 
-  // AddLine()
+  // AddMultilineSection()
   //
-  // Each variable will be written over `number_of_lines_expression` lines. They
-  // will then be zipped together.
+  // Each variable must write exactly `number_of_lines_expression` lines. The
+  // corresponding lines are zipped together with spaces between variables.
+  // A count of zero writes and reads nothing, including no blank line.
   //
   // For example:
-  //   AddMultilineSection(3, "N", "X"); // N = [1, 2, 3], X = [11, 22, 33]
+  //   AddMultilineSection("3", "N", "X");
+  // where N and X are newline-separated arrays with values [1, 2, 3] and
+  // [11, 22, 33], respectively, writes:
   //
-  // Writes:
   //   1 11
   //   2 22
   //   3 33

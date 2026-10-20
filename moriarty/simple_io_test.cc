@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <sstream>
+#include <stdexcept>
 #include <vector>
 
 #include "gmock/gmock.h"
@@ -148,6 +149,60 @@ TEST(SimpleIOWriterTest, MultilineSectionShouldWork) {
 
   writer(ctx, test_cases);
   EXPECT_THAT(ss.str(), StrEq("1 11\n2 22\n3 33\n"));
+}
+
+TEST(SimpleIOWriterTest, ZeroLineSectionWritesNothing) {
+  Context context =
+      Context()
+          .WithVariable("N", MInteger())
+          .WithVariable("A",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()))
+          .WithVariable("B",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()))
+          .WithVariable("T", MInteger());
+  std::vector<TestCase> test_cases = {
+      TestCase()
+          .SetValue<MInteger>("N", 0)
+          .SetValue<MArray<MInteger>>("A", std::vector<int64_t>{})
+          .SetValue<MArray<MInteger>>("B", std::vector<int64_t>{})
+          .SetValue<MInteger>("T", 7),
+  };
+
+  std::stringstream ss;
+  WriteContext ctx(ss, context.Variables(), context.Values());
+  SimpleIO()
+      .AddLine("N")
+      .AddMultilineSection("N", "A", "B")
+      .AddLine("T")
+      .Writer()(ctx, test_cases);
+  EXPECT_THAT(ss.str(), StrEq("0\n7\n"));
+}
+
+TEST(SimpleIOWriterTest, MultilineSectionRejectsMissingRows) {
+  Context context =
+      Context()
+          .WithVariable("N", MInteger())
+          .WithVariable("A",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()))
+          .WithVariable("B",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()))
+          .WithVariable("M", MInteger());
+  std::vector<TestCase> test_cases = {
+      TestCase()
+          .SetValue<MInteger>("N", 3)
+          .SetValue<MArray<MInteger>>("A", std::vector<int64_t>{7})
+          .SetValue<MArray<MInteger>>("B", std::vector<int64_t>{})
+          .SetValue<MInteger>("M", 5),
+  };
+
+  std::stringstream ss;
+  WriteContext ctx(ss, context.Variables(), context.Values());
+  WriterFn writer = SimpleIO()
+                        .AddLine("N")
+                        .AddMultilineSection("N", "A", "B")
+                        .AddLine("M")
+                        .Writer();
+  EXPECT_THROW(writer(ctx, test_cases), std::runtime_error);
 }
 
 // -----------------------------------------------------------------------------
@@ -329,6 +384,57 @@ TEST(SimpleIOReaderTest, MultilineSectionShouldWork) {
                   IntVariableIs("N", 3),
                   ArrayIntVariableIs("A", std::vector<int64_t>{1, 2, 3}),
                   ArrayIntVariableIs("B", std::vector<int64_t>{11, 22, 33}))));
+}
+
+TEST(SimpleIOReaderTest, ZeroLineSectionReadsNothing) {
+  Context context =
+      Context()
+          .WithVariable("N", MInteger())
+          .WithVariable("A",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()))
+          .WithVariable("B",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()))
+          .WithVariable("T", MInteger());
+  std::stringstream ss("0\n7\n");
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ReadContext ctx(context.Variables(), cursor);
+  ReaderFn reader = SimpleIO()
+                        .AddLine("N")
+                        .AddMultilineSection("N", "A", "B")
+                        .AddLine("T")
+                        .Reader();
+
+  EXPECT_THAT(reader(ctx),
+              ElementsAre(AllOf(IntVariableIs("N", 0),
+                                ArrayIntVariableIs("A", std::vector<int64_t>{}),
+                                ArrayIntVariableIs("B", std::vector<int64_t>{}),
+                                IntVariableIs("T", 7))));
+
+  std::stringstream extra_blank_line("0\n\n7\n");
+  InputCursor bad_cursor(extra_blank_line, WhitespaceStrictness::kPrecise);
+  ReadContext bad_ctx(context.Variables(), bad_cursor);
+  EXPECT_THROW(reader(bad_ctx), IOError);
+}
+
+TEST(SimpleIOReaderTest, MultilineSectionRejectsMissingRows) {
+  Context context =
+      Context()
+          .WithVariable("N", MInteger())
+          .WithVariable("A",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()))
+          .WithVariable("B",
+                        MArray<MInteger>(MArrayFormat().NewlineSeparated()))
+          .WithVariable("M", MInteger());
+  std::stringstream ss("3\n7\n5\n");
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
+  ReadContext ctx(context.Variables(), cursor);
+  ReaderFn reader = SimpleIO()
+                        .AddLine("N")
+                        .AddMultilineSection("N", "A", "B")
+                        .AddLine("M")
+                        .Reader();
+
+  EXPECT_THROW(reader(ctx), IOError);
 }
 
 TEST(SimpleIOTest, DependenciesShouldReturnAllVariablesUsed) {
