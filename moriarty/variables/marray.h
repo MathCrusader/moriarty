@@ -69,11 +69,11 @@ class MArrayFormat {
   // Sets the array to be newline-separated.
   MArrayFormat& NewlineSeparated();
 
-  // Take any non-defaults in `other` and apply them to this format.
+  // Apply fields explicitly set in `other` to this format.
   void Merge(const MArrayFormat& other);
 
  private:
-  Whitespace separator_ = Whitespace::kSpace;
+  std::optional<Whitespace> separator_;  // Default: Whitespace::kSpace
 };
 
 // MArray<>
@@ -87,6 +87,7 @@ class MArrayFormat {
 template <typename MElementType>
 class MArray : public librarian::MVariable<MArray<MElementType>> {
  public:
+  using formatter = MArrayFormat;
   using element_value_type = typename MElementType::value_type;
   using vector_value_type = typename std::vector<element_value_type>;
   class Reader;  // Forward declaration
@@ -109,6 +110,13 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
 
   // Create an MArray with this set of constraints on each element.
   explicit MArray(MElementType element_constraints);
+
+  // Create an MArray from a configured element variable and array constraints.
+  template <typename... Constraints>
+    requires(sizeof...(Constraints) > 0 &&
+             (ConstraintFor<MArray<MElementType>, Constraints> && ...))
+  explicit MArray(MElementType element_constraints,
+                  Constraints&&... constraints);
 
   ~MArray() override = default;
 
@@ -152,7 +160,7 @@ class MArray : public librarian::MVariable<MArray<MElementType>> {
   // Returns the I/O format for this array.
   [[nodiscard]] MArrayFormat& Format();
   // Returns the I/O format for this array.
-  [[nodiscard]] MArrayFormat Format() const;
+  [[nodiscard]] const MArrayFormat& Format() const;
 
   // Typename()
   //
@@ -288,7 +296,7 @@ MArray(MoriartyElementType) -> MArray<MoriartyElementType>;
 //   `NestedMArray(NestedMArray(MArray(MInteger())))`
 //   `NestedMArray(NestedMArray(MInteger()))`
 template <typename MElementType, typename... Constraints>
-  requires std::constructible_from<MArray<MElementType>, Constraints...>
+  requires(ConstraintFor<MArray<MArray<MElementType>>, Constraints> && ...)
 MArray<MArray<MElementType>> NestedMArray(MArray<MElementType> elements,
                                           Constraints&&... constraints) {
   MArray<MArray<MElementType>> res(std::move(elements));
@@ -302,6 +310,15 @@ MArray<MArray<MElementType>> NestedMArray(MArray<MElementType> elements,
 template <typename T>
 MArray<T>::MArray(T element_constraints)
     : MArray<T>(StronglyTypedElements<T>(std::move(element_constraints))) {}
+
+template <typename T>
+template <typename... Constraints>
+  requires(sizeof...(Constraints) > 0 &&
+           (ConstraintFor<MArray<T>, Constraints> && ...))
+MArray<T>::MArray(T element_constraints, Constraints&&... constraints)
+    : MArray<T>(std::move(element_constraints)) {
+  (AddConstraint(std::forward<Constraints>(constraints)), ...);
+}
 
 template <typename T>
 template <typename... Constraints>
@@ -371,7 +388,7 @@ MArrayFormat& MArray<T>::Format() {
 }
 
 template <typename T>
-MArrayFormat MArray<T>::Format() const {
+const MArrayFormat& MArray<T>::Format() const {
   return format_;
 }
 

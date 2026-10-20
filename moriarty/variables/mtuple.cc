@@ -23,7 +23,9 @@ MTupleFormat& MTupleFormat::WithSeparator(Whitespace separator) {
   return *this;
 }
 
-Whitespace MTupleFormat::GetSeparator() const { return separator_; }
+Whitespace MTupleFormat::GetSeparator() const {
+  return separator_.value_or(Whitespace::kSpace);
+}
 
 MTupleFormat& MTupleFormat::SpaceSeparated() {
   return WithSeparator(Whitespace::kSpace);
@@ -34,9 +36,7 @@ MTupleFormat& MTupleFormat::NewlineSeparated() {
 }
 
 void MTupleFormat::Merge(const MTupleFormat& other) {
-  if (other.separator_ != Whitespace::kSpace) {
-    separator_ = other.separator_;
-  }
+  if (other.separator_) separator_ = other.separator_;
 }
 
 }  // namespace moriarty

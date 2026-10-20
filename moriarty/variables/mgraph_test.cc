@@ -32,7 +32,9 @@
 #include "moriarty/librarian/errors.h"
 #include "moriarty/librarian/testing/gtest_helpers.h"
 #include "moriarty/types/graph.h"
+#include "moriarty/variables/marray.h"
 #include "moriarty/variables/minteger.h"
+#include "moriarty/variables/mreal.h"
 #include "moriarty/variables/mstring.h"
 
 namespace moriarty {
@@ -170,6 +172,42 @@ TEST(MGraphTest, ReadUnweightedAdjMatrixShouldSucceed) {
       graph, "moriarty/variables/testing/mgraph/matrix_sym_ints_0diag.in", context);
   ReadAndVerifyMGraphFromFile(
       graph, "moriarty/variables/testing/mgraph/matrix_sym_ints_1diag.in", context);
+}
+
+TEST(MGraphTest, MergeFromCombinesExplicitFormatFields) {
+  MGraph<> graph(MGraphFormat().AdjacencyMatrix().OneBased());
+  graph.MergeFrom(MGraph<>());
+  EXPECT_TRUE(graph.Format().IsAdjacencyMatrix());
+  EXPECT_TRUE(graph.Format().IsOneBased());
+
+  graph.MergeFrom(MGraph<>(MGraphFormat().EdgeList()));
+  EXPECT_TRUE(graph.Format().IsEdgeList());
+  EXPECT_TRUE(graph.Format().IsOneBased());
+
+  graph.MergeFrom(MGraph<>(MGraphFormat().ZeroBased()));
+  EXPECT_TRUE(graph.Format().IsZeroBased());
+}
+
+TEST(MGraphTest, EdgeLabelMTypeKeepsItsFormat) {
+  MGraph<MReal> graph(NumNodes(2), NumEdges(1),
+                      EdgeLabels<MReal>(MReal(MRealFormat().Digits(2))));
+  EXPECT_EQ(graph.GetCoreConstraints().EdgeLabels().Format().GetDigits(), 2);
+
+  Graph<double> value(2);
+  value.AddEdge(0, 1, 1.234);
+  EXPECT_EQ(Write(graph, value), "0 1 1.23\n");
+}
+
+TEST(MGraphTest, NestedEdgeLabelWhitespaceSurvivesMerge) {
+  MGraph<MArray<MInteger>> graph(NumNodes(2), NumEdges(1));
+  graph.MergeFrom(MGraph<MArray<MInteger>>(
+      EdgeLabels<MArray<MInteger>>(
+          MArray<MInteger>(Length(2), MArrayFormat().NewlineSeparated()))));
+
+  Graph<std::vector<int64_t>> value(2);
+  value.AddEdge(0, 1, {1, 2});
+  EXPECT_EQ(Write(graph, value), "0 1 1\n2\n");
+  EXPECT_EQ(Read(graph, "0 1 1\n2\n"), value);
 }
 
 TEST(MGraphTest, ReadWeightedAdjMatrixShouldSucceed) {

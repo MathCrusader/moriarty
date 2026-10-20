@@ -23,7 +23,9 @@ MArrayFormat& MArrayFormat::WithSeparator(Whitespace separator) {
   return *this;
 }
 
-Whitespace MArrayFormat::GetSeparator() const { return separator_; }
+Whitespace MArrayFormat::GetSeparator() const {
+  return separator_.value_or(Whitespace::kSpace);
+}
 
 MArrayFormat& MArrayFormat::SpaceSeparated() {
   return WithSeparator(Whitespace::kSpace);
@@ -34,9 +36,7 @@ MArrayFormat& MArrayFormat::NewlineSeparated() {
 }
 
 void MArrayFormat::Merge(const MArrayFormat& other) {
-  if (other.separator_ != Whitespace::kSpace) {
-    separator_ = other.separator_;
-  }
+  if (other.separator_) separator_ = other.separator_;
 }
 
 }  // namespace moriarty

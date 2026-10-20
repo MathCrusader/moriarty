@@ -17,6 +17,7 @@
 #include <cstdint>
 #include <string>
 #include <variant>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -28,6 +29,7 @@
 #include "moriarty/librarian/io_config.h"
 #include "moriarty/librarian/mvariable.h"
 #include "moriarty/librarian/testing/gtest_helpers.h"
+#include "moriarty/variables/marray.h"
 #include "moriarty/variables/minteger.h"
 #include "moriarty/variables/mstring.h"
 
@@ -43,6 +45,7 @@ using ::moriarty_testing::Write;
 using ::testing::AllOf;
 using ::testing::AnyOf;
 using ::testing::Each;
+using ::testing::ElementsAre;
 using ::testing::Ge;
 using ::testing::Le;
 using ::testing::SizeIs;
@@ -101,6 +104,23 @@ TEST(MVariantTest, WriteWithProperSeparatorShouldSucceed) {
 
   EXPECT_EQ(Write(newline_constraints, 1), "int\n1");
   EXPECT_EQ(Write(space_constraints, "twotwo"), "str twotwo");
+}
+
+TEST(MVariantTest, ConfiguredAlternativeAndIndependentFormatFieldsMerge) {
+  MVariant variant(
+      MArray<MInteger>(Length(2), MArrayFormat().NewlineSeparated()),
+      MInteger());
+  variant.Format().Discriminator({"array", "int"}).NewlineSeparated();
+  EXPECT_EQ(Write(variant, std::vector<int64_t>{1, 2}), "array\n1\n2");
+  EXPECT_THAT(Read(variant, "array\n1\n2"),
+              VariantWith<std::vector<int64_t>>(ElementsAre(1, 2)));
+
+  MVariant<MArray<MInteger>, MInteger> separator_override(
+      MVariantFormat().SpaceSeparated());
+  variant.MergeFrom(separator_override);
+  EXPECT_THAT(variant.Format().GetDiscriminatorOptions(),
+              ElementsAre("array", "int"));
+  EXPECT_EQ(Write(variant, std::vector<int64_t>{1, 2}), "array 1\n2");
 }
 
 TEST(MVariantTest, TypicalReadCaseWorks) {

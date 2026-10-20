@@ -55,11 +55,11 @@ class MRealFormat {
   // Returns the number of digits to use when writing this value.
   int GetDigits() const;
 
-  // Take any non-defaults in `other` and apply them to this format.
+  // Apply fields explicitly set in `other` to this format.
   void Merge(const MRealFormat& other);
 
  private:
-  int digits_ = 6;
+  std::optional<int> digits_;  // Default: 6 digits
 };
 
 // MReal
@@ -70,6 +70,7 @@ class MRealFormat {
 // `long double` has different precision on various systems.
 class MReal : public librarian::MVariable<MReal> {
  public:
+  using formatter = MRealFormat;
   // Create an MReal from a set of constraints. Logically equivalent to
   // calling AddConstraint() for each constraint.
   //
@@ -125,12 +126,12 @@ class MReal : public librarian::MVariable<MReal> {
   //  Input/Output style
 
   // Change the I/O format of the number.
-  // Note: I/O constraints behave as overrides instead of merges.
+  // Explicitly set format fields override previous values.
   MReal& AddConstraint(MRealFormat constraint);
   // Returns the I/O format for this number.
   [[nodiscard]] MRealFormat& Format();
   // Returns the I/O format for this number.
-  [[nodiscard]] MRealFormat Format() const;
+  [[nodiscard]] const MRealFormat& Format() const;
 
   [[nodiscard]] std::string Typename() const override { return "MReal"; }
 

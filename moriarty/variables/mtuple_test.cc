@@ -17,6 +17,7 @@
 
 #include <cstdint>
 #include <tuple>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -27,6 +28,7 @@
 #include "moriarty/librarian/io_config.h"
 #include "moriarty/librarian/mvariable.h"
 #include "moriarty/librarian/testing/gtest_helpers.h"
+#include "moriarty/variables/marray.h"
 #include "moriarty/variables/minteger.h"
 #include "moriarty/variables/mstring.h"
 
@@ -41,6 +43,7 @@ using ::moriarty_testing::Read;
 using ::moriarty_testing::Write;
 using ::testing::AllOf;
 using ::testing::AnyOf;
+using ::testing::ElementsAre;
 using ::testing::FieldsAre;
 using ::testing::Ge;
 using ::testing::Le;
@@ -71,6 +74,22 @@ TEST(MTupleTest, WriteWithProperSeparatorShouldSucceed) {
                       MTupleFormat().WithSeparator(Whitespace::kTab)),
                   {1, "twotwo", 333}),
             "1\ttwotwo\t333");
+}
+
+TEST(MTupleTest, ConfiguredChildAndExplicitDefaultSeparatorSurviveMerge) {
+  MTuple tuple(MArray<MInteger>(Length(2), MArrayFormat().NewlineSeparated()),
+               MInteger());
+  EXPECT_EQ(Write(tuple, std::make_tuple(std::vector<int64_t>{1, 2}, 3)),
+            "1\n2 3");
+  EXPECT_THAT(Read(tuple, "1\n2 3"), FieldsAre(ElementsAre(1, 2), 3));
+
+  tuple.Format().NewlineSeparated();
+  tuple.MergeFrom(MTuple(MArray<MInteger>(), MInteger()));
+  EXPECT_EQ(tuple.Format().GetSeparator(), Whitespace::kNewline);
+  MTuple<MArray<MInteger>, MInteger> separator_override(
+      MTupleFormat().SpaceSeparated());
+  tuple.MergeFrom(separator_override);
+  EXPECT_EQ(tuple.Format().GetSeparator(), Whitespace::kSpace);
 }
 
 TEST(MTupleTest, TypicalReadCaseWorks) {

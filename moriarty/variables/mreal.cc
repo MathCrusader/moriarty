@@ -118,7 +118,7 @@ MReal& MReal::AddConstraint(AtLeast constraint) {
 }
 
 MReal& MReal::AddConstraint(MRealFormat constraint) {
-  format_ = constraint;
+  format_.Merge(constraint);
   return *this;
 }
 
@@ -182,7 +182,7 @@ std::optional<double> MReal::GetUniqueValueImpl(
 
 MRealFormat& MReal::Format() { return format_; }
 
-MRealFormat MReal::Format() const { return format_; }
+const MRealFormat& MReal::Format() const { return format_; }
 
 MRealFormat& MRealFormat::Digits(int num_digits) {
   if (!(1 <= num_digits && num_digits <= 20)) {
@@ -195,6 +195,10 @@ MRealFormat& MRealFormat::Digits(int num_digits) {
   return *this;
 }
 
-int MRealFormat::GetDigits() const { return digits_; }
+int MRealFormat::GetDigits() const { return digits_.value_or(6); }
+
+void MRealFormat::Merge(const MRealFormat& other) {
+  if (other.digits_) digits_ = other.digits_;
+}
 
 }  // namespace moriarty

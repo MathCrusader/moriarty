@@ -237,8 +237,10 @@ cc_test(
     srcs = ["mgraph_test.cc"],
     data = glob(["testing/mgraph/*.in"]),
     deps = [
+        ":marray",
         ":mgraph",
         ":minteger",
+        ":mreal",
         ":mstring",
         "//moriarty:context",
         "//moriarty/constraints:equality_constraints",
@@ -290,6 +292,7 @@ cc_test(
     name = "mtuple_test",
     srcs = ["mtuple_test.cc"],
     deps = [
+        ":marray",
         ":minteger",
         ":mstring",
         ":mtuple",
@@ -308,6 +311,7 @@ cc_test(
     name = "mvariant_test",
     srcs = ["mvariant_test.cc"],
     deps = [
+        ":marray",
         ":minteger",
         ":mstring",
         ":mvariant",

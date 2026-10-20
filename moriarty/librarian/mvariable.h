@@ -85,6 +85,9 @@ struct MVariableValueTypeTrait {
 // * `VariableType` is the underlying Moriarty variable type
 // * Make sure you have specialized `MVariableValueTypeTrait<VariableType>`;
 //   `value_type` is the non-Moriarty type that is generated/validated/analyzed.
+// * If the type has I/O formatting, declare `using formatter = ...`, provide
+//   mutable and const `Format()` accessors, and implement formatter::Merge().
+//   MergeFrom() will then preserve explicitly configured formatting.
 //
 // E.g.,
 //     template <>
@@ -123,7 +126,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
 
   // MergeFrom()
   //
-  // Adds all constraints currently in `other` to this variable.
+  // Adds all constraints and explicitly configured I/O formatting in `other`
+  // to this variable.
   VariableType& MergeFrom(const VariableType& other);
 
   // AddCustomConstraint()
@@ -361,7 +365,23 @@ std::string MVariable<V>::ToString() const {
 
 template <typename V>
 V& MVariable<V>::MergeFrom(const V& other) {
+  static_assert((requires { typename V::formatter; }) ==
+                    (requires(V& variable) { variable.Format(); }),
+                "MVariables with a Format() accessor must declare a "
+                "formatter alias, and vice versa.");
+
   other.constraints_.ApplyAllTo(UnderlyingVariableType());
+  if constexpr (requires { typename V::formatter; }) {
+    static_assert(
+        requires(V& variable, const V& source) {
+          { variable.Format() } -> std::same_as<typename V::formatter&>;
+          { source.Format() } -> std::same_as<const typename V::formatter&>;
+          variable.Format().Merge(source.Format());
+        },
+        "A formatter must have mutable and const Format() accessors and "
+        "support Merge().");
+    UnderlyingVariableType().Format().Merge(other.Format());
+  }
   return UnderlyingVariableType();
 }
 

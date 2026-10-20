@@ -100,6 +100,15 @@ TEST(MRealTest, ValidReadInStrictModeShouldSucceed) {
   }
 }
 
+TEST(MRealTest, MergeFromPreservesAndOverridesDigits) {
+  MReal real(MRealFormat().Digits(2));
+  real.MergeFrom(MReal());
+  EXPECT_EQ(Write(real, 1.234), "1.23");
+
+  real.MergeFrom(MReal(MRealFormat().Digits(6)));
+  EXPECT_EQ(Write(real, 1.234), "1.234000");
+}
+
 TEST(MRealTest, ReadWithTokensAfterwardsIsFine) {
   EXPECT_EQ(
       Read(MReal(MRealFormat().Digits(3)), "-123.456 you should ignore this"),

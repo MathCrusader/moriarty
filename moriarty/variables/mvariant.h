@@ -19,6 +19,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <format>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -112,12 +113,14 @@ class MVariantFormat {
   // Returns the discriminator options.
   const std::vector<std::string>& GetDiscriminatorOptions() const;
 
-  // Take any non-defaults in `other` and apply them to this format.
+  // Apply fields explicitly set in `other` to this format.
   void Merge(const MVariantFormat& other);
 
  private:
-  Whitespace separator_ = Whitespace::kSpace;
-  std::vector<std::string> discriminator_options_;
+  std::optional<Whitespace> separator_;  // Default: Whitespace::kSpace
+  // Default: empty discriminator options
+  std::optional<std::vector<std::string>> discriminator_options_;
+  inline static const std::vector<std::string> kEmptyDiscriminatorOptions;
 };
 
 // MVariant<>
@@ -147,6 +150,7 @@ class MVariantFormat {
 template <typename... MAlternativeTypes>
 class MVariant : public librarian::MVariable<MVariant<MAlternativeTypes...>> {
  public:
+  using formatter = MVariantFormat;
   using variant_value_type =
       std::variant<typename MAlternativeTypes::value_type...>;
 
@@ -216,7 +220,7 @@ class MVariant : public librarian::MVariable<MVariant<MAlternativeTypes...>> {
   MVariant& AddConstraint(MVariantFormat constraint);
 
   MVariantFormat& Format();
-  MVariantFormat Format() const;
+  const MVariantFormat& Format() const;
 
   // MVariant::CoreConstraints
   //
@@ -375,7 +379,7 @@ MVariantFormat& MVariant<T...>::Format() {
 }
 
 template <typename... T>
-MVariantFormat MVariant<T...>::Format() const {
+const MVariantFormat& MVariant<T...>::Format() const {
   return format_;
 }
 

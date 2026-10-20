@@ -26,7 +26,9 @@ MVariantFormat& MVariantFormat::WithSeparator(Whitespace separator) {
   return *this;
 }
 
-Whitespace MVariantFormat::GetSeparator() const { return separator_; }
+Whitespace MVariantFormat::GetSeparator() const {
+  return separator_.value_or(Whitespace::kSpace);
+}
 
 MVariantFormat& MVariantFormat::SpaceSeparated() {
   return WithSeparator(Whitespace::kSpace);
@@ -74,16 +76,14 @@ MVariantFormat& MVariantFormat::Discriminator(
 
 const std::vector<std::string>& MVariantFormat::GetDiscriminatorOptions()
     const {
-  return discriminator_options_;
+  return discriminator_options_ ? *discriminator_options_
+                                : kEmptyDiscriminatorOptions;
 }
 
 void MVariantFormat::Merge(const MVariantFormat& other) {
-  if (other.separator_ != Whitespace::kSpace) {
-    separator_ = other.separator_;
-  }
-  if (!other.discriminator_options_.empty()) {
+  if (other.separator_) separator_ = other.separator_;
+  if (other.discriminator_options_)
     discriminator_options_ = other.discriminator_options_;
-  }
 }
 
 }  // namespace moriarty

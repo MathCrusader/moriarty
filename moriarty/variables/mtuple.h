@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <format>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -65,11 +66,11 @@ class MTupleFormat {
   // Sets the tuple to be newline-separated.
   MTupleFormat& NewlineSeparated();
 
-  // Take any non-defaults in `other` and apply them to this format.
+  // Apply fields explicitly set in `other` to this format.
   void Merge(const MTupleFormat& other);
 
  private:
-  Whitespace separator_ = Whitespace::kSpace;
+  std::optional<Whitespace> separator_;  // Default: Whitespace::kSpace
 };
 
 // MTuple<>
@@ -89,6 +90,7 @@ class MTupleFormat {
 template <typename... MElementTypes>
 class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
  public:
+  using formatter = MTupleFormat;
   using tuple_value_type = std::tuple<typename MElementTypes::value_type...>;
   class Reader;  // Forward declaration
   using chunked_reader_type = Reader;
@@ -131,7 +133,7 @@ class MTuple : public librarian::MVariable<MTuple<MElementTypes...>> {
 
   MTuple& AddConstraint(MTupleFormat constraint);
   MTupleFormat& Format();
-  MTupleFormat Format() const;
+  const MTupleFormat& Format() const;
 
   template <size_t I, typename MElementType>
   MTuple& AddConstraint(Element<I, MElementType> constraint);
@@ -279,7 +281,7 @@ MTupleFormat& MTuple<T...>::Format() {
 }
 
 template <typename... T>
-MTupleFormat MTuple<T...>::Format() const {
+const MTupleFormat& MTuple<T...>::Format() const {
   return format_;
 }
 

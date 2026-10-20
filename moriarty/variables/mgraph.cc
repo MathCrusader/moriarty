@@ -18,7 +18,9 @@ namespace moriarty {
 
 MGraphFormat& MGraphFormat::EdgeList() { return SetStyle(Style::kEdgeList); }
 
-bool MGraphFormat::IsEdgeList() const { return style_ == Style::kEdgeList; }
+bool MGraphFormat::IsEdgeList() const {
+  return style_.value_or(Style::kEdgeList) == Style::kEdgeList;
+}
 
 MGraphFormat& MGraphFormat::AdjacencyMatrix() {
   return SetStyle(Style::kAdjacencyMatrix);
@@ -33,7 +35,7 @@ MGraphFormat& MGraphFormat::ZeroBased() {
 }
 
 bool MGraphFormat::IsZeroBased() const {
-  return node_style_ == NodeStyle::k0Based;
+  return node_style_.value_or(NodeStyle::k0Based) == NodeStyle::k0Based;
 }
 
 MGraphFormat& MGraphFormat::OneBased() {
@@ -63,12 +65,8 @@ MGraphFormat& MGraphFormat::SetNodeStyle(NodeStyle node_style) {
 }
 
 void MGraphFormat::Merge(const MGraphFormat& other) {
-  if (other.style_ != Style::kEdgeList) {
-    style_ = other.style_;
-  }
-  if (other.node_style_ != NodeStyle::k0Based) {
-    node_style_ = other.node_style_;
-  }
+  if (other.style_) style_ = other.style_;
+  if (other.node_style_) node_style_ = other.node_style_;
 }
 
 }  // namespace moriarty

@@ -339,6 +339,31 @@ TEST(MArrayTest, WhitespaceSeparatorShouldAffectWrite) {
       "1\n2\n3");  // Note no newline after
 }
 
+TEST(MArrayTest, ConfiguredNestedArrayKeepsItsOwnSeparator) {
+  MArray<MInteger> inner(Length(2), MArrayFormat().NewlineSeparated());
+  MArray<MArray<MInteger>> outer(inner, Length(2));
+
+  EXPECT_EQ(Write(outer, {{1, 2}, {3, 4}}), "1\n2 3\n4");
+  EXPECT_THAT(Read(outer, "1\n2 3\n4"),
+              ElementsAre(ElementsAre(1, 2), ElementsAre(3, 4)));
+  EXPECT_EQ(Write(NestedMArray(inner, Length(2)), {{1, 2}, {3, 4}}),
+            "1\n2 3\n4");
+  EXPECT_EQ(
+      Write(MArray<MArray<MInteger>>(StronglyTypedElements<MArray<MInteger>>(
+                MArrayFormat().NewlineSeparated())),
+            {{1, 2}, {3, 4}}),
+      "1\n2 3\n4");
+}
+
+TEST(MArrayTest, MergeFromPreservesAndOverridesExplicitSeparator) {
+  MArray<MInteger> array(MArrayFormat().NewlineSeparated());
+  array.MergeFrom(MArray<MInteger>());
+  EXPECT_EQ(Write(array, {1, 2}), "1\n2");
+
+  array.MergeFrom(MArray<MInteger>(MArrayFormat().SpaceSeparated()));
+  EXPECT_EQ(Write(array, {1, 2}), "1 2");
+}
+
 TEST(MArrayTest, WhitespaceSeparatorShouldAffectRead) {
   EXPECT_EQ(Read(MArray<MInteger>(MArrayFormat().NewlineSeparated(), Length(6)),
                  "1\n2\n3\n4\n5\n6"),

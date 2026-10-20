@@ -111,15 +111,15 @@ class MGraphFormat {
   // Returns if the node style is node labels. See `NodeLabelsStyle()`.
   bool IsNodeLabelsStyle() const;
 
-  // Take any non-defaults in `other` and apply them to this format.
+  // Apply fields explicitly set in `other` to this format.
   void Merge(const MGraphFormat& other);
 
  private:
   enum class Style { kEdgeList, kAdjacencyMatrix, kNonExhaustiveList };
   enum class NodeStyle { k0Based, k1Based, kNodeLabels, kNonExhaustiveList };
 
-  Style style_ = Style::kEdgeList;
-  NodeStyle node_style_ = NodeStyle::k0Based;
+  std::optional<Style> style_;           // Default: Style::kEdgeList
+  std::optional<NodeStyle> node_style_;  // Default: NodeStyle::k0Based
   MGraphFormat& SetStyle(Style style);
   MGraphFormat& SetNodeStyle(NodeStyle node_style);
 };
@@ -139,6 +139,7 @@ template <typename MEdgeLabel = MNoEdgeLabel,
           typename MNodeLabel = MNoNodeLabel>
 class MGraph : public librarian::MVariable<MGraph<MEdgeLabel, MNodeLabel>> {
  public:
+  using formatter = MGraphFormat;
   using graph_type =
       Graph<typename MEdgeLabel::value_type, typename MNodeLabel::value_type>;
   class Reader;  // Forward declaration
@@ -210,12 +211,12 @@ class MGraph : public librarian::MVariable<MGraph<MEdgeLabel, MNodeLabel>> {
   //  Constrain the I/O format of the graph
 
   // Change the I/O format of the graph.
-  // Note: I/O constraints behave as overrides instead of merges.
+  // Explicitly set format fields override previous values.
   MGraph& AddConstraint(MGraphFormat constraint);
   // Returns the I/O format for this graph.
   [[nodiscard]] MGraphFormat& Format();
   // Returns the I/O format for this graph.
-  [[nodiscard]] MGraphFormat Format() const;
+  [[nodiscard]] const MGraphFormat& Format() const;
 
   // MGraph::CoreConstraints
   //
@@ -703,7 +704,7 @@ MGraph<MEdgeLabel, MNodeLabel>::GetUniqueValueImpl(
 }
 
 template <typename MEdgeLabel, typename MNodeLabel>
-MGraphFormat MGraph<MEdgeLabel, MNodeLabel>::Format() const {
+const MGraphFormat& MGraph<MEdgeLabel, MNodeLabel>::Format() const {
   return format_;
 }
 
