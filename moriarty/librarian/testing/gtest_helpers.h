@@ -489,7 +489,7 @@ std::optional<typename T::value_type> GetUniqueValue(T variable,
   context.WithVariable(var_name, variable);
 
   moriarty::librarian::AnalyzeVariableContext ctx(var_name, context.Variables(),
-                                                  context.Values());
+                                                  context.Values(), {});
   return ctx.GetUniqueValue<T>(var_name);
 }
 
@@ -501,7 +501,7 @@ T::value_type Read(T variable, std::istream& is, Context context) {
   moriarty::moriarty_internal::AbstractVariable* var =
       context.Variables().GetAnonymousVariable(var_name);
 
-  moriarty::InputCursor cr(is, context.WhitespaceStrictness(),
+  moriarty::InputCursor cr(is, {}, context.WhitespaceStrictness(),
                            context.NumericStrictness());
   var->ReadValue(var_name, cr, context.Variables(), context.Values());
   return context.Values().Get<T>(var_name);
@@ -568,7 +568,8 @@ template <moriarty::MoriartyVariable T>
 std::vector<typename T::value_type> GenerateEdgeCases(T variable) {
   moriarty::moriarty_internal::VariableSet variables;
   moriarty::moriarty_internal::ValueSet values;
-  moriarty::librarian::AnalyzeVariableContext ctx("test", variables, values);
+  moriarty::librarian::AnalyzeVariableContext ctx("test", variables, values,
+                                                  {});
   std::vector<T> instances = variable.ListEdgeCases(ctx);
 
   std::vector<typename T::value_type> tricky_values;
@@ -598,7 +599,7 @@ MATCHER_P2(IsSatisfiedWith, value, context, "") {
 
   std::string var_name = std::format("{}::IsSatisfiedWith", arg.Typename());
   moriarty::ConstraintContext ctx(var_name, context_copy.Variables(),
-                                  context_copy.Values());
+                                  context_copy.Values(), {});
 
   if (auto v = arg.Validate(ctx, ValueType(value)); !v.IsOk()) {
     *result_listener << "value does not satisfy constraints:\n"
@@ -637,7 +638,7 @@ MATCHER_P3(IsNotSatisfiedWith, value, expected_reason, context, "") {
 
   std::string var_name = std::format("{}::IsNotSatisfiedWith", arg.Typename());
   moriarty::ConstraintContext ctx(var_name, context_copy.Variables(),
-                                  context_copy.Values());
+                                  context_copy.Values(), {});
 
   if (auto v = arg.Validate(ctx, ValueType(value)); !v.IsOk()) {
     if (!testing::Value(v.PrettyReason(),

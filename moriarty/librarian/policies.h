@@ -17,6 +17,9 @@
 
 namespace moriarty {
 
+// Determines if a generation should be retried or not.
+enum class RetryPolicy { kRetry, kAbort };
+
 // How to handle whitespace when reading from an input stream.
 enum class WhitespaceStrictness {
   // The whitespace must be exactly as expected.
@@ -42,8 +45,17 @@ enum class NumericStrictness {
   kFlexible
 };
 
-// Determines if a generation should be retried or not.
-enum class RetryPolicy { kRetry, kAbort };
+// Controls how constraints are evaluated.
+struct ConstraintOptions {};
+
+// Returns constraint options for generation and assignment operations.
+[[nodiscard]] ConstraintOptions GenerationConstraintOptions();
+
+// Returns constraint options for writing operations.
+[[nodiscard]] ConstraintOptions WritingConstraintOptions();
+
+// Returns constraint options for analysis operations.
+[[nodiscard]] ConstraintOptions AnalysisConstraintOptions();
 
 }  // namespace moriarty
 

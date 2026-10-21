@@ -33,7 +33,7 @@ using testing::SizeIs;
 
 TEST(ViewOnlyContextTest, GetVariableShouldWork) {
   Context context = Context().WithVariable("X", MInteger());
-  ViewOnlyContext ctx(context.Variables(), context.Values());
+  ViewOnlyContext ctx(context.Variables(), context.Values(), {});
 
   EXPECT_NO_THROW({ (void)ctx.GetVariable<MInteger>("X"); });
   EXPECT_THAT([&] { (void)ctx.GetVariable<MInteger>("Y"); },
@@ -44,7 +44,7 @@ TEST(ViewOnlyContextTest, GetVariableShouldWork) {
 
 TEST(ViewOnlyContextTest, GetAnonymousVariableShouldWork) {
   Context context = Context().WithVariable("X", MInteger());
-  ViewOnlyContext ctx(context.Variables(), context.Values());
+  ViewOnlyContext ctx(context.Variables(), context.Values(), {});
 
   EXPECT_NO_THROW({ (void)ctx.GetAnonymousVariable("X"); });
   EXPECT_THAT([&] { (void)ctx.GetAnonymousVariable("Y"); },
@@ -56,7 +56,7 @@ TEST(ViewOnlyContextTest, GetValueShouldWork) {
                         .WithVariable("X", MInteger())
                         .WithVariable("Y", MInteger())
                         .WithValue<MInteger>("X", 10);
-  ViewOnlyContext ctx(context.Variables(), context.Values());
+  ViewOnlyContext ctx(context.Variables(), context.Values(), {});
 
   EXPECT_EQ(ctx.GetValue<MInteger>("X"), 10);
   EXPECT_THAT([&] { (void)ctx.GetValue<MInteger>("Y"); },
@@ -75,7 +75,7 @@ TEST(ViewOnlyContextTest, GetValueIfKnownShouldWork) {
                         .WithVariable("X", MInteger())
                         .WithVariable("Y", MInteger())
                         .WithValue<MInteger>("X", 10);
-  ViewOnlyContext ctx(context.Variables(), context.Values());
+  ViewOnlyContext ctx(context.Variables(), context.Values(), {});
 
   EXPECT_EQ(ctx.GetValueIfKnown<MInteger>("X"), 10);
   EXPECT_EQ(ctx.GetValueIfKnown<MInteger>("Y"), std::nullopt);
@@ -92,7 +92,7 @@ TEST(ViewOnlyContextTest, GetUniqueShouldWork) {
                         .WithVariable("W", MInteger())
                         .WithVariable("A", MArray<MInteger>(Length("X")))
                         .WithValue<MInteger>("X", 10);
-  ViewOnlyContext ctx(context.Variables(), context.Values());
+  ViewOnlyContext ctx(context.Variables(), context.Values(), {});
 
   EXPECT_EQ(ctx.GetUniqueValue<MInteger>("X"), 10);
   EXPECT_EQ(ctx.GetUniqueValue<MInteger>("Y"), 20);
@@ -104,7 +104,7 @@ TEST(ViewOnlyContextTest, GetUniqueShouldWork) {
 TEST(ViewOnlyContext, ValueIsKnownShouldWork) {
   Context context =
       Context().WithVariable("X", MInteger()).WithValue<MInteger>("X", 10);
-  ViewOnlyContext ctx(context.Variables(), context.Values());
+  ViewOnlyContext ctx(context.Variables(), context.Values(), {});
 
   EXPECT_TRUE(ctx.ValueIsKnown("X"));
   EXPECT_FALSE(ctx.ValueIsKnown("Y"));
@@ -113,7 +113,7 @@ TEST(ViewOnlyContext, ValueIsKnownShouldWork) {
 TEST(ViewOnlyContext, IsSatisfiedWithShouldWork) {
   Context context =
       Context().WithVariable("X", MInteger()).WithValue<MInteger>("X", 10);
-  ViewOnlyContext ctx(context.Variables(), context.Values());
+  ViewOnlyContext ctx(context.Variables(), context.Values(), {});
 
   EXPECT_TRUE(ctx.IsSatisfiedWith(MInteger(Between(10, 20)), 10));
   EXPECT_FALSE(ctx.IsSatisfiedWith(MInteger(Between(10, 20)), 5));
@@ -125,7 +125,7 @@ TEST(ViewOnlyContext, GetAllVariablesShouldWork) {
                         .WithVariable("X", MInteger())
                         .WithVariable("Y", MInteger())
                         .WithValue<MInteger>("X", 10);
-  ViewOnlyContext ctx(context.Variables(), context.Values());
+  ViewOnlyContext ctx(context.Variables(), context.Values(), {});
 
   EXPECT_THAT(ctx.ListVariables(), SizeIs(2));
   EXPECT_EQ(ctx.ListVariables().count("X"), 1);

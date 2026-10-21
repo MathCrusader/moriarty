@@ -40,7 +40,7 @@ TEST(BasicIStreamTest, ReadTokenShouldAdhereToWhitespaceScrictness) {
   }
   {
     std::stringstream ss("  \n\tHello");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_THROW({ (void)c.ReadToken(); }, ReadError);
   }
@@ -55,7 +55,7 @@ TEST(BasicIStreamTest, ReadTokenShouldWorkInSimpleCases) {
   }
   {
     std::stringstream ss("Hello");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_EQ(c.ReadToken(), "Hello");
   }
@@ -68,7 +68,7 @@ TEST(BasicIStreamTest, ReadTokenShouldWorkInSimpleCases) {
   }
   {
     std::stringstream ss("Hello World");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_EQ(c.ReadToken(), "Hello");
     EXPECT_THROW({ (void)c.ReadToken(); }, ReadError);
@@ -90,13 +90,13 @@ TEST(BasicIStreamTest, ReadEofShouldWork) {
   }
   {
     std::stringstream ss("");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_NO_THROW({ c.ReadEof(); });
   }
   {
     std::stringstream ss("     \t\n\t");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_THROW({ c.ReadEof(); }, ReadError);
   }
@@ -108,7 +108,7 @@ TEST(BasicIStreamTest, ReadEofShouldWork) {
   }
   {
     std::stringstream ss("Hello");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_THROW({ c.ReadEof(); }, ReadError);
   }
@@ -121,7 +121,7 @@ TEST(BasicIStreamTest, ReadEofShouldWork) {
   }
   {
     std::stringstream ss("Hello");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_EQ(c.ReadToken(), "Hello");
     EXPECT_NO_THROW({ c.ReadEof(); });
@@ -140,7 +140,7 @@ TEST(BasicIStreamTest, ReadWhitespaceShouldWorkInHappyPath) {
   }
   {
     std::stringstream ss(" \n\tHello");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     c.ReadWhitespace(Whitespace::kSpace);
     c.ReadWhitespace(Whitespace::kNewline);
@@ -152,7 +152,7 @@ TEST(BasicIStreamTest, ReadWhitespaceShouldWorkInHappyPath) {
 TEST(BasicIStreamTest, ReadWhitespaceShouldCareWhichWhitespaceInStrictMode) {
   {  // Happy
     std::stringstream ss(" \n\t");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     c.ReadWhitespace(Whitespace::kSpace);
     c.ReadWhitespace(Whitespace::kNewline);
@@ -160,25 +160,25 @@ TEST(BasicIStreamTest, ReadWhitespaceShouldCareWhichWhitespaceInStrictMode) {
   }
   {  // Not space
     std::stringstream ss("\n");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_THROW({ c.ReadWhitespace(Whitespace::kSpace); }, ReadError);
   }
   {  // Not newline
     std::stringstream ss(" ");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_THROW({ c.ReadWhitespace(Whitespace::kNewline); }, ReadError);
   }
   {  // Not tab
     std::stringstream ss(" ");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_THROW({ c.ReadWhitespace(Whitespace::kTab); }, ReadError);
   }
   {  // At EOF
     std::stringstream ss("");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_THROW({ c.ReadWhitespace(Whitespace::kSpace); }, ReadError);
   }
@@ -207,7 +207,7 @@ TEST(BasicIStreamTest, ReadFunctionBehaveEndToEnd) {
   }
   {
     std::stringstream ss("1 2 3");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_EQ(c.ReadToken(), "1");
     c.ReadWhitespace(Whitespace::kSpace);
@@ -218,7 +218,7 @@ TEST(BasicIStreamTest, ReadFunctionBehaveEndToEnd) {
   }
   {
     std::stringstream ss("1 2 3");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_EQ(c.ReadToken(), "1");
     EXPECT_THROW({ (void)c.ReadToken(); }, ReadError);
@@ -232,7 +232,7 @@ void TestReadInteger(std::string input,
   {
     SCOPED_TRACE("strict mode");
     std::stringstream ss(input);
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     if (strict_mode_expected.has_value())
       EXPECT_EQ(c.ReadInteger(), *strict_mode_expected);
@@ -351,7 +351,7 @@ void TestReadReal(std::string input, int precision,
   {
     SCOPED_TRACE("strict mode");
     std::stringstream ss(input);
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     if (strict_mode_expected.has_value())
       EXPECT_EQ(c.ReadReal(precision), *strict_mode_expected);
@@ -492,7 +492,7 @@ TEST(BasicIStreamContextTest, PeekShouldWork) {
   }
   {
     std::stringstream ss(" Hello");
-    InputCursor cr(ss);
+    InputCursor cr(ss, {});
     BasicIStreamContext c(cr);
     EXPECT_EQ(c.PeekToken(), std::nullopt);
     c.ReadWhitespace(Whitespace::kSpace);
@@ -505,7 +505,7 @@ TEST(BasicIStreamContextTest, PeekShouldWork) {
 
 TEST(BasicIStreamContextTest, ThrowReadErrorShouldThrowReadErrorWithMessage) {
   std::stringstream ss("abc");
-  InputCursor cr(ss);
+  InputCursor cr(ss, {});
   BasicIStreamContext c(cr);
   (void)c.ReadToken();
 
@@ -517,7 +517,7 @@ TEST(BasicIStreamContextTest, ThrowReadErrorShouldThrowReadErrorWithMessage) {
 TEST(BasicIStreamContextTest,
      ThrowReadErrorWithContextShouldThrowReadErrorWithPrefixedContext) {
   std::stringstream ss("abc");
-  InputCursor cr(ss);
+  InputCursor cr(ss, {});
   BasicIStreamContext c(cr);
   (void)c.ReadToken();
 

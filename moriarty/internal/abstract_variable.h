@@ -24,6 +24,7 @@
 #include "moriarty/constraints/constraint_violation.h"
 #include "moriarty/librarian/dependencies.h"
 #include "moriarty/librarian/io_config.h"
+#include "moriarty/librarian/policies.h"
 #include "moriarty/librarian/util/ref.h"
 
 namespace moriarty {
@@ -61,10 +62,6 @@ namespace moriarty::librarian {
 template <typename V>
 class MVariable;  // Forward declaration
 }
-
-namespace moriarty {
-enum class WhitespaceStrictness;  // Forward declaration
-}  // namespace moriarty
 
 namespace moriarty {
 namespace moriarty_internal {
@@ -141,10 +138,12 @@ class AbstractVariable {
   // Determines if there is exactly one integer value that this variable can be
   // assigned to. If so, returns that value.
   //
+  // Uses `options` for constraint checks performed during the lookup.
+  //
   // For all non-integer variables, this will always return std::nullopt.
   virtual std::optional<int64_t> UniqueInteger(
       std::string_view variable_name, Ref<const VariableSet> variables,
-      Ref<const ValueSet> values) const = 0;
+      Ref<const ValueSet> values, const ConstraintOptions& options) const = 0;
 
   // ReadValue() [pure virtual]
   //
@@ -188,15 +187,13 @@ class AbstractVariable {
 
   // Validate() [pure virtual]
   //
-  // Determines if the value stored in `ctx` satisfies all constraints for this
-  // variable. `std::nullopt` means it is satisfied. A string is the reason why
-  // it is not satisfied.
-  //
-  // If a variable does not have a value, this will return false.
-  // If a value does not have a variable, this will return true.
+  // Validates the stored value for `variable_name` using `options`.
+  // Returns a ValidationResult describing whether the constraints are
+  // satisfied. Throws if the value is missing or has the wrong type.
   virtual ValidationResult Validate(std::string_view variable_name,
                                     Ref<const VariableSet> variables,
-                                    Ref<const ValueSet> values) const = 0;
+                                    Ref<const ValueSet> values,
+                                    const ConstraintOptions& options) const = 0;
 
   // ListAnonymousEdgeCases() [pure virtual]
   //

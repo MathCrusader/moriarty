@@ -147,6 +147,9 @@ struct ReadOptions {
 
   // After reading is complete, how should we validate the test cases?
   ValidationStyle validation = ValidationStyle::kAllVariables;
+
+  // How constraints are evaluated.
+  ConstraintOptions constraint_options;
 };
 
 // -----------------------------------------------------------------------------
@@ -208,6 +211,9 @@ struct ValidateOptions {
   // How should we validate the test cases?
   ValidationStyle validation = ValidationStyle::kAllVariables;
 
+  // How constraints are evaluated.
+  ConstraintOptions constraint_options;
+
   // Which variables to validate. If empty, all variables will be validated. If
   // this is set, then only these variables count as "all variables" for the
   // purposes of ValidationStyle.
@@ -225,7 +231,8 @@ class ConstraintContext : public moriarty_internal::NameContext,
  public:
   ConstraintContext(std::string_view variable_name,
                     Ref<const moriarty_internal::VariableSet> variables,
-                    Ref<const moriarty_internal::ValueSet> values);
+                    Ref<const moriarty_internal::ValueSet> values,
+                    const ConstraintOptions& options);
   ConstraintContext(const ConstraintContext& other, NameContext new_name);
   template <typename T>
   explicit ConstraintContext(const T& other)

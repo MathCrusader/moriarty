@@ -24,6 +24,7 @@
 #include "moriarty/internal/random_engine.h"
 #include "moriarty/internal/value_set.h"
 #include "moriarty/internal/variable_set.h"
+#include "moriarty/librarian/policies.h"
 #include "moriarty/librarian/util/ref.h"
 
 namespace moriarty {
@@ -104,9 +105,9 @@ template <MoriartyVariable T>
 T::value_type ResolveValuesContext::GenerateVariable(
     std::string_view variable_name, T extra_constraints) {
   if (values_.get().Contains(variable_name)) {
-    if (auto v =
-            extra_constraints.Validate({variable_name, variables_, values_},
-                                       values_.get().Get<T>(variable_name));
+    if (auto v = extra_constraints.Validate(
+            {variable_name, variables_, values_, GenerationConstraintOptions()},
+            values_.get().Get<T>(variable_name));
         !v.IsOk()) {
       throw GenerationError(
           variable_name,

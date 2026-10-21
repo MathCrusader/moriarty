@@ -247,7 +247,7 @@ TEST(MRealTest, IsSatisfiedWithWithExpressionsShouldWorkForBadData) {
 
   moriarty_internal::ValueSet values;
   moriarty_internal::VariableSet variables;
-  ConstraintContext ctx("_", variables, values);
+  ConstraintContext ctx("_", variables, values, {});
   // Could be VariableNotFound as well (impl detail)
   EXPECT_THAT([&] { (void)MReal(Between(1, "3 * N + 1")).Validate(ctx, 2); },
               ThrowsVariableNotFound("N"));

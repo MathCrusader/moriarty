@@ -15,12 +15,17 @@ namespace moriarty {
 namespace moriarty_internal {
 
 ViewOnlyContext::ViewOnlyContext(Ref<const VariableSet> variables,
-                                 Ref<const ValueSet> values)
-    : variables_(variables), values_(values) {}
+                                 Ref<const ValueSet> values,
+                                 const ConstraintOptions& options)
+    : variables_(variables), values_(values), constraint_options_(options) {}
 
 const AbstractVariable& ViewOnlyContext::GetAnonymousVariable(
     std::string_view variable_name) const {
   return *variables_.get().GetAnonymousVariable(variable_name);
+}
+
+const ConstraintOptions& ViewOnlyContext::GetConstraintOptions() const {
+  return constraint_options_;
 }
 
 const VariableSet::Map& ViewOnlyContext::ListVariables() const {
@@ -43,7 +48,7 @@ std::optional<int64_t> ViewOnlyContext::GetUniqueInteger(
   }
 
   return GetAnonymousVariable(variable_name)
-      .UniqueInteger(variable_name, variables_, values_);
+      .UniqueInteger(variable_name, variables_, values_, constraint_options_);
 }
 
 int64_t ViewOnlyContext::EvaluateExpression(const Expression& expr) const {

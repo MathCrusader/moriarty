@@ -285,7 +285,8 @@ class MVariable : public moriarty_internal::AbstractVariable {
   std::optional<int64_t> UniqueInteger(
       std::string_view variable_name,
       Ref<const moriarty_internal::VariableSet> variables,
-      Ref<const moriarty_internal::ValueSet> values) const override;
+      Ref<const moriarty_internal::ValueSet> values,
+      const ConstraintOptions& options) const override;
   void ReadValue(std::string_view variable_name, Ref<InputCursor> input,
                  Ref<const moriarty_internal::VariableSet> variables,
                  Ref<moriarty_internal::ValueSet> values) const override;
@@ -296,10 +297,10 @@ class MVariable : public moriarty_internal::AbstractVariable {
   void WriteValue(std::string_view variable_name, Ref<std::ostream> os,
                   Ref<const moriarty_internal::VariableSet> variables,
                   Ref<const moriarty_internal::ValueSet> values) const override;
-  ValidationResult Validate(
-      std::string_view variable_name,
-      Ref<const moriarty_internal::VariableSet> variables,
-      Ref<const moriarty_internal::ValueSet> values) const override;
+  ValidationResult Validate(std::string_view variable_name,
+                            Ref<const moriarty_internal::VariableSet> variables,
+                            Ref<const moriarty_internal::ValueSet> values,
+                            const ConstraintOptions& options) const override;
   std::vector<std::unique_ptr<AbstractVariable>> ListAnonymousEdgeCases(
       std::string_view variable_name,
       Ref<const moriarty_internal::VariableSet> variables,
@@ -669,9 +670,10 @@ template <typename V>
 std::optional<int64_t> MVariable<V>::UniqueInteger(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
-    Ref<const moriarty_internal::ValueSet> values) const {
+    Ref<const moriarty_internal::ValueSet> values,
+    const ConstraintOptions& options) const {
   if constexpr (std::same_as<value_type, int64_t>) {
-    AnalyzeVariableContext ctx(variable_name, variables, values);
+    AnalyzeVariableContext ctx(variable_name, variables, values, options);
     if (ctx.ValueIsKnown(ctx.GetLocalVariableName())) {
       return ctx.GetValue<V>(ctx.GetLocalVariableName());
     }
@@ -722,8 +724,9 @@ template <typename V>
 ValidationResult MVariable<V>::Validate(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
-    Ref<const moriarty_internal::ValueSet> values) const {
-  ConstraintContext ctx(variable_name, variables, values);
+    Ref<const moriarty_internal::ValueSet> values,
+    const ConstraintOptions& options) const {
+  ConstraintContext ctx(variable_name, variables, values, options);
   return Validate(ctx, ctx.GetValue<V>(ctx.GetLocalVariableName()));
 }
 
@@ -733,7 +736,8 @@ MVariable<V>::ListAnonymousEdgeCases(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values) const {
-  AnalyzeVariableContext ctx(variable_name, variables, values);
+  AnalyzeVariableContext ctx(variable_name, variables, values,
+                             AnalysisConstraintOptions());
   std::vector<V> instances = ListEdgeCases(ctx);
   std::vector<std::unique_ptr<moriarty_internal::AbstractVariable>> new_vec;
   new_vec.reserve(instances.size());

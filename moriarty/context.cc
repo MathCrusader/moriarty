@@ -34,14 +34,14 @@ GenerateContext::GenerateContext(
     Ref<const moriarty_internal::ValueSet> values,
     Ref<moriarty_internal::RandomEngine> rng,
     Ref<const std::unordered_map<std::string, std::string>> args)
-    : ViewOnlyContext(variables, values),
+    : ViewOnlyContext(variables, values, GenerationConstraintOptions()),
       BasicRandomContext(rng),
       VariableRandomContext(variables, values, rng),
       ArgContext(args) {}
 
 ReadContext::ReadContext(Ref<const moriarty_internal::VariableSet> variables,
                          Ref<InputCursor> input)
-    : ViewOnlyContext(variables, values_),
+    : ViewOnlyContext(variables, values_, input.get().GetConstraintOptions()),
       BasicIStreamContext(input),
       VariableIStreamContext(input, variables, values_) {}
 
@@ -49,7 +49,8 @@ ReadContext::ReadContext(Ref<const moriarty_internal::VariableSet> variables,
 ReadContext::ReadContext(Ref<const moriarty_internal::VariableSet> variables,
                          Ref<const moriarty_internal::ValueSet> external_values,
                          Ref<InputCursor> input)
-    : ViewOnlyContext(variables, external_values),
+    : ViewOnlyContext(variables, external_values,
+                      input.get().GetConstraintOptions()),
       BasicIStreamContext(input),
       VariableIStreamContext(input, variables, external_values),
       values_(external_values) {
@@ -60,7 +61,7 @@ TestCase ReadContext::ExternalKnownValues() const { return TestCase(values_); }
 WriteContext::WriteContext(Ref<std::ostream> os,
                            Ref<const moriarty_internal::VariableSet> variables,
                            Ref<const moriarty_internal::ValueSet> values)
-    : ViewOnlyContext(variables, values),
+    : ViewOnlyContext(variables, values, WritingConstraintOptions()),
       BasicOStreamContext(os),
       VariableOStreamContext(os, variables, values) {}
 
@@ -74,8 +75,9 @@ WriteContext::WriteContext(WriteContext ctx, Ref<std::ostream> os)
 ConstraintContext::ConstraintContext(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
-    Ref<const moriarty_internal::ValueSet> values)
-    : NameContext(variable_name), ViewOnlyContext(variables, values) {}
+    Ref<const moriarty_internal::ValueSet> values,
+    const ConstraintOptions& options)
+    : NameContext(variable_name), ViewOnlyContext(variables, values, options) {}
 
 ConstraintContext::ConstraintContext(const ConstraintContext& other,
                                      NameContext new_name)
@@ -96,7 +98,7 @@ ConstraintContext ConstraintContext::ForIndexedSubVariable(
 AnalyzeContext::AnalyzeContext(
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values)
-    : ViewOnlyContext(variables, values) {}
+    : ViewOnlyContext(variables, values, AnalysisConstraintOptions()) {}
 
 void ValidationResults::AddFailure(int case_num, std::string reason) {
   failures_.emplace_back(case_num, std::move(reason));

@@ -35,6 +35,7 @@ cc_library(
         "//moriarty/constraints:constraint_violation",
         "//moriarty/librarian:dependencies",
         "//moriarty/librarian:io_config",
+        "//moriarty/librarian:policies",
         "//moriarty/librarian/util:ref",
     ],
 )

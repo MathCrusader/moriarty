@@ -35,8 +35,8 @@ using ::moriarty_testing::TestType;
 
 TEST(AnalysisBootstrapTest, ValidateValuesSucceedsWithNoVariables) {
   Context context;
-  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(), {},
-                             ValidationStyle::kAllVariables),
+  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(),
+                             {.validation = ValidationStyle::kAllVariables}),
               HasNoInvalidConstraints());
 }
 
@@ -49,8 +49,8 @@ TEST(AnalysisBootstrapTest, ValidateValuesSucceedsInNormalCase) {
                         .WithValue<MTestType>("A", options[4])
                         .WithValue<MTestType>("B", options[53]);
 
-  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(), {},
-                             ValidationStyle::kAllVariables),
+  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(),
+                             {.validation = ValidationStyle::kAllVariables}),
               HasNoInvalidConstraints());
 }
 
@@ -65,11 +65,12 @@ TEST(AnalysisBootstrapTest, ValidateValuesFailIfAtLeastOneValueFails) {
           .WithValue<MTestType>("A", options[4])
           .WithValue<MTestType>("B", TestType(100000));  // Not in the list!
 
-  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(), {},
-                             ValidationStyle::kAllVariables),
+  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(),
+                             {.validation = ValidationStyle::kAllVariables}),
               HasInvalidConstraints(std::vector{"B"}));
-  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(), {{"A"}},
-                             ValidationStyle::kAllVariables),
+  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(),
+                             {.validation = ValidationStyle::kAllVariables,
+                              .variables_to_validate = {{"A"}}}),
               HasNoInvalidConstraints());
 }
 
@@ -81,20 +82,21 @@ TEST(AnalysisBootstrapTest, ValidateValuesFailIfAnyValueIsMissing) {
                         .WithVariable("B", MTestType(OneOf(options)))
                         .WithValue<MTestType>("A", options[4]);
 
-  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(), {},
-                             ValidationStyle::kAllVariables),
+  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(),
+                             {.validation = ValidationStyle::kAllVariables}),
               HasInvalidConstraints(std::vector{"B"}));
-  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(), {},
-                             ValidationStyle::kEverything),
+  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(),
+                             {.validation = ValidationStyle::kEverything}),
               HasInvalidConstraints(std::vector{"B"}));
-  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(), {},
-                             ValidationStyle::kOnlySetValues),
+  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(),
+                             {.validation = ValidationStyle::kOnlySetValues}),
               HasNoInvalidConstraints());
-  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(), {},
-                             ValidationStyle::kOnlySetVariables),
-              HasNoInvalidConstraints());
-  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(), {},
-                             ValidationStyle::kNone),
+  EXPECT_THAT(
+      ValidateValues(context.Variables(), context.Values(),
+                     {.validation = ValidationStyle::kOnlySetVariables}),
+      HasNoInvalidConstraints());
+  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(),
+                             {.validation = ValidationStyle::kNone}),
               HasNoInvalidConstraints());
 }
 
@@ -108,8 +110,8 @@ TEST(AnalysisBootstrapTest, ValidateValuesSucceedsIfThereAreExtraValues) {
                         .WithValue<MTestType>("B", options[40])
                         .WithValue<MTestType>("C", options[50]);
 
-  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(), {},
-                             ValidationStyle::kAllVariables),
+  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(),
+                             {.validation = ValidationStyle::kAllVariables}),
               HasNoInvalidConstraints());
 }
 
@@ -121,8 +123,8 @@ TEST(AnalysisBootstrapTest, ValidateValuesWorksForDependentVariables) {
           .WithValue<MTestType>("B", 27)
           .WithValue<MInteger>("N", 6);
 
-  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(), {},
-                             ValidationStyle::kAllVariables),
+  EXPECT_THAT(ValidateValues(context.Variables(), context.Values(),
+                             {.validation = ValidationStyle::kAllVariables}),
               HasNoInvalidConstraints());
 }
 

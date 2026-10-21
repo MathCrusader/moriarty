@@ -26,6 +26,7 @@
 #include "moriarty/internal/value_set.h"
 #include "moriarty/internal/variable_set.h"
 #include "moriarty/librarian/io_config.h"
+#include "moriarty/librarian/policies.h"
 #include "moriarty/librarian/util/ref.h"
 
 namespace moriarty {
@@ -37,8 +38,9 @@ namespace librarian {
 AnalyzeVariableContext::AnalyzeVariableContext(
     std::string_view variable_name,
     Ref<const moriarty_internal::VariableSet> variables,
-    Ref<const moriarty_internal::ValueSet> values)
-    : NameContext(variable_name), ViewOnlyContext(variables, values) {}
+    Ref<const moriarty_internal::ValueSet> values,
+    const ConstraintOptions& options)
+    : NameContext(variable_name), ViewOnlyContext(variables, values, options) {}
 
 AnalyzeVariableContext::AnalyzeVariableContext(
     const AnalyzeVariableContext& other, NameContext name)
@@ -64,7 +66,7 @@ AssignVariableContext::AssignVariableContext(
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<moriarty_internal::ValueSet> values)
     : NameContext(variable_name),
-      ViewOnlyContext(variables, values),
+      ViewOnlyContext(variables, values, GenerationConstraintOptions()),
       MutableValuesContext(values) {}
 
 AssignVariableContext::AssignVariableContext(
@@ -93,7 +95,7 @@ WriteVariableContext::WriteVariableContext(
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values)
     : NameContext(variable_name),
-      ViewOnlyContext(variables, values),
+      ViewOnlyContext(variables, values, WritingConstraintOptions()),
       BasicOStreamContext(os) {}
 
 WriteVariableContext::WriteVariableContext(
@@ -122,7 +124,7 @@ ReadVariableContext::ReadVariableContext(
     Ref<const moriarty_internal::VariableSet> variables,
     Ref<const moriarty_internal::ValueSet> values)
     : NameContext(variable_name),
-      ViewOnlyContext(variables, values),
+      ViewOnlyContext(variables, values, input.get().GetConstraintOptions()),
       BasicIStreamContext(input) {}
 
 ReadVariableContext::ReadVariableContext(const ReadVariableContext& other,
@@ -153,7 +155,7 @@ GenerateVariableContext::GenerateVariableContext(
     Ref<moriarty_internal::RandomEngine> engine,
     Ref<moriarty_internal::GenerationHandler> handler)
     : NameContext(variable_name),
-      ViewOnlyContext(variables, values),
+      ViewOnlyContext(variables, values, GenerationConstraintOptions()),
       MutableValuesContext(values),
       ResolveValuesContext(variables, values, engine, handler),
       BasicRandomContext(engine),

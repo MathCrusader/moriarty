@@ -105,6 +105,7 @@ cc_library(
 
 cc_library(
     name = "policies",
+    srcs = ["policies.cc"],
     hdrs = ["policies.h"],
 )
 

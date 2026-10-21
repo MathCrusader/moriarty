@@ -49,12 +49,13 @@ struct InputCursor {
   // Creates an InputCursor with the most flexible settings.
   static InputCursor CreateFlexibleStrictness(Ref<std::istream> is);
 
-  InputCursor(Ref<std::istream> is,
+  InputCursor(Ref<std::istream> is, const ConstraintOptions& options,
               WhitespaceStrictness whitespace = WhitespaceStrictness::kPrecise,
               NumericStrictness numeric = NumericStrictness::kPrecise);
 
   [[nodiscard]] WhitespaceStrictness GetWhitespaceStrictness() const;
   [[nodiscard]] NumericStrictness GetNumericStrictness() const;
+  [[nodiscard]] const ConstraintOptions& GetConstraintOptions() const;
 
   [[nodiscard]] std::string ReadToken();
   [[nodiscard]] std::optional<std::string> PeekToken();
@@ -101,6 +102,7 @@ struct InputCursor {
   void StripLeadingWhitespace();
   std::pair<std::string, bool> ReadLookAhead(int max_chars) const;
 
+  ConstraintOptions constraint_options_;
   WhitespaceStrictness whitespace_strictness_ = WhitespaceStrictness::kPrecise;
   NumericStrictness numeric_strictness_ = NumericStrictness::kPrecise;
   CursorMetadata cursor_metadata_;

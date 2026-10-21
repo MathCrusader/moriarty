@@ -56,7 +56,7 @@ TEST(ContainerConstraintsTest, LengthToStringWorks) {
 TEST(ContainerConstraintsTest, LengthUnsatisfiedReasonWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  ConstraintContext ctx("N", variables, values);
+  ConstraintContext ctx("N", variables, values, {});
 
   EXPECT_THAT(
       Length(Between(1, 10)).Validate(ctx, std::string("this string is long")),
@@ -68,7 +68,7 @@ TEST(ContainerConstraintsTest, LengthUnsatisfiedReasonWorks) {
 TEST(ContainerConstraintsTest, LengthIsSatisfiedWithWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  ConstraintContext ctx("N", variables, values);
+  ConstraintContext ctx("N", variables, values, {});
 
   EXPECT_THAT(Length(Between(1, 10)).Validate(ctx, std::string("123456")),
               HasNoViolation());
@@ -106,7 +106,7 @@ TEST(ContainerConstraintsTest, ElementsToStringWorks) {
 TEST(ContainerConstraintsTest, ElementsUnsatisfiedReasonWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  ConstraintContext ctx("N", variables, values);
+  ConstraintContext ctx("N", variables, values, {});
 
   EXPECT_THAT(
       StronglyTypedElements<MInteger>(Between(1, 10)).Validate(ctx, {-1, 2, 3}),
@@ -121,7 +121,7 @@ TEST(ContainerConstraintsTest, ElementsIsSatisfiedWithWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   values.Set<MInteger>("X", 10);
-  ConstraintContext ctx("N", variables, values);
+  ConstraintContext ctx("N", variables, values, {});
 
   {
     EXPECT_THAT(StronglyTypedElements<MString>(Length(Between(1, 10)))
@@ -180,7 +180,7 @@ TEST(ContainerConstraintsTest, ElementToStringWorks) {
 TEST(ContainerConstraintsTest, ElementUnsatisfiedReasonWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  ConstraintContext ctx("N", variables, values);
+  ConstraintContext ctx("N", variables, values, {});
 
   EXPECT_THAT((Element<0, MInteger>(Between(1, 10)).Validate(ctx, -1)),
               HasViolation("too small"));
@@ -193,7 +193,7 @@ TEST(ContainerConstraintsTest, ElementIsSatisfiedWithWorks) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
   values.Set<MInteger>("X", 10);
-  ConstraintContext ctx("N", variables, values);
+  ConstraintContext ctx("N", variables, values, {});
 
   {
     EXPECT_THAT(
@@ -222,7 +222,7 @@ TEST(ContainerConstraintsTest, DistinctElementsToStringWorks) {
 
 TEST(ContainerConstraintsTest, DistinctElementsUnsatisfiedReasonWorks) {
   Context context;
-  ConstraintContext ctx("N", context.Variables(), context.Values());
+  ConstraintContext ctx("N", context.Variables(), context.Values(), {});
   EXPECT_THAT(DistinctElements().Validate(ctx, std::vector{11, 22, 11}),
               HasViolation(AllOf(HasSubstr("indices 0 and 2"),
                                  HasSubstr("distinct elements"))));
@@ -238,7 +238,7 @@ TEST(ContainerConstraintsTest, DistinctElementsUnsatisfiedReasonWorks) {
 
 TEST(ContainerConstraintsTest, DistinctElementsIsSatisfiedWithWorks) {
   Context context;
-  ConstraintContext ctx("N", context.Variables(), context.Values());
+  ConstraintContext ctx("N", context.Variables(), context.Values(), {});
   {
     EXPECT_THAT(DistinctElements().Validate(ctx, std::vector<std::string>{}),
                 HasNoViolation());
@@ -260,7 +260,7 @@ TEST(ContainerConstraintsTest, DistinctElementsIsSatisfiedWithWorks) {
 
 TEST(ContainerConstraintsTest, SortedWorks) {
   Context context;
-  ConstraintContext ctx("N", context.Variables(), context.Values());
+  ConstraintContext ctx("N", context.Variables(), context.Values(), {});
   {
     EXPECT_THAT(Sorted<MString>().Validate(ctx, std::vector<std::string>{}),
                 HasNoViolation());

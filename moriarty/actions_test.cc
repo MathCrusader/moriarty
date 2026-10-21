@@ -351,6 +351,23 @@ TEST(ValidateOutputTest, OutputShouldHaveAccessToInputVariables) {
   }
 }
 
+TEST(ValidateOutputTest, InputConstraintsAreNotCheckedAgainAfterReadingOutput) {
+  Problem p(Variables(Var("N", MInteger().AddCustomConstraint(
+                                   "checked before output is available", {},
+                                   [](ConstraintContext ctx, const int64_t&) {
+                                     return !ctx.ValueIsKnown("X");
+                                   })),
+                      Var("X", MInteger(Between(1, "N")))),
+            InputFormat(Line("N")), OutputFormat(Line("X")));
+
+  std::istringstream input("5\n");
+  std::istringstream output("3\n");
+  EXPECT_NO_THROW(ValidateOutput(p)
+                      .ReadInputUsing({.istream = input})
+                      .ReadOutputUsing({.istream = output})
+                      .Run());
+}
+
 // -----------------------------------------------------------------------------
 
 TEST(GenerateTest, MissingSeedShouldThrow) {

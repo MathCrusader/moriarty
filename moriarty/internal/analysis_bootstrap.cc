@@ -47,18 +47,18 @@ bool ShouldValidateVariable(ValidationStyle validation,
 
 std::vector<DetailedValidationResult> ValidateValues(
     const VariableSet& variables, const ValueSet& values,
-    std::span<const std::string> variables_to_validate,
-    ValidationStyle validation) {
-  if (validation == ValidationStyle::kNone) return {};
+    const ValidateOptions& options) {
+  if (options.validation == ValidationStyle::kNone) return {};
 
   std::vector<DetailedValidationResult> violations;
   for (const auto& [name, var] : variables.ListVariables()) {
-    if (!ShouldValidateVariable(validation, variables_to_validate, name))
+    if (!ShouldValidateVariable(options.validation,
+                                options.variables_to_validate, name))
       continue;
 
     if (!values.Contains(name)) {
-      if (validation == ValidationStyle::kAllVariables ||
-          validation == ValidationStyle::kEverything) {
+      if (options.validation == ValidationStyle::kAllVariables ||
+          options.validation == ValidationStyle::kEverything) {
         violations.push_back(
             {name,
              ValidationResult::Violation(
@@ -66,16 +66,19 @@ std::vector<DetailedValidationResult> ValidateValues(
       }
       continue;
     }
-    if (auto v = var->Validate(name, variables, values); !v.IsOk()) {
+    if (auto v =
+            var->Validate(name, variables, values, options.constraint_options);
+        !v.IsOk()) {
       violations.push_back({name, std::move(v)});
     }
   }
 
-  if (validation == ValidationStyle::kOnlySetValues ||
-      validation == ValidationStyle::kEverything) {
+  if (options.validation == ValidationStyle::kOnlySetValues ||
+      options.validation == ValidationStyle::kEverything) {
     for (const auto& name : values.ListValues()) {
       if (variables.Contains(name)) continue;  // Handled above
-      if (!ShouldValidateVariable(validation, variables_to_validate, name))
+      if (!ShouldValidateVariable(options.validation,
+                                  options.variables_to_validate, name))
         continue;
 
       violations.push_back(

@@ -34,7 +34,7 @@ using ::testing::UnorderedElementsAre;
 TEST(IntegerConstraintsTest, ModValidate) {
   auto context = Context().WithValue<MInteger>("X", 7);
 
-  ConstraintContext ctx("N", context.Variables(), context.Values());
+  ConstraintContext ctx("N", context.Variables(), context.Values(), {});
 
   EXPECT_THAT(Mod(1, 10).Validate(ctx, 11), HasNoViolation());
   EXPECT_THAT(Mod(0, 10).Validate(ctx, 110), HasNoViolation());

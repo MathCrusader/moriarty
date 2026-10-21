@@ -48,7 +48,8 @@ class AnalyzeVariableContext : public moriarty_internal::NameContext,
  public:
   AnalyzeVariableContext(std::string_view variable_name,
                          Ref<const moriarty_internal::VariableSet> variables,
-                         Ref<const moriarty_internal::ValueSet> values);
+                         Ref<const moriarty_internal::ValueSet> values,
+                         const ConstraintOptions& options);
   AnalyzeVariableContext(const AnalyzeVariableContext& other,
                          NameContext new_name);
   template <typename T>

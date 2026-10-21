@@ -58,7 +58,7 @@ struct Positive {
 TEST(ConstraintHandlerTest, EmptyHandlerShouldBeSatisfiedWithEverything) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  ConstraintContext ctx("X", variables, values);
+  ConstraintContext ctx("X", variables, values, {});
 
   {
     ConstraintHandler<MInteger, int> handler;
@@ -94,7 +94,7 @@ TEST(ConstraintHandlerTest, ToStringShouldWork) {
 TEST(ConstraintHandlerTest, ValidateShouldContainRelevantMessages) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  ConstraintContext ctx("X", variables, values);
+  ConstraintContext ctx("X", variables, values, {});
 
   ConstraintHandler<MInteger, int> handler;
   handler.AddConstraint(Even());
@@ -114,7 +114,7 @@ TEST(ConstraintHandlerTest, ValidateShouldContainRelevantMessages) {
 TEST(ConstraintHandlerTest, ValidateShouldReturnIfAnyFail) {
   moriarty_internal::VariableSet variables;
   moriarty_internal::ValueSet values;
-  ConstraintContext ctx("X", variables, values);
+  ConstraintContext ctx("X", variables, values, {});
 
   ConstraintHandler<MInteger, int> handler;
   handler.AddConstraint(Even());

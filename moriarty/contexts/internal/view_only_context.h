@@ -24,6 +24,7 @@
 #include "moriarty/internal/range.h"
 #include "moriarty/internal/value_set.h"
 #include "moriarty/internal/variable_set.h"
+#include "moriarty/librarian/policies.h"
 #include "moriarty/librarian/util/ref.h"
 
 namespace moriarty {
@@ -37,7 +38,8 @@ namespace moriarty_internal {
 class ViewOnlyContext {
  public:
   explicit ViewOnlyContext(Ref<const VariableSet> variables,
-                           Ref<const ValueSet> values);
+                           Ref<const ValueSet> values,
+                           const ConstraintOptions& options);
 
   // GetVariable()
   //
@@ -102,6 +104,11 @@ class ViewOnlyContext {
   [[nodiscard]] bool IsSatisfiedWith(T variable,
                                      const T::value_type& value) const;
 
+  // GetConstraintOptions()
+  //
+  // Returns the configuration used when validating constraints.
+  [[nodiscard]] const ConstraintOptions& GetConstraintOptions() const;
+
   // ListVariables()
   //
   // Returns all variables in the context. Prefer to not use this function. It
@@ -141,6 +148,7 @@ class ViewOnlyContext {
  private:
   Ref<const VariableSet> variables_;
   Ref<const ValueSet> values_;
+  ConstraintOptions constraint_options_;
 };
 
 template <MoriartyVariable T>
@@ -169,13 +177,16 @@ std::optional<typename T::value_type> ViewOnlyContext::GetUniqueValue(
     return *stored_value;
 
   T variable = GetVariable<T>(variable_name);
-  return variable.GetUniqueValue({variable_name, variables_, values_});
+  return variable.GetUniqueValue(
+      {variable_name, variables_, values_, constraint_options_});
 }
 
 template <MoriartyVariable T>
 bool ViewOnlyContext::IsSatisfiedWith(T variable,
                                       const T::value_type& value) const {
-  return variable.Validate({"IsSatisfiedWith()", variables_, values_}, value)
+  return variable
+      .Validate({"IsSatisfiedWith()", variables_, values_, constraint_options_},
+                value)
       .IsOk();
 }
 

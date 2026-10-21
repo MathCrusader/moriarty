@@ -84,7 +84,7 @@ TEST(AlphabetTest, BasicConstructorShouldReturnExactAlphabet) {
 
 TEST(AlphabetTest, IsSatisfiedWithShouldWork) {
   Context context;
-  ConstraintContext ctx("test", context.Variables(), context.Values());
+  ConstraintContext ctx("test", context.Variables(), context.Values(), {});
 
   EXPECT_THAT(Alphabet("abc").Validate(ctx, "a"), HasNoViolation());
   EXPECT_THAT(Alphabet("abc").Validate(ctx, "A"),
@@ -165,7 +165,7 @@ TEST(AlphabetTest, ToStringShouldWork) {
 
 TEST(DistinctCharactersTest, IsSatisfiedWithShouldWork) {
   Context context;
-  ConstraintContext ctx("test", context.Variables(), context.Values());
+  ConstraintContext ctx("test", context.Variables(), context.Values(), {});
 
   EXPECT_THAT(DistinctCharacters().Validate(ctx, ""), HasNoViolation());
   EXPECT_THAT(DistinctCharacters().Validate(ctx, "a"), HasNoViolation());
@@ -188,7 +188,7 @@ TEST(SimplePatternTest, IsSatisfiedWithShouldWork) {
   // See moriarty_internal::SimplePattern class for a more exhaustive set of
   // tests.
   Context context;
-  ConstraintContext ctx("test", context.Variables(), context.Values());
+  ConstraintContext ctx("test", context.Variables(), context.Values(), {});
   {
     EXPECT_THAT(SimplePattern("[a-z]*").Validate(ctx, ""), HasNoViolation());
     EXPECT_THAT(SimplePattern("[a-z]*").Validate(ctx, "a"), HasNoViolation());
@@ -225,7 +225,7 @@ TEST(SimplePatternTest, IsSatisfiedWithIncludingVariablesShouldWork) {
   // tests.
   Context context =
       Context().WithValue<MInteger>("N", 2).WithValue<MInteger>("X", 7);
-  ConstraintContext ctx("test", context.Variables(), context.Values());
+  ConstraintContext ctx("test", context.Variables(), context.Values(), {});
   EXPECT_THAT(SimplePattern("[a-z]{N, X}").Validate(ctx, "asdf"),
               HasNoViolation());
   EXPECT_THAT(SimplePattern("[a-z]{2 * N}").Validate(ctx, "asdf"),

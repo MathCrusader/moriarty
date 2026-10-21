@@ -36,7 +36,7 @@ TEST(CustomConstraintTest, BasicGettersWork) {
   {  // No dependent variables
     moriarty_internal::VariableSet variables;
     moriarty_internal::ValueSet values;
-    ConstraintContext ctx("X", variables, values);
+    ConstraintContext ctx("X", variables, values, {});
 
     CustomConstraint<MInteger> constraint("positive",
                                           [](int64_t x) { return x > 0; });
@@ -51,7 +51,7 @@ TEST(CustomConstraintTest, BasicGettersWork) {
     moriarty_internal::VariableSet variables;
     moriarty_internal::ValueSet values;
     values.Set<MInteger>("N", 10);
-    ConstraintContext ctx("X", variables, values);
+    ConstraintContext ctx("X", variables, values, {});
 
     CustomConstraint<MInteger> constraint("bigger_than_N", Dependencies({"N"}),
                                           [](ConstraintContext ctx, int64_t x) {
@@ -72,7 +72,7 @@ TEST(CustomConstraintTest, ValidateShouldWork) {
   {  // No dependent variables
     moriarty_internal::VariableSet variables;
     moriarty_internal::ValueSet values;
-    ConstraintContext ctx("X", variables, values);
+    ConstraintContext ctx("X", variables, values, {});
 
     CustomConstraint<MInteger> constraint("positive",
                                           [](int64_t x) { return x > 0; });
@@ -86,7 +86,7 @@ TEST(CustomConstraintTest, ValidateShouldWork) {
     moriarty_internal::VariableSet variables;
     moriarty_internal::ValueSet values;
     values.Set<MInteger>("N", 10);
-    ConstraintContext ctx("X", variables, values);
+    ConstraintContext ctx("X", variables, values, {});
 
     CustomConstraint<MInteger> constraint("bigger_than_N", Dependencies({"N"}),
                                           [](ConstraintContext ctx, int64_t x) {

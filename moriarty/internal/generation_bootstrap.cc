@@ -136,7 +136,9 @@ ValueSet GenerateAllValues(VariableSet variables, ValueSet known_values,
   for (std::string_view name : order) {
     if (!should_generate(name)) continue;
     AbstractVariable* var = variables.GetAnonymousVariable(name);
-    if (auto v = var->Validate(name, variables, known_values); !v.IsOk()) {
+    if (auto v = var->Validate(name, variables, known_values,
+                               GenerationConstraintOptions());
+        !v.IsOk()) {
       throw GenerationError(name, v.PrettyReason(), RetryPolicy::kAbort);
     }
   }

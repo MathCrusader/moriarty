@@ -108,6 +108,7 @@ cc_library(
         "//moriarty/internal:random_engine",
         "//moriarty/internal:value_set",
         "//moriarty/internal:variable_set",
+        "//moriarty/librarian:policies",
         "//moriarty/librarian/util:ref",
     ],
 )
@@ -165,6 +166,7 @@ cc_library(
         "//moriarty/internal:value_set",
         "//moriarty/internal:variable_set",
         "//moriarty/librarian:errors",
+        "//moriarty/librarian:policies",
         "//moriarty/librarian/util:ref",
     ],
 )

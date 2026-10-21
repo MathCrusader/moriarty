@@ -30,17 +30,27 @@ namespace moriarty_internal {
 
 // ValidateValues()
 //
-// Returns all variables that do not satisfy their constraints. If all variables
-// satisfy their constraints, returns an empty map.
+// Checks that stored values satisfy the constraints of their corresponding
+// variables. Returns a list of all problems found, or an empty vector if there
+// are none.
 //
-// If a variable does not have a value, this will return not ok.
-// If a value does not have a variable, this will return ok.
+// `options.validation` determines what to check:
+// * kNone             : skips all checks.
+// * kOnlySetVariables : checks variables that have a stored value.
+// * kOnlySetValues    : also reports stored values with no corresponding
+//                       variable.
+// * kAllVariables     : checks every variable and reports any missing values.
+// * kEverything       : checks every variable and reports both missing values
+//                       and stored values with no corresponding variable.
 //
-// If variables_to_validate is non-empty, only those variables will be checked.
+// To check only specific names, list them in `options.variables_to_validate`.
+// An empty list does not restrict which names are checked. kEverything always
+// checks all names, ignoring this list.
+//
+// `options.constraint_options` controls how each constraint is evaluated.
 [[nodiscard]] std::vector<DetailedValidationResult> ValidateValues(
     const VariableSet& variables, const ValueSet& values,
-    std::span<const std::string> variables_to_validate,
-    ValidationStyle validation);
+    const ValidateOptions& options);
 
 }  // namespace moriarty_internal
 }  // namespace moriarty

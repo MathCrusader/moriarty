@@ -297,7 +297,7 @@ TEST(MVariableTest, IsSatisfiedWithWorksForValid) {
 TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
   {  // No value or variable known
     Context context;
-    ConstraintContext ctx("test", context.Variables(), context.Values());
+    ConstraintContext ctx("test", context.Variables(), context.Values(), {});
 
     EXPECT_THAT(
         [&] {
@@ -308,7 +308,7 @@ TEST(MVariableTest, IsSatisfiedWithNeedsDependentValues) {
   }
   {  // Variable known, but no value known.
     Context context = Context().WithVariable("t", MInteger());
-    ConstraintContext ctx("test", context.Variables(), context.Values());
+    ConstraintContext ctx("test", context.Variables(), context.Values(), {});
 
     EXPECT_THAT(
         [&] {
@@ -451,7 +451,7 @@ TEST(MVariableTest,
 TEST(MVariableTest, ListEdgeCasesReturnsMVariablesThatCanBeGenerated) {
   VariableSet variables;
   ValueSet values;
-  AnalyzeVariableContext ctx("test", variables, values);
+  AnalyzeVariableContext ctx("test", variables, values, {});
   EXPECT_THAT(MTestType().ListEdgeCases(ctx),
               ElementsAre(GeneratedValuesAre(2), GeneratedValuesAre(3)));
 }

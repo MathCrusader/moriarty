@@ -14,10 +14,13 @@
 
 #include "moriarty/actions.h"
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <memory>
+#include <span>
+#include <string>
 #include <vector>
 
 #include "moriarty/context.h"
@@ -77,17 +80,31 @@ struct GeneratedCase {
 template <typename T>
 void ValidateTestCases(
     const Problem& problem, const std::vector<T>& test_cases,
+    const ConstraintOptions& options,
+    std::span<const std::string> already_validated,
     std::function<const TestCase&(const T&)> get_test_case =
         [](const T& item) -> const TestCase& { return item; }) {
   if (test_cases.empty()) {
     throw ValidationError("ValidateTestCases", "No Test Cases.");
   }
 
+  ValidateOptions validation_options{
+      .validation = ValidationStyle::kOnlySetVariables,
+      .constraint_options = options};
+  for (const auto& [name, variable] :
+       problem.UnsafeGetVariables().ListVariables()) {
+    if (std::ranges::find(already_validated, name) == already_validated.end())
+      validation_options.variables_to_validate.push_back(name);
+  }
+  // Nothing remains to validate. Passing an empty list to ValidateValues
+  // would incorrectly revalidate every variable.
+  if (validation_options.variables_to_validate.empty()) return;
+
   for (int case_num = 1; const auto& item : test_cases) {
     std::vector<DetailedValidationResult> failures =
-        moriarty_internal::ValidateValues(
-            problem.UnsafeGetVariables(), get_test_case(item).UnsafeGetValues(),
-            {}, ValidationStyle::kOnlySetVariables);
+        moriarty_internal::ValidateValues(problem.UnsafeGetVariables(),
+                                          get_test_case(item).UnsafeGetValues(),
+                                          validation_options);
     if (!failures.empty()) {
       if (test_cases.size() == 1) {
         throw ValidationError(FailuresToString(failures));
@@ -115,6 +132,7 @@ void ValidateInputBuilder::Run() const {
   // }
 
   InputCursor cursor(input_options_->istream,
+                     input_options_->constraint_options,
                      input_options_->whitespace_strictness);
   ReadContext ctx(problem_.UnsafeGetVariables(), cursor);
 
@@ -129,7 +147,7 @@ void ValidateInputBuilder::Run() const {
   if (test_cases.empty())
     throw ConfigurationError("ValidateInput::Run", "No Test Cases.");
 
-  ValidateTestCases(problem_, test_cases);
+  ValidateTestCases(problem_, test_cases, input_options_->constraint_options, {});
 }
 
 ValidateOutputBuilder::ValidateOutputBuilder(Problem problem)
@@ -175,13 +193,14 @@ void ValidateOutputBuilder::Run() const {
   }
 
   InputCursor input_cursor(input_options_->istream,
+                           input_options_->constraint_options,
                            input_options_->whitespace_strictness);
   ReadContext ctx(problem_.UnsafeGetVariables(), input_cursor);
 
   std::vector<TestCase> test_cases = ReadTestCases(*input_reader, ctx);
   if (test_cases.empty())
     throw ConfigurationError("ValidateOutput::Run", "No Test Cases.");
-  ValidateTestCases(problem_, test_cases);
+  ValidateTestCases(problem_, test_cases, input_options_->constraint_options, {});
 
   if (test_cases.size() != 1) {
     throw ConfigurationError(
@@ -190,12 +209,17 @@ void ValidateOutputBuilder::Run() const {
   }
 
   InputCursor output_cursor(output_options_->istream,
+                            output_options_->constraint_options,
                             output_options_->whitespace_strictness);
   ReadContext output_ctx(problem_.UnsafeGetVariables(),
                          test_cases[0].UnsafeGetValues(), output_cursor);
   std::vector<TestCase> output_answers =
       ReadTestCases(*output_reader, output_ctx);
-  ValidateTestCases(problem_, output_answers);
+  // TODO: Check that the output reader did not overwrite any input variables.
+  // We skip validating them below because we assume their values are unchanged.
+  ValidateTestCases(problem_, output_answers,
+                    output_options_->constraint_options,
+                    test_cases[0].UnsafeGetValues().ListValues());
 }
 
 GenerateBuilder Generate(Problem problem) {
@@ -391,7 +415,7 @@ std::vector<TestCase> GenerateBuilder::Run() const {
   // TODO: Validate after the file split occurs once we allow multiple test
   // cases per file.
   ValidateTestCases<GeneratedCase>(
-      problem_, all_test_cases,
+      problem_, all_test_cases, GenerationConstraintOptions(), {},
       [](const GeneratedCase& item) -> const TestCase& {
         return item.test_case;
       });
@@ -459,7 +483,7 @@ void AnalyzeBuilder::Run() const {
                              "analyzers.");
   }
 
-  InputCursor cursor(input_reader_->istream,
+  InputCursor cursor(input_reader_->istream, input_reader_->constraint_options,
                      input_reader_->whitespace_strictness);
   ReadContext ctx(problem_.UnsafeGetVariables(), cursor);
 
@@ -478,6 +502,7 @@ void AnalyzeBuilder::Run() const {
 
   if (output_reader_) {
     InputCursor cursor(output_reader_->istream,
+                       output_reader_->constraint_options,
                        output_reader_->whitespace_strictness);
     ReadContext ctx(problem_.UnsafeGetVariables(), cursor);
 
