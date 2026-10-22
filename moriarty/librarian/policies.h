@@ -45,8 +45,14 @@ enum class NumericStrictness {
   kFlexible
 };
 
+// How ASCII letters are normalized. Other bytes are left unchanged.
+enum class CaseNormalization { kNone, kLowercase, kUppercase };
+
 // Controls how constraints are evaluated.
-struct ConstraintOptions {};
+struct ConstraintOptions {
+  // How letters are normalized before evaluating constraints.
+  CaseNormalization case_normalization = CaseNormalization::kNone;
+};
 
 // Returns constraint options for generation and assignment operations.
 [[nodiscard]] ConstraintOptions GenerationConstraintOptions();

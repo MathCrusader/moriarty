@@ -27,6 +27,13 @@ package(
 licenses(["notice"])
 
 cc_library(
+    name = "case_normalization",
+    srcs = ["case_normalization.cc"],
+    hdrs = ["case_normalization.h"],
+    deps = [":policies"],
+)
+
+cc_library(
     name = "constraint_handler",
     hdrs = ["constraint_handler.h"],
     deps = [
@@ -116,6 +123,17 @@ cc_library(
     deps = [
         "//moriarty/internal:range",
         "@abseil-cpp//absl/log:absl_check",
+    ],
+)
+
+cc_test(
+    name = "case_normalization_test",
+    srcs = ["case_normalization_test.cc"],
+    deps = [
+        ":case_normalization",
+        ":policies",
+        "//moriarty/types:graph",
+        "@googletest//:gtest_main",
     ],
 )
 

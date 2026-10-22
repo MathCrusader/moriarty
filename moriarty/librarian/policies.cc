@@ -16,10 +16,16 @@
 
 namespace moriarty {
 
-ConstraintOptions GenerationConstraintOptions() { return {}; }
+ConstraintOptions GenerationConstraintOptions() {
+  return {.case_normalization = CaseNormalization::kNone};
+}
 
-ConstraintOptions WritingConstraintOptions() { return {}; }
+ConstraintOptions WritingConstraintOptions() {
+  return {.case_normalization = CaseNormalization::kNone};
+}
 
-ConstraintOptions AnalysisConstraintOptions() { return {}; }
+ConstraintOptions AnalysisConstraintOptions() {
+  return {.case_normalization = CaseNormalization::kNone};
+}
 
 }  // namespace moriarty
