@@ -31,6 +31,7 @@
 #include "moriarty/constraints/constraint_violation.h"
 #include "moriarty/context.h"
 #include "moriarty/internal/value_printer.h"
+#include "moriarty/librarian/case_normalization.h"
 #include "moriarty/librarian/errors.h"
 
 namespace moriarty {
@@ -258,7 +259,9 @@ std::string Exactly<T>::ToString() const {
 template <typename T>
 ValidationResult Exactly<T>::Validate(ConstraintContext ctx,
                                       const T& value) const {
-  if (value == value_) return ValidationResult::Ok();
+  if (librarian::AreEqual(value, value_,
+                          ctx.GetConstraintOptions().case_normalization))
+    return ValidationResult::Ok();
   return ctx.Violation(value,
                        {.expected = moriarty_internal::ValuePrinter(value_)});
 }
@@ -364,7 +367,10 @@ std::string OneOf<T>::ToString() const {
 template <typename T>
 ValidationResult OneOf<T>::Validate(ConstraintContext ctx,
                                     const T& value) const {
-  if (std::ranges::find(options_, value) != options_.end())
+  if (std::ranges::any_of(options_, [&](const T& option) {
+        return librarian::AreEqual(
+            value, option, ctx.GetConstraintOptions().case_normalization);
+      }))
     return ValidationResult::Ok();
 
   return ctx.Violation(

@@ -87,6 +87,7 @@ cc_library(
         ":constraint_violation",
         "//moriarty:context",
         "//moriarty/internal:value_printer",
+        "//moriarty/librarian:case_normalization",
         "//moriarty/librarian:errors",
     ],
 )
@@ -158,6 +159,21 @@ cc_library(
         "//moriarty/internal:simple_pattern",
         "//moriarty/internal:value_printer",
         "//moriarty/variables:minteger",
+    ],
+)
+
+cc_test(
+    name = "case_normalization_test",
+    srcs = ["case_normalization_test.cc"],
+    deps = [
+        ":container_constraints",
+        ":equality_constraints",
+        "//moriarty:context",
+        "//moriarty/librarian/testing:gtest_helpers",
+        "//moriarty/types:graph",
+        "//moriarty/variables:marray",
+        "//moriarty/variables:mstring",
+        "@googletest//:gtest_main",
     ],
 )
 

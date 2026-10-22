@@ -31,6 +31,7 @@
 #include "moriarty/simple_io.h"
 #include "moriarty/variables/marray.h"
 #include "moriarty/variables/minteger.h"
+#include "moriarty/variables/mstring.h"
 
 namespace moriarty {
 namespace {
@@ -177,6 +178,53 @@ TEST(ValidateOutputTest, WorksForValidOutput) {
                       .ReadInputUsing({.istream = input})
                       .ReadOutputUsing({.istream = output})
                       .Run());
+}
+
+TEST(ValidateOutputTest, StrictInputAndLowercaseOutputRespectSeparatePolicies) {
+  Problem p(
+      Variables(Var("Input", MString(Exactly("START"))),
+                Var("Answer", MString(OneOf({"POSSIBLE", "IMPOSSIBLE"})))),
+      InputFormat(Line("Input")), OutputFormat(Line("Answer")));
+  std::istringstream input("START\n");
+  std::istringstream output("Possible\n");
+  EXPECT_NO_THROW(
+      ValidateOutput(p)
+          .ReadInputUsing({.istream = input})
+          .ReadOutputUsing(
+              {.istream = output,
+               .constraint_options = {.case_normalization =
+                                          CaseNormalization::kLowercase}})
+          .Run());
+}
+
+TEST(ValidateOutputTest, StrictInputAndUppercaseOutputRespectSeparatePolicies) {
+  Problem p(
+      Variables(Var("Input", MString(Exactly("start"))),
+                Var("Answer", MString(OneOf({"possible", "impossible"})))),
+      InputFormat(Line("Input")), OutputFormat(Line("Answer")));
+  std::istringstream input("start\n");
+  std::istringstream output("Possible\n");
+  EXPECT_NO_THROW(
+      ValidateOutput(p)
+          .ReadInputUsing({.istream = input})
+          .ReadOutputUsing(
+              {.istream = output,
+               .constraint_options = {.case_normalization =
+                                          CaseNormalization::kUppercase}})
+          .Run());
+}
+
+TEST(ValidateOutputTest, OutputCaseRemainsExactByDefault) {
+  Problem p(
+      Variables(Var("Answer", MString(OneOf({"POSSIBLE", "IMPOSSIBLE"})))),
+      InputFormat(), OutputFormat(Line("Answer")));
+  std::istringstream input("");
+  std::istringstream output("Possible\n");
+  EXPECT_THROW(ValidateOutput(p)
+                   .ReadInputUsing({.istream = input})
+                   .ReadOutputUsing({.istream = output})
+                   .Run(),
+               ReadError);
 }
 
 TEST(ValidateOutputTest, InvalidInputShouldFail) {

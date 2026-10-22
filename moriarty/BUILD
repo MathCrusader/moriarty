@@ -127,6 +127,7 @@ cc_test(
         "//moriarty/librarian/testing:gtest_helpers",
         "//moriarty/variables:marray",
         "//moriarty/variables:minteger",
+        "//moriarty/variables:mstring",
         "@googletest//:gtest_main",
     ],
 )
