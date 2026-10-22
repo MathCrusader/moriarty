@@ -181,6 +181,7 @@ cc_library(
         "//moriarty/constraints:container_constraints",
         "//moriarty/contexts:librarian_context",
         "//moriarty/internal:abstract_variable",
+        "//moriarty/librarian:case_normalization",
         "//moriarty/librarian:errors",
         "//moriarty/librarian:io_config",
         "//moriarty/librarian:mvariable",

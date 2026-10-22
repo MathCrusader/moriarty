@@ -90,6 +90,7 @@ cc_library(
         "//moriarty/constraints:numeric_constraints",
         "//moriarty/internal:expressions",
         "//moriarty/internal:value_printer",
+        "//moriarty/librarian:case_normalization",
         "//moriarty/librarian:dependencies",
         "//moriarty/librarian:errors",
         "//moriarty/variables:minteger",

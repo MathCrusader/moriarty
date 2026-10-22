@@ -30,6 +30,7 @@
 #include "moriarty/constraints/numeric_constraints.h"
 #include "moriarty/context.h"
 #include "moriarty/internal/value_printer.h"
+#include "moriarty/librarian/case_normalization.h"
 #include "moriarty/librarian/dependencies.h"
 #include "moriarty/librarian/errors.h"
 #include "moriarty/test_case.h"
@@ -251,7 +252,8 @@ int64_t ReadNumTestCases(ReadContext ctx) {
 void ReadLiteral(ReadContext ctx, const StringLiteral& literal) {
   std::string read_token = ctx.ReadToken();
   std::string expected = std::string(literal);
-  if (read_token != expected) {
+  if (!librarian::AreEqual(read_token, expected,
+                           ctx.GetConstraintOptions().case_normalization)) {
     ctx.ThrowReadError("Expected {}, but got {}.",
                        moriarty_internal::ValuePrinter(expected),
                        moriarty_internal::ValuePrinter(read_token));

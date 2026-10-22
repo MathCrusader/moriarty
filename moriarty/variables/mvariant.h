@@ -33,6 +33,7 @@
 #include "moriarty/context.h"
 #include "moriarty/contexts/librarian_context.h"
 #include "moriarty/internal/abstract_variable.h"
+#include "moriarty/librarian/case_normalization.h"
 #include "moriarty/librarian/errors.h"
 #include "moriarty/librarian/io_config.h"
 #include "moriarty/librarian/mvariable.h"
@@ -473,8 +474,12 @@ template <typename... T>
 MVariant<T...>::variant_value_type MVariant<T...>::ReadImpl(
     librarian::ReadVariableContext ctx) const {
   std::string discriminator = ctx.ReadToken();
-  auto it =
-      std::ranges::find(Format().GetDiscriminatorOptions(), discriminator);
+  auto it = std::ranges::find_if(
+      Format().GetDiscriminatorOptions(), [&](const std::string& option) {
+        return librarian::AreEqual(
+            option, discriminator,
+            ctx.GetConstraintOptions().case_normalization);
+      });
   if (it == Format().GetDiscriminatorOptions().end()) {
     ctx.ThrowReadError(
         "Invalid discriminator {}. Expected one of: {}.",

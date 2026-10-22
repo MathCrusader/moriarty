@@ -74,6 +74,7 @@ cc_library(
     srcs = ["io_config.cc"],
     hdrs = ["io_config.h"],
     deps = [
+        ":case_normalization",
         "//moriarty/internal:value_printer",
         "//moriarty/librarian:errors",
         "//moriarty/librarian:policies",

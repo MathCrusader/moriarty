@@ -15,6 +15,7 @@
 #include "moriarty/variables/mvariant.h"
 
 #include <cstdint>
+#include <sstream>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -123,6 +124,32 @@ TEST(MVariantTest, ConfiguredAlternativeAndIndependentFormatFieldsMerge) {
   EXPECT_THAT(variant.Format().GetDiscriminatorOptions(),
               ElementsAre("array", "int"));
   EXPECT_EQ(Write(variant, std::vector<int64_t>{1, 2}), "array 1\n2");
+}
+
+TEST(MVariantTest, ReadDiscriminatorRespectsLowercase) {
+  std::istringstream stream("sTr PuSh");
+  moriarty_testing::Context context;
+  InputCursor cursor(stream,
+                     {.case_normalization = CaseNormalization::kLowercase});
+  ReadContext ctx(context.Variables(), cursor);
+  EXPECT_THAT(
+      ctx.ReadVariable(MVariant<MInteger, MString>(
+                           MVariantFormat().Discriminator({"INT", "str"})),
+                       "operation"),
+      VariantWith<std::string>("push"));
+}
+
+TEST(MVariantTest, ReadDiscriminatorRespectsUppercase) {
+  std::istringstream stream("sTr PuSh");
+  moriarty_testing::Context context;
+  InputCursor cursor(stream,
+                     {.case_normalization = CaseNormalization::kUppercase});
+  ReadContext ctx(context.Variables(), cursor);
+  EXPECT_THAT(
+      ctx.ReadVariable(MVariant<MInteger, MString>(
+                           MVariantFormat().Discriminator({"INT", "str"})),
+                       "operation"),
+      VariantWith<std::string>("PUSH"));
 }
 
 TEST(MVariantTest, TypicalReadCaseWorks) {

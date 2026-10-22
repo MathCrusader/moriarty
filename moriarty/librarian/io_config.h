@@ -57,7 +57,10 @@ struct InputCursor {
   [[nodiscard]] NumericStrictness GetNumericStrictness() const;
   [[nodiscard]] const ConstraintOptions& GetConstraintOptions() const;
 
+  // Reads a token and applies the configured case normalization.
   [[nodiscard]] std::string ReadToken();
+  // Returns the next normalized token without consuming it, or nullopt if
+  // the token cannot be read or the stream cannot seek.
   [[nodiscard]] std::optional<std::string> PeekToken();
   void ReadEof();
   void ReadWhitespace(Whitespace whitespace);

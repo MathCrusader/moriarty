@@ -272,6 +272,41 @@ end
                   AllOf(IntVariableIs("R", 4), IntVariableIs("S", 44))));
 }
 
+TEST(SimpleIOReaderTest, LiteralsRespectLowercase) {
+  std::stringstream ss("StArT\n42 pUsH\nEnD\n");
+  Context context = Context().WithVariable("N", MInteger());
+  InputCursor cursor(ss, {.case_normalization = CaseNormalization::kLowercase});
+  ReadContext ctx(context.Variables(), cursor);
+  EXPECT_THAT(SimpleIO()
+                  .AddHeaderLine(StringLiteral("START"))
+                  .AddLine("N", StringLiteral("push"))
+                  .AddFooterLine(StringLiteral("END"))
+                  .Reader()(ctx),
+              ElementsAre(IntVariableIs("N", 42)));
+}
+
+TEST(SimpleIOReaderTest, LiteralsRespectUppercase) {
+  std::stringstream ss("StArT\n42 pUsH\nEnD\n");
+  Context context = Context().WithVariable("N", MInteger());
+  InputCursor cursor(ss, {.case_normalization = CaseNormalization::kUppercase});
+  ReadContext ctx(context.Variables(), cursor);
+  EXPECT_THAT(SimpleIO()
+                  .AddHeaderLine(StringLiteral("START"))
+                  .AddLine("N", StringLiteral("push"))
+                  .AddFooterLine(StringLiteral("END"))
+                  .Reader()(ctx),
+              ElementsAre(IntVariableIs("N", 42)));
+}
+
+TEST(SimpleIOReaderTest, LiteralsPreserveCaseByDefault) {
+  std::stringstream ss("push\n");
+  Context context;
+  InputCursor cursor(ss, {});
+  ReadContext ctx(context.Variables(), cursor);
+  EXPECT_THROW(SimpleIO().AddLine(StringLiteral("PUSH")).Reader()(ctx),
+               ReadError);
+}
+
 TEST(SimpleIOReaderTest, ReadWrongTokenFails) {
   std::stringstream ss("these are wrong words");
   ReaderFn reader = SimpleIO()

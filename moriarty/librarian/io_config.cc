@@ -19,6 +19,7 @@
 #include <stdexcept>
 
 #include "moriarty/internal/value_printer.h"
+#include "moriarty/librarian/case_normalization.h"
 #include "moriarty/librarian/errors.h"
 #include "moriarty/librarian/policies.h"
 #include "moriarty/librarian/util/ref.h"
@@ -127,7 +128,8 @@ std::string InputCursor::ReadToken() {
   cursor_metadata_.col_num += token.length();
   current_line_read_ += token;
 
-  return token;
+  return librarian::NormalizeCase(token,
+                                  constraint_options_.case_normalization);
 }
 
 std::optional<std::string> InputCursor::PeekToken() {
@@ -168,7 +170,8 @@ std::optional<std::string> InputCursor::PeekToken() {
   std::string token;
   is >> token;
   restore();
-  return token;
+  return librarian::NormalizeCase(token,
+                                  constraint_options_.case_normalization);
 }
 
 void InputCursor::ReadEof() {

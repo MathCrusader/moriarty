@@ -68,6 +68,43 @@ TEST(InputCursorProcessingTest, StrictnessFactoriesShouldSetExpectedModes) {
   EXPECT_EQ(flexible.GetNumericStrictness(), NumericStrictness::kFlexible);
 }
 
+TEST(InputCursorProcessingTest, ReadAndPeekNormalizeLowercase) {
+  std::istringstream stream("PuSh Z9!");
+  InputCursor cursor(stream,
+                     {.case_normalization = CaseNormalization::kLowercase});
+  EXPECT_EQ(cursor.PeekToken(), "push");
+  EXPECT_EQ(cursor.PeekToken(), "push");
+  EXPECT_EQ(cursor.ReadToken(), "push");
+  cursor.ReadWhitespace(Whitespace::kSpace);
+  EXPECT_EQ(cursor.ReadToken(), "z9!");
+  EXPECT_EQ(cursor.PeekToken(), std::nullopt);
+}
+
+TEST(InputCursorProcessingTest, ReadAndPeekNormalizeUppercase) {
+  std::istringstream stream(" \tPuSh z9!");
+  InputCursor cursor(stream,
+                     {.case_normalization = CaseNormalization::kUppercase},
+                     WhitespaceStrictness::kFlexible);
+  EXPECT_EQ(cursor.PeekToken(), "PUSH");
+  EXPECT_EQ(cursor.ReadToken(), "PUSH");
+  EXPECT_EQ(cursor.PeekToken(), "Z9!");
+  EXPECT_EQ(cursor.ReadToken(), "Z9!");
+}
+
+TEST(InputCursorProcessingTest, NormalizationPreservesOriginalErrorSnippet) {
+  std::istringstream stream("PuSh");
+  InputCursor cursor(stream,
+                     {.case_normalization = CaseNormalization::kLowercase});
+  EXPECT_EQ(cursor.ReadToken(), "push");
+  EXPECT_THAT(
+      CaptureReadErrorMessage([&] {
+        cursor.ThrowReadError(
+            "Bad token",
+            InputCursor::ErrorSnippetCaretPosition::kBeforePreviousRead);
+      }),
+      HasSubstr("PuSh"));
+}
+
 TEST(InputCursorProcessingTest, ReadTokenShouldRespectWhitespaceStrictness) {
   {
     std::istringstream strict_stream(" hello");
