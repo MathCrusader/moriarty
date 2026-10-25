@@ -501,7 +501,7 @@ T::value_type Read(T variable, std::istream& is, Context context) {
   moriarty::moriarty_internal::AbstractVariable* var =
       context.Variables().GetAnonymousVariable(var_name);
 
-  moriarty::InputCursor cr(is, {}, context.WhitespaceStrictness(),
+  moriarty::InputCursor cr(is, context.WhitespaceStrictness(),
                            context.NumericStrictness());
   var->ReadValue(var_name, cr, context.Variables(), context.Values());
   return context.Values().Get<T>(var_name);

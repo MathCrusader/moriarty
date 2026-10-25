@@ -51,18 +51,18 @@ std::string PrettyPrintValue(Whitespace whitespace) {
 }
 
 InputCursor InputCursor::CreatePreciseStrictness(Ref<std::istream> is) {
-  return InputCursor(is, {}, WhitespaceStrictness::kPrecise,
+  return InputCursor(is, WhitespaceStrictness::kPrecise,
                      NumericStrictness::kPrecise);
 }
 
 InputCursor InputCursor::CreateFlexibleStrictness(Ref<std::istream> is) {
-  return InputCursor(is, {}, WhitespaceStrictness::kFlexible,
+  return InputCursor(is, WhitespaceStrictness::kFlexible,
                      NumericStrictness::kFlexible);
 }
 
-InputCursor::InputCursor(Ref<std::istream> is, const ConstraintOptions& options,
-                         WhitespaceStrictness whitespace,
-                         NumericStrictness numeric)
+InputCursor::InputCursor(Ref<std::istream> is, WhitespaceStrictness whitespace,
+                         NumericStrictness numeric,
+                         const ConstraintOptions& options)
     : constraint_options_(options),
       whitespace_strictness_(whitespace),
       numeric_strictness_(numeric),

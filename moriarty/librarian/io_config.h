@@ -49,9 +49,10 @@ struct InputCursor {
   // Creates an InputCursor with the most flexible settings.
   static InputCursor CreateFlexibleStrictness(Ref<std::istream> is);
 
-  InputCursor(Ref<std::istream> is, const ConstraintOptions& options,
+  InputCursor(Ref<std::istream> is,
               WhitespaceStrictness whitespace = WhitespaceStrictness::kPrecise,
-              NumericStrictness numeric = NumericStrictness::kPrecise);
+              NumericStrictness numeric = NumericStrictness::kPrecise,
+              const ConstraintOptions& options = {});
 
   [[nodiscard]] WhitespaceStrictness GetWhitespaceStrictness() const;
   [[nodiscard]] NumericStrictness GetNumericStrictness() const;

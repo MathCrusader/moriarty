@@ -464,7 +464,7 @@ TEST(MArrayTest, DirectlyUsingChunkedReaderShouldWork) {
 
   Context context;
   std::istringstream input("1\n2\n3\n4\n5\n6\n");
-  InputCursor cursor(input, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(input, WhitespaceStrictness::kPrecise);
   librarian::ReadVariableContext ctx("A", cursor, Context().Variables(),
                                      Context().Values());
   MArray<MInteger>::Reader reader(ctx, 6, arr);
@@ -479,7 +479,7 @@ TEST(MArrayTest, DirectlyUsingChunkedReaderShouldWork) {
 TEST(MArrayTest, IndirectlyUsingChunkedReaderShouldWork) {
   Context context;
   std::istringstream input("1\n2\n3\n4\n5\n6\n");
-  InputCursor cursor(input, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(input, WhitespaceStrictness::kPrecise);
 
   MArray<MInteger> arr(Elements(Between(1, 10)), Length(6));
   std::unique_ptr<moriarty_internal::ChunkedReader> reader =

@@ -128,7 +128,7 @@ TEST(MGraphTest, PartialReadShouldSucceed) {
 
   Context context;
   std::istringstream input(std::string{Graph1String()});
-  InputCursor cursor(input, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(input, WhitespaceStrictness::kPrecise);
   librarian::ReadVariableContext ctx("A", cursor, context.Variables(),
                                      context.Values());
   auto reader = MGraph<MNoEdgeLabel, MNoNodeLabel>::Reader(ctx, 3, graph);
@@ -150,7 +150,7 @@ MGraph<MEdgeLabel, MNodeLabel>::value_type ReadMGraphFromFile(
   if (!input.is_open()) {
     throw std::runtime_error("Could not open " + path.string());
   }
-  InputCursor cursor(input, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(input, WhitespaceStrictness::kPrecise);
   librarian::ReadVariableContext ctx("A", cursor, context.Variables(),
                                      context.Values());
   return graph_variable.Read(ctx);

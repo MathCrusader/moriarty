@@ -229,7 +229,7 @@ TEST(SimpleIOReaderTest, ReadInBasicCaseShouldWork) {
   std::stringstream ss("1 11\n2 22\n3 33\n4 44\n");
   ReaderFn reader = SimpleIO().AddLine("R", "S").Reader(4);
 
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
 
   EXPECT_THAT(
@@ -262,7 +262,7 @@ end
                         .AddFooterLine(StringLiteral("end"))
                         .Reader(4);
 
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
 
   EXPECT_THAT(
@@ -276,7 +276,9 @@ end
 TEST(SimpleIOReaderTest, LiteralsRespectLowercase) {
   std::stringstream ss("StArT\n42 pUsH\nEnD\n");
   Context context = Context().WithVariable("N", MInteger());
-  InputCursor cursor(ss, {.case_normalization = CaseNormalization::kLowercase});
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise,
+                     NumericStrictness::kPrecise,
+                     {.case_normalization = CaseNormalization::kLowercase});
   ReadContext ctx(context.Variables(), cursor);
   EXPECT_THAT(SimpleIO()
                   .AddHeaderLine(StringLiteral("START"))
@@ -289,7 +291,9 @@ TEST(SimpleIOReaderTest, LiteralsRespectLowercase) {
 TEST(SimpleIOReaderTest, LiteralsRespectUppercase) {
   std::stringstream ss("StArT\n42 pUsH\nEnD\n");
   Context context = Context().WithVariable("N", MInteger());
-  InputCursor cursor(ss, {.case_normalization = CaseNormalization::kUppercase});
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise,
+                     NumericStrictness::kPrecise,
+                     {.case_normalization = CaseNormalization::kUppercase});
   ReadContext ctx(context.Variables(), cursor);
   EXPECT_THAT(SimpleIO()
                   .AddHeaderLine(StringLiteral("START"))
@@ -302,7 +306,7 @@ TEST(SimpleIOReaderTest, LiteralsRespectUppercase) {
 TEST(SimpleIOReaderTest, LiteralsPreserveCaseByDefault) {
   std::stringstream ss("push\n");
   Context context;
-  InputCursor cursor(ss, {});
+  InputCursor cursor(ss);
   ReadContext ctx(context.Variables(), cursor);
   EXPECT_THROW(SimpleIO().AddLine(StringLiteral("PUSH")).Reader()(ctx),
                ReadError);
@@ -316,7 +320,7 @@ TEST(SimpleIOReaderTest, ReadWrongTokenFails) {
                         .Reader();
 
   Context context;
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
   EXPECT_THROW({ reader(ctx); }, ReadError);
 }
@@ -325,7 +329,7 @@ TEST(SimpleIOReaderTest, UnknownVariableKeepsItsErrorType) {
   std::stringstream ss("1\n");
   ReaderFn reader = SimpleIO().AddLine("missing").Reader();
   Context context;
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
   EXPECT_THROW((void)reader(ctx), VariableNotFound);
 }
@@ -337,7 +341,7 @@ TEST(SimpleIOReaderTest, ReadWrongWhitespaceFails) {
   std::stringstream ss("1\t11\n");
   ReaderFn reader = SimpleIO().AddLine("R", "S").Reader();
 
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
   EXPECT_THROW({ reader(ctx); }, ReadError);
 }
@@ -350,7 +354,7 @@ TEST(SimpleIOReaderTest, ReadWithNumberOfTestCasesInHeaderShouldWork) {
   ReaderFn reader =
       SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Reader();
 
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
 
   EXPECT_THAT(
@@ -370,7 +374,7 @@ TEST(SimpleIOReaderTest,
   ReaderFn reader =
       SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Reader();
 
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
   EXPECT_THROW({ reader(ctx); }, ReadError);
 }
@@ -384,7 +388,7 @@ TEST(SimpleIOReaderTest,
   ReaderFn reader =
       SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Reader();
 
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
   EXPECT_THROW({ reader(ctx); }, ReadError);
 }
@@ -397,7 +401,7 @@ TEST(SimpleIOReaderTest, ReadWithNumberOfTestCasesInHeaderFailsOnNonInteger) {
   ReaderFn reader =
       SimpleIO().WithNumberOfTestCasesInHeader().AddLine("R", "S").Reader();
 
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
   EXPECT_THROW({ reader(ctx); }, ReadError);
 }
@@ -420,7 +424,7 @@ TEST(SimpleIOReaderTest, MultilineSectionShouldWork) {
 
   std::stringstream ss("3\n1 11\n2 22\n3 33\n");
 
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
   ReaderFn reader = SimpleIO()
                         .AddLine("N")
@@ -444,7 +448,7 @@ TEST(SimpleIOReaderTest, ZeroLineSectionReadsNothing) {
                         MArray<MInteger>(MArrayFormat().NewlineSeparated()))
           .WithVariable("T", MInteger());
   std::stringstream ss("0\n7\n");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
   ReaderFn reader = SimpleIO()
                         .AddLine("N")
@@ -459,7 +463,7 @@ TEST(SimpleIOReaderTest, ZeroLineSectionReadsNothing) {
                                 IntVariableIs("T", 7))));
 
   std::stringstream extra_blank_line("0\n\n7\n");
-  InputCursor bad_cursor(extra_blank_line, {}, WhitespaceStrictness::kPrecise);
+  InputCursor bad_cursor(extra_blank_line, WhitespaceStrictness::kPrecise);
   ReadContext bad_ctx(context.Variables(), bad_cursor);
   EXPECT_THROW(reader(bad_ctx), ReadError);
 }
@@ -474,7 +478,7 @@ TEST(SimpleIOReaderTest, MultilineSectionRejectsMissingRows) {
                         MArray<MInteger>(MArrayFormat().NewlineSeparated()))
           .WithVariable("M", MInteger());
   std::stringstream ss("3\n7\n5\n");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
   ReadContext ctx(context.Variables(), cursor);
   ReaderFn reader = SimpleIO()
                         .AddLine("N")

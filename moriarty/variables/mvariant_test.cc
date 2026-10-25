@@ -129,7 +129,8 @@ TEST(MVariantTest, ConfiguredAlternativeAndIndependentFormatFieldsMerge) {
 TEST(MVariantTest, ReadDiscriminatorRespectsLowercase) {
   std::istringstream stream("sTr PuSh");
   moriarty_testing::Context context;
-  InputCursor cursor(stream,
+  InputCursor cursor(stream, WhitespaceStrictness::kPrecise,
+                     NumericStrictness::kPrecise,
                      {.case_normalization = CaseNormalization::kLowercase});
   ReadContext ctx(context.Variables(), cursor);
   EXPECT_THAT(
@@ -142,7 +143,8 @@ TEST(MVariantTest, ReadDiscriminatorRespectsLowercase) {
 TEST(MVariantTest, ReadDiscriminatorRespectsUppercase) {
   std::istringstream stream("sTr PuSh");
   moriarty_testing::Context context;
-  InputCursor cursor(stream,
+  InputCursor cursor(stream, WhitespaceStrictness::kPrecise,
+                     NumericStrictness::kPrecise,
                      {.case_normalization = CaseNormalization::kUppercase});
   ReadContext ctx(context.Variables(), cursor);
   EXPECT_THAT(

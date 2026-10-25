@@ -55,6 +55,38 @@ void ExpectMaxMessageLineWidth(const std::string& message, int max_width) {
   }
 }
 
+TEST(InputCursorProcessingTest, ConstructorDefaultsPreserveCaseAndStrictness) {
+  std::istringstream stream("AnD");
+  InputCursor cursor(stream);
+
+  EXPECT_EQ(cursor.ReadToken(), "AnD");
+  EXPECT_EQ(cursor.GetWhitespaceStrictness(), WhitespaceStrictness::kPrecise);
+  EXPECT_EQ(cursor.GetNumericStrictness(), NumericStrictness::kPrecise);
+  EXPECT_EQ(cursor.GetConstraintOptions().case_normalization,
+            CaseNormalization::kNone);
+}
+
+TEST(InputCursorProcessingTest, ConstructorWithWhitespacePreservesDefaults) {
+  std::istringstream stream("  AnD");
+  InputCursor cursor(stream, WhitespaceStrictness::kFlexible);
+
+  EXPECT_EQ(cursor.ReadToken(), "AnD");
+  EXPECT_EQ(cursor.GetWhitespaceStrictness(), WhitespaceStrictness::kFlexible);
+  EXPECT_EQ(cursor.GetNumericStrictness(), NumericStrictness::kPrecise);
+  EXPECT_EQ(cursor.GetConstraintOptions().case_normalization,
+            CaseNormalization::kNone);
+}
+
+TEST(InputCursorProcessingTest, ConstructorPreservesExplicitStrictness) {
+  std::istringstream stream("AnD");
+  InputCursor cursor(stream, WhitespaceStrictness::kPrecise,
+                     NumericStrictness::kFlexible);
+
+  EXPECT_EQ(cursor.ReadToken(), "AnD");
+  EXPECT_EQ(cursor.GetWhitespaceStrictness(), WhitespaceStrictness::kPrecise);
+  EXPECT_EQ(cursor.GetNumericStrictness(), NumericStrictness::kFlexible);
+}
+
 TEST(InputCursorProcessingTest, StrictnessFactoriesShouldSetExpectedModes) {
   std::istringstream strict_stream("");
   InputCursor strict = InputCursor::CreatePreciseStrictness(strict_stream);
@@ -70,7 +102,8 @@ TEST(InputCursorProcessingTest, StrictnessFactoriesShouldSetExpectedModes) {
 
 TEST(InputCursorProcessingTest, ReadAndPeekNormalizeLowercase) {
   std::istringstream stream("PuSh Z9!");
-  InputCursor cursor(stream,
+  InputCursor cursor(stream, WhitespaceStrictness::kPrecise,
+                     NumericStrictness::kPrecise,
                      {.case_normalization = CaseNormalization::kLowercase});
   EXPECT_EQ(cursor.PeekToken(), "push");
   EXPECT_EQ(cursor.PeekToken(), "push");
@@ -82,9 +115,9 @@ TEST(InputCursorProcessingTest, ReadAndPeekNormalizeLowercase) {
 
 TEST(InputCursorProcessingTest, ReadAndPeekNormalizeUppercase) {
   std::istringstream stream(" \tPuSh z9!");
-  InputCursor cursor(stream,
-                     {.case_normalization = CaseNormalization::kUppercase},
-                     WhitespaceStrictness::kFlexible);
+  InputCursor cursor(stream, WhitespaceStrictness::kFlexible,
+                     NumericStrictness::kPrecise,
+                     {.case_normalization = CaseNormalization::kUppercase});
   EXPECT_EQ(cursor.PeekToken(), "PUSH");
   EXPECT_EQ(cursor.ReadToken(), "PUSH");
   EXPECT_EQ(cursor.PeekToken(), "Z9!");
@@ -93,7 +126,8 @@ TEST(InputCursorProcessingTest, ReadAndPeekNormalizeUppercase) {
 
 TEST(InputCursorProcessingTest, NormalizationPreservesOriginalErrorSnippet) {
   std::istringstream stream("PuSh");
-  InputCursor cursor(stream,
+  InputCursor cursor(stream, WhitespaceStrictness::kPrecise,
+                     NumericStrictness::kPrecise,
                      {.case_normalization = CaseNormalization::kLowercase});
   EXPECT_EQ(cursor.ReadToken(), "push");
   EXPECT_THAT(
@@ -108,7 +142,7 @@ TEST(InputCursorProcessingTest, NormalizationPreservesOriginalErrorSnippet) {
 TEST(InputCursorProcessingTest, ReadTokenShouldRespectWhitespaceStrictness) {
   {
     std::istringstream strict_stream(" hello");
-    InputCursor strict(strict_stream, {}, WhitespaceStrictness::kPrecise);
+    InputCursor strict(strict_stream, WhitespaceStrictness::kPrecise);
     EXPECT_THROW((void)strict.ReadToken(), ReadError);
   }
 
@@ -123,7 +157,7 @@ TEST(InputCursorProcessingTest, ReadTokenShouldRespectWhitespaceStrictness) {
 
 TEST(InputCursorProcessingTest, PeekTokenShouldNotConsumeStream) {
   std::istringstream ss("A B");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.PeekToken(), "A");
   EXPECT_EQ(cursor.ReadToken(), "A");
@@ -136,7 +170,7 @@ TEST(InputCursorProcessingTest, PeekTokenShouldNotConsumeStream) {
 TEST(InputCursorProcessingTest, PeekTokenShouldRespectWhitespaceStrictness) {
   {
     std::istringstream ss(" A");
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+    InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
     EXPECT_EQ(cursor.PeekToken(), std::nullopt);
     cursor.ReadWhitespace(Whitespace::kSpace);
     EXPECT_EQ(cursor.PeekToken(), "A");
@@ -145,7 +179,7 @@ TEST(InputCursorProcessingTest, PeekTokenShouldRespectWhitespaceStrictness) {
 
   {
     std::istringstream ss(" A");
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kFlexible);
+    InputCursor cursor(ss, WhitespaceStrictness::kFlexible);
     EXPECT_EQ(cursor.PeekToken(), "A");
     EXPECT_EQ(cursor.ReadToken(), "A");
     EXPECT_TRUE(cursor.IsEOF());
@@ -154,7 +188,7 @@ TEST(InputCursorProcessingTest, PeekTokenShouldRespectWhitespaceStrictness) {
 
 TEST(InputCursorProcessingTest, ReadWhitespaceShouldValidateInStrictMode) {
   std::istringstream ss(" \t\n");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_NO_THROW(cursor.ReadWhitespace(Whitespace::kSpace));
   EXPECT_NO_THROW(cursor.ReadWhitespace(Whitespace::kTab));
@@ -164,7 +198,7 @@ TEST(InputCursorProcessingTest, ReadWhitespaceShouldValidateInStrictMode) {
 
 TEST(InputCursorProcessingTest, ReadWhitespaceShouldBeNoopInFlexibleMode) {
   std::istringstream ss("X");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kFlexible);
+  InputCursor cursor(ss, WhitespaceStrictness::kFlexible);
 
   EXPECT_NO_THROW(cursor.ReadWhitespace(Whitespace::kSpace));
   EXPECT_NO_THROW(cursor.ReadWhitespace(Whitespace::kTab));
@@ -177,13 +211,13 @@ TEST(InputCursorProcessingTest, ReadWhitespaceShouldBeNoopInFlexibleMode) {
 TEST(InputCursorProcessingTest, ReadWhitespaceShouldHandleEofByStrictness) {
   {
     std::istringstream ss("");
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+    InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
     EXPECT_THROW(cursor.ReadWhitespace(Whitespace::kSpace), ReadError);
   }
 
   {
     std::istringstream ss("");
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kFlexible);
+    InputCursor cursor(ss, WhitespaceStrictness::kFlexible);
     EXPECT_NO_THROW(cursor.ReadWhitespace(Whitespace::kSpace));
     EXPECT_TRUE(cursor.IsEOF());
   }
@@ -192,7 +226,7 @@ TEST(InputCursorProcessingTest, ReadWhitespaceShouldHandleEofByStrictness) {
 TEST(InputCursorProcessingTest, ReadEofShouldRespectWhitespaceStrictness) {
   {
     std::istringstream ss("abc \n\t");
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kFlexible);
+    InputCursor cursor(ss, WhitespaceStrictness::kFlexible);
 
     EXPECT_EQ(cursor.ReadToken(), "abc");
     EXPECT_NO_THROW(cursor.ReadEof());
@@ -200,7 +234,7 @@ TEST(InputCursorProcessingTest, ReadEofShouldRespectWhitespaceStrictness) {
 
   {
     std::istringstream ss("abc \n\t");
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+    InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
     EXPECT_EQ(cursor.ReadToken(), "abc");
     EXPECT_THROW(cursor.ReadEof(), ReadError);
@@ -209,7 +243,7 @@ TEST(InputCursorProcessingTest, ReadEofShouldRespectWhitespaceStrictness) {
 
 TEST(InputCursorProcessingTest, IsEOFShouldReflectStreamState) {
   std::istringstream ss("x");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_FALSE(cursor.IsEOF());
   EXPECT_EQ(cursor.ReadToken(), "x");
@@ -218,7 +252,7 @@ TEST(InputCursorProcessingTest, IsEOFShouldReflectStreamState) {
 
 TEST(InputCursorErrorMessageTest, ReadTokenShouldReportEOFClearly) {
   std::istringstream ss("");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_THAT(
       SingleCall([&] { (void)cursor.ReadToken(); }),
@@ -228,7 +262,7 @@ TEST(InputCursorErrorMessageTest, ReadTokenShouldReportEOFClearly) {
 TEST(InputCursorErrorMessageTest,
      ReadTokenShouldReportUnexpectedWhitespaceClearly) {
   std::istringstream ss("\tX");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_THAT(
       SingleCall([&] { (void)cursor.ReadToken(); }),
@@ -238,7 +272,7 @@ TEST(InputCursorErrorMessageTest,
 TEST(InputCursorErrorMessageTest,
      ReadWhitespaceShouldReportExpectedWhitespaceInStrictMode) {
   std::istringstream ss("\n");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_THAT(SingleCall([&] { cursor.ReadWhitespace(Whitespace::kSpace); }),
               ThrowsMessage<ReadError>(Eq(
@@ -250,7 +284,7 @@ TEST(InputCursorErrorMessageTest,
 TEST(InputCursorErrorMessageTest,
      ReadWhitespaceShouldReportNonWhitespaceCharacters) {
   std::istringstream ss("A");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_THAT(
       SingleCall([&] { cursor.ReadWhitespace(Whitespace::kSpace); }),
@@ -260,7 +294,7 @@ TEST(InputCursorErrorMessageTest,
 TEST(InputCursorErrorMessageTest,
      ReadWhitespaceShouldReportRequestedCharacterAtEOF) {
   std::istringstream ss("");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_THAT(
       SingleCall([&] { cursor.ReadWhitespace(Whitespace::kTab); }),
@@ -269,7 +303,7 @@ TEST(InputCursorErrorMessageTest,
 
 TEST(InputCursorErrorMessageTest, ReadEofShouldReportMessageInStrictMode) {
   std::istringstream ss("x");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_THAT(SingleCall([&] { cursor.ReadEof(); }),
               ThrowsMessage<ReadError>(Eq(
@@ -281,7 +315,7 @@ x
 TEST(InputCursorErrorMessageTest,
      ReadEofInPreciseModeShouldPointAtNextWhitespace) {
   std::istringstream ss("A B");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.ReadToken(), "A");
   EXPECT_THAT(SingleCall([&] { cursor.ReadEof(); }),
@@ -293,7 +327,7 @@ A B
 
 TEST(InputCursorErrorMessageTest, ReadEofInPreciseModeShouldPointAtNextToken) {
   std::istringstream ss("A B");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.ReadToken(), "A");
   cursor.ReadWhitespace(Whitespace::kSpace);
@@ -307,7 +341,7 @@ A B
 TEST(InputCursorErrorMessageTest,
      ReadEofInFlexibleModeShouldPointAtNextTokenAfterWhitespace) {
   std::istringstream ss("A \n\tB");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kFlexible);
+  InputCursor cursor(ss, WhitespaceStrictness::kFlexible);
 
   EXPECT_EQ(cursor.ReadToken(), "A");
   // TODO: Note: I am not happy with where this caret is.
@@ -321,7 +355,7 @@ TEST(InputCursorErrorMessageTest,
 TEST(InputCursorErrorMessageTest,
      ThrowReadErrorShouldUseAtCursorCaretPosition) {
   std::istringstream ss("Hello world");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.ReadToken(), "Hello");
   EXPECT_THAT(SingleCall([&] {
@@ -336,7 +370,7 @@ Hello world
 
 TEST(InputCursorErrorMessageTest, ThrowReadErrorShouldSupportMultilinePrefix) {
   std::istringstream ss("Hello world");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.ReadToken(), "Hello");
   EXPECT_THAT(SingleCall([&] {
@@ -357,7 +391,7 @@ Hello world
 TEST(InputCursorErrorMessageTest,
      ThrowReadErrorShouldUseBeforePreviousReadCaretPosition) {
   std::istringstream ss("Hello world");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.ReadToken(), "Hello");
   EXPECT_THAT(
@@ -375,7 +409,7 @@ Hello world
 TEST(InputCursorErrorMessageTest,
      ThrowReadErrorShouldTreatWhitespaceAsPreviousRead) {
   std::istringstream ss("Hello world");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.ReadToken(), "Hello");
   cursor.ReadWhitespace(Whitespace::kSpace);
@@ -397,7 +431,7 @@ TEST(InputCursorErrorMessageTest,
 
   {
     std::istringstream ss(multiline);
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+    InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
     EXPECT_EQ(cursor.ReadToken(), "A");
     EXPECT_THAT(
@@ -414,7 +448,7 @@ A BB CCC
 
   {
     std::istringstream ss(multiline);
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+    InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
     EXPECT_EQ(cursor.ReadToken(), "A");
     cursor.ReadWhitespace(Whitespace::kSpace);
@@ -437,7 +471,7 @@ DDDD EEEEE
 
   {
     std::istringstream ss(multiline);
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+    InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
     EXPECT_EQ(cursor.ReadToken(), "A");
     cursor.ReadWhitespace(Whitespace::kSpace);
@@ -462,7 +496,7 @@ DDDD EEEEE
 
   {
     std::istringstream ss(multiline);
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+    InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
     EXPECT_EQ(cursor.ReadToken(), "A");
     cursor.ReadWhitespace(Whitespace::kSpace);
@@ -495,7 +529,7 @@ FFFFFF GGGGGGG HHHHHHHH
 TEST(InputCursorErrorMessageTest,
      MultilineReadWhitespaceShouldReportIncorrectNewlineExpectation) {
   std::istringstream ss("A BB CCC\nDDDD EEEEE\nFFFFFF GGGGGGG HHHHHHHH");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.ReadToken(), "A");
   EXPECT_THAT(SingleCall([&] { cursor.ReadWhitespace(Whitespace::kNewline); }),
@@ -508,7 +542,7 @@ A BB CCC
 TEST(InputCursorErrorMessageTest,
      MultilineReadWhitespaceShouldReportIncorrectSpaceExpectation) {
   std::istringstream ss("A BB CCC\nDDDD EEEEE\nFFFFFF GGGGGGG HHHHHHHH");
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   EXPECT_EQ(cursor.ReadToken(), "A");
   cursor.ReadWhitespace(Whitespace::kSpace);
@@ -526,7 +560,7 @@ TEST(InputCursorErrorMessageTest,
      MultilineReadEofShouldReportIncorrectEOFExpectation) {
   {  // Precise
     std::istringstream ss("A BB CCC\nDDDD EEEEE\nFFFFFF GGGGGGG HHHHHHHH");
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+    InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
     EXPECT_EQ(cursor.ReadToken(), "A");
     cursor.ReadWhitespace(Whitespace::kSpace);
@@ -546,7 +580,7 @@ DDDD EEEEE
   }
   {  // Flexible
     std::istringstream ss("A BB CCC\nDDDD EEEEE\nFFFFFF GGGGGGG HHHHHHHH");
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kFlexible);
+    InputCursor cursor(ss, WhitespaceStrictness::kFlexible);
 
     EXPECT_EQ(cursor.ReadToken(), "A");
     EXPECT_EQ(cursor.ReadToken(), "BB");
@@ -567,7 +601,7 @@ TEST(InputCursorErrorMessageTest,
   {
     std::string massive_token(1200, 'A');
     std::istringstream ss(massive_token + " B");
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+    InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
     EXPECT_EQ(cursor.ReadToken(), massive_token);
     std::string message = CaptureReadErrorMessage([&] { cursor.ReadEof(); });
@@ -576,7 +610,7 @@ TEST(InputCursorErrorMessageTest,
   {
     std::string massive_token(1200, 'A');
     std::istringstream ss(massive_token + " B");
-    InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+    InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
     std::string message = CaptureReadErrorMessage(
         [&] { cursor.ReadWhitespace(Whitespace::kSpace); });
@@ -594,7 +628,7 @@ TEST(InputCursorErrorMessageTest,
   }
 
   std::istringstream ss(input);
-  InputCursor cursor(ss, {}, WhitespaceStrictness::kPrecise);
+  InputCursor cursor(ss, WhitespaceStrictness::kPrecise);
 
   for (int i = 0; i < kTokenCount - 1; i++) {
     EXPECT_EQ(cursor.ReadToken(), "x");

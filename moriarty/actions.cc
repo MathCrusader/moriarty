@@ -132,8 +132,9 @@ void ValidateInputBuilder::Run() const {
   // }
 
   InputCursor cursor(input_options_->istream,
-                     input_options_->constraint_options,
-                     input_options_->whitespace_strictness);
+                     input_options_->whitespace_strictness,
+                     NumericStrictness::kPrecise,
+                     input_options_->constraint_options);
   ReadContext ctx(problem_.UnsafeGetVariables(), cursor);
 
   auto reader = problem_.GetInputReader();
@@ -208,8 +209,9 @@ std::vector<TestCase> ValidateOutputBuilder::Run() const {
   }
 
   InputCursor input_cursor(input_options_->istream,
-                           input_options_->constraint_options,
-                           input_options_->whitespace_strictness);
+                           input_options_->whitespace_strictness,
+                           NumericStrictness::kPrecise,
+                           input_options_->constraint_options);
   ReadContext ctx(problem_.UnsafeGetVariables(), input_cursor);
 
   std::vector<TestCase> test_cases = ReadTestCases(*input_reader, ctx);
@@ -225,8 +227,9 @@ std::vector<TestCase> ValidateOutputBuilder::Run() const {
   }
 
   InputCursor output_cursor(output_options_->istream,
-                            output_options_->constraint_options,
-                            output_options_->whitespace_strictness);
+                            output_options_->whitespace_strictness,
+                            NumericStrictness::kPrecise,
+                            output_options_->constraint_options);
   ReadContext output_ctx(problem_.UnsafeGetVariables(),
                          test_cases[0].UnsafeGetValues(), output_cursor);
   std::vector<TestCase> output_answers =
@@ -500,8 +503,10 @@ void AnalyzeBuilder::Run() const {
                              "analyzers.");
   }
 
-  InputCursor cursor(input_reader_->istream, input_reader_->constraint_options,
-                     input_reader_->whitespace_strictness);
+  InputCursor cursor(input_reader_->istream,
+                     input_reader_->whitespace_strictness,
+                     NumericStrictness::kPrecise,
+                     input_reader_->constraint_options);
   ReadContext ctx(problem_.UnsafeGetVariables(), cursor);
 
   auto reader = problem_.GetInputReader();
@@ -519,8 +524,9 @@ void AnalyzeBuilder::Run() const {
 
   if (output_reader_) {
     InputCursor cursor(output_reader_->istream,
-                       output_reader_->constraint_options,
-                       output_reader_->whitespace_strictness);
+                       output_reader_->whitespace_strictness,
+                       NumericStrictness::kPrecise,
+                       output_reader_->constraint_options);
     ReadContext ctx(problem_.UnsafeGetVariables(), cursor);
 
     auto reader = problem_.GetOutputReader();
