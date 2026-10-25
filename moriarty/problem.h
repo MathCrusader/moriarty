@@ -208,6 +208,7 @@ class InputFormat {
 //
 // Specifies how to read and write output for a problem. In general, use Line()
 // and Multiline() to specify the format.
+//
 // ValidateOutput rejects names read by both input and output formats. Output
 // may still depend on input values in constraints and line-count expressions.
 //

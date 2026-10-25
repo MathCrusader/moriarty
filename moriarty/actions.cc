@@ -169,7 +169,7 @@ ValidateOutputBuilder ValidateOutput(Problem problem) {
   return ValidateOutputBuilder(std::move(problem));
 }
 
-void ValidateOutputBuilder::Run() const {
+std::vector<TestCase> ValidateOutputBuilder::Run() const {
   if (!input_options_) {
     throw ConfigurationError("ValidateInput::Run",
                              "std::istream needed for input. Use "
@@ -236,6 +236,7 @@ void ValidateOutputBuilder::Run() const {
   ValidateTestCases(problem_, output_answers,
                     output_options_->constraint_options,
                     test_cases[0].UnsafeGetValues().ListValues());
+  return output_answers;
 }
 
 GenerateBuilder Generate(Problem problem) {

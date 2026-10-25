@@ -231,14 +231,18 @@ TEST(ValidateOutputTest, StrictInputAndLowercaseOutputRespectSeparatePolicies) {
       InputFormat(Line("Input")), OutputFormat(Line("Answer")));
   std::istringstream input("START\n");
   std::istringstream output("Possible\n");
-  EXPECT_NO_THROW(
+  const auto cases =
       ValidateOutput(p)
           .ReadInputUsing({.istream = input})
           .ReadOutputUsing(
               {.istream = output,
                .constraint_options = {.case_normalization =
                                           CaseNormalization::kLowercase}})
-          .Run());
+          .Run();
+
+  ASSERT_THAT(cases, SizeIs(1));
+  EXPECT_EQ(cases[0].GetValue<MString>("Input"), "START");
+  EXPECT_EQ(cases[0].GetValue<MString>("Answer"), "possible");
 }
 
 TEST(ValidateOutputTest, StrictInputAndUppercaseOutputRespectSeparatePolicies) {

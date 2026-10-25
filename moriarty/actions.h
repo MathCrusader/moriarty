@@ -100,7 +100,11 @@ class ValidateOutputBuilder {
   //
   // Reads the input first, then reads the output. The output will have access
   // to the input variables and their values that were read.
-  void Run() const;
+  //
+  // Returns the validated test cases containing both input values
+  // and output values. Each retains the normalization applied using its
+  // respective input or output options.
+  std::vector<TestCase> Run() const;
 
  private:
   // Construct a builder using `ValidateOutput(problem)`.
