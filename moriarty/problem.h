@@ -125,16 +125,19 @@ concept MoriartyFormat = requires(T t) {
   { t.Reader() } -> std::same_as<ReaderFn>;
   { t.Writer() } -> std::same_as<WriterFn>;
   { t.GetDependencies() } -> std::same_as<Dependencies>;
+  { t.GetReadVariableNames() } -> std::same_as<std::vector<std::string>>;
 };
 
 namespace moriarty_internal {
 
 class Format {
  public:
-  Format(ReaderFn reader, WriterFn writer, Dependencies dependencies)
+  Format(ReaderFn reader, WriterFn writer, Dependencies dependencies,
+         std::vector<std::string> read_variable_names)
       : reader_(std::move(reader)),
         writer_(std::move(writer)),
-        dependencies_(std::move(dependencies)) {}
+        dependencies_(std::move(dependencies)),
+        read_variable_names_(std::move(read_variable_names)) {}
 
   template <typename... Lines>
     requires((std::same_as<Lines, Line> || std::same_as<Lines, Multiline>) &&
@@ -144,11 +147,15 @@ class Format {
   ReaderFn Reader() const { return reader_; }
   WriterFn Writer() const { return writer_; }
   Dependencies GetDependencies() const { return dependencies_; }
+  std::vector<std::string> GetReadVariableNames() const {
+    return read_variable_names_;
+  }
 
  private:
   ReaderFn reader_;
   WriterFn writer_;
   Dependencies dependencies_;
+  std::vector<std::string> read_variable_names_;
 };
 
 }  // namespace moriarty_internal
@@ -169,7 +176,9 @@ class Format {
 //   );
 //
 // However, if you need something more complex, any type that has `Reader()`,
-// `Writer()`, and `GetDependencies()` methods can be used as an InputFormat.
+// `Writer()`, `GetDependencies()`, and `GetReadVariableNames()` methods can be
+// used as an InputFormat.
+//
 // Most commonly, this will be `SimpleIO`.
 class InputFormat {
  public:
@@ -185,6 +194,10 @@ class InputFormat {
   WriterFn Writer() const;
   Dependencies GetDependencies() const;
 
+  // Names the reader may assign, excluding inherited values and dependencies.
+  // Custom readers must only assign the names they declare here.
+  std::vector<std::string> GetReadVariableNames() const;
+
   [[nodiscard]] moriarty_internal::Format UnsafeGetFormat() const;
 
  private:
@@ -195,6 +208,8 @@ class InputFormat {
 //
 // Specifies how to read and write output for a problem. In general, use Line()
 // and Multiline() to specify the format.
+// ValidateOutput rejects names read by both input and output formats. Output
+// may still depend on input values in constraints and line-count expressions.
 //
 // Example:
 //   OutputFormat(
@@ -207,7 +222,8 @@ class InputFormat {
 //   );
 //
 // However, if you need something more complex, any type that has `Reader()`,
-// `Writer()`, and `GetDependencies()` methods can be used as an OutputFormat.
+// `Writer()`, `GetDependencies()`, and `GetReadVariableNames()` methods can be
+// used as an OutputFormat.
 // Most commonly, this will be `SimpleIO`.
 class OutputFormat {
  public:
@@ -222,6 +238,10 @@ class OutputFormat {
   ReaderFn Reader() const;
   WriterFn Writer() const;
   Dependencies GetDependencies() const;
+
+  // Names the reader may assign, excluding inherited values and dependencies.
+  // Custom readers must only assign the names they declare here.
+  std::vector<std::string> GetReadVariableNames() const;
 
   [[nodiscard]] moriarty_internal::Format UnsafeGetFormat() const;
 
@@ -323,9 +343,11 @@ class Problem {
   std::optional<ReaderFn> GetInputReader() const;
   std::optional<WriterFn> GetInputWriter() const;
   std::optional<Dependencies> GetInputDependencies() const;
+  std::optional<std::vector<std::string>> GetInputReadVariableNames() const;
   std::optional<ReaderFn> GetOutputReader() const;
   std::optional<WriterFn> GetOutputWriter() const;
   std::optional<Dependencies> GetOutputDependencies() const;
+  std::optional<std::vector<std::string>> GetOutputReadVariableNames() const;
 
   [[nodiscard]] std::vector<int64_t> BaseSeedForGenerator(
       std::string_view generator_seed) const;
@@ -338,9 +360,11 @@ class Problem {
   std::optional<ReaderFn> input_reader_;
   std::optional<WriterFn> input_writer_;
   std::optional<Dependencies> input_dependencies_;
+  std::optional<std::vector<std::string>> input_read_variable_names_;
   std::optional<ReaderFn> output_reader_;
   std::optional<WriterFn> output_writer_;
   std::optional<Dependencies> output_dependencies_;
+  std::optional<std::vector<std::string>> output_read_variable_names_;
 
   void Apply(Title title);
   void Apply(Variables vars);
@@ -393,6 +417,7 @@ moriarty_internal::Format::Format(Lines&&... lines) {
   reader_ = io.Reader();
   writer_ = io.Writer();
   dependencies_ = io.GetDependencies();
+  read_variable_names_ = io.GetReadVariableNames();
 }
 
 template <typename... T>
@@ -402,7 +427,8 @@ Variables::Variables(T... variables) {
 
 template <MoriartyFormat Fmt>
 InputFormat::InputFormat(Fmt format)
-    : format_(format.Reader(), format.Writer(), format.GetDependencies()) {}
+    : format_(format.Reader(), format.Writer(), format.GetDependencies(),
+              format.GetReadVariableNames()) {}
 
 template <typename... Lines>
   requires((std::same_as<Lines, Line> || std::same_as<Lines, Multiline>) && ...)
@@ -411,7 +437,8 @@ InputFormat::InputFormat(Lines&&... lines)
 
 template <MoriartyFormat Fmt>
 OutputFormat::OutputFormat(Fmt format)
-    : format_(format.Reader(), format.Writer(), format.GetDependencies()) {}
+    : format_(format.Reader(), format.Writer(), format.GetDependencies(),
+              format.GetReadVariableNames()) {}
 
 template <typename... Lines>
   requires((std::same_as<Lines, Line> || std::same_as<Lines, Multiline>) && ...)

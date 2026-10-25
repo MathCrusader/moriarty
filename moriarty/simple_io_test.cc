@@ -37,6 +37,7 @@ using ::moriarty::MInteger;
 using ::moriarty_testing::Context;
 using ::testing::AllOf;
 using ::testing::ElementsAre;
+using ::testing::IsEmpty;
 using ::testing::StrEq;
 using ::testing::ThrowsMessage;
 using ::testing::UnorderedElementsAre;
@@ -482,6 +483,24 @@ TEST(SimpleIOReaderTest, MultilineSectionRejectsMissingRows) {
                         .Reader();
 
   EXPECT_THROW(reader(ctx), ReadError);
+}
+
+TEST(SimpleIOTest, ReadVariableNamesExcludeLiteralsAndLineCounts) {
+  SimpleIO io = SimpleIO()
+                    .AddLine("X", StringLiteral("hello"))
+                    .AddMultilineSection("N", "Answers");
+
+  EXPECT_THAT(io.GetReadVariableNames(), UnorderedElementsAre("X", "Answers"));
+}
+
+TEST(SimpleIOTest, ReadVariableNamesAreUnique) {
+  SimpleIO io = SimpleIO().AddLine("X").AddLine("X");
+
+  EXPECT_THAT(io.GetReadVariableNames(), ElementsAre("X"));
+}
+
+TEST(SimpleIOTest, EmptyFormatHasNoReadVariableNames) {
+  EXPECT_THAT(SimpleIO().GetReadVariableNames(), IsEmpty());
 }
 
 TEST(SimpleIOTest, DependenciesShouldReturnAllVariablesUsed) {

@@ -98,6 +98,24 @@ TEST(ProblemTest, AddingAdditionalConstraintsWithANewVariableShouldFail) {
           HasSubstr("Cannot add new variables in WithAdditionalConstraints")));
 }
 
+TEST(ProblemTest, InputReadVariableNamesPropagateFromLines) {
+  InputFormat format(Line("N"), Multiline(NumLines("N"), "A"));
+  Problem problem(format);
+
+  EXPECT_THAT(format.GetReadVariableNames(), ElementsAre("N", "A"));
+  EXPECT_THAT(problem.GetInputReadVariableNames(),
+              Optional(ElementsAre("N", "A")));
+}
+
+TEST(ProblemTest, OutputReadVariableNamesPropagateFromSimpleIO) {
+  OutputFormat format(SimpleIO().AddMultilineSection("N", "Answers"));
+  Problem problem(format);
+
+  EXPECT_THAT(format.GetReadVariableNames(), ElementsAre("Answers"));
+  EXPECT_THAT(problem.GetOutputReadVariableNames(),
+              Optional(ElementsAre("Answers")));
+}
+
 TEST(ProblemTest, InputFormatShouldWork) {
   EXPECT_EQ(Problem().GetInputReader(), std::nullopt);
   EXPECT_EQ(Problem().GetInputWriter(), std::nullopt);

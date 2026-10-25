@@ -167,6 +167,50 @@ TEST(ValidateInputTest, WhitespaceStrictnessShouldBeRespected) {
 
 // -----------------------------------------------------------------------------
 
+TEST(ValidateOutputTest, OverlappingFormatsFailBeforeReading) {
+  Problem p(Variables(Var("N", MInteger())), InputFormat(Line("N")),
+            OutputFormat(Line("N")));
+  std::istringstream input("5\n");
+  std::istringstream output("6\n");
+
+  EXPECT_THAT(SingleCall([&] {
+                ValidateOutput(p)
+                    .ReadInputUsing({.istream = input})
+                    .ReadOutputUsing({.istream = output})
+                    .Run();
+              }),
+              ThrowsMessage<ConfigurationError>(HasSubstr(
+                  "Variable 'N' appears in both input and output formats")));
+  EXPECT_EQ(input.peek(), '5');
+  EXPECT_EQ(output.peek(), '6');
+}
+
+TEST(ValidateOutputTest, OutputLineCountMayDependOnInput) {
+  Problem p(Variables(Var("N", MInteger()),
+                      Var("Answers", MArray<MInteger>(Length("N")))),
+            InputFormat(Line("N")),
+            OutputFormat(Multiline(NumLines("N"), "Answers")));
+  std::istringstream input("2\n");
+  std::istringstream output("7\n8\n");
+
+  EXPECT_NO_THROW(ValidateOutput(p)
+                      .ReadInputUsing({.istream = input})
+                      .ReadOutputUsing({.istream = output})
+                      .Run());
+}
+
+TEST(ValidateOutputTest, SeparateOutputVariableMayEqualInput) {
+  Problem p(Variables(Var("X", MInteger()), Var("Y", MInteger(Exactly("X")))),
+            InputFormat(Line("X")), OutputFormat(Line("Y")));
+  std::istringstream input("5\n");
+  std::istringstream output("5\n");
+
+  EXPECT_NO_THROW(ValidateOutput(p)
+                      .ReadInputUsing({.istream = input})
+                      .ReadOutputUsing({.istream = output})
+                      .Run());
+}
+
 TEST(ValidateOutputTest, WorksForValidOutput) {
   Problem p(Variables(Var("N", MInteger(Between(1, 10))),
                       Var("X", MInteger(Between(20, 25)))),
@@ -211,6 +255,88 @@ TEST(ValidateOutputTest, StrictInputAndUppercaseOutputRespectSeparatePolicies) {
               {.istream = output,
                .constraint_options = {.case_normalization =
                                           CaseNormalization::kUppercase}})
+          .Run());
+}
+
+TEST(ValidateOutputTest, LowercaseInputAndUppercaseOutputUseSeparatePolicies) {
+  Problem p(Variables(Var("Input", MString(Alphabet::Lowercase())),
+                      Var("Answer", MString(Alphabet::Uppercase()))),
+            InputFormat(Line("Input")), OutputFormat(Line("Answer")));
+  std::istringstream input("AnD\n");
+  std::istringstream output("YeS\n");
+
+  EXPECT_NO_THROW(
+      ValidateOutput(p)
+          .ReadInputUsing(
+              {.istream = input,
+               .constraint_options = {.case_normalization =
+                                          CaseNormalization::kLowercase}})
+          .ReadOutputUsing(
+              {.istream = output,
+               .constraint_options = {.case_normalization =
+                                          CaseNormalization::kUppercase}})
+          .Run());
+}
+
+TEST(ValidateOutputTest, OutputNormalizationDoesNotRelaxInputValidation) {
+  Problem p(Variables(Var("Input", MString(Exactly("AND"))),
+                      Var("Answer", MString(Exactly("YES")))),
+            InputFormat(Line("Input")), OutputFormat(Line("Answer")));
+  std::istringstream input("and\n");
+  std::istringstream output("yes\n");
+
+  EXPECT_THROW(
+      ValidateOutput(p)
+          .ReadInputUsing({.istream = input})
+          .ReadOutputUsing(
+              {.istream = output,
+               .constraint_options = {.case_normalization =
+                                          CaseNormalization::kLowercase}})
+          .Run(),
+      ReadError);
+  EXPECT_EQ(output.peek(), 'y');
+}
+
+TEST(ValidateOutputTest, InputNormalizationDoesNotRelaxOutputValidation) {
+  Problem p(Variables(Var("Input", MString(Exactly("AND"))),
+                      Var("Answer", MString(Exactly("YES")))),
+            InputFormat(Line("Input")), OutputFormat(Line("Answer")));
+  std::istringstream input("and\n");
+  std::istringstream output("yes\n");
+
+  EXPECT_THROW(
+      ValidateOutput(p)
+          .ReadInputUsing(
+              {.istream = input,
+               .constraint_options = {.case_normalization =
+                                          CaseNormalization::kLowercase}})
+          .ReadOutputUsing({.istream = output})
+          .Run(),
+      ReadError);
+  EXPECT_EQ(input.peek(), std::char_traits<char>::eof());
+}
+
+TEST(ValidateOutputTest, InheritedInputIsNotValidatedWithOutputOptions) {
+  MString input_variable(Exactly("AND"));
+  input_variable.AddCustomConstraint(
+      "requires exact validation", {},
+      [](ConstraintContext ctx, const std::string&) {
+        return ctx.GetConstraintOptions().case_normalization ==
+               CaseNormalization::kNone;
+      });
+  Problem p(Variables(Var("Input", input_variable),
+                      Var("Answer", MString(Exactly("YES")))),
+            InputFormat(Line("Input")), OutputFormat(Line("Answer")));
+  std::istringstream input("AND\n");
+  std::istringstream output("yes\n");
+
+  EXPECT_NO_THROW(
+      ValidateOutput(p)
+          .ReadInputUsing({.istream = input})
+          .ReadOutputUsing(
+              {.istream = output,
+               .constraint_options = {.case_normalization =
+                                          CaseNormalization::kLowercase}})
           .Run());
 }
 

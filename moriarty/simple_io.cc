@@ -128,6 +128,19 @@ ReaderFn SimpleIO::Reader(int number_of_test_cases) const {
 
 Dependencies SimpleIO::GetDependencies() const { return deps_; }
 
+std::vector<std::string> SimpleIO::GetReadVariableNames() const {
+  std::vector<std::string> names;
+  for (const Line& line : lines_per_test_case_) {
+    for (const SimpleIOToken& token : line.tokens) {
+      if (const auto* name = std::get_if<std::string>(&token);
+          name && std::ranges::find(names, *name) == names.end()) {
+        names.push_back(*name);
+      }
+    }
+  }
+  return names;
+}
+
 namespace {
 
 // -----------------------------------------------------------------------------

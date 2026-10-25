@@ -164,6 +164,12 @@ class SimpleIO {
   // Transitive dependencies are not included.
   Dependencies GetDependencies() const;
 
+  // GetReadVariableNames()
+  //
+  // Names assigned by the reader, excluding literals and line-count
+  // dependencies. Each name is returned once.
+  std::vector<std::string> GetReadVariableNames() const;
+
   // Access the lines
   struct Line {
     std::vector<SimpleIOToken> tokens;

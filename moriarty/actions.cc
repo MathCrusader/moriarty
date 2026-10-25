@@ -147,7 +147,8 @@ void ValidateInputBuilder::Run() const {
   if (test_cases.empty())
     throw ConfigurationError("ValidateInput::Run", "No Test Cases.");
 
-  ValidateTestCases(problem_, test_cases, input_options_->constraint_options, {});
+  ValidateTestCases(problem_, test_cases, input_options_->constraint_options,
+                    {});
 }
 
 ValidateOutputBuilder::ValidateOutputBuilder(Problem problem)
@@ -192,6 +193,20 @@ void ValidateOutputBuilder::Run() const {
         "No OutputFormat specified in Problem. Cannot read output.");
   }
 
+  const auto input_names = *problem_.GetInputReadVariableNames();
+  const auto output_names = *problem_.GetOutputReadVariableNames();
+  for (const auto& name : input_names) {
+    if (std::ranges::find(output_names, name) != output_names.end()) {
+      throw ConfigurationError(
+          "ValidateOutput::Run",
+          std::format(
+              "Variable '{}' appears in both input and output formats. We "
+              "recommend against this. If you really want it in both, use two "
+              "separate variables that have an Exactly() constraint.",
+              name));
+    }
+  }
+
   InputCursor input_cursor(input_options_->istream,
                            input_options_->constraint_options,
                            input_options_->whitespace_strictness);
@@ -200,7 +215,8 @@ void ValidateOutputBuilder::Run() const {
   std::vector<TestCase> test_cases = ReadTestCases(*input_reader, ctx);
   if (test_cases.empty())
     throw ConfigurationError("ValidateOutput::Run", "No Test Cases.");
-  ValidateTestCases(problem_, test_cases, input_options_->constraint_options, {});
+  ValidateTestCases(problem_, test_cases, input_options_->constraint_options,
+                    {});
 
   if (test_cases.size() != 1) {
     throw ConfigurationError(
@@ -215,8 +231,8 @@ void ValidateOutputBuilder::Run() const {
                          test_cases[0].UnsafeGetValues(), output_cursor);
   std::vector<TestCase> output_answers =
       ReadTestCases(*output_reader, output_ctx);
-  // TODO: Check that the output reader did not overwrite any input variables.
-  // We skip validating them below because we assume their values are unchanged.
+  // Input values were validated with the input options. The formats declare
+  // disjoint read variables, so inherited input values need no revalidation.
   ValidateTestCases(problem_, output_answers,
                     output_options_->constraint_options,
                     test_cases[0].UnsafeGetValues().ListValues());

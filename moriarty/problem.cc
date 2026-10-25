@@ -43,12 +43,20 @@ Dependencies InputFormat::GetDependencies() const {
   return format_.GetDependencies();
 }
 
+std::vector<std::string> InputFormat::GetReadVariableNames() const {
+  return format_.GetReadVariableNames();
+}
+
 ReaderFn OutputFormat::Reader() const { return format_.Reader(); }
 
 WriterFn OutputFormat::Writer() const { return format_.Writer(); }
 
 Dependencies OutputFormat::GetDependencies() const {
   return format_.GetDependencies();
+}
+
+std::vector<std::string> OutputFormat::GetReadVariableNames() const {
+  return format_.GetReadVariableNames();
 }
 
 std::optional<Title> Problem::GetTitle() const { return title_; }
@@ -71,6 +79,11 @@ std::optional<Dependencies> Problem::GetInputDependencies() const {
   return input_dependencies_;
 }
 
+std::optional<std::vector<std::string>> Problem::GetInputReadVariableNames()
+    const {
+  return input_read_variable_names_;
+}
+
 std::optional<ReaderFn> Problem::GetOutputReader() const {
   return output_reader_;
 }
@@ -81,6 +94,11 @@ std::optional<WriterFn> Problem::GetOutputWriter() const {
 
 std::optional<Dependencies> Problem::GetOutputDependencies() const {
   return output_dependencies_;
+}
+
+std::optional<std::vector<std::string>> Problem::GetOutputReadVariableNames()
+    const {
+  return output_read_variable_names_;
 }
 
 std::vector<int64_t> Problem::BaseSeedForGenerator(
@@ -108,12 +126,14 @@ void Problem::Apply(InputFormat format) {
   input_reader_ = format.Reader();
   input_writer_ = format.Writer();
   input_dependencies_ = format.GetDependencies();
+  input_read_variable_names_ = format.GetReadVariableNames();
 }
 
 void Problem::Apply(OutputFormat format) {
   output_reader_ = format.Reader();
   output_writer_ = format.Writer();
   output_dependencies_ = format.GetDependencies();
+  output_read_variable_names_ = format.GetReadVariableNames();
 }
 
 Title::Title(std::string_view title) : title_(title) {}
