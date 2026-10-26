@@ -402,9 +402,10 @@ std::vector<TestCase> GenerateBuilder::Run() const {
   }
 
   std::vector<GeneratedCase> all_test_cases;
+  auto input_dependencies = problem_.GetInputDependencies();
   std::span<const std::string> input_deps;
-  if (problem_.GetInputDependencies()) {
-    const auto& deps = *problem_.GetInputDependencies();
+  if (input_dependencies) {
+    const auto& deps = *input_dependencies;
     input_deps = {deps.data(), deps.size()};
   }
 
@@ -441,10 +442,11 @@ std::vector<TestCase> GenerateBuilder::Run() const {
       });
 
   auto include_output = [&](const GeneratedCase& test_case) {
-    if (!problem_.GetOutputWriter() || !problem_.GetOutputDependencies())
+    auto output_dependencies = problem_.GetOutputDependencies();
+    if (!problem_.GetOutputWriter() || !output_dependencies)
       return false;
 
-    const auto& output_deps = *problem_.GetOutputDependencies();
+    const auto& output_deps = *output_dependencies;
     // FIXME: This is technically not true, since the output may be printing a
     // static output, but that's low priority to support.
     if (output_deps.empty()) return false;
